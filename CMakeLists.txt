@@ -46,6 +46,7 @@ add_subdirectory(libdevcore)
 add_subdirectory(libevmasm)
 add_subdirectory(libsolidity)
 add_subdirectory(libsolc)
+add_subdirectory(libiele)
 
 if (NOT EMSCRIPTEN)
 	add_subdirectory(solc)
