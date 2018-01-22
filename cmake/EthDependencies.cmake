@@ -48,3 +48,8 @@ option(Boost_USE_STATIC_LIBS "Link Boost statically" ON)
 find_package(Boost 1.54.0 QUIET REQUIRED COMPONENTS regex filesystem unit_test_framework program_options system)
 
 eth_show_dependency(Boost boost)
+
+## we use some of LLVM's libraries for the IELE backend
+find_package(LLVM 5.0.0 QUIET REQUIRED CONFIG)
+
+eth_show_dependency(LLVM LLVM)

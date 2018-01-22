@@ -1,8 +1,13 @@
+#include "llvm/ADT/simple_ilist.h"
+
 namespace dev {
 namespace iele {
 
-class IeleContract {
+class IeleFunction;
 
+class IeleContract {
+private:
+  llvm::simple_ilist<IeleFunction> Functions;
 };
 
 } // end namespace iele
