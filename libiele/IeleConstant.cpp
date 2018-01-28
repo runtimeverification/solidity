@@ -2,3 +2,5 @@
 
 using namespace dev;
 using namespace dev::iele;
+
+IeleConstant::~IeleConstant() { }

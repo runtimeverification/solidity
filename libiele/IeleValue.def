@@ -1,0 +1,41 @@
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+// Provide definitions of macros so that users of this file do not have to
+// define everything to use it...
+//
+#if !(defined HANDLE_IELE_GLOBAL_VALUE || defined HANDLE_IELE_CONSTANT ||      \
+      defined HANDLE_IELE_LOCAL_VARIABLE || defined HANDLE_IELE_VALUE)
+#error "Missing macro definition of HANDLE_IELE_VALUE*"
+#endif
+
+#ifndef HANDLE_IELE_GLOBAL_VALUE
+#define HANDLE_IELE_GLOBAL_VALUE(ValueName) HANDLE_IELE_CONSTANT(ValueName)
+#endif
+
+#ifndef HANDLE_IELE_CONSTANT
+#define HANDLE_IELE_CONSTANT(ValueName) HANDLE_IELE_VALUE(ValueName)
+#endif
+
+#ifndef HANDLE_IELE_LOCAL_VARIABLE
+#define HANDLE_IELE_LOCAL_VARIABLE(ValueName) HANDLE_IELE_VALUE(ValueName)
+#endif
+
+#ifndef HANDLE_IELE_VALUE
+#define HANDLE_IELE_VALUE(ValueName)
+#endif
+
+HANDLE_IELE_VALUE(IeleBlock)
+HANDLE_IELE_VALUE(IeleContract)
+
+HANDLE_IELE_GLOBAL_VALUE(IeleFunction)
+HANDLE_IELE_GLOBAL_VALUE(IeleGlobalVariable)
+
+HANDLE_IELE_CONSTANT(IeleIntConstant)
+
+HANDLE_IELE_LOCAL_VARIABLE(IeleArgument)
+HANDLE_IELE_LOCAL_VARIABLE(IeleLocalVariable)
+
+#undef HANDLE_IELE_GLOBAL_VALUE
+#undef HANDLE_IELE_CONSTANT
+#undef HANDLE_IELE_LOCAL_VARIABLE
+#undef HANDLE_IELE_VALUE
