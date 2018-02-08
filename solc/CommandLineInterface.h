@@ -54,6 +54,8 @@ private:
 	bool link();
 	void writeLinkedFiles();
 
+    void writeIeleFiles();
+
 	bool assemble(AssemblyStack::Language _language, AssemblyStack::Machine _targetMachine);
 
 	void outputCompilationResults();
@@ -91,6 +93,8 @@ private:
 	bool m_onlyAssemble = false;
 
 	bool m_onlyLink = false;
+
+    bool m_onlyIele = false;
 
 	/// Compiler arguments variable map
 	boost::program_options::variables_map m_args;

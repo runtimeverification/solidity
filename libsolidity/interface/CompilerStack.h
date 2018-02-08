@@ -48,6 +48,11 @@ class AssemblyItem;
 using AssemblyItems = std::vector<AssemblyItem>;
 }
 
+namespace iele
+{
+class IeleContract;
+}
+
 namespace solidity
 {
 
@@ -62,6 +67,7 @@ class GlobalContext;
 class Natspec;
 class Error;
 class DeclarationContainer;
+class IeleCompiler;
 
 /**
  * Easy to use and self-contained Solidity compiler with as few header dependencies as possible.
@@ -147,6 +153,10 @@ public:
 	/// @returns false on error.
 	bool compile();
 
+	/// Compiles the source units that were previously added and parsed to IELE.
+	/// @returns false on error.
+	bool compileToIele();
+
 	/// @returns the list of sources (paths) used
 	std::vector<std::string> sourceNames() const;
 
@@ -205,6 +215,11 @@ public:
 	/// Prerequisite: Successful compilation.
 	std::string assemblyString(std::string const& _contractName, StringMap _sourceCodes = StringMap()) const;
 
+	/// @return a verbose text representation of the IELE assembly.
+	/// @arg _sourceCodes is the map of input files to source code strings
+	/// Prerequisite: Successful compilation to IELE.
+	void ieleString(std::string const& _contractName, std::string &ret) const;
+
 	/// @returns a JSON representation of the assembly.
 	/// @arg _sourceCodes is the map of input files to source code strings
 	/// Prerequisite: Successful compilation.
@@ -256,6 +271,8 @@ private:
 		mutable std::unique_ptr<Json::Value const> devDocumentation;
 		mutable std::unique_ptr<std::string const> sourceMapping;
 		mutable std::unique_ptr<std::string const> runtimeSourceMapping;
+		std::shared_ptr<IeleCompiler> ieleCompiler;
+		const iele::IeleContract* ieleContract;
 	};
 
 	/// Loads the missing sources from @a _ast (named @a _path) using the callback
@@ -278,6 +295,12 @@ private:
 		std::map<ContractDefinition const*, eth::Assembly const*>& _compiledContracts
 	);
 	void link();
+
+	/// Compile a single contract to IELE and put the result in @a _compiledContracts.
+	void compileContractToIele(
+		ContractDefinition const& _contract,
+		std::map<ContractDefinition const*, iele::IeleContract const*>& _compiledContracts
+	);
 
 	Contract const& contract(std::string const& _contractName) const;
 	Source const& source(std::string const& _sourceName) const;
