@@ -20,7 +20,6 @@ void IeleCompiler::compileContract(
   llvm::APInt NextStorageAddress(64, 1); // here we should use a true unbound
                                          // integer datatype but using llvm's
                                          // APINt for now.
-  int i = 0;
   for (const VariableDeclaration *stateVariable : contract.stateVariables()) {
     assert(!stateVariable->value().get() && "not implemented yet");
     iele::IeleGlobalVariable *GV =
@@ -31,7 +30,6 @@ void IeleCompiler::compileContract(
            "supported");
     GV->setStorageAddress(iele::IeleIntConstant::Create(&Context,
                                                         NextStorageAddress++));
-    ++i;
   }
 
   // Visit fallback. If it doesn't exist create an empty @deposit function as
@@ -46,8 +44,17 @@ void IeleCompiler::compileContract(
     iele::IeleInstruction::CreateRetVoid(FallbackBlock);
   }
 
-  // Visit constructor.
-  contract.constructor()->accept(*this);
+  // Visit constructor. If it doesn't exist create an empty @init function as
+  // constructor.
+  if (const FunctionDefinition *constructor = contract.constructor())
+    constructor->accept(*this);
+  else {
+    iele::IeleFunction *Constructor =
+      iele::IeleFunction::Create(&Context, true, "init", CompilingContract);
+    iele::IeleBlock *ConstructorBlock =
+      iele::IeleBlock::Create(&Context, "entry", Constructor);
+    iele::IeleInstruction::CreateRetVoid(ConstructorBlock);
+  }
 
   // Visit functions.
   for (const FunctionDefinition *function : contract.definedFunctions()) {

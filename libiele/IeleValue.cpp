@@ -125,3 +125,21 @@ void IeleValue::destroyIeleName() {
     Name->Destroy();
   setIeleName(nullptr);
 }
+
+void IeleValue::printAsValue(llvm::raw_ostream &OS) const {
+  switch (SubclassID) {
+  case IeleLocalVariableVal:
+  case IeleArgumentVal:
+  case IeleBlockVal:
+    OS << "%" << getName();
+    break;
+  case IeleGlobalVariableVal:
+  case IeleFunctionVal:
+    OS << "@" << getName();
+    break;
+  case IeleIntConstantVal:
+    print(OS);
+  case IeleContractVal:
+    OS << getName();
+  }
+}

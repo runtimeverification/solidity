@@ -86,6 +86,7 @@ public:
   //inline       IeleInstruction *getParent()       { return Parent; }
 
   virtual void print(llvm::raw_ostream &OS, unsigned indent = 0) const =0;
+  void printAsValue(llvm::raw_ostream &OS) const;
 };
 
 } // end namespace iele

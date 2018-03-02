@@ -371,7 +371,7 @@ static void printRet(llvm::raw_ostream &OS, const IeleInstruction *I) {
     for (const IeleValue *V : I->operands()) {
       if (!isFirst)
         OS << ", ";
-      V->print(OS);
+      V->printAsValue(OS);
       isFirst = false;
     }
   }
@@ -379,19 +379,19 @@ static void printRet(llvm::raw_ostream &OS, const IeleInstruction *I) {
 
 static void printRevert(llvm::raw_ostream &OS, const IeleInstruction *I) {
   OS << "revert ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
 }
 
 static void printIsZero(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = iszero ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
 }
 
 static void printBr(llvm::raw_ostream &OS, const IeleInstruction *I) {
   OS << "br ";
   if (I->size() == 2) {
-    (*I->begin())->print(OS);
+    (*I->begin())->printAsValue(OS);
     OS << ", " << (*(++I->begin()))->getName();
   } else {
     OS << (*I->begin())->getName();
@@ -399,103 +399,159 @@ static void printBr(llvm::raw_ostream &OS, const IeleInstruction *I) {
 }
 
 static void printCallAt(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = call ";
   auto It = I->begin();
   OS << "@" << (*It)->getName(); ++It;
   OS << " at ";
-  (*It)->print(OS); ++It;
+  (*It)->printAsValue(OS); ++It;
   auto SavedIt = It; ++It; ++It;
   OS << " (";
   bool isFirst = true;
   for (; It != I->end(); ++It) {
     if (!isFirst)
       OS << ", ";
-    (*It)->print(OS);
+    (*It)->printAsValue(OS);
     isFirst = false;
   }
   OS << ") send ";
-  (*SavedIt)->print(OS); ++SavedIt;
+  (*SavedIt)->printAsValue(OS); ++SavedIt;
   OS << ", gaslimit ";
-  (*SavedIt)->print(OS);
+  (*SavedIt)->printAsValue(OS);
 }
 
 static void printAssign(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
 }
 
 static void printSLoad(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = sload ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
 }
 
 static void printSStore(llvm::raw_ostream &OS, const IeleInstruction *I) {
   OS << "sstore ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
   OS << ", ";
-  (*(++I->begin()))->print(OS);
+  (*(++I->begin()))->printAsValue(OS);
 }
 
 static void printAdd(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = add ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
   OS << ", ";
-  (*(++I->begin()))->print(OS);
+  (*(++I->begin()))->printAsValue(OS);
+}
+
+static void printMul(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  (*I->lvalue_begin())->printAsValue(OS);
+  OS << " = mul ";
+  (*I->begin())->printAsValue(OS);
+  OS << ", ";
+  (*(++I->begin()))->printAsValue(OS);
+}
+
+static void printSub(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  (*I->lvalue_begin())->printAsValue(OS);
+  OS << " = sub ";
+  (*I->begin())->printAsValue(OS);
+  OS << ", ";
+  (*(++I->begin()))->printAsValue(OS);
+}
+
+static void printDiv(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  (*I->lvalue_begin())->printAsValue(OS);
+  OS << " = div ";
+  (*I->begin())->printAsValue(OS);
+  OS << ", ";
+  (*(++I->begin()))->printAsValue(OS);
+}
+
+static void printExp(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  (*I->lvalue_begin())->printAsValue(OS);
+  OS << " = exp ";
+  (*I->begin())->printAsValue(OS);
+  OS << ", ";
+  (*(++I->begin()))->printAsValue(OS);
+}
+
+static void printMod(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  (*I->lvalue_begin())->printAsValue(OS);
+  OS << " = mod ";
+  (*I->begin())->printAsValue(OS);
+  OS << ", ";
+  (*(++I->begin()))->printAsValue(OS);
+}
+
+static void printCmpEq(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  (*I->lvalue_begin())->printAsValue(OS);
+  OS << " = cmp eq ";
+  (*I->begin())->printAsValue(OS);
+  OS << ", ";
+  (*(++I->begin()))->printAsValue(OS);
 }
 
 static void printCmpNe(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = cmp ne ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
   OS << ", ";
-  (*(++I->begin()))->print(OS);
+  (*(++I->begin()))->printAsValue(OS);
+}
+
+static void printCmpLt(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  (*I->lvalue_begin())->printAsValue(OS);
+  OS << " = cmp lt ";
+  (*I->begin())->printAsValue(OS);
+  OS << ", ";
+  (*(++I->begin()))->printAsValue(OS);
 }
 
 static void printCmpLe(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = cmp le ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
   OS << ", ";
-  (*(++I->begin()))->print(OS);
+  (*(++I->begin()))->printAsValue(OS);
 }
 
 static void printCmpGt(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = cmp gt ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
   OS << ", ";
-  (*(++I->begin()))->print(OS);
+  (*(++I->begin()))->printAsValue(OS);
 }
 
 static void printCmpGe(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = cmp ge ";
-  (*I->begin())->print(OS);
+  (*I->begin())->printAsValue(OS);
   OS << ", ";
-  (*(++I->begin()))->print(OS);
+  (*(++I->begin()))->printAsValue(OS);
 }
 
 static void printTimestamp(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = call @iele.timestamp() ";
 }
 
 static void printCaller(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = call @iele.caller() ";
 }
 
 static void printCallvalue(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = call @iele.callvalue() ";
 }
 
 static void printGaslimit(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->print(OS);
+  (*I->lvalue_begin())->printAsValue(OS);
   OS << " = call @iele.gaslimit() ";
 }
 
@@ -513,7 +569,14 @@ void IeleInstruction::print(llvm::raw_ostream &OS, unsigned indent) const {
     case SLoad: printSLoad(OS, this); break;
     case SStore: printSStore(OS, this); break;
     case Add: printAdd(OS, this); break;
+    case Mul: printMul(OS, this); break;
+    case Sub: printSub(OS, this); break;
+    case Div: printDiv(OS, this); break;
+    case Exp: printExp(OS, this); break;
+    case Mod: printMod(OS, this); break;
+    case CmpEq: printCmpEq(OS, this); break;
     case CmpNe: printCmpNe(OS, this); break;
+    case CmpLt: printCmpLt(OS, this); break;
     case CmpLe: printCmpLe(OS, this); break;
     case CmpGt: printCmpGt(OS, this); break;
     case CmpGe: printCmpGe(OS, this); break;
