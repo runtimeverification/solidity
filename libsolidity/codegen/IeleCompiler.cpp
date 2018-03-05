@@ -557,7 +557,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       appendInvalid(InvConditionValue);
     else
       appendRevert(InvConditionValue);
-      break;
+    break;
   }
   case FunctionType::Kind::Internal:
   case FunctionType::Kind::External:

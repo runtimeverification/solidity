@@ -3,6 +3,7 @@
 #include "SymbolTableListTraits.h"
 
 #include "llvm/ADT/iterator_range.h"
+#include <vector>
 
 namespace dev {
 namespace iele {

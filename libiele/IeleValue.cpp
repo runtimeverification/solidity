@@ -139,6 +139,7 @@ void IeleValue::printAsValue(llvm::raw_ostream &OS) const {
     break;
   case IeleIntConstantVal:
     print(OS);
+    break;
   case IeleContractVal:
     OS << getName();
   }
