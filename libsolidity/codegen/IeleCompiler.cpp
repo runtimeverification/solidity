@@ -32,17 +32,9 @@ void IeleCompiler::compileContract(
                                                         NextStorageAddress++));
   }
 
-  // Visit fallback. If it doesn't exist create an empty @deposit function as
-  // fallback.
+  // Visit fallback.
   if (const FunctionDefinition *fallback = contract.fallbackFunction())
     fallback->accept(*this);
-  else {
-    iele::IeleFunction *Fallback =
-      iele::IeleFunction::Create(&Context, true, "deposit", CompilingContract);
-    iele::IeleBlock *FallbackBlock =
-      iele::IeleBlock::Create(&Context, "entry", Fallback);
-    iele::IeleInstruction::CreateRetVoid(FallbackBlock);
-  }
 
   // Visit constructor. If it doesn't exist create an empty @init function as
   // constructor.
