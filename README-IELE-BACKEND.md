@@ -22,7 +22,7 @@ Use the compiler like this:
 
 To run the compilation tests:
 ```
-./test/iele ieleCmdlineTests.sh
+./test/ieleCmdlineTests.sh
 
 # failed tests reported are stored in test/failed, clean them before rerunning
 rm -rf test/failed
