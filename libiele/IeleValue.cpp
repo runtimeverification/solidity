@@ -130,7 +130,6 @@ void IeleValue::printAsValue(llvm::raw_ostream &OS) const {
   switch (SubclassID) {
   case IeleLocalVariableVal:
   case IeleArgumentVal:
-  case IeleBlockVal:
     OS << "%" << getName();
     break;
   case IeleGlobalVariableVal:
@@ -141,6 +140,7 @@ void IeleValue::printAsValue(llvm::raw_ostream &OS) const {
     print(OS);
     break;
   case IeleContractVal:
+  case IeleBlockVal:
     OS << getName();
   }
 }
