@@ -1,0 +1,79 @@
+contract SimpleAuction {
+
+@beneficiary = 1
+
+@auctionEnd = 2
+
+@highestBidder = 3
+
+@highestBid = 4
+
+@ended = 5
+
+define @init(%_beneficiary, %_biddingTime) {
+entry:
+  sstore %_beneficiary, @beneficiary
+  %timestamp = call @iele.timestamp()
+  %tmp = add %timestamp, %_biddingTime
+  sstore %tmp, @auctionEnd
+  ret void
+}
+
+define public @bid() {
+entry:
+  %timestamp = call @iele.timestamp()
+  %auctionEnd.val = sload @auctionEnd
+  %tmp = cmp le %timestamp, %auctionEnd.val
+  %tmp1 = iszero %tmp
+  br %tmp1, throw
+  %callvalue = call @iele.callvalue()
+  %highestBid.val = sload @highestBid
+  %tmp2 = cmp gt %callvalue, %highestBid.val
+  %tmp3 = iszero %tmp2
+  br %tmp3, throw
+  %highestBidder.val = sload @highestBidder
+  %tmp4 = cmp ne %highestBidder.val, 0
+  %tmp5 = iszero %tmp4
+  br %tmp5, if.end
+  %highestBidder.val6 = sload @highestBidder
+  %highestBid.val7 = sload @highestBid
+  %gas = call @iele.gaslimit()
+  %status = call @deposit at %highestBidder.val6 () send %highestBid.val7, gaslimit %gas
+  br %status, throw
+
+if.end:
+  %caller = call @iele.caller()
+  sstore %caller, @highestBidder
+  %callvalue8 = call @iele.callvalue()
+  sstore %callvalue8, @highestBid
+  ret void
+
+throw:
+  revert -1
+}
+
+define public @settleAuction() {
+entry:
+  %timestamp = call @iele.timestamp()
+  %auctionEnd.val = sload @auctionEnd
+  %tmp = cmp ge %timestamp, %auctionEnd.val
+  %tmp1 = iszero %tmp
+  br %tmp1, throw
+  %ended.val = sload @ended
+  %tmp2 = iszero %ended.val
+  %tmp3 = iszero %tmp2
+  br %tmp3, throw
+  sstore 1, @ended
+  %beneficiary.val = sload @beneficiary
+  %highestBid.val = sload @highestBid
+  %gas = call @iele.gaslimit()
+  %status = call @deposit at %beneficiary.val () send %highestBid.val, gaslimit %gas
+  br %status, throw
+  %highestBidder.val = sload @highestBidder
+  ret %highestBidder.val
+
+throw:
+  revert -1
+}
+
+}
