@@ -12,7 +12,7 @@
 #define HANDLE_IELE_INTRINSIC_INST(num, opcode, text)
 #else
 #define HANDLE_IELE_INTRINSIC_INST(num, opcode, text) \
-        HANDLE_IELE_INST(num, opcode)
+        HANDLE_IELE_INST(num, opcode, text)
 #endif
 #endif
 #ifndef LAST_IELE_INTRINSIC_INST
@@ -24,9 +24,10 @@
 #endif
 #ifndef HANDLE_IELE_CALL_INST
 #ifndef HANDLE_IELE_INST
-#define HANDLE_IELE_CALL_INST(num, opcode)
+#define HANDLE_IELE_CALL_INST(num, opcode, text)
 #else
-#define HANDLE_IELE_CALL_INST(num, opcode) HANDLE_IELE_INST(num, opcode)
+#define HANDLE_IELE_CALL_INST(num, opcode, text) \
+        HANDLE_IELE_INST(num, opcode, text)
 #endif
 #endif
 #ifndef LAST_IELE_CALL_INST
@@ -41,7 +42,7 @@
 #define HANDLE_IELE_OTHER_INST(num, opcode, text)
 #else
 #define HANDLE_IELE_OTHER_INST(num, opcode, text) \
-        HANDLE_IELE_INST(num, opcode)
+        HANDLE_IELE_INST(num, opcode, text)
 #endif
 #endif
 #ifndef LAST_IELE_OTHER_INST
@@ -88,11 +89,11 @@ HANDLE_IELE_OTHER_INST     (35   , Selfdestruct , "selfdestruct")
 LAST_IELE_OTHER_INST       (35)
 
 FIRST_IELE_CALL_INST       (36)
-HANDLE_IELE_CALL_INST      (36   , Call        ) 
-HANDLE_IELE_CALL_INST      (37   , CallAt      ) 
-HANDLE_IELE_CALL_INST      (38   , StaticCallAt)
-HANDLE_IELE_CALL_INST      (39   , Create      )
-HANDLE_IELE_CALL_INST      (40   , CopyCreate  )
+HANDLE_IELE_CALL_INST      (36   , Call         , "call"      ) 
+HANDLE_IELE_CALL_INST      (37   , CallAt       , "call"      ) 
+HANDLE_IELE_CALL_INST      (38   , StaticCallAt , "staticcall")
+HANDLE_IELE_CALL_INST      (39   , Create       , "create"    )
+HANDLE_IELE_CALL_INST      (40   , CopyCreate   , "copycreate")
 LAST_IELE_CALL_INST        (40)
 
 FIRST_IELE_INTRINSIC_INST  (41)

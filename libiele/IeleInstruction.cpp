@@ -364,11 +364,7 @@ IeleInstruction *IeleInstruction::CreateBinOp(
 
 static void printOpcode(llvm::raw_ostream &OS, const IeleInstruction *I) {
   switch (I->getOpcode()) {
-#define HANDLE_IELE_OTHER_INST(N, OPC, TXT) \
-  case IeleInstruction::OPC: OS << TXT; break;
-#include "IeleInstruction.def"
-
-#define HANDLE_IELE_INTRINSIC_INST(N, OPC, TXT) \
+#define HANDLE_IELE_INST(N, OPC, TXT) \
   case IeleInstruction::OPC: OS << TXT; break;
 #include "IeleInstruction.def"
 
@@ -377,26 +373,68 @@ static void printOpcode(llvm::raw_ostream &OS, const IeleInstruction *I) {
   }
 }
 
-static void printCallAt(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = call ";
-  auto It = I->begin();
-  OS << "@" << (*It)->getName(); ++It;
-  OS << " at ";
-  (*It)->printAsValue(OS); ++It;
-  auto SavedIt = It; ++It; ++It;
-  OS << " (";
+static void printCall(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  // print lvalues
   bool isFirst = true;
+  for (auto It = I->lvalue_begin(); It != I->lvalue_end(); ++It) {
+    if (!isFirst)
+      OS << ", ";
+    (*It)->printAsValue(OS);
+    isFirst = false;
+  }
+
+  // print opcode
+  if (I->lvalue_size())
+    OS << " = ";
+  printOpcode(OS, I);
+  OS << " ";
+
+  // print call target
+  auto It = I->begin();
+  (*It)->printAsValue(OS); ++It;
+
+  // in case of account calls, print called account
+  if (I->getOpcode() == IeleInstruction::CallAt ||
+      I->getOpcode() == IeleInstruction::StaticCallAt) {
+    OS << " at ";
+    (*It)->printAsValue(OS);
+    ++It;
+    OS << " ";
+  }
+
+  // Skip send and gaslimit arguments, in case of creation or account call
+  auto SavedIt = It;
+  ++It;
+  if (I->getOpcode() == IeleInstruction::CallAt)
+    ++It;
+
+  // print operands
+  OS << "(";
+  isFirst = true;
   for (; It != I->end(); ++It) {
     if (!isFirst)
       OS << ", ";
     (*It)->printAsValue(OS);
     isFirst = false;
   }
-  OS << ") send ";
-  (*SavedIt)->printAsValue(OS); ++SavedIt;
-  OS << ", gaslimit ";
-  (*SavedIt)->printAsValue(OS);
+  OS << ")";
+
+  // print send
+  if (I->getOpcode() != IeleInstruction::Call &&
+      I->getOpcode() != IeleInstruction::StaticCallAt) {
+    OS << " send ";
+    (*SavedIt)->printAsValue(OS);
+    ++SavedIt;
+  }
+  
+  // print gaslimit
+  if (I->getOpcode() == IeleInstruction::CallAt)
+    OS << ",";
+  if (I->getOpcode() == IeleInstruction::CallAt ||
+      I->getOpcode() == IeleInstruction::StaticCallAt) {
+    OS << " gaslimit ";
+    (*SavedIt)->printAsValue(OS);
+  }
 }
 
 static void printIntrinsic(llvm::raw_ostream &OS, const IeleInstruction *I) {
@@ -463,10 +501,12 @@ void IeleInstruction::print(llvm::raw_ostream &OS, unsigned indent) const {
   case OPC: printIntrinsic(OS, this); break;
 #include "IeleInstruction.def"
 
-  case CallAt: printCallAt(OS, this); break;
+#define HANDLE_IELE_CALL_INST(N, OPC, TXT) \
+  case OPC: printCall(OS, this); break;
+#include "IeleInstruction.def"
 
   default:
-    assert(false && "not implemented yet");
+    assert(false && "unreachable");
   }
 }
 
