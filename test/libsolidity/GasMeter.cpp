@@ -70,7 +70,7 @@ public:
 		// costs for deployment
 		gas += bytecodeSize * GasCosts::createDataGas;
 		// costs for transaction
-		gas += gasForTransaction(m_compiler.object(m_compiler.lastContractName()).bytecode, true);
+		gas += gasForTransaction(m_compiler.object(m_compiler.lastContractName()).bytecode, vector<bytes>());
 
 		BOOST_REQUIRE(!gas.isInfinite);
 		BOOST_CHECK(gas.value == m_gasUsed);
@@ -78,16 +78,15 @@ public:
 
 	/// Compares the gas computed by PathGasMeter for the given signature (but unknown arguments)
 	/// against the actual gas usage computed by the VM on the given set of argument variants.
-	void testRunTimeGas(string const& _sig, vector<bytes> _argumentVariants)
+	void testRunTimeGas(string const& _sig, vector<vector<bytes>> _argumentVariants)
 	{
 		u256 gasUsed = 0;
 		GasMeter::GasConsumption gas;
-		FixedHash<4> hash(dev::keccak256(_sig));
-		for (bytes const& arguments: _argumentVariants)
+		for (vector<bytes> const& arguments: _argumentVariants)
 		{
-			sendMessage(hash.asBytes() + arguments, false, 0);
+			callContractFunctionNoEncoding(_sig, arguments);
 			gasUsed = max(gasUsed, m_gasUsed);
-			gas = max(gas, gasForTransaction(hash.asBytes() + arguments, false));
+			gas = max(gas, gasForTransaction(_sig, arguments));
 		}
 
 		gas += GasEstimator::functionalEstimation(
@@ -98,10 +97,20 @@ public:
 		BOOST_CHECK(gas.value == m_gasUsed);
 	}
 
-	static GasMeter::GasConsumption gasForTransaction(bytes const& _data, bool _isCreation)
+	static GasMeter::GasConsumption gasForTransaction(bytes const& _data, vector<bytes> const& _arguments)
 	{
-		GasMeter::GasConsumption gas = _isCreation ? GasCosts::txCreateGas : GasCosts::txGas;
-		for (auto i: _data)
+		GasMeter::GasConsumption gas = GasCosts::txCreateGas;
+		bytes txData = rlpEncode(_data, _arguments);	
+		for (auto i: txData)
+			gas += i != 0 ? GasCosts::txDataNonZeroGas : GasCosts::txDataZeroGas;
+		return gas;
+	}
+
+	static GasMeter::GasConsumption gasForTransaction(string const& _sig, vector<bytes> const& _arguments)
+	{
+		GasMeter::GasConsumption gas = GasCosts::txGas;
+		bytes txData = rlpEncode(asBytes(_sig), _arguments);
+		for (auto i: txData)
 			gas += i != 0 ? GasCosts::txDataNonZeroGas : GasCosts::txDataZeroGas;
 		return gas;
 	}
@@ -202,7 +211,7 @@ BOOST_AUTO_TEST_CASE(branches)
 		}
 	)";
 	testCreationTimeGas(sourceCode);
-	testRunTimeGas("f(uint256)", vector<bytes>{encodeArgs(2), encodeArgs(8)});
+	testRunTimeGas("f(uint256)", vector<vector<bytes>>{encodeArgs(2), encodeArgs(8)});
 }
 
 BOOST_AUTO_TEST_CASE(function_calls)
@@ -223,7 +232,7 @@ BOOST_AUTO_TEST_CASE(function_calls)
 		}
 	)";
 	testCreationTimeGas(sourceCode);
-	testRunTimeGas("f(uint256)", vector<bytes>{encodeArgs(2), encodeArgs(8)});
+	testRunTimeGas("f(uint256)", vector<vector<bytes>>{encodeArgs(2), encodeArgs(8)});
 }
 
 BOOST_AUTO_TEST_CASE(multiple_external_functions)
@@ -244,8 +253,8 @@ BOOST_AUTO_TEST_CASE(multiple_external_functions)
 		}
 	)";
 	testCreationTimeGas(sourceCode);
-	testRunTimeGas("f(uint256)", vector<bytes>{encodeArgs(2), encodeArgs(8)});
-	testRunTimeGas("g(uint256)", vector<bytes>{encodeArgs(2)});
+	testRunTimeGas("f(uint256)", vector<vector<bytes>>{encodeArgs(2), encodeArgs(8)});
+	testRunTimeGas("g(uint256)", vector<vector<bytes>>{encodeArgs(2)});
 }
 
 BOOST_AUTO_TEST_CASE(exponent_size)
@@ -261,8 +270,8 @@ BOOST_AUTO_TEST_CASE(exponent_size)
 		}
 	)";
 	testCreationTimeGas(sourceCode);
-	testRunTimeGas("g(uint256)", vector<bytes>{encodeArgs(2)});
-	testRunTimeGas("h(uint256)", vector<bytes>{encodeArgs(2)});
+	testRunTimeGas("g(uint256)", vector<vector<bytes>>{encodeArgs(2)});
+	testRunTimeGas("h(uint256)", vector<vector<bytes>>{encodeArgs(2)});
 }
 
 BOOST_AUTO_TEST_CASE(balance_gas)
@@ -275,7 +284,7 @@ BOOST_AUTO_TEST_CASE(balance_gas)
 		}
 	)";
 	testCreationTimeGas(sourceCode);
-	testRunTimeGas("lookup_balance(address)", vector<bytes>{encodeArgs(2), encodeArgs(100)});
+	testRunTimeGas("lookup_balance(address)", vector<vector<bytes>>{encodeArgs(2), encodeArgs(100)});
 }
 
 BOOST_AUTO_TEST_CASE(extcodesize_gas)
@@ -290,7 +299,7 @@ BOOST_AUTO_TEST_CASE(extcodesize_gas)
 		}
 	)";
 	testCreationTimeGas(sourceCode);
-	testRunTimeGas("f()", vector<bytes>{encodeArgs()});
+	testRunTimeGas("f()", vector<vector<bytes>>{encodeArgs()});
 }
 
 BOOST_AUTO_TEST_SUITE_END()

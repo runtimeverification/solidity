@@ -48,13 +48,16 @@ public:
 		std::string const& _sourceCode,
 		u256 const& _value = 0,
 		std::string const& _contractName = "",
-		bytes const& _arguments = bytes(),
+		std::vector<bytes> const& _arguments = std::vector<bytes>(),
 		std::map<std::string, dev::test::Address> const& _libraryAddresses = std::map<std::string, dev::test::Address>()
 	) override
 	{
-		bytes bytecode = compileContract(_sourceCode, _contractName, _libraryAddresses);
-		sendMessage(bytecode + _arguments, true, _value);
-		return m_output;
+		bytes const& bytecode = compileContract(_sourceCode, _contractName, _libraryAddresses);
+		sendMessage(_arguments, "", bytecode, true, _value);
+		if (m_status.empty()) {
+			return m_status;
+		}
+		return bytecode;
 	}
 
 	bytes compileContract(

@@ -56,7 +56,7 @@ public:
 		std::string const& _sourceCode,
 		u256 const& _value = 0,
 		std::string const& _contractName = "",
-		bytes const& _arguments = bytes(),
+		std::vector<bytes> const& _arguments = std::vector<bytes>(),
 		std::map<std::string, Address> const& _libraryAddresses = std::map<std::string, Address>()
 	) = 0;
 
@@ -64,46 +64,47 @@ public:
 		std::string const& _sourceCode,
 		u256 const& _value = 0,
 		std::string const& _contractName = "",
-		bytes const& _arguments = bytes(),
+		std::vector<bytes> const& _arguments = std::vector<bytes>(),
 		std::map<std::string, Address> const& _libraryAddresses = std::map<std::string, Address>()
 	)
 	{
-		compileAndRunWithoutCheck(_sourceCode, _value, _contractName, _arguments, _libraryAddresses);
-		BOOST_REQUIRE(!m_output.empty());
-		return m_output;
+		bytes const& ret = compileAndRunWithoutCheck(_sourceCode, _value, _contractName, _arguments, _libraryAddresses);
+		BOOST_REQUIRE(!ret.empty());
+		return ret;
 	}
 
-	bytes const& callFallbackWithValue(u256 const& _value)
+	std::vector<bytes> const& callFallbackWithValue(u256 const& _value)
 	{
-		sendMessage(bytes(), false, _value);
+		sendMessage(std::vector<bytes>(), "deposit", bytes(), false, _value);
 		return m_output;
 	}
 
-	bytes const & callFallback()
+	std::vector<bytes> const & callFallback()
 	{
 		return callFallbackWithValue(0);
 	}
 
-	bytes const& callContractFunctionWithValueNoEncoding(std::string _sig, u256 const& _value, bytes const& _arguments)
+	std::vector<bytes> const& callContractFunctionWithValueNoEncoding(std::string _sig, u256 const& _value, std::vector<bytes> const& _arguments)
 	{
+		//TODO: handle overloading correctly
 		FixedHash<4> hash(dev::keccak256(_sig));
-		sendMessage(hash.asBytes() + _arguments, false, _value);
+		sendMessage(_arguments, _sig, bytes(), false, _value);
 		return m_output;
 	}
 
-	bytes const& callContractFunctionNoEncoding(std::string _sig, bytes const& _arguments)
+	std::vector<bytes> const& callContractFunctionNoEncoding(std::string _sig, std::vector<bytes> const& _arguments)
 	{
 		return callContractFunctionWithValueNoEncoding(_sig, 0, _arguments);
 	}
 
 	template <class... Args>
-	bytes const& callContractFunctionWithValue(std::string _sig, u256 const& _value, Args const&... _arguments)
+	std::vector<bytes> const& callContractFunctionWithValue(std::string _sig, u256 const& _value, Args const&... _arguments)
 	{
 		return callContractFunctionWithValueNoEncoding(_sig, _value, encodeArgs(_arguments...));
 	}
 
 	template <class... Args>
-	bytes const& callContractFunction(std::string _sig, Args const&... _arguments)
+	std::vector<bytes> const& callContractFunction(std::string _sig, Args const&... _arguments)
 	{
 		return callContractFunctionWithValue(_sig, 0, _arguments...);
 	}
@@ -111,14 +112,11 @@ public:
 	template <class CppFunction, class... Args>
 	void testContractAgainstCpp(std::string _sig, CppFunction const& _cppFunction, Args const&... _arguments)
 	{
-		bytes contractResult = callContractFunction(_sig, _arguments...);
-		bytes cppResult = callCppAndEncodeResult(_cppFunction, _arguments...);
+		std::vector<bytes> contractResult = callContractFunction(_sig, _arguments...);
+		std::vector<bytes> cppResult = callCppAndEncodeResult(_cppFunction, _arguments...);
 		BOOST_CHECK_MESSAGE(
 			contractResult == cppResult,
-			"Computed values do not match.\nContract: " +
-				toHex(contractResult) +
-				"\nC++:      " +
-				toHex(cppResult)
+			"Computed values do not match.\nContract: "
 		);
 	}
 
@@ -127,21 +125,18 @@ public:
 	{
 		for (u256 argument = _rangeStart; argument < _rangeEnd; ++argument)
 		{
-			bytes contractResult = callContractFunction(_sig, argument);
-			bytes cppResult = callCppAndEncodeResult(_cppFunction, argument);
+			std::vector<bytes> contractResult = callContractFunction(_sig, argument);
+			std::vector<bytes> cppResult = callCppAndEncodeResult(_cppFunction, argument);
 			BOOST_CHECK_MESSAGE(
 				contractResult == cppResult,
 				"Computed values do not match.\nContract: " +
-					toHex(contractResult) +
-					"\nC++:      " +
-					toHex(cppResult) +
-					"\nArgument: " +
+					std::string("\nArgument: ") +
 					toHex(encode(argument))
 			);
 		}
 	}
 
-	static std::pair<bool, std::string> compareAndCreateMessage(bytes const& _result, bytes const& _expectation);
+	static std::pair<bool, std::string> compareAndCreateMessage(std::vector<bytes> const& _result, std::vector<bytes> const& _expectation);
 
 	static bytes encode(bool _value) { return encode(byte(_value)); }
 	static bytes encode(int _value) { return encode(u256(_value)); }
@@ -174,39 +169,87 @@ public:
 	}
 
 	template <class FirstArg, class... Args>
-	static bytes encodeArgs(FirstArg const& _firstArg, Args const&... _followingArgs)
+	static std::vector<bytes> encodeArgs(FirstArg const& _firstArg, Args const&... _followingArgs)
 	{
-		return encode(_firstArg) + encodeArgs(_followingArgs...);
+		return std::vector<bytes>(1, encode(_firstArg)) + encodeArgs(_followingArgs...);
 	}
-	static bytes encodeArgs()
+	static std::vector<bytes> encodeArgs()
+	{
+		return std::vector<bytes>();
+	}
+	template <class FirstArg, class... Args>
+	static bytes encodeLogs(FirstArg const& _firstArg, Args const&... _followingArgs)
+	{
+		return encode(_firstArg) + encodeLogs(_followingArgs...);
+	}
+	static bytes encodeLogs()
 	{
 		return bytes();
 	}
 
 	//@todo might be extended in the future
 	template <class Arg>
-	static bytes encodeDyn(Arg const& _arg)
+	static std::vector<bytes> encodeDyn(Arg const& _arg)
 	{
 		return encodeArgs(u256(0x20), u256(_arg.size()), _arg);
+	}
+
+	static bytes rlpEncode(bytes const& _first, std::vector<bytes> const& _second)
+	{
+		return rlpEncodeLength(rlpEncode(_first) + rlpEncode(_second), 0xc0);
+	}
+		
+	static bytes rlpEncode(std::vector<bytes> const& _list)
+	{
+		bytes ret;
+		for (bytes item : _list) {
+			ret += rlpEncode(item);
+		}
+		return rlpEncodeLength(ret, 0xc0);
+	}
+
+	static bytes rlpEncode(bytes const& _str)
+	{
+		if (_str.size() == 1 && _str[0] <= 0x7f) {
+			return _str;
+		}
+		return rlpEncodeLength(_str, 0x80);
 	}
 
 private:
 	template <class CppFunction, class... Args>
 	auto callCppAndEncodeResult(CppFunction const& _cppFunction, Args const&... _arguments)
-	-> typename std::enable_if<std::is_void<decltype(_cppFunction(_arguments...))>::value, bytes>::type
+	-> typename std::enable_if<std::is_void<decltype(_cppFunction(_arguments...))>::value, std::vector<bytes>>::type
 	{
 		_cppFunction(_arguments...);
-		return bytes();
+		return std::vector<bytes>();
 	}
 	template <class CppFunction, class... Args>
 	auto callCppAndEncodeResult(CppFunction const& _cppFunction, Args const&... _arguments)
-	-> typename std::enable_if<!std::is_void<decltype(_cppFunction(_arguments...))>::value, bytes>::type
+	-> typename std::enable_if<!std::is_void<decltype(_cppFunction(_arguments...))>::value, std::vector<bytes>>::type
 	{
-		return encode(_cppFunction(_arguments...));
+		return encodeArgs(_cppFunction(_arguments...));
+	}
+
+	static bytes rlpEncodeLength(bytes const& _str, byte const& offset)
+	{
+		if (_str.size() <= 55) {
+			return bytes(1, offset+_str.size()) + _str;
+		}
+		bytes len = sizeToBigEndian(_str.size());
+		return bytes(1, offset+55+len.size()) + len + _str;
+	}
+
+	static bytes sizeToBigEndian(size_t _val)
+	{
+		if (_val == 0) {
+			return bytes();
+		}
+		return sizeToBigEndian(_val / 256) + bytes(1, _val % 256);
 	}
 
 protected:
-	void sendMessage(bytes const& _data, bool _isCreation, u256 const& _value = 0);
+	void sendMessage(std::vector<bytes> const& _arguments, std::string _function, bytes const& _data, bool _isCreation, u256 const& _value = 0);
 	void sendEther(Address const& _to, u256 const& _value);
 	size_t currentTimestamp();
 	size_t blockTimestamp(u256 _number);
@@ -235,7 +278,8 @@ protected:
 	u256 m_blockNumber;
 	u256 const m_gasPrice = 100 * szabo;
 	u256 const m_gas = 100000000;
-	bytes m_output;
+	std::vector<bytes> m_output;
+	bytes m_status;
 	std::vector<LogEntry> m_logs;
 	u256 m_gasUsed;
 };

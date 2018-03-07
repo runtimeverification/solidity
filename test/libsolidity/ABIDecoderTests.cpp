@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(fixed_arrays)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		bytes args = encodeArgs(
+		std::vector<bytes> args = encodeArgs(
 			1, 2, 3,
 			11, 12,
 			21, 22,
@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE(dynamic_arrays)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		bytes args = encodeArgs(
+		std::vector<bytes> args = encodeArgs(
 			6, 0x60, 9,
 			7,
 			11, 12, 13, 14, 15, 16, 17
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(dynamic_nested_arrays)
 	)";
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
-		bytes args = encodeArgs(
+		std::vector<bytes> args = encodeArgs(
 			0x12, 4 * 0x20, 17 * 0x20, 0x13,
 			// b
 			3, 3 * 0x20, 6 * 0x20, 11 * 0x20,
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(dynamic_nested_arrays)
 			0
 		);
 
-		bytes expectation = encodeArgs(0x12, 3, 4, 0x66, 5, 0x85, 0x13);
+		std::vector<bytes> expectation = encodeArgs(0x12, 3, 4, 0x66, 5, 0x85, 0x13);
 		ABI_CHECK(callContractFunction("test()"), expectation);
 		ABI_CHECK(callContractFunction("f(uint256,uint16[][],uint256[2][][3],uint256)", args), expectation);
 	)
@@ -242,7 +242,7 @@ BOOST_AUTO_TEST_CASE(byte_arrays)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		bytes args = encodeArgs(
+		std::vector<bytes> args = encodeArgs(
 			6, 0x60, 9,
 			7, "abcdefg"
 		);
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE(calldata_arrays_too_large)
 	bool newEncoder = false;
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		bytes args = encodeArgs(
+		std::vector<bytes> args = encodeArgs(
 			6, 0x60, 9,
 			(u256(1) << 255) + 2, 1, 2
 		);
@@ -453,8 +453,8 @@ BOOST_AUTO_TEST_CASE(short_input_value_type)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		ABI_CHECK(callContractFunction("f(uint256,uint256)", 1, 2), encodeArgs(1));
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256,uint256)", bytes(64, 0)), encodeArgs(0));
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256,uint256)", bytes(63, 0)), newDecoder ? encodeArgs() : encodeArgs(0));
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256,uint256)", std::vector<bytes>(2, bytes(32, 0))), encodeArgs(0));
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256,uint256)", std::vector<bytes>(1, bytes(63, 0))), newDecoder ? encodeArgs() : encodeArgs(0));
 		newDecoder = true;
 	)
 }
@@ -471,8 +471,8 @@ BOOST_AUTO_TEST_CASE(short_input_array)
 		compileAndRun(sourceCode);
 		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 0)), encodeArgs(7));
 		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 1)), newDecoder ? encodeArgs() : encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 1) + bytes(31, 0)), newDecoder ? encodeArgs() : encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 1) + bytes(32, 0)), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 1) + std::vector<bytes>(1, bytes(31, 0))), newDecoder ? encodeArgs() : encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 1) + std::vector<bytes>(1, bytes(32, 0))), encodeArgs(7));
 		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 2, 5, 6)), encodeArgs(7));
 		newDecoder = true;
 	)
@@ -501,14 +501,14 @@ BOOST_AUTO_TEST_CASE(short_input_bytes)
 	)";
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
-		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + bytes(5, 0)), encodeArgs());
-		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + bytes(6, 0)), encodeArgs());
-		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + bytes(7, 0)), encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + bytes(8, 0)), encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + bytes(5, 0)), encodeArgs());
-		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + bytes(6, 0)), encodeArgs());
-		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + bytes(7, 0)), encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + bytes(8, 0)), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + std::vector<bytes>(1, bytes(5, 0))), encodeArgs());
+		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + std::vector<bytes>(1, bytes(6, 0))), encodeArgs());
+		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + std::vector<bytes>(1, bytes(7, 0))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + std::vector<bytes>(1, bytes(8, 0))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + std::vector<bytes>(1, bytes(5, 0))), encodeArgs());
+		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + std::vector<bytes>(1, bytes(6, 0))), encodeArgs());
+		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + std::vector<bytes>(1, bytes(7, 0))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + std::vector<bytes>(1, bytes(8, 0))), encodeArgs(7));
 	)
 }
 
@@ -565,7 +565,7 @@ BOOST_AUTO_TEST_CASE(storage_ptr)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode, 0, "L");
-		compileAndRun(sourceCode, 0, "C", bytes(), map<string, Address>{{"L", m_contractAddress}});
+		compileAndRun(sourceCode, 0, "C", std::vector<bytes>(), map<string, Address>{{"L", m_contractAddress}});
 		ABI_CHECK(callContractFunction("f()"), encodeArgs(8, 7, 1, 2, 7, 12));
 	)
 }
@@ -629,11 +629,11 @@ BOOST_AUTO_TEST_CASE(struct_short)
 			encodeArgs(0xff010, 0xff0002, "abcd")
 		);
 		ABI_CHECK(
-			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", encodeArgs(0xff010, 0xff0002) + bytes(32, 0)),
+			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", encodeArgs(0xff010, 0xff0002) + std::vector<bytes>(1, bytes(32, 0))),
 			encodeArgs(0xff010, 0xff0002, 0)
 		);
 		ABI_CHECK(
-			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", encodeArgs(0xff010, 0xff0002) + bytes(31, 0)),
+			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", encodeArgs(0xff010, 0xff0002) + std::vector<bytes>(1, bytes(31, 0))),
 			encodeArgs()
 		);
 	)
@@ -749,7 +749,7 @@ BOOST_AUTO_TEST_CASE(complex_struct)
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
 		string sig = "f(uint256,(address,(uint256,uint8,uint8)[])[2],(address,(uint256,uint8,uint8)[])[],uint256)";
-		bytes args = encodeArgs(
+		std::vector<bytes> args = encodeArgs(
 			7, 0x80, 0x1e0, 8,
 			// S[2] s1
 			0x40,
@@ -780,7 +780,7 @@ BOOST_AUTO_TEST_CASE(complex_struct)
 		);
 		ABI_CHECK(callContractFunction(sig, args), encodeArgs(7, u256(u160(m_contractAddress)), 8, 2, 0x1234, 3, 2, 0x22));
 		// invalid enum value
-		args.data()[0x20 * 28] = 3;
+		args[28][0] = 3;
 		ABI_CHECK(callContractFunction(sig, args), encodeArgs());
 	)
 }

@@ -36,11 +36,19 @@ public:
 
 protected:
 	template <class... Args>
-	bytes const& call(std::string const& _sig, Args const&... _arguments)
+	std::vector<bytes> const& call(std::string const& _sig, Args const&... _arguments)
 	{
 		auto const& ret = m_framework.callContractFunctionWithValue(_sig, m_nextValue, _arguments...);
 		m_nextValue = 0;
 		return ret;
+	}
+
+	template <class... Args>
+	bytes const& callReturning(std::string const& _sig, Args const&... _arguments)
+	{
+		auto const& ret = call(_sig, _arguments...);
+		BOOST_REQUIRE(ret.size() == 1);
+		return ret[0];
 	}
 
 	void callString(std::string const& _name, std::string const& _arg)
@@ -65,7 +73,7 @@ protected:
 
 	u160 callStringReturnsAddress(std::string const& _name, std::string const& _arg)
 	{
-		bytes const& ret = call(_name + "(string)", u256(0x20), _arg.length(), _arg);
+		bytes const& ret = callReturning(_name + "(string)", u256(0x20), _arg.length(), _arg);
 		BOOST_REQUIRE(ret.size() == 0x20);
 		BOOST_CHECK(std::count(ret.begin(), ret.begin() + 12, 0) == 12);
 		return u160(u256(h256(ret)));
@@ -73,7 +81,7 @@ protected:
 
 	std::string callAddressReturnsString(std::string const& _name, u160 const& _arg)
 	{
-		bytesConstRef const ret(&call(_name + "(address)", _arg));
+		bytesConstRef const ret(&callReturning(_name + "(address)", _arg));
 		BOOST_REQUIRE(ret.size() >= 0x40);
 		u256 offset(h256(ret.cropped(0, 0x20)));
 		BOOST_REQUIRE_EQUAL(offset, 0x20);
@@ -84,7 +92,7 @@ protected:
 
 	h256 callStringReturnsBytes32(std::string const& _name, std::string const& _arg)
 	{
-		bytes const& ret = call(_name + "(string)", u256(0x20), _arg.length(), _arg);
+		bytes const& ret = callReturning(_name + "(string)", u256(0x20), _arg.length(), _arg);
 		BOOST_REQUIRE(ret.size() == 0x20);
 		return h256(ret);
 	}
