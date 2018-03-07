@@ -70,13 +70,84 @@ std::pair<bool, string> ExecutionFramework::compareAndCreateMessage(
 
 void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::string _function, bytes const& _data, bool _isCreation, u256 const& _value)
 {
-	// TODO: implement for IELE
+	if (m_showMessages)
+	{
+	        if (_isCreation) {
+	                cout << "CREATE " << m_sender.hex() << ":" << endl;
+			cout << " code:      " << toHex(_data) << endl;
+		}
+	        else {
+	                cout << "CALL   " << m_sender.hex() << " -> " << m_contractAddress.hex() << ":" << endl;
+			cout << " function:  " << _function << endl;
+		}
+	        if (_value > 0)
+	                cout << " value: " << _value << endl;
+		cout << " args:      [ ";
+		for (bytes arg : _arguments) {
+			cout << toHex(arg) << " ";
+		}
+		cout << "]" << endl;
+	}
+	RPCSession::TransactionData d;
+	d.data = "0x" + toHex(_data);
+	for (bytes const& arg : _arguments) {
+		d.arguments.push_back("0x" + toHex(arg));
+	}
+	d.function = _function;
+	d.from = "0x" + toString(m_sender);
+	d.gas = toHex(m_gas, HexPrefix::Add);
+	d.gasPrice = toHex(m_gasPrice, HexPrefix::Add);
+	d.value = toHex(_value, HexPrefix::Add);
+	if (!_isCreation)
+	{
+	        d.to = dev::toString(m_contractAddress);
+	        BOOST_REQUIRE(m_rpc.eth_getCode(d.to, "latest").size() > 2);
+	}
+
+	string txHash = m_rpc.eth_sendTransaction(d);
+	m_rpc.test_mineBlocks(1);
+	RPCSession::TransactionReceipt receipt(m_rpc.eth_getTransactionReceipt(txHash));
+	m_output.clear();
+	for (string const& output : receipt.output) {
+		m_output.push_back(fromHex(output, WhenError::Throw));
+	}
+
+	m_blockNumber = u256(receipt.blockNumber);
+
+	if (_isCreation)
+	{
+	        m_contractAddress = Address(receipt.output[0]);
+	        BOOST_REQUIRE(m_contractAddress);
+	}
+
+	if (m_showMessages)
+	{
+	        cout << " out:     [ ";
+		for (bytes const& output : m_output) {
+			cout << toHex(output) << " ";
+		}
+		cout << "]" << endl;
+	        cout << " tx hash: " << txHash << endl;
+	}
+
+	m_gasUsed = u256(receipt.gasUsed);
+	m_logs.clear();
+	for (auto const& log: receipt.logEntries)
+	{
+	        LogEntry entry;
+	        entry.address = Address(log.address);
+	        for (auto const& topic: log.topics)
+	                entry.topics.push_back(h256(topic));
+	        entry.data = fromHex(log.data, WhenError::Throw);
+	        m_logs.push_back(entry);
+	}
 }
 
 void ExecutionFramework::sendEther(Address const& _to, u256 const& _value)
 {
 	RPCSession::TransactionData d;
 	d.data = "0x";
+	d.function = "deposit";
 	d.from = "0x" + toString(m_sender);
 	d.gas = toHex(m_gas, HexPrefix::Add);
 	d.gasPrice = toHex(m_gasPrice, HexPrefix::Add);
@@ -89,14 +160,14 @@ void ExecutionFramework::sendEther(Address const& _to, u256 const& _value)
 
 size_t ExecutionFramework::currentTimestamp()
 {
-	auto latestBlock = m_rpc.eth_getBlockByNumber("latest", false);
-	return size_t(u256(latestBlock.get("timestamp", "invalid").asString()));
+	auto timestamp = m_rpc.eth_getTimestamp("latest");
+	return size_t(u256(timestamp));
 }
 
 size_t ExecutionFramework::blockTimestamp(u256 _number)
 {
-	auto latestBlock = m_rpc.eth_getBlockByNumber(toString(_number), false);
-	return size_t(u256(latestBlock.get("timestamp", "invalid").asString()));
+	auto timestamp = m_rpc.eth_getTimestamp(toString(_number));
+	return size_t(u256(timestamp));
 }
 
 Address ExecutionFramework::account(size_t _i)
@@ -117,7 +188,5 @@ u256 ExecutionFramework::balanceAt(Address const& _addr)
 
 bool ExecutionFramework::storageEmpty(Address const& _addr)
 {
-	h256 root(m_rpc.eth_getStorageRoot(toString(_addr), "latest"));
-	BOOST_CHECK(root);
-	return root == EmptyTrie;
+	return m_rpc.eth_isStorageEmpty(toString(_addr), "latest");
 }

@@ -83,6 +83,8 @@ public:
 		std::string gasPrice;
 		std::string value;
 		std::string data;
+		std::string function;
+		std::vector<std::string> arguments;
 
 		std::string toJson() const;
 	};
@@ -96,29 +98,26 @@ public:
 	struct TransactionReceipt
 	{
 		std::string gasUsed;
-		std::string contractAddress;
+		std::string status;
 		std::vector<LogEntry> logEntries;
 		std::string blockNumber;
+		std::vector<std::string> output;
 	};
 
 	static RPCSession& instance(std::string const& _path);
 
 	std::string eth_getCode(std::string const& _address, std::string const& _blockNumber);
-	Json::Value eth_getBlockByNumber(std::string const& _blockNumber, bool _fullObjects);
-	std::string eth_call(TransactionData const& _td, std::string const& _blockNumber);
+	std::string eth_getTimestamp(std::string const& _blockNumber);
 	TransactionReceipt eth_getTransactionReceipt(std::string const& _transactionHash);
 	std::string eth_sendTransaction(TransactionData const& _td);
 	std::string eth_sendTransaction(std::string const& _transaction);
 	std::string eth_getBalance(std::string const& _address, std::string const& _blockNumber);
-	std::string eth_getStorageRoot(std::string const& _address, std::string const& _blockNumber);
-	std::string personal_newAccount(std::string const& _password);
-	void personal_unlockAccount(std::string const& _address, std::string const& _password, int _duration);
-	void test_setChainParams(std::vector<std::string> const& _accounts);
-	void test_setChainParams(std::string const& _config);
+	bool eth_isStorageEmpty(std::string const& _address, std::string const& _blockNumber);
 	void test_rewindToBlock(size_t _blockNr);
 	void test_modifyTimestamp(size_t _timestamp);
 	void test_mineBlocks(int _number);
-	Json::Value rpcCall(std::string const& _methodName, std::vector<std::string> const& _args = std::vector<std::string>(), bool _canFail = false);
+
+	bool miner_setEtherbase(std::string const& _address);
 
 	std::string const& account(size_t _id) const { return m_accounts.at(_id); }
 	std::string const& accountCreate();
@@ -126,6 +125,10 @@ public:
 
 private:
 	explicit RPCSession(std::string const& _path);
+
+	Json::Value rpcCall(std::string const& _methodName, std::vector<std::string> const& _args = std::vector<std::string>(), bool _canFail = false);
+	std::string personal_newAccount();
+	void test_setBalance(std::vector<std::string> _accounts, std::string _balance);
 
 	inline std::string quote(std::string const& _arg) { return "\"" + _arg + "\""; }
 	/// Parse std::string replacing keywords to values

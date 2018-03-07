@@ -1489,7 +1489,7 @@ BOOST_AUTO_TEST_CASE(blockchain)
 			}
 		}
 	)";
-	BOOST_CHECK(m_rpc.rpcCall("miner_setEtherbase", {"\"0x1212121212121212121212121212121212121212\""}).asBool() == true);
+	BOOST_CHECK(m_rpc.miner_setEtherbase("0x1212121212121212121212121212121212121212") == true);
 	m_rpc.test_mineBlocks(5);
 	compileAndRun(sourceCode, 27);
 	ABI_CHECK(callContractFunctionWithValue("someInfo()", 28), encodeArgs(28, u256("0x1212121212121212121212121212121212121212"), 7));
