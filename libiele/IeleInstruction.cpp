@@ -362,197 +362,130 @@ IeleInstruction *IeleInstruction::CreateBinOp(
   return BinOpInst;
 }
 
-static void printRet(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  OS << "ret ";
-  if (I->getIeleOperandList().empty())
-    OS << "void";
-  else {
-    bool isFirst = true;
-    for (const IeleValue *V : I->operands()) {
-      if (!isFirst)
-        OS << ", ";
-      V->printAsValue(OS);
-      isFirst = false;
-    }
+static void printOpcode(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  switch (I->getOpcode()) {
+#define HANDLE_IELE_INST(N, OPC, TXT) \
+  case IeleInstruction::OPC: OS << TXT; break;
+#include "IeleInstruction.def"
+
+  default:
+    assert(false && "unreachable");
   }
 }
 
-static void printRevert(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  OS << "revert ";
-  (*I->begin())->printAsValue(OS);
-}
-
-static void printIsZero(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = iszero ";
-  (*I->begin())->printAsValue(OS);
-}
-
-static void printBr(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  OS << "br ";
-  if (I->size() == 2) {
-    (*I->begin())->printAsValue(OS);
-    OS << ", " << (*(++I->begin()))->getName();
-  } else {
-    OS << (*I->begin())->getName();
-  }
-}
-
-static void printCallAt(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = call ";
-  auto It = I->begin();
-  OS << "@" << (*It)->getName(); ++It;
-  OS << " at ";
-  (*It)->printAsValue(OS); ++It;
-  auto SavedIt = It; ++It; ++It;
-  OS << " (";
+static void printCall(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  // print lvalues
   bool isFirst = true;
+  for (auto It = I->lvalue_begin(); It != I->lvalue_end(); ++It) {
+    if (!isFirst)
+      OS << ", ";
+    (*It)->printAsValue(OS);
+    isFirst = false;
+  }
+
+  // print opcode
+  if (I->lvalue_size())
+    OS << " = ";
+  printOpcode(OS, I);
+  OS << " ";
+
+  // print call target
+  auto It = I->begin();
+  (*It)->printAsValue(OS); ++It;
+
+  // in case of account calls, print called account
+  if (I->getOpcode() == IeleInstruction::CallAt ||
+      I->getOpcode() == IeleInstruction::StaticCallAt) {
+    OS << " at ";
+    (*It)->printAsValue(OS);
+    ++It;
+    OS << " ";
+  }
+
+  // Skip send and gaslimit arguments, in case of creation or account call
+  auto SavedIt = It;
+  ++It;
+  if (I->getOpcode() == IeleInstruction::CallAt)
+    ++It;
+
+  // print operands
+  OS << "(";
+  isFirst = true;
   for (; It != I->end(); ++It) {
     if (!isFirst)
       OS << ", ";
     (*It)->printAsValue(OS);
     isFirst = false;
   }
-  OS << ") send ";
-  (*SavedIt)->printAsValue(OS); ++SavedIt;
-  OS << ", gaslimit ";
-  (*SavedIt)->printAsValue(OS);
+  OS << ")";
+
+  // print send
+  if (I->getOpcode() != IeleInstruction::Call &&
+      I->getOpcode() != IeleInstruction::StaticCallAt) {
+    OS << " send ";
+    (*SavedIt)->printAsValue(OS);
+    ++SavedIt;
+  }
+  
+  // print gaslimit
+  if (I->getOpcode() == IeleInstruction::CallAt)
+    OS << ",";
+  if (I->getOpcode() == IeleInstruction::CallAt ||
+      I->getOpcode() == IeleInstruction::StaticCallAt) {
+    OS << " gaslimit ";
+    (*SavedIt)->printAsValue(OS);
+  }
 }
 
-static void printAssign(llvm::raw_ostream &OS, const IeleInstruction *I) {
+static void printIntrinsic(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  // print lvalue
   (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = ";
-  (*I->begin())->printAsValue(OS);
+
+  // print opcode
+  OS << " = call ";
+  printOpcode(OS, I);
+
+  // print operands
+  OS << "(";
+  bool isFirst = true;
+  for (auto It = I->begin(); It != I->end(); ++It) {
+    if (!isFirst)
+      OS << ", ";
+    (*It)->printAsValue(OS);
+    isFirst = false;
+  }
+  OS << ")";
 }
 
-static void printSLoad(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = sload ";
-  (*I->begin())->printAsValue(OS);
-}
+static void printOtherInst(llvm::raw_ostream &OS, const IeleInstruction *I) {
+  // print lvalues
+  bool isFirst = true;
+  for (auto It = I->lvalue_begin(); It != I->lvalue_end(); ++It) {
+    if (!isFirst)
+      OS << ", ";
+    (*It)->printAsValue(OS);
+    isFirst = false;
+  }
 
-static void printSStore(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  OS << "sstore ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
+  // print opcode
+  if (I->lvalue_size())
+    OS << " = ";
+  printOpcode(OS, I);
 
-static void printAdd(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = add ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
+  // print operands
+  isFirst = true;
+  for (auto It = I->begin(); It != I->end(); ++It) {
+    if (!isFirst)
+      OS << ", ";
+    else if (I->getOpcode() != IeleInstruction::Assign)
+      OS << " ";
+    (*It)->printAsValue(OS);
+    isFirst = false;
+  }
 
-static void printMul(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = mul ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printSub(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = sub ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printDiv(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = div ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printExp(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = exp ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printMod(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = mod ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printCmpEq(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = cmp eq ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printCmpNe(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = cmp ne ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printCmpLt(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = cmp lt ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printCmpLe(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = cmp le ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printCmpGt(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = cmp gt ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printCmpGe(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = cmp ge ";
-  (*I->begin())->printAsValue(OS);
-  OS << ", ";
-  (*(++I->begin()))->printAsValue(OS);
-}
-
-static void printTimestamp(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = call @iele.timestamp() ";
-}
-
-static void printCaller(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = call @iele.caller() ";
-}
-
-static void printCallvalue(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = call @iele.callvalue() ";
-}
-
-static void printGaslimit(llvm::raw_ostream &OS, const IeleInstruction *I) {
-  (*I->lvalue_begin())->printAsValue(OS);
-  OS << " = call @iele.gaslimit() ";
+  // In case of ret, check for no operands
+  if (I->getOpcode() == IeleInstruction::Ret && I->size() == 0)
+    OS << " void";
 }
 
 void IeleInstruction::print(llvm::raw_ostream &OS, unsigned indent) const {
@@ -560,34 +493,20 @@ void IeleInstruction::print(llvm::raw_ostream &OS, unsigned indent) const {
   OS << Indent;
 
   switch (getOpcode()) {
-    case Ret: printRet(OS, this); break;
-    case Revert: printRevert(OS, this); break;
-    case IsZero: printIsZero(OS, this); break;
-    case Br: printBr(OS, this); break;
-    case CallAt: printCallAt(OS, this); break;
-    case Assign: printAssign(OS, this); break;
-    case SLoad: printSLoad(OS, this); break;
-    case SStore: printSStore(OS, this); break;
-    case Add: printAdd(OS, this); break;
-    case Mul: printMul(OS, this); break;
-    case Sub: printSub(OS, this); break;
-    case Div: printDiv(OS, this); break;
-    case Exp: printExp(OS, this); break;
-    case Mod: printMod(OS, this); break;
-    case CmpEq: printCmpEq(OS, this); break;
-    case CmpNe: printCmpNe(OS, this); break;
-    case CmpLt: printCmpLt(OS, this); break;
-    case CmpLe: printCmpLe(OS, this); break;
-    case CmpGt: printCmpGt(OS, this); break;
-    case CmpGe: printCmpGe(OS, this); break;
-    case Timestamp: printTimestamp(OS, this); break;
-    case Caller: printCaller(OS, this); break;
-    case Callvalue: printCallvalue(OS, this); break;
-    case Gaslimit: printGaslimit(OS, this); break;
-    default:
-      assert(false && "not implemented yet");
-//#define HANDLE_IELE_INST(N, OPC) case OPC: print##OPC(OS, this); break;
-//#include "IeleInstruction.def"
+#define HANDLE_IELE_OTHER_INST(N, OPC, TXT) \
+  case OPC: printOtherInst(OS, this); break;
+#include "IeleInstruction.def"
+
+#define HANDLE_IELE_INTRINSIC_INST(N, OPC, TXT) \
+  case OPC: printIntrinsic(OS, this); break;
+#include "IeleInstruction.def"
+
+#define HANDLE_IELE_CALL_INST(N, OPC, TXT) \
+  case OPC: printCall(OS, this); break;
+#include "IeleInstruction.def"
+
+  default:
+    assert(false && "unreachable");
   }
 }
 

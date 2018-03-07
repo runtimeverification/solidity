@@ -33,7 +33,7 @@ public:
 
   // Enumeration of instruction opcodes
   enum IeleOps {
-#define HANDLE_IELE_INST(N, OPC) OPC = N,
+#define HANDLE_IELE_INST(N, OPC, TXT) OPC = N,
 #include "IeleInstruction.def"
   };
 

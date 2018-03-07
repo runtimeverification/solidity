@@ -3,83 +3,131 @@
 // Provide definitions of macros so that users of this file do not have to
 // define everything to use it...
 //
-#if !(defined HANDLE_IELE_INST || defined FIRST_IELE_INSTRINSIC_INST ||       \
-      defined LAST_IELE_INSTRINSIC_INST)
-#error "Missing macro definition of HANDLE_IELE_INST"
-#endif
 
 #ifndef FIRST_IELE_INTRINSIC_INST
 #define FIRST_IELE_INTRINSIC_INST(num)
 #endif
 #ifndef HANDLE_IELE_INTRINSIC_INST
-#define HANDLE_IELE_INTRINSIC_INST(num, opcode)
+#ifndef HANDLE_IELE_INST
+#define HANDLE_IELE_INTRINSIC_INST(num, opcode, text)
+#else
+#define HANDLE_IELE_INTRINSIC_INST(num, opcode, text) \
+        HANDLE_IELE_INST(num, opcode, text)
+#endif
 #endif
 #ifndef LAST_IELE_INTRINSIC_INST
 #define LAST_IELE_INTRINSIC_INST(num)
 #endif
 
-//                ( num , opcode      )
-HANDLE_IELE_INST  ( 1   , Assign      )
-HANDLE_IELE_INST  ( 2   , Load        )
-HANDLE_IELE_INST  ( 3   , Store       )
-HANDLE_IELE_INST  ( 4   , SLoad       )
-HANDLE_IELE_INST  ( 5   , SStore      )
-HANDLE_IELE_INST  ( 6   , IsZero      )
-HANDLE_IELE_INST  ( 7   , Not         )
-HANDLE_IELE_INST  ( 8   , Add         )
-HANDLE_IELE_INST  ( 9   , Mul         )
-HANDLE_IELE_INST  (11   , Sub         )
-HANDLE_IELE_INST  (12   , Div         )
-HANDLE_IELE_INST  (13   , Exp         )
-HANDLE_IELE_INST  (14   , Mod         )
-HANDLE_IELE_INST  (15   , AddMod      )
-HANDLE_IELE_INST  (16   , MulMod      )
-HANDLE_IELE_INST  (17   , ExpMod      )
-HANDLE_IELE_INST  (18   , Byte        )
-HANDLE_IELE_INST  (19   , SExt        )
-HANDLE_IELE_INST  (20   , Twos        )
-HANDLE_IELE_INST  (21   , And         )
-HANDLE_IELE_INST  (22   , Or          )
-HANDLE_IELE_INST  (23   , Xor         )
-HANDLE_IELE_INST  (24   , Shift       )
-HANDLE_IELE_INST  (25   , CmpLt       )
-HANDLE_IELE_INST  (26   , CmpLe       )
-HANDLE_IELE_INST  (27   , CmpGt       )
-HANDLE_IELE_INST  (28   , CmpGe       )
-HANDLE_IELE_INST  (29   , CmpEq       )
-HANDLE_IELE_INST  (30   , CmpNe       )
-HANDLE_IELE_INST  (31   , Sha3        )
-HANDLE_IELE_INST  (32   , Br          )
-HANDLE_IELE_INST  (33   , Call        )
-HANDLE_IELE_INST  (34   , CallAt      )
-HANDLE_IELE_INST  (35   , StaticCallAt)
-HANDLE_IELE_INST  (36   , Ret         )
-HANDLE_IELE_INST  (37   , Revert      )
-HANDLE_IELE_INST  (38   , Log         )
-HANDLE_IELE_INST  (39   , Create      )
-HANDLE_IELE_INST  (40   , CopyCreate  )
-HANDLE_IELE_INST  (41   , Selfdestruct)
+#ifndef FIRST_IELE_CALL_INST
+#define FIRST_IELE_CALL_INST(num)
+#endif
+#ifndef HANDLE_IELE_CALL_INST
+#ifndef HANDLE_IELE_INST
+#define HANDLE_IELE_CALL_INST(num, opcode, text)
+#else
+#define HANDLE_IELE_CALL_INST(num, opcode, text) \
+        HANDLE_IELE_INST(num, opcode, text)
+#endif
+#endif
+#ifndef LAST_IELE_CALL_INST
+#define LAST_IELE_CALL_INST(num)
+#endif
 
-FIRST_IELE_INTRINSIC_INST(42)
-HANDLE_IELE_INST  (42   , Invalid)
-HANDLE_IELE_INST  (43   , Gas)
-HANDLE_IELE_INST  (44   , Gasprice)
-HANDLE_IELE_INST  (45   , Gaslimit)
-HANDLE_IELE_INST  (46   , Beneficiary)
-HANDLE_IELE_INST  (47   , Timestamp)
-HANDLE_IELE_INST  (48   , Number)
-HANDLE_IELE_INST  (49   , Difficulty)
-HANDLE_IELE_INST  (50   , Address)
-HANDLE_IELE_INST  (51   , Origin)
-HANDLE_IELE_INST  (52   , Caller)
-HANDLE_IELE_INST  (53   , Callvalue)
-HANDLE_IELE_INST  (54   , Msize)
-HANDLE_IELE_INST  (55   , Codesize)
-HANDLE_IELE_INST  (56   , Blockhash)
-HANDLE_IELE_INST  (57   , Balance)
-HANDLE_IELE_INST  (58   , Extcodesize)
-LAST_IELE_INTRINSIC_INST(58)
+#ifndef FIRST_IELE_OTHER_INST
+#define FIRST_IELE_OTHER_INST(num)
+#endif
+#ifndef HANDLE_IELE_OTHER_INST
+#ifndef HANDLE_IELE_INST
+#define HANDLE_IELE_OTHER_INST(num, opcode, text)
+#else
+#define HANDLE_IELE_OTHER_INST(num, opcode, text) \
+        HANDLE_IELE_INST(num, opcode, text)
+#endif
+#endif
+#ifndef LAST_IELE_OTHER_INST
+#define LAST_IELE_OTHER_INST(num)
+#endif
 
-#undef HANDLE_IELE_INST
+//                         ( num , opcode       , text          ) 
+FIRST_IELE_OTHER_INST      ( 1)
+HANDLE_IELE_OTHER_INST     ( 1   , Assign       , ""            )
+HANDLE_IELE_OTHER_INST     ( 2   , Load         , "load"        )
+HANDLE_IELE_OTHER_INST     ( 3   , Store        , "store"       )
+HANDLE_IELE_OTHER_INST     ( 4   , SLoad        , "sload"       )
+HANDLE_IELE_OTHER_INST     ( 5   , SStore       , "sstore"      )
+HANDLE_IELE_OTHER_INST     ( 6   , IsZero       , "iszero"      )
+HANDLE_IELE_OTHER_INST     ( 7   , Not          , "not"         )
+HANDLE_IELE_OTHER_INST     ( 8   , Add          , "add"         )
+HANDLE_IELE_OTHER_INST     ( 9   , Mul          , "mul"         )
+HANDLE_IELE_OTHER_INST     (10   , Sub          , "sub"         )
+HANDLE_IELE_OTHER_INST     (11   , Div          , "div"         )
+HANDLE_IELE_OTHER_INST     (12   , Exp          , "exp"         )
+HANDLE_IELE_OTHER_INST     (13   , Mod          , "mod"         )
+HANDLE_IELE_OTHER_INST     (14   , AddMod       , "addmod"      )
+HANDLE_IELE_OTHER_INST     (15   , MulMod       , "mullmod"     )
+HANDLE_IELE_OTHER_INST     (16   , ExpMod       , "expmod"      )
+HANDLE_IELE_OTHER_INST     (17   , Byte         , "byte"        )
+HANDLE_IELE_OTHER_INST     (18   , SExt         , "sext"        )
+HANDLE_IELE_OTHER_INST     (19   , Twos         , "twos"        )
+HANDLE_IELE_OTHER_INST     (20   , And          , "and"         )
+HANDLE_IELE_OTHER_INST     (21   , Or           , "or"          )
+HANDLE_IELE_OTHER_INST     (22   , Xor          , "xor"         )
+HANDLE_IELE_OTHER_INST     (23   , Shift        , "shift"       )
+HANDLE_IELE_OTHER_INST     (24   , CmpLt        , "cmp lt"      )
+HANDLE_IELE_OTHER_INST     (25   , CmpLe        , "cmp le"      )
+HANDLE_IELE_OTHER_INST     (26   , CmpGt        , "cmp gt"      )
+HANDLE_IELE_OTHER_INST     (27   , CmpGe        , "cmp ge"      )
+HANDLE_IELE_OTHER_INST     (28   , CmpEq        , "cmp eq"      )
+HANDLE_IELE_OTHER_INST     (29   , CmpNe        , "cmp ne"      )
+HANDLE_IELE_OTHER_INST     (30   , Sha3         , "sha3"        )
+HANDLE_IELE_OTHER_INST     (31   , Br           , "br"          )
+HANDLE_IELE_OTHER_INST     (32   , Ret          , "ret"         )
+HANDLE_IELE_OTHER_INST     (33   , Revert       , "revert"      )
+HANDLE_IELE_OTHER_INST     (34   , Log          , "log"         )
+HANDLE_IELE_OTHER_INST     (35   , Selfdestruct , "selfdestruct")
+LAST_IELE_OTHER_INST       (35)
+
+FIRST_IELE_CALL_INST       (36)
+HANDLE_IELE_CALL_INST      (36   , Call         , "call"      ) 
+HANDLE_IELE_CALL_INST      (37   , CallAt       , "call"      ) 
+HANDLE_IELE_CALL_INST      (38   , StaticCallAt , "staticcall")
+HANDLE_IELE_CALL_INST      (39   , Create       , "create"    )
+HANDLE_IELE_CALL_INST      (40   , CopyCreate   , "copycreate")
+LAST_IELE_CALL_INST        (40)
+
+FIRST_IELE_INTRINSIC_INST  (41)
+HANDLE_IELE_INTRINSIC_INST (41   , Invalid      , "@iele.invalid"    )
+HANDLE_IELE_INTRINSIC_INST (42   , Gas          , "@iele.gas"        )
+HANDLE_IELE_INTRINSIC_INST (43   , Gasprice     , "@iele.gasprice"   )
+HANDLE_IELE_INTRINSIC_INST (44   , Gaslimit     , "@iele.gaslimit"   )
+HANDLE_IELE_INTRINSIC_INST (45   , Beneficiary  , "@iele.beneficiary")
+HANDLE_IELE_INTRINSIC_INST (46   , Timestamp    , "@iele.timestamp"  )
+HANDLE_IELE_INTRINSIC_INST (47   , Number       , "@iele.number"     )
+HANDLE_IELE_INTRINSIC_INST (48   , Difficulty   , "@iele.difficulty" )
+HANDLE_IELE_INTRINSIC_INST (49   , Address      , "@iele.address"    )
+HANDLE_IELE_INTRINSIC_INST (50   , Origin       , "@iele.origin"     )
+HANDLE_IELE_INTRINSIC_INST (51   , Caller       , "@iele.caller"     )
+HANDLE_IELE_INTRINSIC_INST (52   , Callvalue    , "@iele.callvalue"  )
+HANDLE_IELE_INTRINSIC_INST (53   , Msize        , "@iele.msize"      )
+HANDLE_IELE_INTRINSIC_INST (54   , Codesize     , "@iele.codesize"   )
+HANDLE_IELE_INTRINSIC_INST (55   , Blockhash    , "@iele.blockhash"  )
+HANDLE_IELE_INTRINSIC_INST (56   , Balance      , "@iele.balance"    )
+HANDLE_IELE_INTRINSIC_INST (57   , Extcodesize  , "@iele.extcodesize")
+LAST_IELE_INTRINSIC_INST   (57)
+
 #undef FIRST_IELE_INTRINSIC_INST
+#undef HANDLE_IELE_INTRINSIC_INST
 #undef LAST_IELE_INTRINSIC_INST
+
+#undef FIRST_IELE_CALL_INST
+#undef HANDLE_IELE_CALL_INST
+#undef LAST_IELE_CALL_INST
+
+#undef FIRST_IELE_OTHER_INST
+#undef HANDLE_IELE_OTHER_INST
+#undef LAST_IELE_OTHER_INST
+
+#ifdef HANDLE_IELE_INST
+#undef HANDLE_IELE_INST
+#endif
