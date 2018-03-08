@@ -163,12 +163,12 @@ public:
       IeleValue *Condition, IeleBlock *Target, IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateAccountCall(
-      IeleLocalVariable *StatusValue, IeleFunction *Callee,
+      IeleLocalVariable *StatusValue, IeleGlobalVariable *Callee,
       IeleValue *AddressValue, IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateAccountCall(
-      IeleLocalVariable *StatusValue, IeleFunction *Callee,
+      IeleLocalVariable *StatusValue, IeleGlobalVariable *Callee,
       IeleValue *AddressValue, IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleBlock *InsertAtEnd);
