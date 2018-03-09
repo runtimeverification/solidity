@@ -70,9 +70,13 @@ bool IeleCompiler::visit(FunctionDefinition const& function) {
     iele::IeleFunction::Create(&Context, function.isPartOfExternalInterface(),
                                FunctionName, CompilingContract);
 
-  // Visit formal arguments.
-  for (ASTPointer<VariableDeclaration const> const& arg : function.parameters())
+  // Visit formal arguments and return parameters.
+  for (const ASTPointer<const VariableDeclaration> &arg : function.parameters())
     iele::IeleArgument::Create(&Context, arg->name(), CompilingFunction);
+
+  for (const ASTPointer<const VariableDeclaration> &ret :
+         function.returnParameters())
+    iele::IeleLocalVariable::Create(&Context, ret->name(), CompilingFunction);
 
   // Visit local variables.
   for (const VariableDeclaration *local: function.localVariables()) {
