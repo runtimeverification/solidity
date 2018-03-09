@@ -222,7 +222,7 @@ protected:
 		if (!s_compiledRegistrar)
 			s_compiledRegistrar.reset(new bytes(compileContract(registrarCode, "GlobalRegistrar")));
 
-		sendMessage(*s_compiledRegistrar, true);
+		sendMessage(std::vector<bytes>(), "", *s_compiledRegistrar, true);
 		BOOST_REQUIRE(!m_output.empty());
 	}
 

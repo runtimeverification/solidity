@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(value_types)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(
+		REQUIRE_LOG_DATA(encodeLogs(
 			10, u256(65534), u256(0x121212), u256(-1), string("\x1b\xab\xab"), true, u160(u256(-5))
 		));
 	)
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(string_literal)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(
+		REQUIRE_LOG_DATA(encodeLogs(
 			0x60, string("abcde"), 0xa0,
 			6, string("abcdef"),
 			0x8b, string("abcdefabcdefgehabcabcasdfjklabcdefabcedefghabcabcasdfjklabcdefabcdefghabcabcasdfjklabcdeefabcdefghabcabcasdefjklabcdefabcdefghabcabcasdfjkl")
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE(conversion)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(
+		REQUIRE_LOG_DATA(encodeLogs(
 			string(3, 0) + string("\x0a"), string("\xf1\xf2"),
 			0xff, 0xff, u256(-1), u256(1)
 		));
@@ -167,11 +167,11 @@ BOOST_AUTO_TEST_CASE(memory_array_one_dim)
 	compileAndRun(sourceCode);
 	callContractFunction("f()");
 	// The old encoder does not clean array elements.
-	REQUIRE_LOG_DATA(encodeArgs(10, 0x60, 11, 3, u256("0xfffffffe"), u256("0xffffffff"), u256("0x100000000")));
+	REQUIRE_LOG_DATA(encodeLogs(10, 0x60, 11, 3, u256("0xfffffffe"), u256("0xffffffff"), u256("0x100000000")));
 
 	compileAndRun(NewEncoderPragma + sourceCode);
 	callContractFunction("f()");
-	REQUIRE_LOG_DATA(encodeArgs(10, 0x60, 11, 3, u256(-2), u256(-1), u256(0)));
+	REQUIRE_LOG_DATA(encodeLogs(10, 0x60, 11, 3, u256(-2), u256(-1), u256(0)));
 }
 
 BOOST_AUTO_TEST_CASE(memory_array_two_dim)
@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE(memory_array_two_dim)
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(10, 0x60, 11, 0x40, 0xc0, 3, 7, 0x0506, u256(-1), 2, 4, 5));
+		REQUIRE_LOG_DATA(encodeLogs(10, 0x60, 11, 0x40, 0xc0, 3, 7, 0x0506, u256(-1), 2, 4, 5));
 	)
 }
 
@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE(memory_byte_array)
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(
+		REQUIRE_LOG_DATA(encodeLogs(
 			10, 0x60, 11,
 			2, 0x40, 0xc0,
 			66, string("abcabcdefghjklmnopqrsuvwabcdefgijklmnopqrstuwabcdefgijklmnoprstuvw"),
@@ -241,7 +241,7 @@ BOOST_AUTO_TEST_CASE(storage_byte_array)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(
+		REQUIRE_LOG_DATA(encodeLogs(
 			0x40, 0x80,
 			31, string("123456789012345678901234567890a"),
 			75, string("ffff123456789012345678901234567890afffffffff123456789012345678901234567890a")
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE(storage_array)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(u160(-1), u160(-2), u160(-3)));
+		REQUIRE_LOG_DATA(encodeLogs(u160(-1), u160(-2), u160(-3)));
 	)
 }
 
@@ -289,7 +289,7 @@ BOOST_AUTO_TEST_CASE(storage_array_dyn)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(0x20, 3, u160(1), u160(2), u160(3)));
+		REQUIRE_LOG_DATA(encodeLogs(0x20, 3, u160(1), u160(2), u160(3)));
 	)
 }
 
@@ -315,7 +315,7 @@ BOOST_AUTO_TEST_CASE(storage_array_compact)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(
+		REQUIRE_LOG_DATA(encodeLogs(
 			0x20, 8, u256(-1), 2, u256(-3), 4, u256(-5), 6, u256(-7), 8
 		));
 	)
@@ -337,7 +337,7 @@ BOOST_AUTO_TEST_CASE(external_function)
 		compileAndRun(sourceCode);
 		callContractFunction("f(uint256)", u256(0));
 		string functionIdF = asString(m_contractAddress.ref()) + asString(FixedHash<4>(dev::keccak256("f(uint256)")).ref());
-		REQUIRE_LOG_DATA(encodeArgs(functionIdF, functionIdF));
+		REQUIRE_LOG_DATA(encodeLogs(functionIdF, functionIdF));
 	)
 }
 
@@ -358,7 +358,7 @@ BOOST_AUTO_TEST_CASE(external_function_cleanup)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f(uint256)", u256(0));
-		REQUIRE_LOG_DATA(encodeArgs(string(24, char(-1)), string(24, char(-1))));
+		REQUIRE_LOG_DATA(encodeLogs(string(24, char(-1)), string(24, char(-1))));
 	)
 }
 
@@ -379,9 +379,9 @@ BOOST_AUTO_TEST_CASE(calldata)
 		compileAndRun(sourceCode);
 		callContractFunction("f(bytes)", 0x20, s.size(), s);
 		// The old encoder did not pad to multiples of 32 bytes
-		REQUIRE_LOG_DATA(encodeArgs(0x20, s.size()) + (newEncoder ? encodeArgs(s) : asBytes(s)));
+		REQUIRE_LOG_DATA(encodeLogs(0x20, s.size()) + (newEncoder ? encodeLogs(s) : asBytes(s)));
 		callContractFunction("f(bytes)", 0x20, t.size(), t);
-		REQUIRE_LOG_DATA(encodeArgs(0x20, t.size()) + (newEncoder ? encodeArgs(t) : asBytes(t)));
+		REQUIRE_LOG_DATA(encodeLogs(0x20, t.size()) + (newEncoder ? encodeLogs(t) : asBytes(t)));
 		newEncoder = true;
 	)
 }
@@ -437,7 +437,7 @@ BOOST_AUTO_TEST_CASE(structs)
 
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
-		bytes encoded = encodeArgs(
+		std::vector<bytes> encoded = encodeArgs(
 			u256(7), 0x40,
 			8, 9, 0x80, 10,
 			3,
@@ -445,8 +445,12 @@ BOOST_AUTO_TEST_CASE(structs)
 			12, 0,
 			0, 13
 		);
+                bytes flattened;
+                for (bytes arg : encoded) {
+			flattened += arg;
+		}
 		BOOST_CHECK(callContractFunction("f()") == encoded);
-		REQUIRE_LOG_DATA(encoded);
+		REQUIRE_LOG_DATA(flattened);
 	)
 }
 
@@ -466,9 +470,13 @@ BOOST_AUTO_TEST_CASE(empty_struct)
 
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
-		bytes encoded = encodeArgs(7, 8);
+		std::vector<bytes> encoded = encodeArgs(7, 8);
+                bytes flattened;
+                for (bytes arg : encoded) {
+			flattened += arg;
+		}
 		BOOST_CHECK(callContractFunction("f()") == encoded);
-		REQUIRE_LOG_DATA(encoded);
+		REQUIRE_LOG_DATA(flattened);
 	)
 }
 

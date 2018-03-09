@@ -92,14 +92,12 @@ public:
 	void compareVersions(std::string _sig, Args const&... _arguments)
 	{
 		m_contractAddress = m_nonOptimizedContract;
-		bytes nonOptimizedOutput = callContractFunction(_sig, _arguments...);
+		std::vector<bytes> nonOptimizedOutput = callContractFunction(_sig, _arguments...);
 		m_contractAddress = m_optimizedContract;
-		bytes optimizedOutput = callContractFunction(_sig, _arguments...);
+		std::vector<bytes> optimizedOutput = callContractFunction(_sig, _arguments...);
 		BOOST_CHECK_MESSAGE(!optimizedOutput.empty(), "No optimized output for " + _sig);
 		BOOST_CHECK_MESSAGE(!nonOptimizedOutput.empty(), "No un-optimized output for " + _sig);
-		BOOST_CHECK_MESSAGE(nonOptimizedOutput == optimizedOutput, "Computed values do not match."
-							"\nNon-Optimized: " + toHex(nonOptimizedOutput) +
-							"\nOptimized:     " + toHex(optimizedOutput));
+		BOOST_CHECK_MESSAGE(nonOptimizedOutput == optimizedOutput, "Computed values do not match.");
 	}
 
 	/// @returns the number of intructions in the given bytecode, not taking the metadata hash
