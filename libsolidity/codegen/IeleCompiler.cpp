@@ -74,6 +74,13 @@ bool IeleCompiler::visit(FunctionDefinition const& function) {
   for (ASTPointer<VariableDeclaration const> const& arg : function.parameters())
     iele::IeleArgument::Create(&Context, arg->name(), CompilingFunction);
 
+  // Visit local variables.
+  for (const VariableDeclaration *local: function.localVariables()) {
+    if (local->isLocalOrReturn())
+      iele::IeleLocalVariable::Create(&Context, local->name(),
+                                      CompilingFunction);
+  }
+
   // Create the entry block.
   CompilingBlock =
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
@@ -317,7 +324,39 @@ bool IeleCompiler::visit(const Break &breakStatement) {
 
 bool IeleCompiler::visit(
     const VariableDeclarationStatement &variableDeclarationStatement) {
-  assert(false && "not implemented yet");
+  if (const Expression* rhsExpr =
+        variableDeclarationStatement.initialValue()) {
+
+    // Visit RHS expression.
+    llvm::SmallVector<iele::IeleValue*, 4> RHSValues;
+    compileTuple(*rhsExpr, RHSValues);
+
+    // Visit assignments.
+    auto const &assignments =
+      variableDeclarationStatement.annotation().assignments;
+    assert(assignments.size() == RHSValues.size() &&
+           "IeleCompiler: Missing assignment in variable declaration "
+           "statement");
+    for (unsigned i = 0; i < assignments.size(); ++i) {
+      const VariableDeclaration *varDecl = assignments[i];
+      if (varDecl) {
+        // Visit LHS. We lookup the LHS name in the function's symbol table,
+        // where we should find it.
+        iele::IeleValueSymbolTable *ST =
+          CompilingFunction->getIeleValueSymbolTable();
+        assert(ST &&
+              "IeleCompiler: failed to access compiling function's symbol "
+              "table.");
+        iele::IeleValue *LHSValue = ST->lookup(varDecl->name());
+        assert(LHSValue && "IeleCompiler: Failed to compile LHS of variable "
+                           "declaration statement");
+        // Assign to RHS.
+        iele::IeleInstruction::CreateAssign(
+            llvm::cast<iele::IeleLocalVariable>(LHSValue), RHSValues[i],
+            CompilingBlock);
+      }
+    }
+  }
   return false;
 }
 
