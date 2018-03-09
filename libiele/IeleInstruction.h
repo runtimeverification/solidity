@@ -228,6 +228,12 @@ public:
   static IeleInstruction *CreateSStore(
       IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateStore(
+      IeleValue *DataValue, IeleValue *AddressValue,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateStore(
+      IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
+
   static IeleInstruction *CreateBinOp(
       IeleOps BinOpcode, IeleLocalVariable *Result, IeleValue *LeftOperandValue,
       IeleValue *RightOperandValue, IeleInstruction *InsertBefore = nullptr);

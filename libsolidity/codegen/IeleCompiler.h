@@ -21,10 +21,18 @@ namespace solidity {
 class IeleCompiler : public ASTConstVisitor {
 public:
   explicit IeleCompiler() :
-    CompiledContract(nullptr), CompilingContract(nullptr),
-    CompilingFunction(nullptr), CompilingBlock(nullptr), BreakBlock(nullptr),
-    ContinueBlock(nullptr), RevertBlock(nullptr), AssertFailBlock(nullptr),
-    CompilingLValue(false) { }
+    CompiledContract(nullptr),
+    CompilingContract(nullptr),
+    CompilingFunction(nullptr),
+    CompilingBlock(nullptr),
+    BreakBlock(nullptr),
+    ContinueBlock(nullptr),
+    RevertBlock(nullptr),
+    AssertFailBlock(nullptr),
+    CompilingLValue(false),
+    CompilingContractASTNode(nullptr),
+    CompilingFunctionASTNode(nullptr),
+    ModifierDepth(-1) { }
 
   // Compiles a contract.
   void compileContract(
@@ -88,19 +96,21 @@ private:
   iele::IeleBlock *AssertFailBlock;
   llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
   bool CompilingLValue;
+  // This diverges from the evm compiler: they use
+  // CompilerContext::m_inheritanceHierarchy 
+  // to loop through all contracts in the chain. We don't have inheritance for
+  // now, so let's keep it simple and use this as ashortcut. May need updating
+  // later when we support OO features.  
+  const ContractDefinition *CompilingContractASTNode;
+  const FunctionDefinition *CompilingFunctionASTNode;
 
   // Infrastructure for handling modifiers (borrowed from ContractCompiler.cpp)
   // Lookup function modifier by name
-  ModifierDefinition const& functionModifier(std::string const& _name) const;
-  // Appends one layer of function modifier code of the current function, or the function
-  // body itself if the last modifier was reached.
+  const ModifierDefinition &functionModifier(const std::string &_name) const;
+  // Appends one layer of function modifier code of the current function, or the
+  // function body itself if the last modifier was reached.
   void appendModifierOrFunctionCode();
-  unsigned ModifierDepth = -1;
-  FunctionDefinition const* CurrentFunction = nullptr;
-  // This diverges from the evm compiler: they use CompilerContext::m_inheritanceHierarchy 
-  // to loop through all contracts in the chain. We don't have inheritance for now, so 
-  // let's keep it simple and use this as ashortcut. May need updating later when we support OO features.  
-  ContractDefinition const* CurrentContract = nullptr; 
+  unsigned ModifierDepth;
 
   // Helpers for the compilation process.
   iele::IeleValue *compileExpression(const Expression &expression);
@@ -108,11 +118,13 @@ private:
       const Expression &expression,
       llvm::SmallVectorImpl<iele::IeleValue *> &Result);
   iele::IeleValue *compileLValue(const Expression &expression);
+
   void connectWithUnconditionalJump(iele::IeleBlock *SourceBlock, 
                                     iele::IeleBlock *DestinationBlock);
   void connectWithConditionalJump(iele::IeleValue *Condition,
                                   iele::IeleBlock *SouceBlock, 
                                   iele::IeleBlock *DestinationBlock);
+
   void appendRevert(iele::IeleValue *Condition = nullptr);
   void appendInvalid(iele::IeleValue *Condition = nullptr);
 
@@ -123,6 +135,32 @@ private:
   // It is not enough to map names to names; we need such a mapping for each "layer",
   // that is for each function modifier. 
   std::map<unsigned, std::map <std::string, std::string>> VarNameMap;
+
+  void appendStateVariableInitialization();
+
+  iele::IeleValue *appendIeleRuntimeAllocateMemory(iele::IeleValue *NumElems);
+  iele::IeleValue *appendIeleRuntimeAllocateStorage(iele::IeleValue *NumElems);
+  iele::IeleValue *appendIeleRuntimeMemoryAddress(iele::IeleValue *Base,
+                                                  iele::IeleValue *Offset);
+  iele::IeleValue *appendIeleRuntimeStorageAddress(iele::IeleValue *Base,
+                                                   iele::IeleValue *Offset);
+  iele::IeleValue *appendIeleRuntimeMemoryLoad(iele::IeleValue *Base,
+                                               iele::IeleValue *Offset);
+  iele::IeleValue *appendIeleRuntimeStorageLoad(iele::IeleValue *Base,
+                                                iele::IeleValue *Offset);
+  iele::IeleValue *appendIeleRuntimeStorageToStorageCopy(iele::IeleValue *From);
+  iele::IeleValue *appendIeleRuntimeMemoryToStorageCopy(iele::IeleValue *From);
+  iele::IeleValue *appendIeleRuntimeStorageToMemoryCopy(iele::IeleValue *From);
+
+  bool shouldCopyStorageToStorage(iele::IeleValue *To, TypePointer From) const;
+  bool shouldCopyMemoryToStorage(TypePointer To, TypePointer From) const;
+  bool shouldCopyStorageToMemory(TypePointer To, TypePointer From) const;
+
+  bool lvalueCompilesToStoragePtr(const Expression &LValue) const;
+  bool lvalueCompilesToMemoryPtr(const Expression &LValue) const;
+
+  unsigned getStructMemberIndex(const StructType &type,
+                                const std::string &member) const;
 };
 
 } // end namespace solidity

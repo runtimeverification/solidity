@@ -379,6 +379,29 @@ IeleInstruction *IeleInstruction::CreateSStore(
   return SStoreInst;
 }
 
+IeleInstruction *IeleInstruction::CreateStore(
+    IeleValue *DataValue, IeleValue *AddressValue,
+    IeleInstruction *InsertBefore) {
+  assert(DataValue && AddressValue && "CreateStore: Invalid operands");
+
+  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertBefore);
+  StoreInst->getIeleOperandList().push_back(DataValue);
+  StoreInst->getIeleOperandList().push_back(AddressValue);
+
+  return StoreInst;
+}
+
+IeleInstruction *IeleInstruction::CreateStore(
+    IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd) {
+  assert(DataValue && AddressValue && "CreateStore: Invalid operands");
+
+  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertAtEnd);
+  StoreInst->getIeleOperandList().push_back(DataValue);
+  StoreInst->getIeleOperandList().push_back(AddressValue);
+
+  return StoreInst;
+}
+
 IeleInstruction *IeleInstruction::CreateBinOp(
     IeleOps BinOpcode, IeleLocalVariable *Result, IeleValue *LeftOperandValue,
     IeleValue *RightOperandValue, IeleInstruction *InsertBefore) {
