@@ -27,4 +27,3 @@ To run the compilation tests:
 # failed tests reported are stored in test/failed, clean them before rerunning
 rm -rf test/failed
 ```
-
