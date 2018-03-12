@@ -509,10 +509,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       CompilingContract->getIeleValueSymbolTable();
     assert(ST &&
            "IeleCompiler: failed to access compiling contract's symbol table.");
-    iele::IeleValue *DepositValue = ST->lookup("deposit");
-    assert(DepositValue && llvm::isa<iele::IeleFunction>(DepositValue) &&
-           "IeleCompiler: @deposit function not found.");
-    iele::IeleFunction *Deposit = llvm::cast<iele::IeleFunction>(DepositValue);
+    iele::IeleGlobalVariable *Deposit =
+      iele::IeleGlobalVariable::Create(&Context, "deposit");
     iele::IeleLocalVariable *StatusValue =
       iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
     iele::IeleInstruction::CreateAccountCall(StatusValue, Deposit,

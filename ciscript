@@ -1,0 +1,21 @@
+# clean
+rm -rf deps build test/failed iele-example-tests/auction/auction.iele
+
+# build
+mkdir build
+cd build
+cmake ..
+make -j2
+cd ..
+
+# run simple end-to-end test
+# needs iele-semantics installed and blockchaintest in the path
+./builid/solc/solc --iele iele-example-tests/auction/auction.sol > iele-example-tests/auction/auction.iele
+diff iele-example-tests/auction/auction.iele iele-example-tests/auction/auction.iele.ref
+for f in $(ls iele-example-tests/auction/*.json); do
+  blockchaintest $f
+done
+
+# run command line tests
+./test/ieleCmdlineTests.sh
+

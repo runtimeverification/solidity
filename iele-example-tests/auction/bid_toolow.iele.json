@@ -1,5 +1,6 @@
 {
     "Auction_IELE": {
+        "checkGas": false,
         "pre": {
             "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {
                 "nonce": "0x00", 
@@ -16,7 +17,7 @@
                     "0x03": "0x2000000000000000000000000000000000000000",
                     "0x04": "0x0100"
                 },
-                "code": "../auction.iele"
+                "code": "auction.iele"
             }
         },
         "blocks": [
@@ -71,7 +72,7 @@
                     "0x03": "0x2000000000000000000000000000000000000000",
                     "0x04": "0x0100"
                 }, 
-                "code": "../auction.iele"
+                "code": "auction.iele"
             }
         }
     }

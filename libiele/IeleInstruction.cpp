@@ -1,6 +1,7 @@
 #include "IeleInstruction.h"
 
 #include "IeleFunction.h"
+#include "IeleGlobalVariable.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -181,7 +182,7 @@ IeleInstruction *IeleInstruction::CreateCondBr(
 }
 
 IeleInstruction *IeleInstruction::CreateAccountCall(
-    IeleLocalVariable *StatusValue, IeleFunction *Callee,
+    IeleLocalVariable *StatusValue, IeleGlobalVariable *Callee,
     IeleValue *AddressValue, IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleInstruction *InsertBefore) {
@@ -203,7 +204,7 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
 }
 
 IeleInstruction *IeleInstruction::CreateAccountCall(
-    IeleLocalVariable *StatusValue, IeleFunction *Callee,
+    IeleLocalVariable *StatusValue, IeleGlobalVariable *Callee,
     IeleValue *AddressValue, IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleBlock *InsertAtEnd) {
