@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(metadata_stamp)
 	compilerStack.addSource("", std::string(sourceCode));
 	compilerStack.setOptimiserSettings(dev::test::Options::get().optimize);
 	BOOST_REQUIRE_MESSAGE(compilerStack.compile(), "Compiling contract failed");
-	bytes const& bytecode = compilerStack.runtimeObject("test").bytecode;
+	bytes const& bytecode = compilerStack.object("test").bytecode;
 	std::string const& metadata = compilerStack.metadata("test");
 	BOOST_CHECK(dev::test::isValidMetadata(metadata));
 	bytes hash = dev::swarmHash(metadata).asBytes();
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(metadata_stamp_experimental)
 	compilerStack.addSource("", std::string(sourceCode));
 	compilerStack.setOptimiserSettings(dev::test::Options::get().optimize);
 	BOOST_REQUIRE_MESSAGE(compilerStack.compile(), "Compiling contract failed");
-	bytes const& bytecode = compilerStack.runtimeObject("test").bytecode;
+	bytes const& bytecode = compilerStack.object("test").bytecode;
 	std::string const& metadata = compilerStack.metadata("test");
 	BOOST_CHECK(dev::test::isValidMetadata(metadata));
 	bytes hash = dev::swarmHash(metadata).asBytes();

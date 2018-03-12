@@ -8,7 +8,7 @@ REPO_ROOT=$(cd $(dirname "$0")/.. && pwd)
 FAILED="$REPO_ROOT"/test/failed
 SOLC="$REPO_ROOT/build/solc/solc"
 
-FULLARGS="--iele"
+FULLARGS="--asm"
 
 function printTask() { echo "$(tput bold)$(tput setaf 2)$1$(tput sgr0)"; }
 

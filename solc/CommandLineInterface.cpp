@@ -241,6 +241,7 @@ void CommandLineInterface::handleBinary(string const& _contract)
 			cout << m_compiler->object(_contract).toHex() << endl;
 		}
 	}
+/*
 	if (m_args.count(g_argCloneBinary))
 	{
 		if (m_args.count(g_argOutputDir))
@@ -261,6 +262,7 @@ void CommandLineInterface::handleBinary(string const& _contract)
 			cout << m_compiler->runtimeObject(_contract).toHex() << endl;
 		}
 	}
+*/
 }
 
 void CommandLineInterface::handleOpcode(string const& _contract)
@@ -363,6 +365,8 @@ void CommandLineInterface::handleNatspec(bool _natspecDev, string const& _contra
 
 void CommandLineInterface::handleGasEstimation(string const& _contract)
 {
+	//TODO: gas estimates
+/*
 	Json::Value estimates = m_compiler->gasEstimates(_contract);
 	cout << "Gas estimation:" << endl;
 
@@ -399,6 +403,7 @@ void CommandLineInterface::handleGasEstimation(string const& _contract)
 			cout << internalFunctions[name].asString() << endl;
 		}
 	}
+*/
 }
 
 void CommandLineInterface::readInputFilesAndConfigureRemappings()
@@ -877,24 +882,30 @@ void CommandLineInterface::handleCombinedJSON()
 			contractData["metadata"] = m_compiler->metadata(contractName);
 		if (requests.count(g_strBinary))
 			contractData[g_strBinary] = m_compiler->object(contractName).toHex();
+/*
 		if (requests.count(g_strBinaryRuntime))
 			contractData[g_strBinaryRuntime] = m_compiler->runtimeObject(contractName).toHex();
 		if (requests.count(g_strCloneBinary))
 			contractData[g_strCloneBinary] = m_compiler->cloneObject(contractName).toHex();
+*/
 		if (requests.count(g_strOpcodes))
 			contractData[g_strOpcodes] = solidity::disassemble(m_compiler->object(contractName).bytecode);
+/*
 		if (requests.count(g_strAsm))
 			contractData[g_strAsm] = m_compiler->assemblyJSON(contractName, m_sourceCodes);
+*/
 		if (requests.count(g_strSrcMap))
 		{
 			auto map = m_compiler->sourceMapping(contractName);
 			contractData[g_strSrcMap] = map ? *map : "";
 		}
+/*
 		if (requests.count(g_strSrcMapRuntime))
 		{
 			auto map = m_compiler->runtimeSourceMapping(contractName);
 			contractData[g_strSrcMapRuntime] = map ? *map : "";
 		}
+*/
 		if (requests.count(g_strSignatureHashes))
 			contractData[g_strSignatureHashes] = m_compiler->methodIdentifiers(contractName);
 		if (requests.count(g_strNatspecDev))
@@ -954,12 +965,13 @@ void CommandLineInterface::handleAst(string const& _argStr)
 			asts.push_back(&m_compiler->ast(sourceCode.first));
 		map<ASTNode const*, eth::GasMeter::GasConsumption> gasCosts;
 		// FIXME: shouldn't this be done for every contract?
+/*
 		if (m_compiler->runtimeAssemblyItems(m_compiler->lastContractName()))
 			gasCosts = GasEstimator::breakToStatementLevel(
 				GasEstimator::structuralEstimation(*m_compiler->runtimeAssemblyItems(m_compiler->lastContractName()), asts),
 				asts
 			);
-
+*/
 		bool legacyFormat = !m_args.count(g_argAstCompactJson);
 		if (m_args.count(g_argOutputDir))
 		{
@@ -1176,9 +1188,11 @@ void CommandLineInterface::outputCompilationResults()
 		if (m_args.count(g_argAsm) || m_args.count(g_argAsmJson))
 		{
 			string ret;
+/*
 			if (m_args.count(g_argAsmJson))
 				ret = dev::jsonPrettyPrint(m_compiler->assemblyJSON(contract, m_sourceCodes));
 			else
+*/
 				ret = m_compiler->assemblyString(contract, m_sourceCodes);
 
 			if (m_args.count(g_argOutputDir))

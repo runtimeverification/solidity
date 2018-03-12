@@ -269,7 +269,7 @@ bool CompilerStack::compile()
 		if (!parseAndAnalyze())
 			return false;
 
-	map<ContractDefinition const*, eth::Assembly const*> compiledContracts;
+	map<ContractDefinition const*, iele::IeleContract const*> compiledContracts;
 	for (Source const* source: m_sourceOrder)
 		for (ASTPointer<ASTNode> const& node: source->ast->nodes())
 			if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
@@ -285,8 +285,10 @@ void CompilerStack::link()
 	for (auto& contract: m_contracts)
 	{
 		contract.second.object.link(m_libraries);
+/*
 		contract.second.runtimeObject.link(m_libraries);
 		contract.second.cloneObject.link(m_libraries);
+*/
 	}
 }
 
@@ -299,7 +301,7 @@ vector<string> CompilerStack::contractNames() const
 		contractNames.push_back(contract.first);
 	return contractNames;
 }
-
+/*
 eth::AssemblyItems const* CompilerStack::assemblyItems(string const& _contractName) const
 {
 	Contract const& currentContract = contract(_contractName);
@@ -311,9 +313,12 @@ eth::AssemblyItems const* CompilerStack::runtimeAssemblyItems(string const& _con
 	Contract const& currentContract = contract(_contractName);
 	return currentContract.compiler ? &contract(_contractName).compiler->runtimeAssemblyItems() : nullptr;
 }
-
+*/
 string const* CompilerStack::sourceMapping(string const& _contractName) const
 {
+	// TODO: source mapping
+	return nullptr;
+/*
 	Contract const& c = contract(_contractName);
 	if (!c.sourceMapping)
 	{
@@ -321,8 +326,9 @@ string const* CompilerStack::sourceMapping(string const& _contractName) const
 			c.sourceMapping.reset(new string(computeSourceMapping(*items)));
 	}
 	return c.sourceMapping.get();
+*/
 }
-
+/*
 string const* CompilerStack::runtimeSourceMapping(string const& _contractName) const
 {
 	Contract const& c = contract(_contractName);
@@ -333,7 +339,7 @@ string const* CompilerStack::runtimeSourceMapping(string const& _contractName) c
 	}
 	return c.runtimeSourceMapping.get();
 }
-
+*/
 std::string const CompilerStack::filesystemFriendlyName(string const& _contractName) const
 {
 	// Look up the contract (by its fully-qualified name)
@@ -359,7 +365,7 @@ eth::LinkerObject const& CompilerStack::object(string const& _contractName) cons
 {
 	return contract(_contractName).object;
 }
-
+/*
 eth::LinkerObject const& CompilerStack::runtimeObject(string const& _contractName) const
 {
 	return contract(_contractName).runtimeObject;
@@ -369,7 +375,7 @@ eth::LinkerObject const& CompilerStack::cloneObject(string const& _contractName)
 {
 	return contract(_contractName).cloneObject;
 }
-
+*/
 /// FIXME: cache this string
 string CompilerStack::assemblyString(string const& _contractName, StringMap _sourceCodes) const
 {
@@ -380,6 +386,7 @@ string CompilerStack::assemblyString(string const& _contractName, StringMap _sou
 		return string();
 }
 
+/*
 /// FIXME: cache the JSON
 Json::Value CompilerStack::assemblyJSON(string const& _contractName, StringMap _sourceCodes) const
 {
@@ -389,7 +396,7 @@ Json::Value CompilerStack::assemblyJSON(string const& _contractName, StringMap _
 	else
 		return Json::Value();
 }
-
+*/
 vector<string> CompilerStack::sourceNames() const
 {
 	vector<string> names;
@@ -503,7 +510,7 @@ ContractDefinition const& CompilerStack::contractDefinition(string const& _contr
 
 	return *contract(_contractName).contract;
 }
-
+/*
 size_t CompilerStack::functionEntryPoint(
 	std::string const& _contractName,
 	FunctionDefinition const& _function
@@ -521,7 +528,7 @@ size_t CompilerStack::functionEntryPoint(
 			return i;
 	return 0;
 }
-
+*/
 tuple<int, int, int, int> CompilerStack::positionFromSourceLocation(SourceLocation const& _sourceLocation) const
 {
 	int startLine;
@@ -668,7 +675,7 @@ bool onlySafeExperimentalFeaturesActivated(set<ExperimentalFeature> const& featu
 
 void CompilerStack::compileContract(
 	ContractDefinition const& _contract,
-	map<ContractDefinition const*, eth::Assembly const*>& _compiledContracts
+	map<ContractDefinition const*, iele::IeleContract const*>& _compiledContracts
 )
 {
 	if (
@@ -680,7 +687,7 @@ void CompilerStack::compileContract(
 	for (auto const* dependency: _contract.annotation().contractDependencies)
 		compileContract(*dependency, _compiledContracts);
 
-	shared_ptr<Compiler> compiler = make_shared<Compiler>(m_optimize, m_optimizeRuns);
+	shared_ptr<IeleCompiler> compiler = make_shared<IeleCompiler>();
 	Contract& compiledContract = m_contracts.at(_contract.fullyQualifiedName());
 	string metadata = createMetadata(compiledContract);
 	bytes cborEncodedHash =
@@ -703,7 +710,7 @@ void CompilerStack::compileContract(
 	solAssert(cborEncodedMetadata.size() <= 0xffff, "Metadata too large");
 	// 16-bit big endian length
 	cborEncodedMetadata += toCompactBigEndian(cborEncodedMetadata.size(), 2);
-	compiler->compileContract(_contract, _compiledContracts, cborEncodedMetadata);
+	compiler->compileContract(_contract, _compiledContracts);
 	compiledContract.compiler = compiler;
 
 	try
@@ -718,7 +725,7 @@ void CompilerStack::compileContract(
 	{
 		solAssert(false, "Assembly exception for bytecode");
 	}
-
+/*
 	try
 	{
 		compiledContract.runtimeObject = compiler->runtimeObject();
@@ -731,10 +738,10 @@ void CompilerStack::compileContract(
 	{
 		solAssert(false, "Assembly exception for deployed bytecode");
 	}
-
+*/
 	compiledContract.metadata = metadata;
 	_compiledContracts[compiledContract.contract] = &compiler->assembly();
-
+/*
 	try
 	{
 		if (!_contract.isLibrary())
@@ -751,6 +758,7 @@ void CompilerStack::compileContract(
 
 		// TODO: Report error / warning
 	}
+*/
 }
 
 string const CompilerStack::lastContractName() const
@@ -934,7 +942,7 @@ string CompilerStack::computeSourceMapping(eth::AssemblyItems const& _items) con
 	}
 	return ret;
 }
-
+/*
 namespace
 {
 
@@ -1021,3 +1029,4 @@ Json::Value CompilerStack::gasEstimates(string const& _contractName) const
 
 	return output;
 }
+*/

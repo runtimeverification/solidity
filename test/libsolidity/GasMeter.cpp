@@ -51,7 +51,7 @@ public:
 		m_compiler.setOptimiserSettings(dev::test::Options::get().optimize);
 		BOOST_REQUIRE_MESSAGE(m_compiler.compile(), "Compiling contract failed");
 
-		AssemblyItems const* items = m_compiler.runtimeAssemblyItems(m_compiler.lastContractName());
+		AssemblyItems const* items = nullptr; //m_compiler.runtimeAssemblyItems(m_compiler.lastContractName());
 		ASTNode const& sourceUnit = m_compiler.ast("");
 		BOOST_REQUIRE(items != nullptr);
 		m_gasCosts = GasEstimator::breakToStatementLevel(
@@ -62,6 +62,7 @@ public:
 
 	void testCreationTimeGas(string const& _sourceCode)
 	{
+/*
 		compileAndRun(_sourceCode);
 		auto state = make_shared<KnownState>();
 		PathGasMeter meter(*m_compiler.assemblyItems(m_compiler.lastContractName()));
@@ -74,12 +75,15 @@ public:
 
 		BOOST_REQUIRE(!gas.isInfinite);
 		BOOST_CHECK(gas.value == m_gasUsed);
+*/
+		BOOST_REQUIRE(false);
 	}
 
 	/// Compares the gas computed by PathGasMeter for the given signature (but unknown arguments)
 	/// against the actual gas usage computed by the VM on the given set of argument variants.
 	void testRunTimeGas(string const& _sig, vector<vector<bytes>> _argumentVariants)
 	{
+/*
 		u256 gasUsed = 0;
 		GasMeter::GasConsumption gas;
 		for (vector<bytes> const& arguments: _argumentVariants)
@@ -95,6 +99,8 @@ public:
 		);
 		BOOST_REQUIRE(!gas.isInfinite);
 		BOOST_CHECK(gas.value == m_gasUsed);
+*/
+		BOOST_REQUIRE(false);
 	}
 
 	static GasMeter::GasConsumption gasForTransaction(bytes const& _data, vector<bytes> const& _arguments)
