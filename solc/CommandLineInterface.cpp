@@ -613,8 +613,8 @@ Allowed options)",
 		(g_argAst.c_str(), "AST of all source files.")
 		(g_argAstJson.c_str(), "AST of all source files in JSON format.")
 		(g_argAstCompactJson.c_str(), "AST of all source files in a compact JSON format.")
-		(g_argAsm.c_str(), "EVM assembly of the contracts.")
-		(g_argAsmJson.c_str(), "EVM assembly of the contracts in JSON format.")
+		(g_argAsm.c_str(), "IELE assembly of the contracts.")
+		(g_argAsmJson.c_str(), "IELE assembly of the contracts in JSON format.")
 		(g_argOpcodes.c_str(), "Opcodes of the contracts.")
 		(g_argBinary.c_str(), "Binary of the contracts in hex.")
 		(g_argBinaryRuntime.c_str(), "Binary of the runtime part of the contracts in hex.")
@@ -1197,11 +1197,11 @@ void CommandLineInterface::outputCompilationResults()
 
 			if (m_args.count(g_argOutputDir))
 			{
-				createFile(m_compiler->filesystemFriendlyName(contract) + (m_args.count(g_argAsmJson) ? "_evm.json" : ".evm"), ret);
+				createFile(m_compiler->filesystemFriendlyName(contract) + (m_args.count(g_argAsmJson) ? "_iele.json" : ".iele"), ret);
 			}
 			else
 			{
-				cout << "EVM assembly:" << endl << ret << endl;
+				cout << "IELE assembly:" << endl << ret << endl;
 			}
 		}
 
