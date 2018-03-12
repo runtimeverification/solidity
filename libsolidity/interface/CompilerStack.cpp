@@ -55,8 +55,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "llvm/Support/raw_ostream.h"
-
 using namespace std;
 using namespace dev;
 using namespace dev::solidity;
@@ -292,22 +290,6 @@ void CompilerStack::link()
 	}
 }
 
-bool CompilerStack::compileToIele()
-{
-	if (m_stackState < AnalysisSuccessful)
-		if (!parseAndAnalyze())
-			return false;
-
-	map<ContractDefinition const*, iele::IeleContract const*> compiledContracts;
-	for (Source const* source: m_sourceOrder)
-		for (ASTPointer<ASTNode> const& node: source->ast->nodes())
-			if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
-				if (isRequestedContract(*contract))
-					compileContractToIele(*contract, compiledContracts);
-	m_stackState = CompilationSuccessful;
-	return true;
-}
-
 vector<string> CompilerStack::contractNames() const
 {
 	if (m_stackState < AnalysisSuccessful)
@@ -396,14 +378,6 @@ string CompilerStack::assemblyString(string const& _contractName, StringMap _sou
 		return currentContract.compiler->assemblyString(_sourceCodes);
 	else
 		return string();
-}
-
-void CompilerStack::ieleString(string const& _contractName, string &ret) const
-{
-    llvm::raw_string_ostream OS(ret);
-	Contract const& currentContract = contract(_contractName);
-	if (currentContract.ieleContract)
-		currentContract.ieleContract->print(OS);
 }
 
 /// FIXME: cache the JSON
@@ -777,28 +751,6 @@ void CompilerStack::compileContract(
 
 		// TODO: Report error / warning
 	}
-}
-
-void CompilerStack::compileContractToIele(
-	ContractDefinition const& _contract,
-	map<ContractDefinition const*, iele::IeleContract const*>& _compiledContracts
-)
-{
-	if (
-		_compiledContracts.count(&_contract) ||
-		!_contract.annotation().unimplementedFunctions.empty() ||
-		!_contract.constructorIsPublic()
-	)
-		return;
-	for (auto const* dependency: _contract.annotation().contractDependencies)
-		compileContractToIele(*dependency, _compiledContracts);
-
-	shared_ptr<IeleCompiler> compiler = make_shared<IeleCompiler>();
-	Contract& compiledContract = m_contracts.at(_contract.fullyQualifiedName());
-	compiler->compileContract(_contract, _compiledContracts);
-	compiledContract.ieleCompiler = compiler;
-    compiledContract.ieleContract = compiler->ieleContract();
-	_compiledContracts[compiledContract.contract] = compiler->ieleContract();
 }
 
 string const CompilerStack::lastContractName() const

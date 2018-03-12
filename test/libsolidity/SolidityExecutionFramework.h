@@ -72,7 +72,7 @@ public:
 		m_compiler.addSource("", sourceCode);
 		m_compiler.setLibraries(_libraryAddresses);
 		m_compiler.setOptimiserSettings(m_optimize, m_optimizeRuns);
-		if (!m_compiler.compileToIele())
+		if (!m_compiler.compile())
 		{
 			auto scannerFromSourceName = [&](std::string const& _sourceName) -> solidity::Scanner const& { return m_compiler.scanner(_sourceName); };
 			SourceReferenceFormatter formatter(std::cerr, scannerFromSourceName);

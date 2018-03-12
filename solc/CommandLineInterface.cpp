@@ -782,11 +782,6 @@ bool CommandLineInterface::processInput()
 		m_onlyLink = true;
 		return link();
 	}
-	if (m_args.count(g_argIele))
-	{
-		// switch to IELE mode
-		m_onlyIele = true;
-	}
 
 	m_compiler.reset(new CompilerStack(fileReader));
 
@@ -808,7 +803,7 @@ bool CommandLineInterface::processInput()
 		unsigned runs = m_args[g_argOptimizeRuns].as<unsigned>();
 		m_compiler->setOptimiserSettings(optimize, runs);
 
-		bool successful = m_onlyIele ? m_compiler->compileToIele() : m_compiler->compile();
+		bool successful = m_compiler->compile();
 
 		for (auto const& error: m_compiler->errors())
 			formatter.printExceptionInformation(
@@ -1015,8 +1010,6 @@ bool CommandLineInterface::actOnInput()
 		return true;
 	else if (m_onlyLink)
 		writeLinkedFiles();
-    else if (m_onlyIele)
-        writeIeleFiles();
 	else
 		outputCompilationResults();
 	return !m_error;
@@ -1073,18 +1066,6 @@ void CommandLineInterface::writeLinkedFiles()
 			cout << src.second << endl;
 		else
 			writeFile(src.first, src.second);
-}
-
-void CommandLineInterface::writeIeleFiles() {
-  vector<string> contracts = m_compiler->contractNames();
-  for (const string &contract: contracts) {
-    string ret;
-    m_compiler->ieleString(contract, ret);
-    if (m_args.count(g_argOutputDir))
-      createFile(m_compiler->filesystemFriendlyName(contract) + ".iele", ret);
-    else
-      cout << ret << endl;
-  }
 }
 
 bool CommandLineInterface::assemble(
