@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libdevcore/CommonData.h"
 #include "IeleFunction.h"
 #include "IeleGlobalVariable.h"
 #include "IeleValue.h"
@@ -187,6 +188,7 @@ public:
   bool   contract_empty() const { return IeleContractList.empty(); }
 
   void print(llvm::raw_ostream &OS, unsigned indent = 0) const override;
+  bytes toBinary() const;
 
   // Method for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const IeleValue *V) {
