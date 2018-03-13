@@ -316,7 +316,7 @@ bool IeleCompiler::visit(const WhileStatement &whileStatement) {
     iele::IeleValue * ConditionValue =
       compileExpression(whileStatement.condition());
     assert(ConditionValue &&
-           "IeleComp iler: Failed to compile while condition.");
+           "IeleCompiler: Failed to compile while condition.");
 
     // Invert the condition.
     iele::IeleLocalVariable *InvConditionValue =
