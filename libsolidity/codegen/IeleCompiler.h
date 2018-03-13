@@ -70,6 +70,20 @@ private:
   llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
   bool CompilingLValue;
 
+  // Infrastructure for handling modifiers (borrowed from ContractCompiler.cpp)
+  // Lookup function modifier by name
+	ModifierDefinition const& functionModifier(std::string const& _name) const;
+  // Appends one layer of function modifier code of the current function, or the function
+	// body itself if the last modifier was reached.
+	void appendModifierOrFunctionCode();
+  unsigned m_modifierDepth = 0;
+	FunctionDefinition const* m_currentFunction = nullptr;
+	// This diverges from the evm compiler: they use CompilerContext::m_inheritanceHierarchy 
+  // to loop through all contracts in the chain. We don't have inheritance for now, so 
+  // let's keep it simple and use this as ashortcut. May need updating later when we support OO features.  
+  ContractDefinition const* m_currentContract = nullptr; 
+  // ------------------------------------------------------------------------------------
+
   // Helpers for the compilation process.
   iele::IeleValue *compileExpression(const Expression &expression);
   void compileTuple(
