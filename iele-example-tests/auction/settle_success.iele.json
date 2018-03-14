@@ -17,7 +17,7 @@
                     "0x03": "0x2000000000000000000000000000000000000000",
                     "0x04": "0x0100"
                 },
-                "code": "auction.iele"
+                "code": "SimpleAuction.iele"
             }
         },
         "blocks": [
@@ -73,7 +73,7 @@
                     "0x04": "0x0100",
                     "0x05": "0x01"
                 }, 
-                "code": "auction.iele"
+                "code": "SimpleAuction.iele"
             }
         }
     }
