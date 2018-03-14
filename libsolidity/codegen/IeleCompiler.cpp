@@ -210,31 +210,32 @@ void IeleCompiler::appendModifierOrFunctionCode() {
 
   // The function we are processing has no modifiers. 
   // Process function body as normal...
-  if (ModifierDepth >= CurrentFunction->modifiers().size())
-  {
+  if (ModifierDepth >= CurrentFunction->modifiers().size()) {
     assert(CurrentFunction->isImplemented() && "");
     codeBlock = &CurrentFunction->body();
   }
   // The function we are processing uses modifiers. 
-  else
-  { 
+  else { 
     // Get next modifier invocation
     ASTPointer<ModifierInvocation> const& modifierInvocation = CurrentFunction->modifiers()[ModifierDepth];
 
     // constructor call should be excluded
-    if (dynamic_cast<ContractDefinition const*>(modifierInvocation->name()->annotation().referencedDeclaration))
-    {
+    if (dynamic_cast<ContractDefinition const*>(modifierInvocation->name()->annotation().referencedDeclaration)) {
       assert(false && "IeleCompiler: modifiers not allowed on constructor!");
       appendModifierOrFunctionCode();
     }
-    else
-    {
+    else {
       // Retrieve modifier definition from its name
       ModifierDefinition const& modifier = functionModifier(modifierInvocation->name()->name());
       
       // Visit the modifier's parameters
       for (const ASTPointer<const VariableDeclaration> &arg : modifier.parameters())
         iele::IeleLocalVariable::Create(&Context, arg->name(), CompilingFunction);
+
+      // TODO: double check, and delete once sure it's not needed
+      // Visit the modifier's return parameters
+      // for (const ASTPointer<const VariableDeclaration> &ret : modifier.returnParameters())
+      //   iele::IeleLocalVariable::Create(&Context, ret->name(), CompilingFunction);
 
       // Visit the modifier's local variables
       for (const VariableDeclaration *local: modifier.localVariables()) {
@@ -248,8 +249,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
 
       // Cycle through each parameter-argument pair; for each one, make an assignment.
       // This way, we pass arguments into the modifier.  
-      for (unsigned i = 0; i < modifier.parameters().size(); ++i)
-      {
+      for (unsigned i = 0; i < modifier.parameters().size(); ++i) {
         // Extract LHS and RHS from modifier definition and invocation
         VariableDeclaration const& var = *modifier.parameters()[i];
         Expression const& initValue    = *modifierInvocation->arguments()[i];
@@ -280,8 +280,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
   }
 
   // Visit whatever is next (modifier's body or function body)
-  if (codeBlock)
-  {
+  if (codeBlock) {
     codeBlock->accept(*this);
   }
 
