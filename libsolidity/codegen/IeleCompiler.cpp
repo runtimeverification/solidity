@@ -11,15 +11,14 @@ using namespace dev;
 using namespace dev::solidity;
 
 // lookup a ModifierDefinition by name (borrowed from CompilerContext.cpp)
-ModifierDefinition const& IeleCompiler::functionModifier(std::string const& _name) const
-{
-	//solAssert(!m_inheritanceHierarchy.empty(), "No inheritance hierarchy set.");
-	//for (ContractDefinition const* contract: m_inheritanceHierarchy)
-    assert(m_currentContract && "m_currentContract not set.");
-    for (ModifierDefinition const* modifier: m_currentContract->functionModifiers())
-			if (modifier->name() == _name)
-				return *modifier;
-    assert(false && "Function modifier not found.");
+const ModifierDefinition &IeleCompiler::functionModifier(std::string const& _name) const {
+  //solAssert(!m_inheritanceHierarchy.empty(), "No inheritance hierarchy set.");
+  //for (ContractDefinition const* contract: m_inheritanceHierarchy)
+  assert(CurrentContract && "CurrentContract not set.");
+  for (ModifierDefinition const* modifier: CurrentContract->functionModifiers())
+    if (modifier->name() == _name)
+      return *modifier;
+  assert(false && "IeleCompiler: Function modifier not found.");
 }
 
 void IeleCompiler::compileContract(
@@ -27,7 +26,7 @@ void IeleCompiler::compileContract(
     std::map<ContractDefinition const*, iele::IeleContract const*> const &contracts) {
   
   // Store the current contract
-  m_currentContract = &contract;
+  CurrentContract = &contract;
   
   // Create IeleContract.
   CompilingContract = iele::IeleContract::Create(&Context, contract.name());
@@ -106,8 +105,8 @@ bool IeleCompiler::visit(FunctionDefinition const& function) {
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
 
   // Visit function body (inc modifiers). 
-	m_currentFunction = &function;
-  m_modifierDepth = -1;
+  CurrentFunction = &function;
+  ModifierDepth = -1;
   appendModifierOrFunctionCode();
 
   // Add a ret void if the last block doesn't end with a ret instruction.
@@ -203,36 +202,35 @@ bool IeleCompiler::visit(const Return &returnStatement) {
   return false;
 }
 
-void IeleCompiler::appendModifierOrFunctionCode()
-{
-	assert(m_currentFunction && "m_currentFunction not defined");
-	
+void IeleCompiler::appendModifierOrFunctionCode() {
+  assert(CurrentFunction && "IeleCompiler: CurrentFunction not defined");
+  
   Block const* codeBlock = nullptr;
-	m_modifierDepth++;
+  ModifierDepth++;
 
   // The function we are processing has no modifiers. 
   // Process function body as normal...
-	if (m_modifierDepth >= m_currentFunction->modifiers().size())
-	{
-		assert(m_currentFunction->isImplemented() && "");
-		codeBlock = &m_currentFunction->body();
-	}
+  if (ModifierDepth >= CurrentFunction->modifiers().size())
+  {
+    assert(CurrentFunction->isImplemented() && "");
+    codeBlock = &CurrentFunction->body();
+  }
   // The function we are processing uses modifiers. 
-	else
-	{
+  else
+  { 
     // Get next modifier invocation
-		ASTPointer<ModifierInvocation> const& modifierInvocation = m_currentFunction->modifiers()[m_modifierDepth];
+    ASTPointer<ModifierInvocation> const& modifierInvocation = CurrentFunction->modifiers()[ModifierDepth];
 
-		// constructor call should be excluded
+    // constructor call should be excluded
     if (dynamic_cast<ContractDefinition const*>(modifierInvocation->name()->annotation().referencedDeclaration))
     {
-  	  assert(false && "modifiers not allowed on constructor!");
-			appendModifierOrFunctionCode();
+      assert(false && "IeleCompiler: modifiers not allowed on constructor!");
+      appendModifierOrFunctionCode();
     }
-		else
-		{
+    else
+    {
       // Retrieve modifier definition from its name
-			ModifierDefinition const& modifier = functionModifier(modifierInvocation->name()->name());
+      ModifierDefinition const& modifier = functionModifier(modifierInvocation->name()->name());
       
       // Visit the modifier's parameters
       for (const ASTPointer<const VariableDeclaration> &arg : modifier.parameters())
@@ -246,12 +244,12 @@ void IeleCompiler::appendModifierOrFunctionCode()
 
       // Is the modifier invocation well formed?
       assert(modifier.parameters().size() == modifierInvocation->arguments().size() && 
-             "modifier has wrong number of parameters!");
+             "IeleCompiler: modifier has wrong number of parameters!");
 
       // Cycle through each parameter-argument pair; for each one, make an assignment.
       // This way, we pass arguments into the modifier.  
       for (unsigned i = 0; i < modifier.parameters().size(); ++i)
-			{
+      {
         // Extract LHS and RHS from modifier definition and invocation
         VariableDeclaration const& var = *modifier.parameters()[i];
         Expression const& initValue    = *modifierInvocation->arguments()[i];
@@ -274,20 +272,20 @@ void IeleCompiler::appendModifierOrFunctionCode()
         // Make assignment
         iele::IeleInstruction::CreateAssign(
             llvm::cast<iele::IeleLocalVariable>(LHSValue), RHSValue, CompilingBlock);
-			}
+      }
       
       // Arguments to the modifier have been taken care off. Now move to modifier's body. 
       codeBlock = &modifier.body();
-		}
-	}
+    }
+  }
 
   // Visit whatever is next (modifier's body or function body)
-	if (codeBlock)
-	{
-		codeBlock->accept(*this);
-	}
+  if (codeBlock)
+  {
+    codeBlock->accept(*this);
+  }
 
-	m_modifierDepth--;
+  ModifierDepth--;
 }
 
 bool IeleCompiler::visit(const Throw &throwStatement) {
@@ -475,7 +473,7 @@ bool IeleCompiler::visit(const ExpressionStatement &expressionStatement) {
 }
 
 bool IeleCompiler::visit(const PlaceholderStatement &placeholderStatement) {
-	appendModifierOrFunctionCode();
+  appendModifierOrFunctionCode();
   return false;
 }
 
@@ -493,7 +491,7 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   Token::Value op = assignment.assignmentOperator();
   assert(op == Token::Assign && "not implemented yet");
   assert(assignment.leftHandSide().annotation().type->category() !=
-	         Type::Category::Tuple && "not implemented yet");
+           Type::Category::Tuple && "not implemented yet");
 
   // Visit LHS.
   iele::IeleValue *LHSValue = compileLValue(assignment.leftHandSide());
