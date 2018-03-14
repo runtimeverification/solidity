@@ -42,7 +42,7 @@ void IeleCompiler::compileContract(
     constructor->accept(*this);
   else {
     iele::IeleFunction *Constructor =
-      iele::IeleFunction::Create(&Context, true, "init", CompilingContract);
+      iele::IeleFunction::Create(&Context, false, "init", CompilingContract);
     iele::IeleBlock *ConstructorBlock =
       iele::IeleBlock::Create(&Context, "entry", Constructor);
     iele::IeleInstruction::CreateRetVoid(ConstructorBlock);
