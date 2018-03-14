@@ -12,8 +12,12 @@ cd ..
 # needs iele-semantics installed and blockchaintest in the path
 ./build/solc/solc --iele iele-example-tests/auction/auction.sol > iele-example-tests/auction/auction.iele
 diff iele-example-tests/auction/auction.iele iele-example-tests/auction/auction.iele.ref
+
+iele-vm 0 127.0.0.1 > port &
+sleep 3
+export PORT=`cat port | awk -F ':' '{print $3}'`
 for f in $(ls iele-example-tests/auction/*.json); do
-  blockchaintest $f
+  iele-test-vm $f $PORT
 done
 
 # run command line tests
