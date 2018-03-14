@@ -728,9 +728,15 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleInstruction::Gasprice, GaspriceValue, EmptyArguments,
         CompilingBlock);
       CompilingExpressionResult.push_back(GaspriceValue);
-    } else if (member == "coinbase")
-      assert(false && "IeleCompiler: member not supported in IELE");
-    else if (member == "data")
+    } else if (member == "coinbase") {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *BeneficiaryValue =
+        iele::IeleLocalVariable::Create(&Context, "beneficiary", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Beneficiary, BeneficiaryValue, EmptyArguments,
+        CompilingBlock);
+      CompilingExpressionResult.push_back(BeneficiaryValue);
+    } else if (member == "data")
       assert(false && "IeleCompiler: member not supported in IELE");
     else if (member == "sig")
       assert(false && "IeleCompiler: member not supported in IELE");
