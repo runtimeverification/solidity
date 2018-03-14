@@ -60,11 +60,16 @@ void IeleCompiler::compileContract(
 }
 
 bool IeleCompiler::visit(FunctionDefinition const& function) {
-  std::string FunctionName = function.name();
+  std::string FunctionName;
   if (function.isConstructor())
     FunctionName = "init";
   else if (function.isFallback())
     FunctionName = "deposit";
+  else if (function.isPublic())
+    FunctionName = function.externalSignature();
+  else
+    // TODO: overloading on internal functions.
+    FunctionName = function.name();
 
   CompilingFunction =
     iele::IeleFunction::Create(&Context, function.isPartOfExternalInterface(),
