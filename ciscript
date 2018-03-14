@@ -1,4 +1,5 @@
 # clean
+export PATH=~/.local/bin:$PATH
 rm -rf deps build test/failed iele-example-tests/auction/auction.iele
 
 # build
