@@ -21,6 +21,8 @@ for f in $(ls iele-example-tests/auction/*.json); do
   iele-test-vm $f $PORT
 done
 
+kill -int %1
+
 # run command line tests
 ./test/ieleCmdlineTests.sh
 
