@@ -98,7 +98,6 @@ static string const g_strLicense = "license";
 static string const g_strLibraries = "libraries";
 static string const g_strLink = "link";
 static string const g_strMachine = "machine";
-static string const g_strIele = "iele";
 static string const g_strMetadata = "metadata";
 static string const g_strMetadataLiteral = "metadata-literal";
 static string const g_strNatspecDev = "devdoc";
@@ -141,7 +140,6 @@ static string const g_argJulia = g_strJulia;
 static string const g_argLibraries = g_strLibraries;
 static string const g_argLink = g_strLink;
 static string const g_argMachine = g_strMachine;
-static string const g_argIele = g_strIele;
 static string const g_argMetadata = g_strMetadata;
 static string const g_argMetadataLiteral = g_strMetadataLiteral;
 static string const g_argNatspecDev = g_strNatspecDev;
@@ -597,10 +595,6 @@ Allowed options)",
 			g_argLink.c_str(),
 			"Switch to linker mode, ignoring all options apart from --libraries "
 			"and modify binaries in place."
-		)
-		(
-			g_argIele.c_str(),
-			"Switch to IELE mode, ignoring all options, and compile solidity input to IELE."
 		)
 		(g_argMetadataLiteral.c_str(), "Store referenced sources are literal data in the metadata output.")
 		(
