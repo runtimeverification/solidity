@@ -55,7 +55,7 @@ void IeleContract::print(llvm::raw_ostream &OS, unsigned indent) const {
     F.print(OS, indent);
     isFirst = false;
   }
-  OS << "\n\n" << Indent << "}";
+  OS << "\n\n" << Indent << "}" << "\n";
 }
 
 bytes IeleContract::toBinary() const {
