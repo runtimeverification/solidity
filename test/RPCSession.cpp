@@ -25,6 +25,8 @@
 
 #include <libdevcore/JSON.h>
 
+#include <test/ExecutionFramework.h>
+
 #include <string>
 #include <stdio.h>
 #include <thread>
@@ -148,7 +150,7 @@ string RPCSession::eth_getCode(string const& _address, string const& _blockNumbe
 string RPCSession::eth_getTimestamp(string const& _blockNumber)
 {
 	// NOTE: to_string() converts bool to 0 or 1
-	return rpcCall("eth_getTimestamp", { quote(_blockNumber) }).asString();
+	return rpcCall("eth_getBlockByNumber", { quote(_blockNumber), "false" })["timestamp"].asString();
 }
 
 RPCSession::TransactionReceipt RPCSession::eth_getTransactionReceipt(string const& _transactionHash)
@@ -156,12 +158,9 @@ RPCSession::TransactionReceipt RPCSession::eth_getTransactionReceipt(string cons
 	TransactionReceipt receipt;
 	Json::Value const result = rpcCall("eth_getTransactionReceipt", { quote(_transactionHash) });
 	BOOST_REQUIRE(!result.isNull());
+	receipt.contractAddress = result["contractAddress"].asString();
 	receipt.gasUsed = result["gasUsed"].asString();
 	receipt.status = result["status"].asString();
-	for (auto const& output : result["output"])
-	{
-		receipt.output.push_back(output.asString());
-	}
 	receipt.blockNumber = result["blockNumber"].asString();
 	for (auto const& log: result["logs"])
 	{
@@ -175,14 +174,24 @@ RPCSession::TransactionReceipt RPCSession::eth_getTransactionReceipt(string cons
 	return receipt;
 }
 
-string RPCSession::eth_sendTransaction(TransactionData const& _td)
+string RPCSession::iele_sendTransaction(TransactionData const& _td)
 {
-	return eth_sendTransaction(_td.toJson());
+	return iele_sendTransaction(_td.toJson());
 }
 
-string RPCSession::eth_sendTransaction(string const& _transaction)
+string RPCSession::iele_sendTransaction(string const& _transaction)
 {
-	return rpcCall("eth_sendTransaction", { _transaction }).asString();
+	return rpcCall("iele_sendTransaction", { _transaction }).asString();
+}
+
+vector<string> RPCSession::iele_call(TransactionData const& _td)
+{
+	Json::Value rawOutput = rpcCall("iele_call", { _td.toJson(), quote("latest") });
+	vector<string> result;
+        for (auto const& output : rawOutput) {
+		result.push_back(output.asString());
+	}
+	return result;
 }
 
 string RPCSession::eth_getBalance(string const& _address, string const& _blockNumber)
@@ -191,16 +200,19 @@ string RPCSession::eth_getBalance(string const& _address, string const& _blockNu
 	return rpcCall("eth_getBalance", { quote(address), quote(_blockNumber) }).asString();
 }
 
+h256 const EmptyTrie("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+
 bool RPCSession::eth_isStorageEmpty(string const& _address, string const& _blockNumber)
 {
 	string address = (_address.length() == 20) ? "0x" + _address : _address;
-	string result = rpcCall("eth_isStorageEmpty", { quote(address), quote(_blockNumber) }).asString();
-	return result == "true" ? true : false;
+	string result = rpcCall("eth_getStorageRoot", { quote(address), quote(_blockNumber) }).asString();
+	return h256(result) == EmptyTrie;
 }
 
 string RPCSession::personal_newAccount()
 {
 	string addr = rpcCall("personal_newAccount", { quote("") }).asString();
+	BOOST_REQUIRE(rpcCall("personal_unlockAccount", { quote(addr), quote(""), to_string(100000) }));
 	BOOST_TEST_MESSAGE("Created account " + addr);
 	return addr;
 }
@@ -226,10 +238,33 @@ bool RPCSession::miner_setEtherbase(string const& _address)
 }
 
 void RPCSession::test_setBalance(vector<string> _accounts, string _balance) {
-	for (auto const& account: _accounts) {
-		string address = (account.length() == 20) ? "0x" + account : account;
-		BOOST_REQUIRE(rpcCall("test_setBalance", { quote(address), quote(_balance) }) == true);
+	string forks;
+	static string const c_configString = R"(
+	{
+		"sealEngine": "NoProof",
+		"params": {
+			"accountStartNonce": "0x00",
+			"maximumExtraDataSize": "0x1000000",
+			"blockReward": "0x",
+			"allowFutureBlocks": true
+		},
+		"genesis": {
+			"author": "0000000000000010000000000000000000000000",
+			"timestamp": "0x00",
+			"parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+			"extraData": "0x",
+			"gasLimit": "0x1000000000000"
+		},
+		"accounts": {}
 	}
+	)";
+
+	Json::Value config;
+	BOOST_REQUIRE(jsonParseStrict(c_configString, config));
+	for (auto const& account: _accounts)
+		config["accounts"][account]["wei"] = _balance;
+
+	BOOST_REQUIRE(rpcCall("test_setChainParams", {jsonCompactPrint(config)}) == true);
 }
 
 Json::Value RPCSession::rpcCall(string const& _methodName, vector<string> const& _args, bool _canFail)

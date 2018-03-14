@@ -69,7 +69,7 @@ public:
 	)
 	{
 		bytes const& ret = compileAndRunWithoutCheck(_sourceCode, _value, _contractName, _arguments, _libraryAddresses);
-		BOOST_REQUIRE(!ret.empty());
+		BOOST_REQUIRE(ret.size() != 0);
 		return ret;
 	}
 
@@ -142,7 +142,7 @@ public:
 	static bytes encode(int _value) { return encode(u256(_value)); }
 	static bytes encode(size_t _value) { return encode(u256(_value)); }
 	static bytes encode(char const* _value) { return encode(std::string(_value)); }
-	static bytes encode(byte _value) { return bytes(31, 0) + bytes{_value}; }
+	static bytes encode(byte _value) { return bytes{_value}; }
 	static bytes encode(u256 const& _value) { return toBigEndian(_value); }
 	/// @returns the fixed-point encoding of a rational number with a given
 	/// number of fractional bits.
@@ -216,6 +216,26 @@ public:
 		return rlpEncodeLength(_str, 0x80);
 	}
 
+	static bytes toBigEndian(size_t _val, bool _partial = false)
+	{
+		if (_val == 0 && _partial) {
+			return bytes();
+		} else if (_val == 0) {
+			return bytes(1, 0);
+		}
+		return toBigEndian(_val / 256, true) + bytes(1, _val % 256);
+	}
+
+	static bytes toBigEndian(u256 _val, bool _partial = false)
+	{
+		if (_val == 0 && _partial) {
+			return bytes();
+		} else if (_val == 0) {
+			return bytes(1, 0);
+		}
+		return toBigEndian(_val / 256, true) + bytes(1, (unsigned char)_val % 256);
+	}
+
 private:
 	template <class CppFunction, class... Args>
 	auto callCppAndEncodeResult(CppFunction const& _cppFunction, Args const&... _arguments)
@@ -236,16 +256,8 @@ private:
 		if (_str.size() <= 55) {
 			return bytes(1, offset+_str.size()) + _str;
 		}
-		bytes len = sizeToBigEndian(_str.size());
+		bytes len = toBigEndian(_str.size());
 		return bytes(1, offset+55+len.size()) + len + _str;
-	}
-
-	static bytes sizeToBigEndian(size_t _val)
-	{
-		if (_val == 0) {
-			return bytes();
-		}
-		return sizeToBigEndian(_val / 256) + bytes(1, _val % 256);
 	}
 
 protected:
@@ -279,7 +291,7 @@ protected:
 	u256 const m_gasPrice = 100 * szabo;
 	u256 const m_gas = 100000000;
 	std::vector<bytes> m_output;
-	bytes m_status;
+	u256 m_status;
 	std::vector<LogEntry> m_logs;
 	u256 m_gasUsed;
 };

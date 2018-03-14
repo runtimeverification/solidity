@@ -110,21 +110,23 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 	{
 	        d.to = dev::toString(m_contractAddress);
 	        BOOST_REQUIRE(m_rpc.eth_getCode(d.to, "latest").size() > 2);
+		vector<string> const& outputs = m_rpc.iele_call(d);
+		m_output.clear();
+		for (auto const& output : outputs) {
+			m_output.push_back(fromHex(output, WhenError::Throw));
+		}
 	}
 
-	string txHash = m_rpc.eth_sendTransaction(d);
+	string txHash = m_rpc.iele_sendTransaction(d);
 	m_rpc.test_mineBlocks(1);
 	RPCSession::TransactionReceipt receipt(m_rpc.eth_getTransactionReceipt(txHash));
-	m_output.clear();
-	for (string const& output : receipt.output) {
-		m_output.push_back(fromHex(output, WhenError::Throw));
-	}
 
 	m_blockNumber = u256(receipt.blockNumber);
+	m_status = u256(receipt.status);
 
 	if (_isCreation)
 	{
-	        m_contractAddress = Address(receipt.output[0]);
+	        m_contractAddress = Address(receipt.contractAddress);
 	        BOOST_REQUIRE(m_contractAddress);
 	}
 
@@ -162,7 +164,7 @@ void ExecutionFramework::sendEther(Address const& _to, u256 const& _value)
 	d.value = toHex(_value, HexPrefix::Add);
 	d.to = dev::toString(_to);
 
-	string txHash = m_rpc.eth_sendTransaction(d);
+	string txHash = m_rpc.iele_sendTransaction(d);
 	m_rpc.test_mineBlocks(1);
 }
 
