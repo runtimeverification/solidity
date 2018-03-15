@@ -456,7 +456,11 @@ bool IeleCompiler::visit(const Assignment &assignment) {
 }
 
 bool IeleCompiler::visit(const TupleExpression &tuple) {
-  assert(false && "not implemented yet");
+  if (tuple.components().size() == 1) {
+    tuple.components()[0].get()->accept(*this);
+  } else {
+    assert(false && "not implemented yet");
+  }
   return false;
 }
 
