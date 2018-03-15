@@ -10,7 +10,7 @@ contract SimpleAuction {
 
 @ended = 5
 
-define @init(%_beneficiary, %_biddingTime) {
+define @"init"(%_beneficiary, %_biddingTime) {
 entry:
   sstore %_beneficiary, @beneficiary
   %timestamp = call @iele.timestamp()
@@ -19,7 +19,7 @@ entry:
   ret void
 }
 
-define public @bid() {
+define public @"bid()"() {
 entry:
   %timestamp = call @iele.timestamp()
   %auctionEnd.val = sload @auctionEnd
@@ -52,7 +52,7 @@ throw:
   revert -1
 }
 
-define public @settleAuction() {
+define public @"settleAuction()"() {
 entry:
   %timestamp = call @iele.timestamp()
   %auctionEnd.val = sload @auctionEnd

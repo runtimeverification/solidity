@@ -15,7 +15,7 @@ function printTask() { echo "$(tput bold)$(tput setaf 2)$1$(tput sgr0)"; }
 function printResult()
 {
     echo -e -n "$(tput bold)$(tput setaf 4)$1 passed: $(tput sgr0)"
-    printf '%4d / %4d\n' $2 $3
+    printf '%4d / %4d (%4d excluded)\n' $2 $3 $4
 }
 
 function compileFull()
@@ -49,42 +49,59 @@ function compileFull()
 printTask "Compiling all examples in std..."
 examples=0
 examples_success=0
+examples_excluded=0
 cd "$REPO_ROOT"
-for f in `ls std/*.sol | sort | comm -23 - test/failing-tests`
+for f in std/*.sol
 do
     compileFull "$f"
     failed=$?
+    grep -q $f test/failing-tests
+    excluded=$?
     examples=$((examples+1))
-    [ $failed -eq 0 ] && examples_success=$((examples_success+1))
-    
+    [ $failed -eq 0 ] && [ $excluded -ne 0 ] && examples_success=$((examples_success+1))
+    [ $failed -ne 0 ] && [ $excluded -eq 0 ] && examples_excluded=$((examples_excluded+1))
+    [ $failed -eq 0 ] && [ $excluded -eq 0 ] && echo "Error: test passed but was expected to fail: $f" && cat "$f"
+    [ $failed -ne 0 ] && [ $excluded -ne 0 ] && echo "Error: test failed but was expected to pass: $f" && cat "$f"
 done
 
 printTask "Compiling various contracts and libraries..."
 contracts=0
 contracts_success=0
-for dir in `ls -d test/compilationTests/* | sort | comm -23 - test/failing-tests`
+contracts_excluded=0
+for dir in test/compilationTests/*
 do
     if [ "$dir" != "test/compilationTests/README.md" ]
     then
         compileFull "$dir"/*.sol "$dir"/*/*.sol
         failed=$?
+        grep -q $dir test/failing-tests
+        excluded=$?
         contracts=$((contracts+1))
-        [ $failed -eq 0 ] && contracts_success=$((contracts_success+1))
+        [ $failed -eq 0 ] && [ $excluded -ne 0 ] && contracts_success=$((contracts_success+1))
+        [ $failed -ne 0 ] && [ $excluded -eq 0 ] && contracts_excluded=$((contracts_excluded+1))
+        [ $failed -eq 0 ] && [ $excluded -eq 0 ] && echo "Error: test passed but was expected to fail: $dir"
+        [ $failed -ne 0 ] && [ $excluded -ne 0 ] && echo "Error: test failed but was expected to pass: $dir"
     fi
 done
 
 printTask "Compiling all examples from the C++ test suite..."
 ctests=0
 ctests_success=0
+ctests_excluded=0
 TMPDIR=$(mktemp -d)
 cd "$TMPDIR"
 "$REPO_ROOT"/scripts/isolate_tests.py "$REPO_ROOT"/test/
-for f in `ls *.sol | sort | comm -23 - "$REPO_ROOT"/test/failing-tests`
+for f in *.sol
 do
     compileFull "$f"
     failed=$?
+    grep -q $f "$REPO_ROOT"/test/failing-tests
+    excluded=$?
     ctests=$((ctests+1))
-    [ $failed -eq 0 ] && ctests_success=$((ctests_success+1))
+    [ $failed -eq 0 ] && [ $excluded -ne 0 ] && ctests_success=$((ctests_success+1))
+    [ $failed -ne 0 ] && [ $excluded -eq 0 ] && ctests_excluded=$((ctests_excluded+1))
+    [ $failed -eq 0 ] && [ $excluded -eq 0 ] && echo "Error: test passed but was expected to fail: $f" && cat "$f"
+    [ $failed -ne 0 ] && [ $excluded -ne 0 ] && echo "Error: test failed but was expected to pass: $f" && cat "$f"
 done
 cd ..
 rm -rf "$TMPDIR"
@@ -92,28 +109,33 @@ rm -rf "$TMPDIR"
 printTask "Compiling all examples from the documentation..."
 doctests=0
 doctests_success=0
+doctests_excluded=0
 TMPDIR=$(mktemp -d)
 cd "$TMPDIR"
 "$REPO_ROOT"/scripts/isolate_tests.py "$REPO_ROOT"/docs/ docs
-for f in `ls *.sol | sort | comm -23 - "$REPO_ROOT"/test/failing-tests`
+for f in *.sol
 do
     compileFull "$f"
     failed=$?
+    grep -q $f "$REPO_ROOT"/test/failing-tests
+    excluded=$?
     doctests=$((doctests+1))
-    [ $failed -eq 0 ] && doctests_success=$((doctests_success+1))
+    [ $failed -eq 0 ] && [ $excluded -ne 0 ] && doctests_success=$((doctests_success+1))
+    [ $failed -ne 0 ] && [ $excluded -eq 0 ] && doctests_excluded=$((doctests_excluded+1))
+    [ $failed -eq 0 ] && [ $excluded -eq 0 ] && echo "Error: test passed but was expected to fail: $f" && cat "$f"
+    [ $failed -ne 0 ] && [ $excluded -ne 0 ] && echo "Error: test failed but was expected to pass: $f" && cat "$f"
 done
 cd ..
 rm -rf "$TMPDIR"
 
 total=$((examples+contracts+ctests+doctests))
 total_success=$((examples_success+contracts_success+ctests_success+doctests_success))
-excluded=$(cat "$REPO_ROOT"/test/failing-tests | wc -l)
-printResult "Std examples          " "$examples_success" "$examples"
-printResult "Contracts             " "$contracts_success" "$contracts"
-printResult "Test-suite examples   " "$ctests_success" "$ctests"
-printResult "Documentation examples" "$doctests_success" "$doctests"
-printResult "Total tests           " "$total_success" "$total"
-printResult "Excluded              " 0 "$excluded" 
+total_excluded=$((examples_excluded+contracts_excluded+ctests_excluded+doctests_excluded))
+printResult "Std examples          " "$examples_success" "$examples" "$examples_excluded"
+printResult "Contracts             " "$contracts_success" "$contracts" "$contracts_excluded"
+printResult "Test-suite examples   " "$ctests_success" "$ctests" "$ctests_excluded"
+printResult "Documentation examples" "$doctests_success" "$doctests" "$doctests_excluded"
+printResult "Total tests           " "$total_success" "$total" "$total_excluded"
 
 echo "Done."
-[ "$total" -eq "$total_success" ]
+[ "$total" -eq $(($total_success+$total_excluded)) ]
