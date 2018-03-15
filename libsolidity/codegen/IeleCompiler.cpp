@@ -233,13 +233,18 @@ void IeleCompiler::appendModifierOrFunctionCode() {
         iele::IeleLocalVariable::Create(&Context, arg->name(), CompilingFunction);
 
       // Visit the modifier's local variables
-      for (const VariableDeclaration *local: modifier.localVariables()) {
+      for (const VariableDeclaration *local: modifier.localVariables())
         iele::IeleLocalVariable::Create(&Context, local->name(), CompilingFunction);
-      }
 
       // Is the modifier invocation well formed?
       assert(modifier.parameters().size() == modifierInvocation->arguments().size() && 
              "IeleCompiler: modifier has wrong number of parameters!");
+
+      // Get Symbol Table
+      iele::IeleValueSymbolTable *ST = CompilingFunction->getIeleValueSymbolTable();
+      assert(ST &&
+            "IeleCompiler: failed to access compiling function's symbol "
+            "table while processing function modifer. ");
 
       // Cycle through each parameter-argument pair; for each one, make an assignment.
       // This way, we pass arguments into the modifier.  
@@ -251,13 +256,6 @@ void IeleCompiler::appendModifierOrFunctionCode() {
         // Compile RHS expression 
         // NB: seems that tuples are not allowed, so stick to simple expression
         iele::IeleValue* RHSValue = compileExpression(initValue);
-
-        // Get Symbol Table
-        // TODO: can we get this outside of the loop? (same question is valid for VariableDeclarationStatement visitor)
-        iele::IeleValueSymbolTable *ST = CompilingFunction->getIeleValueSymbolTable();
-        assert(ST &&
-              "IeleCompiler: failed to access compiling function's symbol "
-              "table while processing function modifer. ");
 
         // Lookup LHS from symbol table
         iele::IeleValue *LHSValue = ST->lookup(var.name());
@@ -437,16 +435,16 @@ bool IeleCompiler::visit(
     assert(assignments.size() == RHSValues.size() &&
            "IeleCompiler: Missing assignment in variable declaration "
            "statement");
+    // Visit LHS. We lookup the LHS name in the function's symbol table,
+    // where we should find it.
+    iele::IeleValueSymbolTable *ST =
+      CompilingFunction->getIeleValueSymbolTable();
+    assert(ST &&
+          "IeleCompiler: failed to access compiling function's symbol "
+          "table.");
     for (unsigned i = 0; i < assignments.size(); ++i) {
       const VariableDeclaration *varDecl = assignments[i];
       if (varDecl) {
-        // Visit LHS. We lookup the LHS name in the function's symbol table,
-        // where we should find it.
-        iele::IeleValueSymbolTable *ST =
-          CompilingFunction->getIeleValueSymbolTable();
-        assert(ST &&
-              "IeleCompiler: failed to access compiling function's symbol "
-              "table.");
         iele::IeleValue *LHSValue = ST->lookup(varDecl->name());
         assert(LHSValue && "IeleCompiler: Failed to compile LHS of variable "
                            "declaration statement");
