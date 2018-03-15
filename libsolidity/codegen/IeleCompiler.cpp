@@ -349,6 +349,7 @@ bool IeleCompiler::visit(
     for (unsigned i = 0; i < assignments.size(); ++i) {
       const VariableDeclaration *varDecl = assignments[i];
       if (varDecl) {
+        assert (varDecl->type()->category() != Type::Category::Function && "not implemented yet");
         // Visit LHS. We lookup the LHS name in the function's symbol table,
         // where we should find it.
         iele::IeleValueSymbolTable *ST =
