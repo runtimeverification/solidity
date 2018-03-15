@@ -119,9 +119,6 @@ bool IeleCompiler::visit(FunctionDefinition const& function) {
 }
 
 bool IeleCompiler::visit(const IfStatement &ifStatement) {
-  // Save condition block.
-  iele::IeleBlock *ConditionBlock = CompilingBlock;
-
   // Check if we have an if-false block. Our compilation strategy depends on
   // that.
   bool HasIfFalse = ifStatement.falseStatement() != nullptr;
@@ -147,7 +144,7 @@ bool IeleCompiler::visit(const IfStatement &ifStatement) {
 
   // Connect the condition block with a conditional jump to the condition target
   // block.
-  connectWithConditionalJump(ConditionValue, ConditionBlock, CondTargetBlock);
+  connectWithConditionalJump(ConditionValue, CompilingBlock, CondTargetBlock);
 
   // Append the code for the if-false block if we have one, else append the code
   // for the if-true block. The code is appended to the condition block.
@@ -210,14 +207,14 @@ bool IeleCompiler::visit(const WhileStatement &whileStatement) {
   iele::IeleBlock *LoopCondBlock = nullptr;
   if (whileStatement.isDoWhile())
     LoopCondBlock =
-      iele::IeleBlock::Create(&Context, "while.cond", CompilingFunction);
+      iele::IeleBlock::Create(&Context, "while.cond");
 
   // Create the loop exit block.
   iele::IeleBlock *LoopExitBlock =
-    iele::IeleBlock::Create(&Context, "while.end", CompilingFunction);
+    iele::IeleBlock::Create(&Context, "while.end");
 
   if (!whileStatement.isDoWhile()) {
-    // In a while loop, we first Visit the condition.
+    // In a while loop, we first visit the condition.
     iele::IeleValue * ConditionValue =
       compileExpression(whileStatement.condition());
     assert(ConditionValue &&
@@ -231,7 +228,7 @@ bool IeleCompiler::visit(const WhileStatement &whileStatement) {
     ConditionValue = InvConditionValue;
 
     // Branch out of the loop if the condition doesn't hold.
-    connectWithConditionalJump(ConditionValue, LoopBodyBlock, LoopExitBlock);
+    connectWithConditionalJump(ConditionValue, CompilingBlock, LoopExitBlock);
   }
 
   // Visit loop body.
@@ -245,6 +242,7 @@ bool IeleCompiler::visit(const WhileStatement &whileStatement) {
 
   if (whileStatement.isDoWhile()) {
     // In a do-while loop, we visit the condition after the loop body.
+    LoopCondBlock->insertInto(CompilingFunction);
     CompilingBlock = LoopCondBlock;
     iele::IeleValue * ConditionValue =
       compileExpression(whileStatement.condition());
@@ -252,13 +250,14 @@ bool IeleCompiler::visit(const WhileStatement &whileStatement) {
            "IeleCompiler: Failed to compile do-while condition.");
 
     // Branch to the start of the loop if the condition holds.
-    connectWithConditionalJump(ConditionValue, LoopCondBlock, LoopBodyBlock);
+    connectWithConditionalJump(ConditionValue, CompilingBlock, LoopBodyBlock);
   } else {
     // In a while loop, we jump to the start of the loop unconditionally.
-    connectWithUnconditionalJump(LoopBodyBlock, LoopBodyBlock);
+    connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
   }
 
   // Compilation continues in the loop exit block.
+  LoopExitBlock->insertInto(CompilingFunction);
   CompilingBlock = LoopExitBlock;
   return false;
 }
@@ -276,12 +275,10 @@ bool IeleCompiler::visit(const ForStatement &forStatement) {
   // Create the loop increment block, if needed.
   iele::IeleBlock *LoopIncBlock = nullptr;
   if (forStatement.loopExpression())
-    LoopIncBlock =
-      iele::IeleBlock::Create(&Context, "for.inc", CompilingFunction);
+    LoopIncBlock = iele::IeleBlock::Create(&Context, "for.inc");
 
   // Create the loop exit block.
-  iele::IeleBlock *LoopExitBlock =
-    iele::IeleBlock::Create(&Context, "for.end", CompilingFunction);
+  iele::IeleBlock *LoopExitBlock = iele::IeleBlock::Create(&Context, "for.end");
 
   // Visit condition, if it exists.
   if (forStatement.condition()) {
@@ -297,7 +294,7 @@ bool IeleCompiler::visit(const ForStatement &forStatement) {
     ConditionValue = InvConditionValue;
 
     // Branch out of the loop if the condition doesn't hold.
-    connectWithConditionalJump(ConditionValue, LoopBodyBlock, LoopExitBlock);
+    connectWithConditionalJump(ConditionValue, CompilingBlock, LoopExitBlock);
   }
 
   // Visit loop body.
@@ -314,6 +311,7 @@ bool IeleCompiler::visit(const ForStatement &forStatement) {
 
   if (forStatement.loopExpression()) {
     // Visit the loop increment code.
+    LoopIncBlock->insertInto(CompilingFunction);
     CompilingBlock = LoopIncBlock;
     forStatement.loopExpression()->accept(*this);
   }
@@ -322,6 +320,7 @@ bool IeleCompiler::visit(const ForStatement &forStatement) {
   connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
 
   // Compilation continues in the loop exit block.
+  LoopExitBlock->insertInto(CompilingFunction);
   CompilingBlock = LoopExitBlock;
   return false;
 }
