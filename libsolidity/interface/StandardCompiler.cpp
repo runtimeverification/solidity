@@ -518,13 +518,16 @@ Json::Value StandardCompiler::compileInternal(Json::Value const& _input)
 		// @TODO: add ir
 		if (isArtifactRequested(outputSelection, file, name, "evm.assembly"))
 			evmData["assembly"] = m_compilerStack.assemblyString(contractName, createSourceList(_input));
+/*
 		if (isArtifactRequested(outputSelection, file, name, "evm.legacyAssembly"))
 			evmData["legacyAssembly"] = m_compilerStack.assemblyJSON(contractName, createSourceList(_input));
+*/
 		if (isArtifactRequested(outputSelection, file, name, "evm.methodIdentifiers"))
 			evmData["methodIdentifiers"] = m_compilerStack.methodIdentifiers(contractName);
+/*
 		if (isArtifactRequested(outputSelection, file, name, "evm.gasEstimates"))
 			evmData["gasEstimates"] = m_compilerStack.gasEstimates(contractName);
-
+*/
 		if (isArtifactRequested(
 			outputSelection,
 			file,
@@ -542,11 +545,12 @@ Json::Value StandardCompiler::compileInternal(Json::Value const& _input)
 			name,
 			{ "evm.deployedBytecode", "evm.deployedBytecode.object", "evm.deployedBytecode.opcodes", "evm.deployedBytecode.sourceMap", "evm.deployedBytecode.linkReferences" }
 		))
+/*
 			evmData["deployedBytecode"] = collectEVMObject(
 				m_compilerStack.runtimeObject(contractName),
 				m_compilerStack.runtimeSourceMapping(contractName)
 			);
-
+*/
 		contractData["evm"] = evmData;
 
 		if (!contractsOutput.isMember(file))
