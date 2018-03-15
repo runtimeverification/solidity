@@ -232,15 +232,9 @@ void IeleCompiler::appendModifierOrFunctionCode() {
       for (const ASTPointer<const VariableDeclaration> &arg : modifier.parameters())
         iele::IeleLocalVariable::Create(&Context, arg->name(), CompilingFunction);
 
-      // TODO: double check, and delete once sure it's not needed
-      // Visit the modifier's return parameters
-      // for (const ASTPointer<const VariableDeclaration> &ret : modifier.returnParameters())
-      //   iele::IeleLocalVariable::Create(&Context, ret->name(), CompilingFunction);
-
       // Visit the modifier's local variables
       for (const VariableDeclaration *local: modifier.localVariables()) {
-        if (local->isLocalOrReturn())
-          iele::IeleLocalVariable::Create(&Context, local->name(), CompilingFunction);
+        iele::IeleLocalVariable::Create(&Context, local->name(), CompilingFunction);
       }
 
       // Is the modifier invocation well formed?
