@@ -386,9 +386,6 @@ bool IeleCompiler::visit(const InlineAssembly &inlineAssembly) {
 }
 
 bool IeleCompiler::visit(const Conditional &condition) {
-  // Save condition block.
-  iele::IeleBlock *ConditionBlock = CompilingBlock;
-
   // Visit condition.
   iele::IeleValue *ConditionValue = compileExpression(condition.condition());
   assert(ConditionValue && "IeleCompiler: failed to compile conditional condition.");
@@ -399,7 +396,7 @@ bool IeleCompiler::visit(const Conditional &condition) {
 
   // Connect the condition block with a conditional jump to the condition target
   // block.
-  connectWithConditionalJump(ConditionValue, ConditionBlock, CondTargetBlock);
+  connectWithConditionalJump(ConditionValue, CompilingBlock, CondTargetBlock);
 
   // Declare the final result of the conditional.
   iele::IeleLocalVariable *ResultValue =
