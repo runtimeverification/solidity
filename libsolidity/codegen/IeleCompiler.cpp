@@ -380,7 +380,51 @@ bool IeleCompiler::visit(const InlineAssembly &inlineAssembly) {
 }
 
 bool IeleCompiler::visit(const Conditional &condition) {
-  assert(false && "not implemented yet");
+  // Save condition block.
+  iele::IeleBlock *ConditionBlock = CompilingBlock;
+
+  // Visit condition.
+  iele::IeleValue *ConditionValue = compileExpression(condition.condition());
+  assert(ConditionValue && "IeleCompiler: failed to compile conditional condition.");
+
+  // The condition target block is the if-true block.
+  iele::IeleBlock *CondTargetBlock =
+    iele::IeleBlock::Create(&Context, "if.true");
+
+  // Connect the condition block with a conditional jump to the condition target
+  // block.
+  connectWithConditionalJump(ConditionValue, ConditionBlock, CondTargetBlock);
+
+  // Declare the final result of the conditional.
+  iele::IeleLocalVariable *ResultValue =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+
+  // Append the expression for the if-false block and assign it to the result.
+  iele::IeleValue *FalseValue = compileExpression(condition.falseExpression());
+  iele::IeleInstruction::CreateAssign(
+    ResultValue, FalseValue, CompilingBlock);
+
+  iele::IeleBlock *IfTrueBlock = CondTargetBlock;
+
+  // Since we have an if-false block, we need a new join block to jump to.
+  iele::IeleBlock *JoinBlock = iele::IeleBlock::Create(&Context, "if.end");
+
+  connectWithUnconditionalJump(CompilingBlock, JoinBlock);
+
+  // Add the if-true block at the end of the function and generate its code.
+  IfTrueBlock->insertInto(CompilingFunction);
+  CompilingBlock = IfTrueBlock;
+
+  // Append the expression for the if-true block and assign it to the result.
+  iele::IeleValue *TrueValue = compileExpression(condition.trueExpression());
+  iele::IeleInstruction::CreateAssign(
+    ResultValue, TrueValue, CompilingBlock);
+
+  // Add the join block at the end of the function and compilation continues in
+  // the join block.
+  JoinBlock->insertInto(CompilingFunction);
+  CompilingBlock = JoinBlock;
+  CompilingExpressionResult.push_back(ResultValue);
   return false;
 }
 
