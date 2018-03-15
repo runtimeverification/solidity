@@ -64,7 +64,15 @@ std::pair<bool, string> ExecutionFramework::compareAndCreateMessage(
 	if (_result == _expectation)
 		return std::make_pair(true, std::string{});
 	std::string message =
-			"Invalid encoded data\n";
+			"Invalid encoded data:\nExpected: [ ";
+	for (bytes const& val : _expectation) {
+		message += toHex(val) + " ";
+	}
+	message += "]\nActual: [ ";
+	for (bytes const& val : _result) {
+		message += toHex(val) + " ";
+	}
+	message += "]\n";
 	return make_pair(false, message);
 }
 
