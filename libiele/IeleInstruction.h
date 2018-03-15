@@ -209,6 +209,16 @@ public:
       IeleOps BinOpcode, IeleLocalVariable *Result, IeleValue *LeftOperandValue,
       IeleValue *RightOperandValue, IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateTernOp(
+      IeleOps TernOpcode, IeleLocalVariable *Result, IeleValue *FirstOperandValue,
+      IeleValue *SecondOperandValue, IeleValue *ThirdOperandValue,
+      IeleInstruction *InsertBefore = nullptr);
+
+  static IeleInstruction *CreateTernOp(
+      IeleOps TernOpcode, IeleLocalVariable *Result, IeleValue *FirstOperandValue,
+      IeleValue *SecondOperandValue, IeleValue *ThirdOperandValue,
+      IeleBlock *InsertAtEnd);
+
   void print(llvm::raw_ostream &OS, unsigned indent = 0) const;
 };
 

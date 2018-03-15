@@ -592,6 +592,44 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       appendRevert(InvConditionValue);
     break;
   }
+  case FunctionType::Kind::AddMod: {
+    iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
+    assert(Op1 &&
+           "IeleCompiler: Failed to compile operand 1 of addmod.");
+    iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
+    assert(Op2 &&
+           "IeleCompiler: Failed to compile operand 2 of addmod.");
+    iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
+    assert(Modulus &&
+           "IeleCompiler: Failed to compile modulus of addmod.");
+
+    iele::IeleLocalVariable *AddModValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateTernOp(iele::IeleInstruction::AddMod,
+                                        AddModValue, Op1, Op2, Modulus, 
+                                        CompilingBlock);
+    CompilingExpressionResult.push_back(AddModValue);
+    break;
+  }
+  case FunctionType::Kind::MulMod: {
+    iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
+    assert(Op1 &&
+           "IeleCompiler: Failed to compile operand 1 of addmod.");
+    iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
+    assert(Op2 &&
+           "IeleCompiler: Failed to compile operand 2 of addmod.");
+    iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
+    assert(Modulus &&
+           "IeleCompiler: Failed to compile modulus of addmod.");
+
+    iele::IeleLocalVariable *MulModValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateTernOp(iele::IeleInstruction::MulMod,
+                                        MulModValue, Op1, Op2, Modulus, 
+                                        CompilingBlock);
+    CompilingExpressionResult.push_back(MulModValue);
+    break;
+  }
   case FunctionType::Kind::Internal:
   case FunctionType::Kind::External:
   case FunctionType::Kind::CallCode:
@@ -614,8 +652,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Selfdestruct:
   case FunctionType::Kind::SHA3:
   case FunctionType::Kind::BlockHash:
-  case FunctionType::Kind::AddMod:
-  case FunctionType::Kind::MulMod:
   case FunctionType::Kind::ECRecover:
   case FunctionType::Kind::SHA256:
   case FunctionType::Kind::RIPEMD160:

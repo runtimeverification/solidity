@@ -363,6 +363,40 @@ IeleInstruction *IeleInstruction::CreateBinOp(
   return BinOpInst;
 }
 
+IeleInstruction *IeleInstruction::CreateTernOp(
+    IeleOps TernOpcode, IeleLocalVariable *Result, IeleValue *FirstOperandValue,
+    IeleValue *SecondOperandValue, IeleValue *ThirdOperandValue,
+    IeleInstruction *InsertBefore) {
+  assert(Result && "CreateTernOp: Invalid lvalues");
+  assert(FirstOperandValue && SecondOperandValue && ThirdOperandValue &&
+         "CreateTernOp: Invalid operands");
+
+  IeleInstruction *TernOpInst = new IeleInstruction(TernOpcode, InsertBefore);
+  TernOpInst->getIeleLValueList().push_back(Result);
+  TernOpInst->getIeleOperandList().push_back(FirstOperandValue);
+  TernOpInst->getIeleOperandList().push_back(SecondOperandValue);
+  TernOpInst->getIeleOperandList().push_back(ThirdOperandValue);
+
+  return TernOpInst;
+}
+
+IeleInstruction *IeleInstruction::CreateTernOp(
+    IeleOps TernOpcode, IeleLocalVariable *Result, IeleValue *FirstOperandValue,
+    IeleValue *SecondOperandValue, IeleValue *ThirdOperandValue,
+    IeleBlock *InsertAtEnd) {
+  assert(Result && "CreateTernOp: Invalid lvalues");
+  assert(FirstOperandValue && SecondOperandValue && ThirdOperandValue &&
+         "CreateTernOp: Invalid operands");
+
+  IeleInstruction *TernOpInst = new IeleInstruction(TernOpcode, InsertAtEnd);
+  TernOpInst->getIeleLValueList().push_back(Result);
+  TernOpInst->getIeleOperandList().push_back(FirstOperandValue);
+  TernOpInst->getIeleOperandList().push_back(SecondOperandValue);
+  TernOpInst->getIeleOperandList().push_back(ThirdOperandValue);
+
+  return TernOpInst;
+}
+
 static void printOpcode(llvm::raw_ostream &OS, const IeleInstruction *I) {
   switch (I->getOpcode()) {
 #define HANDLE_IELE_INST(N, OPC, TXT) \
