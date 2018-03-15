@@ -140,35 +140,40 @@ bool IeleCompiler::visit(const IfStatement &ifStatement) {
     ConditionValue = InvConditionValue;
   }
 
-  // If we have an if-false block, then the join block is the if-true block,
-  // else it is a new block.
-  iele::IeleBlock *JoinBlock =
-    iele::IeleBlock::Create(&Context, HasIfFalse ? "if.true" : "if.end",
-                            CompilingFunction);
+  // If we have an if-false block, then the condition target block is the if-true
+  // block, else it is the if-end block.
+  iele::IeleBlock *CondTargetBlock =
+    iele::IeleBlock::Create(&Context, HasIfFalse ? "if.true" : "if.end");
 
-  // Connect the condition block with a conditional jump to the join block.
-  connectWithConditionalJump(ConditionValue, ConditionBlock, JoinBlock);
+  // Connect the condition block with a conditional jump to the condition target
+  // block.
+  connectWithConditionalJump(ConditionValue, ConditionBlock, CondTargetBlock);
 
   // Append the code for the if-false block if we have one, else append the code
-  // for the if-true block.
+  // for the if-true block. The code is appended to the condition block.
   if (HasIfFalse)
     ifStatement.falseStatement()->accept(*this);
   else
     ifStatement.trueStatement().accept(*this);
 
-  // If we have an if-false block, then we need a new join block to jump to.
+  // If we have an if-false block, then we need a new join block to jump to,
+  // else the join block is the condition target block.
+  iele::IeleBlock *JoinBlock = CondTargetBlock;
   if (HasIfFalse) {
-    iele::IeleBlock *IfTrueBlock = JoinBlock;
-    JoinBlock = iele::IeleBlock::Create(&Context, "if.end", CompilingFunction);
+    iele::IeleBlock *IfTrueBlock = CondTargetBlock;
+    JoinBlock = iele::IeleBlock::Create(&Context, "if.end");
 
-    connectWithUnconditionalJump(ConditionBlock, JoinBlock);
+    connectWithUnconditionalJump(CompilingBlock, JoinBlock);
 
-    // Append the code for the if-true block.
+    // Add the if-true block at the end of the function and generate its code.
+    IfTrueBlock->insertInto(CompilingFunction);
     CompilingBlock = IfTrueBlock;
     ifStatement.trueStatement().accept(*this);
   }
 
-  // Compilation continues in the join block.
+  // Add the join block at the end of the function and compilation continues in
+  // the join block.
+  JoinBlock->insertInto(CompilingFunction);
   CompilingBlock = JoinBlock;
   return false;
 }
