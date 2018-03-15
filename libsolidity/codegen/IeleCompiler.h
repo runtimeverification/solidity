@@ -1,7 +1,11 @@
 #pragma once
 
 #include "libiele/IeleContext.h"
+#include "libiele/IeleContract.h"
 #include "libsolidity/ast/ASTVisitor.h"
+#include "libevmasm/LinkerObject.h"
+
+#include "llvm/Support/raw_ostream.h"
 
 namespace dev {
 namespace iele {
@@ -26,7 +30,20 @@ public:
       std::map<ContractDefinition const*, iele::IeleContract const*> const &contracts);
 
   // Returns the compiled IeleContract.
-  iele::IeleContract const* ieleContract() const { return CompiledContract; }
+  iele::IeleContract const& assembly() const { return *CompiledContract; }
+
+  std::string assemblyString(StringMap const& _sourceCodes = StringMap()) const {
+    std::string ret;
+    llvm::raw_string_ostream OS(ret);
+    CompiledContract->print(OS);
+    return ret;
+  }
+
+  eth::LinkerObject assembledObject() const {
+    bytes bytecode = CompiledContract->toBinary();
+    return {bytecode, std::map<size_t, std::string>()};
+  }
+
 
   // Visitor interface.
   virtual bool visit(const FunctionDefinition &function) override;

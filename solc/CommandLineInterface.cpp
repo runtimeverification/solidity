@@ -98,7 +98,6 @@ static string const g_strLicense = "license";
 static string const g_strLibraries = "libraries";
 static string const g_strLink = "link";
 static string const g_strMachine = "machine";
-static string const g_strIele = "iele";
 static string const g_strMetadata = "metadata";
 static string const g_strMetadataLiteral = "metadata-literal";
 static string const g_strNatspecDev = "devdoc";
@@ -141,7 +140,6 @@ static string const g_argJulia = g_strJulia;
 static string const g_argLibraries = g_strLibraries;
 static string const g_argLink = g_strLink;
 static string const g_argMachine = g_strMachine;
-static string const g_argIele = g_strIele;
 static string const g_argMetadata = g_strMetadata;
 static string const g_argMetadataLiteral = g_strMetadataLiteral;
 static string const g_argNatspecDev = g_strNatspecDev;
@@ -241,6 +239,7 @@ void CommandLineInterface::handleBinary(string const& _contract)
 			cout << m_compiler->object(_contract).toHex() << endl;
 		}
 	}
+/*
 	if (m_args.count(g_argCloneBinary))
 	{
 		if (m_args.count(g_argOutputDir))
@@ -261,6 +260,7 @@ void CommandLineInterface::handleBinary(string const& _contract)
 			cout << m_compiler->runtimeObject(_contract).toHex() << endl;
 		}
 	}
+*/
 }
 
 void CommandLineInterface::handleOpcode(string const& _contract)
@@ -363,6 +363,8 @@ void CommandLineInterface::handleNatspec(bool _natspecDev, string const& _contra
 
 void CommandLineInterface::handleGasEstimation(string const& _contract)
 {
+	//TODO: gas estimates
+/*
 	Json::Value estimates = m_compiler->gasEstimates(_contract);
 	cout << "Gas estimation:" << endl;
 
@@ -399,6 +401,7 @@ void CommandLineInterface::handleGasEstimation(string const& _contract)
 			cout << internalFunctions[name].asString() << endl;
 		}
 	}
+*/
 }
 
 void CommandLineInterface::readInputFilesAndConfigureRemappings()
@@ -593,10 +596,6 @@ Allowed options)",
 			"Switch to linker mode, ignoring all options apart from --libraries "
 			"and modify binaries in place."
 		)
-		(
-			g_argIele.c_str(),
-			"Switch to IELE mode, ignoring all options, and compile solidity input to IELE."
-		)
 		(g_argMetadataLiteral.c_str(), "Store referenced sources are literal data in the metadata output.")
 		(
 			g_argAllowPaths.c_str(),
@@ -608,8 +607,8 @@ Allowed options)",
 		(g_argAst.c_str(), "AST of all source files.")
 		(g_argAstJson.c_str(), "AST of all source files in JSON format.")
 		(g_argAstCompactJson.c_str(), "AST of all source files in a compact JSON format.")
-		(g_argAsm.c_str(), "EVM assembly of the contracts.")
-		(g_argAsmJson.c_str(), "EVM assembly of the contracts in JSON format.")
+		(g_argAsm.c_str(), "IELE assembly of the contracts.")
+		(g_argAsmJson.c_str(), "IELE assembly of the contracts in JSON format.")
 		(g_argOpcodes.c_str(), "Opcodes of the contracts.")
 		(g_argBinary.c_str(), "Binary of the contracts in hex.")
 		(g_argBinaryRuntime.c_str(), "Binary of the runtime part of the contracts in hex.")
@@ -782,11 +781,6 @@ bool CommandLineInterface::processInput()
 		m_onlyLink = true;
 		return link();
 	}
-	if (m_args.count(g_argIele))
-	{
-		// switch to IELE mode
-		m_onlyIele = true;
-	}
 
 	m_compiler.reset(new CompilerStack(fileReader));
 
@@ -808,7 +802,7 @@ bool CommandLineInterface::processInput()
 		unsigned runs = m_args[g_argOptimizeRuns].as<unsigned>();
 		m_compiler->setOptimiserSettings(optimize, runs);
 
-		bool successful = m_onlyIele ? m_compiler->compileToIele() : m_compiler->compile();
+		bool successful = m_compiler->compile();
 
 		for (auto const& error: m_compiler->errors())
 			formatter.printExceptionInformation(
@@ -882,24 +876,30 @@ void CommandLineInterface::handleCombinedJSON()
 			contractData["metadata"] = m_compiler->metadata(contractName);
 		if (requests.count(g_strBinary))
 			contractData[g_strBinary] = m_compiler->object(contractName).toHex();
+/*
 		if (requests.count(g_strBinaryRuntime))
 			contractData[g_strBinaryRuntime] = m_compiler->runtimeObject(contractName).toHex();
 		if (requests.count(g_strCloneBinary))
 			contractData[g_strCloneBinary] = m_compiler->cloneObject(contractName).toHex();
+*/
 		if (requests.count(g_strOpcodes))
 			contractData[g_strOpcodes] = solidity::disassemble(m_compiler->object(contractName).bytecode);
+/*
 		if (requests.count(g_strAsm))
 			contractData[g_strAsm] = m_compiler->assemblyJSON(contractName, m_sourceCodes);
+*/
 		if (requests.count(g_strSrcMap))
 		{
 			auto map = m_compiler->sourceMapping(contractName);
 			contractData[g_strSrcMap] = map ? *map : "";
 		}
+/*
 		if (requests.count(g_strSrcMapRuntime))
 		{
 			auto map = m_compiler->runtimeSourceMapping(contractName);
 			contractData[g_strSrcMapRuntime] = map ? *map : "";
 		}
+*/
 		if (requests.count(g_strSignatureHashes))
 			contractData[g_strSignatureHashes] = m_compiler->methodIdentifiers(contractName);
 		if (requests.count(g_strNatspecDev))
@@ -959,12 +959,13 @@ void CommandLineInterface::handleAst(string const& _argStr)
 			asts.push_back(&m_compiler->ast(sourceCode.first));
 		map<ASTNode const*, eth::GasMeter::GasConsumption> gasCosts;
 		// FIXME: shouldn't this be done for every contract?
+/*
 		if (m_compiler->runtimeAssemblyItems(m_compiler->lastContractName()))
 			gasCosts = GasEstimator::breakToStatementLevel(
 				GasEstimator::structuralEstimation(*m_compiler->runtimeAssemblyItems(m_compiler->lastContractName()), asts),
 				asts
 			);
-
+*/
 		bool legacyFormat = !m_args.count(g_argAstCompactJson);
 		if (m_args.count(g_argOutputDir))
 		{
@@ -1015,8 +1016,6 @@ bool CommandLineInterface::actOnInput()
 		return true;
 	else if (m_onlyLink)
 		writeLinkedFiles();
-    else if (m_onlyIele)
-        writeIeleFiles();
 	else
 		outputCompilationResults();
 	return !m_error;
@@ -1073,18 +1072,6 @@ void CommandLineInterface::writeLinkedFiles()
 			cout << src.second << endl;
 		else
 			writeFile(src.first, src.second);
-}
-
-void CommandLineInterface::writeIeleFiles() {
-  vector<string> contracts = m_compiler->contractNames();
-  for (const string &contract: contracts) {
-    string ret;
-    m_compiler->ieleString(contract, ret);
-    if (m_args.count(g_argOutputDir))
-      createFile(m_compiler->filesystemFriendlyName(contract) + ".iele", ret);
-    else
-      cout << ret << endl;
-  }
 }
 
 bool CommandLineInterface::assemble(
@@ -1195,18 +1182,20 @@ void CommandLineInterface::outputCompilationResults()
 		if (m_args.count(g_argAsm) || m_args.count(g_argAsmJson))
 		{
 			string ret;
+/*
 			if (m_args.count(g_argAsmJson))
 				ret = dev::jsonPrettyPrint(m_compiler->assemblyJSON(contract, m_sourceCodes));
 			else
+*/
 				ret = m_compiler->assemblyString(contract, m_sourceCodes);
 
 			if (m_args.count(g_argOutputDir))
 			{
-				createFile(m_compiler->filesystemFriendlyName(contract) + (m_args.count(g_argAsmJson) ? "_evm.json" : ".evm"), ret);
+				createFile(m_compiler->filesystemFriendlyName(contract) + (m_args.count(g_argAsmJson) ? "_iele.json" : ".iele"), ret);
 			}
 			else
 			{
-				cout << "EVM assembly:" << endl << ret << endl;
+				cout << "IELE assembly:" << endl << ret << endl;
 			}
 		}
 

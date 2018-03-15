@@ -1,6 +1,5 @@
 {
     "Auction_IELE": {
-        "checkGas": false,
         "pre": {
             "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {
                 "nonce": "0x00", 
@@ -15,7 +14,7 @@
                     {
                         "out": ["0x6295ee1b4f6dd65047762f924ecd367c17eabf8f"],
                         "status": "",
-                        "gas": "0x0dc6df",
+                        "gas": "0x0dd0a3",
                         "logs": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347", 
                         "refund": ""
                     }
@@ -31,9 +30,9 @@
                           "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
                           "0x1000"
                         ], 
-                        "data": "auction.iele",
+                        "data": "SimpleAuction.iele",
                         "gasPrice": "0x01",
-                        "secretKey": "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"
+                        "from": "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"
                     }
                 ], 
                 "blockHeader": {
@@ -61,7 +60,7 @@
                     "0x01": "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
                     "0x02": "0x13e8"
                 }, 
-                "code": "auction.iele"
+                "code": "SimpleAuction.iele"
             }
         }
     }
