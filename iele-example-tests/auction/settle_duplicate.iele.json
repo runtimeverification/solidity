@@ -27,7 +27,7 @@
                     {
                         "out": [],
                         "status": "-0x01",
-                        "gas": "0x0fa7fd",
+                        "gas": "0x0fa775",
                         "logs": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347", 
                         "refund": ""
                     }
@@ -35,7 +35,7 @@
                 "transactions": [
                     {
                         "nonce": "0x00", 
-                        "function": "settleAuction", 
+                        "function": "settleAuction()", 
                         "gasLimit": "0x100000", 
                         "value": "0x00", 
                         "to": "0x1000000000000000000000000000000000000000",

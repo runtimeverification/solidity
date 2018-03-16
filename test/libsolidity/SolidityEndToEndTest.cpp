@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(conditional_expression_true_literal)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f()", vector<bytes>()), encodeArgs(toBigEndian(u256(5))));
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(5)));
 }
 
 BOOST_AUTO_TEST_CASE(conditional_expression_false_literal)
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(conditional_expression_false_literal)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f()", vector<bytes>()), encodeArgs(toBigEndian(u256(10))));
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(10)));
 }
 
 BOOST_AUTO_TEST_CASE(conditional_expression_multiple)
@@ -134,10 +134,10 @@ BOOST_AUTO_TEST_CASE(conditional_expression_multiple)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f(uint256)", u256(1001)), encodeArgs(toBigEndian(u256(1000))));
-	ABI_CHECK(callContractFunction("f(uint256)", u256(500)), encodeArgs(toBigEndian(u256(100))));
-	ABI_CHECK(callContractFunction("f(uint256)", u256(80)), encodeArgs(toBigEndian(u256(50))));
-	ABI_CHECK(callContractFunction("f(uint256)", u256(40)), encodeArgs(toBigEndian(u256(10))));
+	ABI_CHECK(callContractFunction("f(uint256)", u256(1001)), encodeArgs(u256(1000)));
+	ABI_CHECK(callContractFunction("f(uint256)", u256(500)), encodeArgs(u256(100)));
+	ABI_CHECK(callContractFunction("f(uint256)", u256(80)), encodeArgs(u256(50)));
+	ABI_CHECK(callContractFunction("f(uint256)", u256(40)), encodeArgs(u256(10)));
 }
 
 BOOST_AUTO_TEST_CASE(conditional_expression_with_return_values)

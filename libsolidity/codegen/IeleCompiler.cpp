@@ -57,7 +57,7 @@ void IeleCompiler::compileContract(
     constructor->accept(*this);
   else {
     iele::IeleFunction *Constructor =
-      iele::IeleFunction::Create(&Context, true, "init", CompilingContract);
+      iele::IeleFunction::Create(&Context, false, "init", CompilingContract);
     iele::IeleBlock *ConstructorBlock =
       iele::IeleBlock::Create(&Context, "entry", Constructor);
     iele::IeleInstruction::CreateRetVoid(ConstructorBlock);
@@ -75,11 +75,16 @@ void IeleCompiler::compileContract(
 }
 
 bool IeleCompiler::visit(FunctionDefinition const& function) {
-  std::string FunctionName = function.name();
+  std::string FunctionName;
   if (function.isConstructor())
     FunctionName = "init";
   else if (function.isFallback())
     FunctionName = "deposit";
+  else if (function.isPublic())
+    FunctionName = function.externalSignature();
+  else
+    // TODO: overloading on internal functions.
+    FunctionName = function.name();
 
   CompilingFunction =
     iele::IeleFunction::Create(&Context, function.isPartOfExternalInterface(),
@@ -444,6 +449,7 @@ bool IeleCompiler::visit(
     for (unsigned i = 0; i < assignments.size(); ++i) {
       const VariableDeclaration *varDecl = assignments[i];
       if (varDecl) {
+        assert (varDecl->type()->category() != Type::Category::Function && "not implemented yet");
         iele::IeleValue *LHSValue = ST->lookup(varDecl->name());
         assert(LHSValue && "IeleCompiler: Failed to compile LHS of variable "
                            "declaration statement");
@@ -473,7 +479,48 @@ bool IeleCompiler::visit(const InlineAssembly &inlineAssembly) {
 }
 
 bool IeleCompiler::visit(const Conditional &condition) {
-  assert(false && "not implemented yet");
+  // Visit condition.
+  iele::IeleValue *ConditionValue = compileExpression(condition.condition());
+  assert(ConditionValue && "IeleCompiler: failed to compile conditional condition.");
+
+  // The condition target block is the if-true block.
+  iele::IeleBlock *CondTargetBlock =
+    iele::IeleBlock::Create(&Context, "if.true");
+
+  // Connect the condition block with a conditional jump to the condition target
+  // block.
+  connectWithConditionalJump(ConditionValue, CompilingBlock, CondTargetBlock);
+
+  // Declare the final result of the conditional.
+  iele::IeleLocalVariable *ResultValue =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+
+  // Append the expression for the if-false block and assign it to the result.
+  iele::IeleValue *FalseValue = compileExpression(condition.falseExpression());
+  iele::IeleInstruction::CreateAssign(
+    ResultValue, FalseValue, CompilingBlock);
+
+  iele::IeleBlock *IfTrueBlock = CondTargetBlock;
+
+  // Since we have an if-false block, we need a new join block to jump to.
+  iele::IeleBlock *JoinBlock = iele::IeleBlock::Create(&Context, "if.end");
+
+  connectWithUnconditionalJump(CompilingBlock, JoinBlock);
+
+  // Add the if-true block at the end of the function and generate its code.
+  IfTrueBlock->insertInto(CompilingFunction);
+  CompilingBlock = IfTrueBlock;
+
+  // Append the expression for the if-true block and assign it to the result.
+  iele::IeleValue *TrueValue = compileExpression(condition.trueExpression());
+  iele::IeleInstruction::CreateAssign(
+    ResultValue, TrueValue, CompilingBlock);
+
+  // Add the join block at the end of the function and compilation continues in
+  // the join block.
+  JoinBlock->insertInto(CompilingFunction);
+  CompilingBlock = JoinBlock;
+  CompilingExpressionResult.push_back(ResultValue);
   return false;
 }
 
@@ -505,7 +552,11 @@ bool IeleCompiler::visit(const Assignment &assignment) {
 }
 
 bool IeleCompiler::visit(const TupleExpression &tuple) {
-  assert(false && "not implemented yet");
+  if (tuple.components().size() == 1) {
+    tuple.components()[0].get()->accept(*this);
+  } else {
+    assert(false && "not implemented yet");
+  }
   return false;
 }
 
@@ -685,6 +736,44 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       appendRevert(InvConditionValue);
     break;
   }
+  case FunctionType::Kind::AddMod: {
+    iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
+    assert(Op1 &&
+           "IeleCompiler: Failed to compile operand 1 of addmod.");
+    iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
+    assert(Op2 &&
+           "IeleCompiler: Failed to compile operand 2 of addmod.");
+    iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
+    assert(Modulus &&
+           "IeleCompiler: Failed to compile modulus of addmod.");
+
+    iele::IeleLocalVariable *AddModValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateTernOp(iele::IeleInstruction::AddMod,
+                                        AddModValue, Op1, Op2, Modulus, 
+                                        CompilingBlock);
+    CompilingExpressionResult.push_back(AddModValue);
+    break;
+  }
+  case FunctionType::Kind::MulMod: {
+    iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
+    assert(Op1 &&
+           "IeleCompiler: Failed to compile operand 1 of addmod.");
+    iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
+    assert(Op2 &&
+           "IeleCompiler: Failed to compile operand 2 of addmod.");
+    iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
+    assert(Modulus &&
+           "IeleCompiler: Failed to compile modulus of addmod.");
+
+    iele::IeleLocalVariable *MulModValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateTernOp(iele::IeleInstruction::MulMod,
+                                        MulModValue, Op1, Op2, Modulus, 
+                                        CompilingBlock);
+    CompilingExpressionResult.push_back(MulModValue);
+    break;
+  }
   case FunctionType::Kind::Internal:
   case FunctionType::Kind::External:
   case FunctionType::Kind::CallCode:
@@ -707,8 +796,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Selfdestruct:
   case FunctionType::Kind::SHA3:
   case FunctionType::Kind::BlockHash:
-  case FunctionType::Kind::AddMod:
-  case FunctionType::Kind::MulMod:
   case FunctionType::Kind::ECRecover:
   case FunctionType::Kind::SHA256:
   case FunctionType::Kind::RIPEMD160:

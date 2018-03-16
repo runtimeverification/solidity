@@ -20,8 +20,8 @@ IeleFunction::~IeleFunction() { }
 
 void IeleFunction::print(llvm::raw_ostream &OS, unsigned indent) const {
   std::string Indent(indent, ' ');
-  OS << Indent << "define " << (isPublic() ? "public " : "") << "@" << getName()
-     << "(";
+  OS << Indent << "define " << (isPublic() ? "public " : "") << "@\"" << getName()
+     << "\"(";
   bool isFirst = true;
   for (const IeleArgument &A : args()) {
     if (!isFirst)
