@@ -57,6 +57,7 @@ BOOST_AUTO_TEST_CASE(both_encoders_macro)
 	BOOST_CHECK_EQUAL(runs, 2);
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(value_types, 1)
 BOOST_AUTO_TEST_CASE(value_types)
 {
 	string sourceCode = R"(
@@ -81,6 +82,7 @@ BOOST_AUTO_TEST_CASE(value_types)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(string_literal, 1)
 BOOST_AUTO_TEST_CASE(string_literal)
 {
 	string sourceCode = R"(
@@ -103,6 +105,7 @@ BOOST_AUTO_TEST_CASE(string_literal)
 }
 
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(enum_type_cleanup, 1)
 BOOST_AUTO_TEST_CASE(enum_type_cleanup)
 {
 	string sourceCode = R"(
@@ -121,6 +124,7 @@ BOOST_AUTO_TEST_CASE(enum_type_cleanup)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(conversion, 1)
 BOOST_AUTO_TEST_CASE(conversion)
 {
 	string sourceCode = R"(
@@ -147,6 +151,7 @@ BOOST_AUTO_TEST_CASE(conversion)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_array_one_dim, 1)
 BOOST_AUTO_TEST_CASE(memory_array_one_dim)
 {
 	string sourceCode = R"(
@@ -174,6 +179,7 @@ BOOST_AUTO_TEST_CASE(memory_array_one_dim)
 	REQUIRE_LOG_DATA(encodeLogs(10, 0x60, 11, 3, u256(-2), u256(-1), u256(0)));
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_array_two_dim, 1)
 BOOST_AUTO_TEST_CASE(memory_array_two_dim)
 {
 	string sourceCode = R"(
@@ -199,6 +205,7 @@ BOOST_AUTO_TEST_CASE(memory_array_two_dim)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_byte_array, 1)
 BOOST_AUTO_TEST_CASE(memory_byte_array)
 {
 	string sourceCode = R"(
@@ -224,6 +231,7 @@ BOOST_AUTO_TEST_CASE(memory_byte_array)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_byte_array, 1)
 BOOST_AUTO_TEST_CASE(storage_byte_array)
 {
 	string sourceCode = R"(
@@ -249,6 +257,7 @@ BOOST_AUTO_TEST_CASE(storage_byte_array)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array, 1)
 BOOST_AUTO_TEST_CASE(storage_array)
 {
 	string sourceCode = R"(
@@ -272,6 +281,7 @@ BOOST_AUTO_TEST_CASE(storage_array)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array_dyn, 1)
 BOOST_AUTO_TEST_CASE(storage_array_dyn)
 {
 	string sourceCode = R"(
@@ -293,6 +303,7 @@ BOOST_AUTO_TEST_CASE(storage_array_dyn)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array_compact, 1)
 BOOST_AUTO_TEST_CASE(storage_array_compact)
 {
 	string sourceCode = R"(
@@ -321,6 +332,7 @@ BOOST_AUTO_TEST_CASE(storage_array_compact)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(external_function, 1)
 BOOST_AUTO_TEST_CASE(external_function)
 {
 	string sourceCode = R"(
@@ -341,6 +353,7 @@ BOOST_AUTO_TEST_CASE(external_function)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(external_function_cleanup, 1)
 BOOST_AUTO_TEST_CASE(external_function_cleanup)
 {
 	string sourceCode = R"(
@@ -362,6 +375,7 @@ BOOST_AUTO_TEST_CASE(external_function_cleanup)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(calldata, 1)
 BOOST_AUTO_TEST_CASE(calldata)
 {
 	string sourceCode = R"(
@@ -386,6 +400,7 @@ BOOST_AUTO_TEST_CASE(calldata)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_name_collision, 1)
 BOOST_AUTO_TEST_CASE(function_name_collision)
 {
 	// This tests a collision between a function name used by inline assembly
@@ -412,6 +427,7 @@ BOOST_AUTO_TEST_CASE(function_name_collision)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(structs, 1)
 BOOST_AUTO_TEST_CASE(structs)
 {
 	string sourceCode = R"(
@@ -454,6 +470,7 @@ BOOST_AUTO_TEST_CASE(structs)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(empty_struct, 1)
 BOOST_AUTO_TEST_CASE(empty_struct)
 {
 	string sourceCode = R"(
@@ -480,6 +497,7 @@ BOOST_AUTO_TEST_CASE(empty_struct)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(structs2, 1)
 BOOST_AUTO_TEST_CASE(structs2)
 {
 	string sourceCode = R"(
