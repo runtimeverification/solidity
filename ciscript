@@ -21,8 +21,13 @@ for f in $(ls iele-example-tests/auction/*.json); do
   iele-test-vm $f $PORT
 done
 
-kill -int %1
-
 # run command line tests
 ./test/ieleCmdlineTests.sh
 
+iele-test-client build/ipcfile $PORT &
+sleep 3
+
+#lrun boost tests
+./build/test/soltest -c no -e build/report.xml -r detailed -m xml -- --ipcpath build/ipcfile --testpath test
+xmllint --xpath "//TestCase[@assertions_failed!=@expected_failures]" build/report.xml && false
+kill %1 %2
