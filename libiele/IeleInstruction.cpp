@@ -273,7 +273,7 @@ IeleInstruction *IeleInstruction::CreateInternalCall(
     IeleGlobalVariable *Callee,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleInstruction *InsertBefore) {
-  assert(Callee && "CreateInternalCall: Invalid operands");
+  solAssert(Callee, "CreateInternalCall: Invalid operands");
 
   IeleInstruction *InternalCallInst = new IeleInstruction(Call, InsertBefore);
   InternalCallInst->getIeleLValueList().insert(InternalCallInst->lvalue_end(),
@@ -291,7 +291,7 @@ IeleInstruction *IeleInstruction::CreateInternalCall(
     IeleGlobalVariable *Callee,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleBlock *InsertAtEnd) {
-  assert(Callee && "CreateInternalCall: Invalid operands");
+  solAssert(Callee, "CreateInternalCall: Invalid operands");
 
   IeleInstruction *InternalCallInst = new IeleInstruction(Call, InsertAtEnd);
   InternalCallInst->getIeleLValueList().insert(InternalCallInst->lvalue_end(),
@@ -382,7 +382,7 @@ IeleInstruction *IeleInstruction::CreateSStore(
 IeleInstruction *IeleInstruction::CreateStore(
     IeleValue *DataValue, IeleValue *AddressValue,
     IeleInstruction *InsertBefore) {
-  assert(DataValue && AddressValue && "CreateStore: Invalid operands");
+  solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
 
   IeleInstruction *StoreInst = new IeleInstruction(Store, InsertBefore);
   StoreInst->getIeleOperandList().push_back(DataValue);
@@ -393,7 +393,7 @@ IeleInstruction *IeleInstruction::CreateStore(
 
 IeleInstruction *IeleInstruction::CreateStore(
     IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd) {
-  assert(DataValue && AddressValue && "CreateStore: Invalid operands");
+  solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
 
   IeleInstruction *StoreInst = new IeleInstruction(Store, InsertAtEnd);
   StoreInst->getIeleOperandList().push_back(DataValue);
