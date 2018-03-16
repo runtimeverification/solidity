@@ -2,6 +2,8 @@
 
 #include "IeleFunction.h"
 
+#include <libsolidity/interface/Exceptions.h>
+
 using namespace dev;
 using namespace dev::iele;
 
@@ -11,15 +13,15 @@ IeleBlock::IeleBlock(IeleContext *Ctx, const llvm::Twine &Name,
   if (F)
     insertInto(F, InsertBefore);
   else
-    assert(!InsertBefore &&
+    solAssert(!InsertBefore,
            "Cannot insert block before another block with no function!");
 
   setName(Name);
 }
 
 void IeleBlock::insertInto(IeleFunction *NewParent, IeleBlock *InsertBefore) {
-  assert(NewParent && "Expected a parent");
-  assert(!Parent && "Already has a parent");
+  solAssert(NewParent, "Expected a parent");
+  solAssert(!Parent, "Already has a parent");
 
   if (InsertBefore)
     NewParent->getIeleBlockList().insert(
@@ -36,15 +38,15 @@ void IeleBlock::setParent(IeleFunction *parent) {
   for (const IeleInstruction &I : instructions()) {
     for (const IeleValue *V : I.operands()) {
       if (const IeleLocalVariable *LV = llvm::dyn_cast<IeleLocalVariable>(V))
-        assert(LV->getParent() == parent &&
+        solAssert(LV->getParent() == parent,
                "Instruction operand belongs to a different function!");
       else if (const IeleBlock *B = llvm::dyn_cast<IeleBlock>(V))
-        assert(B->getParent() == parent &&
+        solAssert(B->getParent() == parent,
                "Instruction operand belongs to a different function!");
     }
 
     for (const IeleLocalVariable *LV : I.lvalues()) {
-      assert(LV->getParent() == parent &&
+      solAssert(LV->getParent() == parent,
              "Instruction lvalue belongs to a different function!");
     }
   }
