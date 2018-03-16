@@ -10,9 +10,24 @@
 using namespace dev;
 using namespace dev::solidity;
 
+// lookup a ModifierDefinition by name (borrowed from CompilerContext.cpp)
+const ModifierDefinition &IeleCompiler::functionModifier(std::string const& _name) const {
+  //solAssert(!m_inheritanceHierarchy.empty(), "No inheritance hierarchy set.");
+  //for (ContractDefinition const* contract: m_inheritanceHierarchy)
+  assert(CurrentContract && "CurrentContract not set.");
+  for (ModifierDefinition const* modifier: CurrentContract->functionModifiers())
+    if (modifier->name() == _name)
+      return *modifier;
+  assert(false && "IeleCompiler: Function modifier not found.");
+}
+
 void IeleCompiler::compileContract(
     ContractDefinition const &contract,
     std::map<ContractDefinition const*, iele::IeleContract const*> const &contracts) {
+  
+  // Store the current contract
+  CurrentContract = &contract;
+  
   // Create IeleContract.
   CompilingContract = iele::IeleContract::Create(&Context, contract.name());
 
@@ -94,8 +109,10 @@ bool IeleCompiler::visit(FunctionDefinition const& function) {
   CompilingBlock =
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
 
-  // Visit function's body.
-  function.body().accept(*this);
+  // Visit function body (inc modifiers). 
+  CurrentFunction = &function;
+  ModifierDepth = -1;
+  appendModifierOrFunctionCode();
 
   // Add a ret void if the last block doesn't end with a ret instruction.
   if (!CompilingBlock->endsWithRet())
@@ -190,6 +207,83 @@ bool IeleCompiler::visit(const Return &returnStatement) {
   iele::IeleInstruction::CreateRet(ReturnValues, CompilingBlock);
 
   return false;
+}
+
+void IeleCompiler::appendModifierOrFunctionCode() {
+  assert(CurrentFunction && "IeleCompiler: CurrentFunction not defined");
+  
+  Block const* codeBlock = nullptr;
+  ModifierDepth++;
+
+  // The function we are processing has no modifiers. 
+  // Process function body as normal...
+  if (ModifierDepth >= CurrentFunction->modifiers().size()) {
+    assert(CurrentFunction->isImplemented() && "");
+    codeBlock = &CurrentFunction->body();
+  }
+  // The function we are processing uses modifiers. 
+  else { 
+    // Get next modifier invocation
+    ASTPointer<ModifierInvocation> const& modifierInvocation = CurrentFunction->modifiers()[ModifierDepth];
+
+    // constructor call should be excluded (and managed separeately)
+    if (dynamic_cast<ContractDefinition const*>(modifierInvocation->name()->annotation().referencedDeclaration)) {
+      assert(false && "IeleCompiler: function modifiers on constructor not implemented yet.");
+      appendModifierOrFunctionCode();
+    }
+    else {
+      // Retrieve modifier definition from its name
+      ModifierDefinition const& modifier = functionModifier(modifierInvocation->name()->name());
+      
+      // Visit the modifier's parameters
+      for (const ASTPointer<const VariableDeclaration> &arg : modifier.parameters())
+        iele::IeleLocalVariable::Create(&Context, arg->name(), CompilingFunction);
+
+      // Visit the modifier's local variables
+      for (const VariableDeclaration *local: modifier.localVariables())
+        iele::IeleLocalVariable::Create(&Context, local->name(), CompilingFunction);
+
+      // Is the modifier invocation well formed?
+      assert(modifier.parameters().size() == modifierInvocation->arguments().size() && 
+             "IeleCompiler: modifier has wrong number of parameters!");
+
+      // Get Symbol Table
+      iele::IeleValueSymbolTable *ST = CompilingFunction->getIeleValueSymbolTable();
+      assert(ST &&
+            "IeleCompiler: failed to access compiling function's symbol "
+            "table while processing function modifer. ");
+
+      // Cycle through each parameter-argument pair; for each one, make an assignment.
+      // This way, we pass arguments into the modifier.  
+      for (unsigned i = 0; i < modifier.parameters().size(); ++i) {
+        // Extract LHS and RHS from modifier definition and invocation
+        VariableDeclaration const& var = *modifier.parameters()[i];
+        Expression const& initValue    = *modifierInvocation->arguments()[i];
+
+        // Compile RHS expression 
+        // NB: seems that tuples are not allowed, so stick to simple expression
+        iele::IeleValue* RHSValue = compileExpression(initValue);
+
+        // Lookup LHS from symbol table
+        iele::IeleValue *LHSValue = ST->lookup(var.name());
+        assert(LHSValue && "IeleCompiler: Failed to compile argument to modifier invocation");
+
+        // Make assignment
+        iele::IeleInstruction::CreateAssign(
+            llvm::cast<iele::IeleLocalVariable>(LHSValue), RHSValue, CompilingBlock);
+      }
+      
+      // Arguments to the modifier have been taken care off. Now move to modifier's body. 
+      codeBlock = &modifier.body();
+    }
+  }
+
+  // Visit whatever is next (modifier's body or function body)
+  if (codeBlock) {
+    codeBlock->accept(*this);
+  }
+
+  ModifierDepth--;
 }
 
 bool IeleCompiler::visit(const Throw &throwStatement) {
@@ -350,17 +444,17 @@ bool IeleCompiler::visit(
     assert(assignments.size() == RHSValues.size() &&
            "IeleCompiler: Missing assignment in variable declaration "
            "statement");
+    // Visit LHS. We lookup the LHS name in the function's symbol table,
+    // where we should find it.
+    iele::IeleValueSymbolTable *ST =
+      CompilingFunction->getIeleValueSymbolTable();
+    assert(ST &&
+          "IeleCompiler: failed to access compiling function's symbol "
+          "table.");
     for (unsigned i = 0; i < assignments.size(); ++i) {
       const VariableDeclaration *varDecl = assignments[i];
       if (varDecl) {
         assert (varDecl->type()->category() != Type::Category::Function && "not implemented yet");
-        // Visit LHS. We lookup the LHS name in the function's symbol table,
-        // where we should find it.
-        iele::IeleValueSymbolTable *ST =
-          CompilingFunction->getIeleValueSymbolTable();
-        assert(ST &&
-              "IeleCompiler: failed to access compiling function's symbol "
-              "table.");
         iele::IeleValue *LHSValue = ST->lookup(varDecl->name());
         assert(LHSValue && "IeleCompiler: Failed to compile LHS of variable "
                            "declaration statement");
@@ -380,7 +474,7 @@ bool IeleCompiler::visit(const ExpressionStatement &expressionStatement) {
 }
 
 bool IeleCompiler::visit(const PlaceholderStatement &placeholderStatement) {
-  assert(false && "not implemented yet");
+  appendModifierOrFunctionCode();
   return false;
 }
 
@@ -439,7 +533,7 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   Token::Value op = assignment.assignmentOperator();
   assert(op == Token::Assign && "not implemented yet");
   assert(assignment.leftHandSide().annotation().type->category() !=
-	         Type::Category::Tuple && "not implemented yet");
+           Type::Category::Tuple && "not implemented yet");
 
   // Visit LHS.
   iele::IeleValue *LHSValue = compileLValue(assignment.leftHandSide());
