@@ -379,6 +379,32 @@ IeleInstruction *IeleInstruction::CreateSStore(
   return SStoreInst;
 }
 
+IeleInstruction *IeleInstruction::CreateLoad(
+    IeleLocalVariable *Result, IeleValue *AddressValue,
+    IeleInstruction *InsertBefore) {
+  solAssert(Result, "CreateLoad: Invalid lvalues");
+  solAssert(AddressValue, "CreateLoad: Invalid operands");
+
+  IeleInstruction *LoadInst = new IeleInstruction(Load, InsertBefore);
+  LoadInst->getIeleLValueList().push_back(Result);
+  LoadInst->getIeleOperandList().push_back(AddressValue);
+
+  return LoadInst;
+}
+
+IeleInstruction *IeleInstruction::CreateLoad(
+    IeleLocalVariable *Result, IeleValue *AddressValue,
+    IeleBlock *InsertAtEnd) {
+  solAssert(Result, "CreateLoad: Invalid lvalues");
+  solAssert(AddressValue, "CreateLoad: Invalid operands");
+
+  IeleInstruction *LoadInst = new IeleInstruction(Load, InsertAtEnd);
+  LoadInst->getIeleLValueList().push_back(Result);
+  LoadInst->getIeleOperandList().push_back(AddressValue);
+
+  return LoadInst;
+}
+
 IeleInstruction *IeleInstruction::CreateStore(
     IeleValue *DataValue, IeleValue *AddressValue,
     IeleInstruction *InsertBefore) {

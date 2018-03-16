@@ -228,6 +228,13 @@ public:
   static IeleInstruction *CreateSStore(
       IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateLoad(
+      IeleLocalVariable *Result, IeleValue *AddressValue,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateLoad(
+      IeleLocalVariable *Result, IeleValue *AddressValue,
+      IeleBlock *InsertAtEnd);
+
   static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue,
       IeleInstruction *InsertBefore = nullptr);

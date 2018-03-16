@@ -25,9 +25,9 @@ const ModifierDefinition &IeleCompiler::functionModifier(
 }
 
 void IeleCompiler::compileContract(
-    ContractDefinition const &contract,
-    std::map<ContractDefinition const*, iele::IeleContract const*> const &contracts) {
-
+    const ContractDefinition &contract,
+    const std::map<const ContractDefinition *, const iele::IeleContract *> &contracts) {
+  
   // Store the current contract
   CompilingContractASTNode = &contract;
   
@@ -88,7 +88,7 @@ std::string IeleCompiler::getNextVarSuffix() {
   return ("_" + std::to_string(getNextUniqueIntToken()));
 }
 
-bool IeleCompiler::visit(FunctionDefinition const& function) {
+bool IeleCompiler::visit(const FunctionDefinition &function) {
   std::string FunctionName;
   if (function.isConstructor())
     FunctionName = "init";
@@ -123,8 +123,7 @@ bool IeleCompiler::visit(FunctionDefinition const& function) {
   for (const VariableDeclaration *local: function.localVariables()) {
     std::string genName = local->name() + getNextVarSuffix();
     VarNameMap[NumOfModifiers][local->name()] = genName; 
-    if (local->isLocalOrReturn())
-      iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
+    iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
   }
 
   // Create the entry block.
@@ -596,22 +595,22 @@ bool IeleCompiler::visit(const Conditional &condition) {
 
 bool IeleCompiler::visit(const Assignment &assignment) {
   Token::Value op = assignment.assignmentOperator();
-  solAssert(op == Token::Assign, "not implemented yet");
-  solAssert(assignment.leftHandSide().annotation().type->category() !=
-           Type::Category::Tuple, "not implemented yet");
+  const Expression &LHS = assignment.leftHandSide();
+  const Expression &RHS = assignment.rightHandSide();
+  solAssert(LHS.annotation().type->category() != Type::Category::Tuple,
+            "not implemented yet");
+
+  // Visit RHS.
+  iele::IeleValue *RHSValue = compileExpression(RHS);
+  solAssert(RHSValue, "IeleCompiler: Failed to compile RHS of assignment");
 
   // Visit LHS.
-  iele::IeleValue *LHSValue = compileLValue(assignment.leftHandSide());
+  iele::IeleValue *LHSValue = compileLValue(LHS);
   solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of assignment");
 
-  // Visit RHS and store it as the result of the expression.
-  iele::IeleValue *RHSValue = compileExpression(assignment.rightHandSide());
-  solAssert(RHSValue, "IeleCompiler: Failed to compile RHS of assignment");
-  CompilingExpressionResult.push_back(RHSValue);
-
   // Check if we need to do a memory or storage copy.
-  TypePointer LHSType = assignment.leftHandSide().annotation().type;
-  TypePointer RHSType = assignment.rightHandSide().annotation().type;
+  TypePointer LHSType = LHS.annotation().type;
+  TypePointer RHSType = RHS.annotation().type;
   if (shouldCopyStorageToStorage(LHSValue, RHSType))
     RHSValue = appendIeleRuntimeStorageToStorageCopy(RHSValue);
   else if (shouldCopyMemoryToStorage(LHSType, RHSType))
@@ -619,17 +618,18 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   else if (shouldCopyStorageToMemory(LHSType, RHSType))
     RHSValue = appendIeleRuntimeStorageToMemoryCopy(RHSValue);
 
-  // If the LHS is a pointer to storage (e.g. state variable) we need to perform
-  // an sstore, if it is a pointer to memory then a store, else a simple
-  // assignment.
-  if (lvalueCompilesToStoragePtr(assignment.leftHandSide()))
-    iele::IeleInstruction::CreateSStore(RHSValue, LHSValue, CompilingBlock);
-  else if (lvalueCompilesToMemoryPtr(assignment.leftHandSide()))
-    iele::IeleInstruction::CreateStore(RHSValue, LHSValue, CompilingBlock);
-  else
-    iele::IeleInstruction::CreateAssign(
-      llvm::cast<iele::IeleLocalVariable>(LHSValue), RHSValue, CompilingBlock);
+  // Check for compound assignment.
+  if (op != Token::Assign) {
+    Token::Value binOp = Token::AssignmentToBinaryOp(op);
+    iele::IeleValue *LHSDeref = appendLValueDereference(LHSValue);
+    RHSValue = appendBinaryOperator(binOp, LHSDeref, RHSValue);
+  }
 
+  // Generate assignment code.
+  appendLValueAssign(LHSValue, RHSValue);
+
+  // The result of the expression is the RHS.
+  CompilingExpressionResult.push_back(RHSValue);
   return false;
 }
 
@@ -643,24 +643,35 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
 }
 
 bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
-  // Visit subexpression.
-  iele::IeleValue *SubExprValue = 
-    compileExpression(unaryOperation.subExpression());
-  solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
-
-  switch (unaryOperation.getOperator()) {
+  Token::Value UnOperator = unaryOperation.getOperator();
+  switch (UnOperator) {
   case Token::Not: {// !
+    // Visit subexpression.
+    iele::IeleValue *SubExprValue =
+      compileExpression(unaryOperation.subExpression());
+    solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
+    // Compile as an iszero.
     iele::IeleLocalVariable *Result =
       iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
     iele::IeleInstruction::CreateIsZero(Result, SubExprValue, CompilingBlock);
     CompilingExpressionResult.push_back(Result);
     break;
   }
-  case Token::Add: // +
+  case Token::Add: { // +
+    // Visit subexpression.
+    iele::IeleValue *SubExprValue =
+      compileExpression(unaryOperation.subExpression());
+    solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
     // unary add, so basically no-op
     CompilingExpressionResult.push_back(SubExprValue);
     break;
+  }
   case Token::Sub: { // -
+    // Visit subexpression.
+    iele::IeleValue *SubExprValue =
+      compileExpression(unaryOperation.subExpression());
+    solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
+    // Compile as a subtraction from zero.
     iele::IeleLocalVariable *Result =
       iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
     iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Sub,
@@ -670,10 +681,39 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     CompilingExpressionResult.push_back(Result);
     break;
   }
+  case Token::Inc:    // ++ (pre- or postfix)
+  case Token::Dec:  { // -- (pre- or postfix)
+    Token::Value BinOperator =
+      (UnOperator == Token::Inc) ? Token::Add : Token::Sub;
+    // Compile subexpression as an lvalue.
+    iele::IeleValue *SubExprValue =
+      compileLValue(unaryOperation.subExpression());
+    solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
+    // Get the current subexpression value, and save it in case of a postfix
+    // oparation.
+    iele::IeleValue *Before = appendLValueDereference(SubExprValue);
+    iele::IeleLocalVariable *Result = nullptr;
+    if (!unaryOperation.isPrefixOperation()) {
+      Result =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateAssign(Result, Before, CompilingBlock);
+    }
+
+    // Generate code for the inc/dec operation.
+    iele::IeleIntConstant *One = iele::IeleIntConstant::getOne(&Context);
+    iele::IeleLocalVariable *After =
+      appendBinaryOperator(BinOperator, Before, One);
+    // In case of a prefix operation, this is the result.
+    if (unaryOperation.isPrefixOperation())
+      Result = After;
+    // Generate assignment code.
+    appendLValueAssign(SubExprValue, After);
+    // Return result.
+    CompilingExpressionResult.push_back(Result);
+    break;
+  }
   case Token::BitNot: // ~
   case Token::Delete: // delete
-  case Token::Inc: // ++ (pre- or postfix)
-  case Token::Dec: // -- (pre- or postfix)
     solAssert(false, "not implemented yet");
     break;
   default:
@@ -693,33 +733,10 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
     compileExpression(binaryOperation.rightExpression());
   solAssert(RightOperandValue, "IeleCompiler: Failed to compile right operand.");
 
-  // Find corresponding IELE binary opcode.
-  iele::IeleInstruction::IeleOps BinOpcode;
-  switch (binaryOperation.getOperator()) {
-  case Token::Add:                BinOpcode = iele::IeleInstruction::Add; break;
-  case Token::Sub:                BinOpcode = iele::IeleInstruction::Sub; break;
-  case Token::Mul:                BinOpcode = iele::IeleInstruction::Mul; break;
-  case Token::Div:                BinOpcode = iele::IeleInstruction::Div; break;
-  case Token::Mod:                BinOpcode = iele::IeleInstruction::Mod; break;
-  case Token::Exp:                BinOpcode = iele::IeleInstruction::Exp; break;
-  case Token::Equal:              BinOpcode = iele::IeleInstruction::CmpEq; break;
-  case Token::NotEqual:           BinOpcode = iele::IeleInstruction::CmpNe; break;
-  case Token::GreaterThanOrEqual: BinOpcode = iele::IeleInstruction::CmpGe; break;
-  case Token::LessThanOrEqual:    BinOpcode = iele::IeleInstruction::CmpLe; break;
-  case Token::GreaterThan:        BinOpcode = iele::IeleInstruction::CmpGt; break;
-  case Token::LessThan:           BinOpcode = iele::IeleInstruction::CmpLt; break;
-  default:
-    solAssert(false, "not implemented yet");
-    solAssert(false, "IeleCompiler: Invalid binary operator");
-  }
-
-  // Create the instruction.
-  iele::IeleLocalVariable *Result =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleInstruction::CreateBinOp(BinOpcode,
-                                     Result,
-                                     LeftOperandValue,
-                                     RightOperandValue, CompilingBlock);
+  // Append the IELE code for the binary operator.
+  iele::IeleValue *Result =
+    appendBinaryOperator(binaryOperation.getOperator(),
+                         LeftOperandValue, RightOperandValue);
 
   CompilingExpressionResult.push_back(Result);
   return false;
@@ -1102,6 +1119,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleValue *AddressValue =
           appendIeleRuntimeStorageAddress(ExprValue, OffsetValue);
         CompilingExpressionResult.push_back(AddressValue);
+        CompilingLValueKind = LValueKind::Storage;
       } else {
         iele::IeleValue *LoadedValue =
           appendIeleRuntimeStorageLoad(ExprValue, OffsetValue);
@@ -1114,6 +1132,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleValue *AddressValue =
           appendIeleRuntimeMemoryAddress(ExprValue, OffsetValue);
         CompilingExpressionResult.push_back(AddressValue);
+        CompilingLValueKind = LValueKind::Memory;
       } else {
         iele::IeleValue *LoadedValue =
           appendIeleRuntimeMemoryLoad(ExprValue, OffsetValue);
@@ -1166,6 +1185,7 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
         iele::IeleValue *AddressValue =
           appendIeleRuntimeStorageAddress(ExprValue, IndexValue);
         CompilingExpressionResult.push_back(AddressValue);
+        CompilingLValueKind = LValueKind::Storage;
       } else {
         iele::IeleValue *LoadedValue =
           appendIeleRuntimeStorageLoad(ExprValue, IndexValue);
@@ -1178,6 +1198,7 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
         iele::IeleValue *AddressValue =
           appendIeleRuntimeMemoryAddress(ExprValue, IndexValue);
         CompilingExpressionResult.push_back(AddressValue);
+        CompilingLValueKind = LValueKind::Memory;
       } else {
         iele::IeleValue *LoadedValue =
           appendIeleRuntimeMemoryLoad(ExprValue, IndexValue);
@@ -1235,8 +1256,12 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
   // Lookup identifier in the function's symbol table.
   iele::IeleValueSymbolTable *ST = CompilingFunction->getIeleValueSymbolTable();
   solAssert(ST,
-         "IeleCompiler: failed to access compiling function's symbol table.");
-  if (iele::IeleValue *Identifier = ST->lookup(VarNameMap[ModifierDepth][name])) {
+            "IeleCompiler: failed to access compiling function's symbol "
+            "table.");
+  if (iele::IeleValue *Identifier =
+        ST->lookup(VarNameMap[ModifierDepth][name])) {
+    if (CompilingLValue)
+      CompilingLValueKind = LValueKind::Reg;
     CompilingExpressionResult.push_back(Identifier);
     return;
   }
@@ -1244,19 +1269,25 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
   // If not found, lookup identifier in the contract's symbol table.
   ST = CompilingContract->getIeleValueSymbolTable();
   solAssert(ST,
-         "IeleCompiler: failed to access compiling contract's symbol table.");
+            "IeleCompiler: failed to access compiling contract's symbol "
+            "table.");
   if (iele::IeleValue *Identifier = ST->lookup(name)) {
-    // If we aren't compiling an lvalue, we have to load the global variable.
-    if (!CompilingLValue) {
-      if (iele::IeleGlobalVariable *GV =
-            llvm::dyn_cast<iele::IeleGlobalVariable>(Identifier)) {
+    if (iele::IeleGlobalVariable *GV =
+          llvm::dyn_cast<iele::IeleGlobalVariable>(Identifier)) {
+      // In case of a global variable, if we aren't compiling an lvalue, we have
+      // to load the global variable.
+      if (!CompilingLValue) {
         iele::IeleLocalVariable *LoadedValue =
           iele::IeleLocalVariable::Create(&Context, name + ".val",
                                           CompilingFunction);
         iele::IeleInstruction::CreateSLoad(LoadedValue, GV, CompilingBlock);
         CompilingExpressionResult.push_back(LoadedValue);
         return;
+      } else {
+        CompilingLValueKind = LValueKind::Storage;
       }
+    } else if (CompilingLValue) {
+      CompilingLValueKind = LValueKind::Reg;
     }
 
     CompilingExpressionResult.push_back(Identifier);
@@ -1266,6 +1297,8 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
   // If not found, make a new IeleLocalVariable for the identifier.
   iele::IeleLocalVariable *Identifier =
     iele::IeleLocalVariable::Create(&Context, name, CompilingFunction);
+  if (CompilingLValue)
+    CompilingLValueKind = LValueKind::Reg;
   CompilingExpressionResult.push_back(Identifier);
   return;
 }
@@ -1349,8 +1382,12 @@ iele::IeleValue *IeleCompiler::compileLValue(const Expression &expression) {
   // field. This helper should only be used when a scalar lvalue is expected as
   // the result of the corresponding expression computation.
   iele::IeleValue *Result = nullptr;
-  solAssert(CompilingExpressionResult.size() > 0, "expression visitor did not set a result value");
+  solAssert(CompilingExpressionResult.size() > 0,
+            "IeleCompiler: Expression visitor did not set a result value");
   Result = CompilingExpressionResult[0];
+  solAssert(llvm::isa<iele::IeleLocalVariable>(Result) ||
+            llvm::isa<iele::IeleGlobalVariable>(Result),
+            "IeleCompiler: Invalid compilation for an lvalue");
 
   // Restore expression compilation status and return result.
   CompilingExpressionResult.clear();
@@ -1442,7 +1479,7 @@ void IeleCompiler::appendStateVariableInitialization() {
   }
 }
 
-iele::IeleValue *IeleCompiler::appendIeleRuntimeAllocateMemory(
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateMemory(
      iele::IeleValue *NumElems) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -1455,7 +1492,7 @@ iele::IeleValue *IeleCompiler::appendIeleRuntimeAllocateMemory(
   return Result;
 }
 
-iele::IeleValue *IeleCompiler::appendIeleRuntimeAllocateStorage(
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateStorage(
      iele::IeleValue *NumElems) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -1468,7 +1505,7 @@ iele::IeleValue *IeleCompiler::appendIeleRuntimeAllocateStorage(
   return Result;
 }
 
-iele::IeleValue *IeleCompiler::appendIeleRuntimeMemoryAddress(
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeMemoryAddress(
      iele::IeleValue *Base, iele::IeleValue *Offset) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -1483,7 +1520,7 @@ iele::IeleValue *IeleCompiler::appendIeleRuntimeMemoryAddress(
   return Result;
 }
 
-iele::IeleValue *IeleCompiler::appendIeleRuntimeStorageAddress(
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageAddress(
     iele::IeleValue *Base, iele::IeleValue *Offset) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -1498,7 +1535,7 @@ iele::IeleValue *IeleCompiler::appendIeleRuntimeStorageAddress(
   return Result;
 }
 
-iele::IeleValue *IeleCompiler::appendIeleRuntimeMemoryLoad(
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeMemoryLoad(
     iele::IeleValue *Base, iele::IeleValue *Offset) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -1513,7 +1550,7 @@ iele::IeleValue *IeleCompiler::appendIeleRuntimeMemoryLoad(
   return Result;
 }
 
-iele::IeleValue *IeleCompiler::appendIeleRuntimeStorageLoad(
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageLoad(
     iele::IeleValue *Base, iele::IeleValue *Offset) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -1528,7 +1565,7 @@ iele::IeleValue *IeleCompiler::appendIeleRuntimeStorageLoad(
   return Result;
 }
 
-iele::IeleValue *IeleCompiler::appendIeleRuntimeStorageToStorageCopy(
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageToStorageCopy(
     iele::IeleValue *From) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -1541,7 +1578,7 @@ iele::IeleValue *IeleCompiler::appendIeleRuntimeStorageToStorageCopy(
   return Result;
 }
 
-iele::IeleValue *IeleCompiler::appendIeleRuntimeMemoryToStorageCopy(
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeMemoryToStorageCopy(
     iele::IeleValue *From) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -1554,7 +1591,7 @@ iele::IeleValue *IeleCompiler::appendIeleRuntimeMemoryToStorageCopy(
   return Result;
 }
 
-iele::IeleValue *IeleCompiler::appendIeleRuntimeStorageToMemoryCopy(
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageToMemoryCopy(
     iele::IeleValue *From) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -1564,6 +1601,86 @@ iele::IeleValue *IeleCompiler::appendIeleRuntimeStorageToMemoryCopy(
   llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, From);
   iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
                                             CompilingBlock);
+  return Result;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendLValueDereference(
+    iele::IeleValue *LValue) {
+  // If the LValue is a pointer to storage (e.g. state variable) we need to
+  // perform an sload, if it is a pointer to memory then a load, else
+  // dereference is a noop.
+  iele::IeleLocalVariable *LoadedValue = nullptr;
+  switch (CompilingLValueKind) {
+  case LValueKind::Storage: {
+    LoadedValue = iele::IeleLocalVariable::Create(
+                     &Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateSLoad(LoadedValue, LValue, CompilingBlock);
+    break;
+  }
+  case LValueKind::Memory: {
+    LoadedValue = iele::IeleLocalVariable::Create(
+                     &Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateLoad(LoadedValue, LValue, CompilingBlock);
+    break;
+  }
+  case LValueKind::Reg: {
+    LoadedValue = llvm::cast<iele::IeleLocalVariable>(LValue);
+    break;
+  }
+  }
+
+  return LoadedValue;
+}
+
+void IeleCompiler::appendLValueAssign(iele::IeleValue *LValue,
+                                      iele::IeleValue *RValue) {
+  // If the LValue is a pointer to storage (e.g. state variable) we need to
+  // perform an sstore, if it is a pointer to memory then a store, else a simple
+  // assignment.
+  switch (CompilingLValueKind) {
+  case LValueKind::Storage:
+    iele::IeleInstruction::CreateSStore(RValue, LValue, CompilingBlock);
+    break;
+  case LValueKind::Memory:
+    iele::IeleInstruction::CreateStore(RValue, LValue, CompilingBlock);
+    break;
+  case LValueKind::Reg:
+    iele::IeleInstruction::CreateAssign(
+        llvm::cast<iele::IeleLocalVariable>(LValue), RValue, CompilingBlock);
+    break;
+  }
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
+    Token::Value Opcode,
+    iele::IeleValue *LeftOperand,
+    iele::IeleValue *RightOperand) {
+  // Find corresponding IELE binary opcode.
+  iele::IeleInstruction::IeleOps BinOpcode;
+  switch (Opcode) {
+  case Token::Add:                BinOpcode = iele::IeleInstruction::Add; break;
+  case Token::Sub:                BinOpcode = iele::IeleInstruction::Sub; break;
+  case Token::Mul:                BinOpcode = iele::IeleInstruction::Mul; break;
+  case Token::Div:                BinOpcode = iele::IeleInstruction::Div; break;
+  case Token::Mod:                BinOpcode = iele::IeleInstruction::Mod; break;
+  case Token::Exp:                BinOpcode = iele::IeleInstruction::Exp; break;
+  case Token::Equal:              BinOpcode = iele::IeleInstruction::CmpEq; break;
+  case Token::NotEqual:           BinOpcode = iele::IeleInstruction::CmpNe; break;
+  case Token::GreaterThanOrEqual: BinOpcode = iele::IeleInstruction::CmpGe; break;
+  case Token::LessThanOrEqual:    BinOpcode = iele::IeleInstruction::CmpLe; break;
+  case Token::GreaterThan:        BinOpcode = iele::IeleInstruction::CmpGt; break;
+  case Token::LessThan:           BinOpcode = iele::IeleInstruction::CmpLt; break;
+  default:
+    solAssert(false, "not implemented yet");
+    solAssert(false, "IeleCompiler: Invalid binary operator");
+  }
+
+  // Create the instruction.
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      BinOpcode, Result, LeftOperand, RightOperand, CompilingBlock);
+
   return Result;
 }
 
@@ -1583,39 +1700,6 @@ bool IeleCompiler::shouldCopyStorageToMemory(TypePointer To,
                                              TypePointer From) const {
   return To->dataStoredIn(DataLocation::Memory) &&
          From->dataStoredIn(DataLocation::Storage);
-}
-
-bool IeleCompiler::lvalueCompilesToStoragePtr(const Expression &LValue) const {
-  if (const Identifier *ID = dynamic_cast<const Identifier *>(&LValue)) {
-    iele::IeleValueSymbolTable *ST =
-      CompilingContract->getIeleValueSymbolTable();
-    solAssert(ST,
-              "IeleCompiler: failed to access compiling contract's symbol table.");
-    return ST->lookup(ID->name()) != nullptr;
-  } else if (const MemberAccess *MA =
-               dynamic_cast<const MemberAccess *>(&LValue)) {
-    TypePointer T = MA->expression().annotation().type;
-    return T->dataStoredIn(DataLocation::Storage);
-  } else if (const IndexAccess *IA =
-               dynamic_cast<const IndexAccess *>(&LValue)) {
-    TypePointer T = IA->baseExpression().annotation().type;
-    return T->dataStoredIn(DataLocation::Storage);
-  }
-
-  return false;
-}
-
-bool IeleCompiler::lvalueCompilesToMemoryPtr(const Expression &LValue) const {
-  if (const MemberAccess *MA = dynamic_cast<const MemberAccess *>(&LValue)) {
-    TypePointer T = MA->expression().annotation().type;
-    return T->dataStoredIn(DataLocation::Memory);
-  } else if (const IndexAccess *IA =
-               dynamic_cast<const IndexAccess *>(&LValue)) {
-    TypePointer T = IA->baseExpression().annotation().type;
-    return T->dataStoredIn(DataLocation::Memory);
-  }
-
-  return false;
 }
 
 unsigned IeleCompiler::getStructMemberIndex(const StructType &type,
