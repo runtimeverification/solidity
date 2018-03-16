@@ -226,6 +226,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
 
     // constructor call should be excluded (and managed separeately)
     if (dynamic_cast<ContractDefinition const*>(modifierInvocation->name()->annotation().referencedDeclaration)) {
+      assert(false && "IeleCompiler: function modifiers on constructor not implemented yet.");
       appendModifierOrFunctionCode();
     }
     else {
