@@ -219,9 +219,8 @@ void IeleCompiler::appendModifierOrFunctionCode() {
     // Get next modifier invocation
     ASTPointer<ModifierInvocation> const& modifierInvocation = CurrentFunction->modifiers()[ModifierDepth];
 
-    // constructor call should be excluded
+    // constructor call should be excluded (and managed separeately)
     if (dynamic_cast<ContractDefinition const*>(modifierInvocation->name()->annotation().referencedDeclaration)) {
-      assert(false && "IeleCompiler: modifiers not allowed on constructor!");
       appendModifierOrFunctionCode();
     }
     else {
