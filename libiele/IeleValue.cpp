@@ -8,6 +8,8 @@
 #include "IeleLocalVariable.h"
 #include "IeleValueSymbolTable.h"
 
+#include <libsolidity/interface/Exceptions.h>
+
 #include "llvm/ADT/SmallString.h"
 
 using namespace dev;
@@ -28,7 +30,7 @@ static bool getSymTab(IeleValue *V, IeleValueSymbolTable *&ST) {
     if (IeleFunction *P = LV->getParent())
       ST = P->getIeleValueSymbolTable();
   } else {
-    assert(llvm::isa<IeleConstant>(V) && "Unknown value type!");
+    solAssert(llvm::isa<IeleConstant>(V), "Unknown value type!");
     return true;  // no name is setable for this.
   }
   return false;
@@ -40,14 +42,14 @@ IeleName *IeleValue::getIeleName() const {
   if (!HasName) return nullptr;
 
   auto I = Context->IeleNames.find(this);
-  assert(I != Context->IeleNames.end() &&
+  solAssert(I != Context->IeleNames.end(),
          "No name entry found!");
 
   return I->second;
 }
 
 void IeleValue::setIeleName(IeleName *IN) {
-  assert(HasName == Context->IeleNames.count(this) &&
+  solAssert(HasName == Context->IeleNames.count(this),
          "HasName bit out of sync!");
 
   if (!IN) {
@@ -75,7 +77,7 @@ void IeleValue::setName(const llvm::Twine &Name) {
 
   llvm::SmallString<256> NameData;
   llvm::StringRef NameRef = Name.toStringRef(NameData);
-  assert(NameRef.find_first_of(0) == llvm::StringRef::npos &&
+  solAssert(NameRef.find_first_of(0) == llvm::StringRef::npos,
          "Null bytes are not allowed in names");
 
   // Name isn't changing?

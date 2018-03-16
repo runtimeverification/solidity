@@ -1,5 +1,7 @@
 #include "IeleValueSymbolTable.h"
 
+#include <libsolidity/interface/Exceptions.h>
+
 #include "llvm/ADT/SmallString.h"
 
 using namespace dev;
@@ -25,7 +27,7 @@ IeleName *IeleValueSymbolTable::makeUniqueName(
 }
 
 void IeleValueSymbolTable::reinsertIeleValue(IeleValue* V) {
-  assert(V->hasName() && "Can't insert nameless Value into symbol table");
+  solAssert(V->hasName(), "Can't insert nameless Value into symbol table");
 
   // Try inserting the name, assuming it won't conflict.
   if (vmap.insert(V->getIeleName())) {

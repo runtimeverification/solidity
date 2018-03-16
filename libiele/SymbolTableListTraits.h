@@ -2,6 +2,8 @@
 
 #include "IeleValueSymbolTable.h"
 
+#include <libsolidity/interface/Exceptions.h>
+
 #include "llvm/ADT/ilist.h"
 #include <cstddef>
 
@@ -86,7 +88,7 @@ public:
 template <typename ItemClass>
 void SymbolTableListTraits<ItemClass>::addNodeToList(
     ItemClass *V) {
-  assert(!V->getParent() && "Value already in a container!!");
+  solAssert(!V->getParent(), "Value already in a container!!");
   ItemParentClass *Owner = getListOwner();
   V->setParent(Owner);
   if (IeleValue *IV = llvm::dyn_cast<IeleValue>(V))
@@ -111,7 +113,7 @@ void SymbolTableListTraits<ItemClass>::transferNodesFromList(
   // We only have to do work here if transferring instructions between blocks
   // or local variables between instructions.
   ItemParentClass *NewIP = getListOwner(), *OldIP = L2.getListOwner();
-  assert(NewIP != OldIP && "Expected different list owners");
+  solAssert(NewIP != OldIP, "Expected different list owners");
 
   // We only have to update symbol table entries if we are transferring the
   // instructions or local variables to a different symtab object...

@@ -4,6 +4,8 @@
 #include "IeleIntConstant.h"
 #include "IeleValueSymbolTable.h"
 
+#include <libsolidity/interface/Exceptions.h>
+
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Program.h"
 
@@ -78,7 +80,7 @@ bytes IeleContract::toBinary() const {
   const StringRef output = tempout_str;
   const StringRef *redirects[] = {&input, &output, nullptr};
   int exit = ExecuteAndWait(program, args, nullptr, redirects);
-  assert(exit == 0);
+  solAssert(exit == 0, "Iele assembler failed to execute on " + tempin_str);
 
   std::ifstream read(tempout_str);
   std::stringstream buffer;
