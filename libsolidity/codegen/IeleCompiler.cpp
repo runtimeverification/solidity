@@ -480,14 +480,20 @@ bool IeleCompiler::visit(
     llvm::SmallVector<iele::IeleValue*, 4> RHSValues;
     compileTuple(*rhsExpr, RHSValues);
 
+    // Get RHS types
+    TypePointers RHSTypes;
+    if (const TupleType *tupleType =
+          dynamic_cast<const TupleType *>(rhsExpr->annotation().type.get()))
+      RHSTypes = tupleType->components();
+    else
+      RHSTypes = TypePointers{rhsExpr->annotation().type};
+
     // Visit assignments.
     auto const &assignments =
       variableDeclarationStatement.annotation().assignments;
     solAssert(assignments.size() == RHSValues.size(),
            "IeleCompiler: Missing assignment in variable declaration "
            "statement");
-    // Visit LHS. We lookup the LHS name in the function's symbol table,
-    // where we should find it.
     iele::IeleValueSymbolTable *ST =
       CompilingFunction->getIeleValueSymbolTable();
     solAssert(ST,
@@ -496,13 +502,17 @@ bool IeleCompiler::visit(
     for (unsigned i = 0; i < assignments.size(); ++i) {
       const VariableDeclaration *varDecl = assignments[i];
       if (varDecl) {
-        solAssert (varDecl->type()->category() != Type::Category::Function, "not implemented yet");
-        iele::IeleValue *LHSValue = ST->lookup(VarNameMap[ModifierDepth][varDecl->name()]);
+        solAssert(varDecl->type()->category() != Type::Category::Function,
+                  "not implemented yet");
+        // Visit LHS. We lookup the LHS name in the function's symbol table,
+        // where we should find it.
+        iele::IeleValue *LHSValue =
+          ST->lookup(VarNameMap[ModifierDepth][varDecl->name()]);
         solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of variable "
                            "declaration statement");
         // Check if we need to do a memory to storage copy.
         TypePointer LHSType = varDecl->annotation().type;
-        TypePointer RHSType = varDecl->value()->annotation().type;
+        TypePointer RHSType = RHSTypes[i];
         iele::IeleValue *RHSValue = RHSValues[i];
         solAssert(!shouldCopyStorageToStorage(LHSValue, RHSType),
                   "IeleCompiler: found copy to storage in a variable "
@@ -953,13 +963,16 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     return false;
   }
 
-  // Visit accessed exression.
-  iele::IeleValue *ExprValue = compileExpression(memberAccess.expression());
-  solAssert(ExprValue,
-            "IeleCompiler: failed to compile base expression for member "
-            "access.");
-
   const Type &baseType = *memberAccess.expression().annotation().type;
+
+  // Visit accessed exression (skip in case of magic base expression).
+  iele::IeleValue *ExprValue = nullptr;
+  if (baseType.category() != Type::Category::Magic) {
+    ExprValue = compileExpression(memberAccess.expression());
+    solAssert(ExprValue,
+              "IeleCompiler: failed to compile base expression for member "
+              "access.");
+  }
 
   switch (baseType.category()) {
   case Type::Category::Magic:
