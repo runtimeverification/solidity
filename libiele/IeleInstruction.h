@@ -176,14 +176,14 @@ public:
   static IeleInstruction *CreateAccountCall(
       IeleLocalVariable *StatusValue,
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-      IeleGlobalVariable *Callee, IeleValue *AddressValue,
+      IeleGlobalValue *Callee, IeleValue *AddressValue,
       IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateAccountCall(
       IeleLocalVariable *StatusValue,
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-      IeleGlobalVariable *Callee, IeleValue *AddressValue,
+      IeleGlobalValue *Callee, IeleValue *AddressValue,
       IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleBlock *InsertAtEnd);
@@ -199,12 +199,12 @@ public:
 
   static IeleInstruction *CreateInternalCall(
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-      IeleGlobalVariable *Callee,
+      IeleGlobalValue *Callee,
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateInternalCall(
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-      IeleGlobalVariable *Callee,
+      IeleGlobalValue *Callee,
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleBlock *InsertAtEnd);
 

@@ -135,9 +135,16 @@ void IeleValue::printAsValue(llvm::raw_ostream &OS) const {
     OS << "%" << getName();
     break;
   case IeleGlobalVariableVal:
-  case IeleFunctionVal:
     OS << "@" << getName();
     break;
+  case IeleFunctionVal: {
+    const IeleFunction *F = llvm::cast<IeleFunction>(this);
+    if (F->isPublic() && !(F->isInit() || F->isDeposit()))
+      OS << "@\"" << getName() << "\"";
+    else
+      OS << "@" << getName();
+    break;
+  }
   case IeleIntConstantVal:
     print(OS);
     break;

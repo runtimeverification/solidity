@@ -39,6 +39,8 @@ private:
   IeleLocalVariableListType IeleLocalVariableList;
   std::unique_ptr<IeleValueSymbolTable> SymTab;
   bool IsPublic;
+  bool IsInit;
+  bool IsDeposit;
 
   friend class SymbolTableListTraits<IeleFunction>;
 
@@ -46,8 +48,8 @@ private:
   // the function is automatically inserted into the end of the function list
   // for the given contract.
   //
-  IeleFunction(IeleContext *Ctx, bool isPublic, const llvm::Twine &Name= "",
-               IeleContract *C = nullptr);
+  IeleFunction(IeleContext *Ctx, bool isPublic, bool isInit, bool isDeposit,
+               const llvm::Twine &Name= "", IeleContract *C = nullptr);
 
 public:
   IeleFunction(const IeleFunction&) = delete;
@@ -58,11 +60,27 @@ public:
   static IeleFunction *Create(IeleContext *Ctx, bool isPublic,
                               const llvm::Twine &Name = "",
                               IeleContract *C = nullptr) {
-    return new IeleFunction(Ctx, isPublic, Name, C);
+    return new IeleFunction(Ctx, isPublic, false, false, Name, C);
+  }
+
+  static IeleFunction *CreateInit(IeleContext *Ctx, bool isPublic,
+                                  IeleContract *C = nullptr) {
+    return new IeleFunction(Ctx, isPublic, true, false, "init", C);
+  }
+
+  static IeleFunction *CreateDeposit(IeleContext *Ctx, bool isPublic,
+                                     IeleContract *C = nullptr) {
+    return new IeleFunction(Ctx, isPublic, false, true, "deposit", C);
   }
 
   inline bool isPublic() const { return IsPublic; }
   inline void setPublic(bool isPublic) { IsPublic = isPublic; }
+
+  inline bool isInit() const { return IsInit; }
+  inline void setInit(bool isInit) { IsInit = isInit; }
+
+  inline bool isDeposit() const { return IsDeposit; }
+  inline void setDeposit(bool isDeposit) { IsDeposit = isDeposit; }
 
   // Get the underlying elements of the IeleFunction.
   //

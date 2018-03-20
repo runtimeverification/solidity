@@ -12,6 +12,22 @@
 using namespace dev;
 using namespace dev::solidity;
 
+static std::string getIeleNameForFunction(
+    const FunctionDefinition &function) {
+  std::string IeleFunctionName;
+  if (function.isConstructor())
+    IeleFunctionName = "init";
+  else if (function.isFallback())
+    IeleFunctionName = "deposit";
+  else if (function.isPublic())
+    IeleFunctionName = function.externalSignature();
+  else
+    // TODO: overloading on internal functions.
+    IeleFunctionName = function.name();
+
+  return IeleFunctionName;
+}
+
 // lookup a ModifierDefinition by name (borrowed from CompilerContext.cpp)
 const ModifierDefinition &IeleCompiler::functionModifier(
     const std::string &_name) const {
@@ -50,6 +66,29 @@ void IeleCompiler::compileContract(
                                                         NextStorageAddress++));
   }
 
+  // Add all functions to the contract's symbol table.
+  if (const FunctionDefinition *fallback = contract.fallbackFunction()) {
+    // First add the fallback to the symbol table, since it is not added by the
+    // previous loop.
+    iele::IeleFunction::CreateDeposit(&Context,
+                                      fallback->isPartOfExternalInterface(),
+                                      CompilingContract);
+  }
+  if (const FunctionDefinition *constructor = contract.constructor()) {
+    // Then add the constructor to the symbol table.
+    iele::IeleFunction::CreateInit(&Context,
+                                   constructor->isPartOfExternalInterface(),
+                                   CompilingContract);
+  }
+  // Add the rest of the functions.
+  for (const FunctionDefinition *function : contract.definedFunctions()) {
+    if (function->isConstructor() || function->isFallback())
+      continue;
+    std::string FunctionName = getIeleNameForFunction(*function);
+    iele::IeleFunction::Create(&Context, function->isPartOfExternalInterface(),
+                               FunctionName, CompilingContract);
+  }
+
   // Visit fallback.
   if (const FunctionDefinition *fallback = contract.fallbackFunction())
     fallback->accept(*this);
@@ -60,7 +99,7 @@ void IeleCompiler::compileContract(
     constructor->accept(*this);
   else {
     CompilingFunction =
-      iele::IeleFunction::Create(&Context, false, "init", CompilingContract);
+      iele::IeleFunction::CreateInit(&Context, false, CompilingContract);
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
     appendStateVariableInitialization();
@@ -89,20 +128,16 @@ std::string IeleCompiler::getNextVarSuffix() {
 }
 
 bool IeleCompiler::visit(const FunctionDefinition &function) {
-  std::string FunctionName;
-  if (function.isConstructor())
-    FunctionName = "init";
-  else if (function.isFallback())
-    FunctionName = "deposit";
-  else if (function.isPublic())
-    FunctionName = function.externalSignature();
-  else
-    // TODO: overloading on internal functions.
-    FunctionName = function.name();
+  std::string name = getIeleNameForFunction(function);
 
-  CompilingFunction =
-    iele::IeleFunction::Create(&Context, function.isPartOfExternalInterface(),
-                               FunctionName, CompilingContract);
+  // Lookup function in the contract's symbol table.
+  iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
+  solAssert(ST,
+            "IeleCompiler: failed to access compiling contract's symbol table.");
+  CompilingFunction = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(name));
+  solAssert(CompilingFunction,
+            "IeleCompiler: failed to find function in compiling contract's"
+            " symbol table");
   CompilingFunctionASTNode = &function;
   unsigned NumOfModifiers = CompilingFunctionASTNode->modifiers().size();
 
@@ -785,9 +820,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     for (unsigned i = 0; i < arguments.size(); ++i) {
       iele::IeleValue *InitValue = compileExpression(*arguments[i]);
       iele::IeleValue *AddressValue =
-      appendIeleRuntimeMemoryAddress(
-          StructValue,
-          iele::IeleIntConstant::Create(&Context, llvm::APInt(64, i)));
+        appendIeleRuntimeMemoryAddress(
+            StructValue,
+            iele::IeleIntConstant::Create(&Context, llvm::APInt(64, i)));
       iele::IeleInstruction::CreateSStore(InitValue, AddressValue,
                                           CompilingBlock);
     }
@@ -921,10 +956,47 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     // Return pointer to allocated array.
     CompilingExpressionResult.push_back(ArrayValue);
-
-    return false;
+    break;
   }
-  case FunctionType::Kind::Internal:
+  case FunctionType::Kind::Internal: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call "
+                "argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type;
+      TypePointer ParamType = function.parameterTypes()[i];
+      if (shouldCopyMemoryToStorage(ParamType, ArgType))
+        ArgValue = appendIeleRuntimeMemoryToStorageCopy(ArgValue);
+      else if (shouldCopyStorageToMemory(ParamType, ArgType))
+        ArgValue = appendIeleRuntimeStorageToMemoryCopy(ArgValue);
+      Arguments.push_back(ArgValue);
+    }
+
+    // Visit callee.
+    iele::IeleGlobalValue *CalleeValue =
+      llvm::dyn_cast<iele::IeleGlobalValue>(
+          compileExpression(functionCall.expression()));
+    solAssert(CalleeValue,
+              "IeleCompiler: Failed to compile callee of internal function "
+              "call");
+
+    // Prepare registers for return values.
+    llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
+    for (unsigned i = 0; i < function.returnParameterTypes().size(); ++i)
+      Returns.push_back(
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction));
+
+    // Generate call and return values.
+    iele::IeleInstruction::CreateInternalCall(Returns, CalleeValue, Arguments,
+                                              CompilingBlock);
+    CompilingExpressionResult.insert(
+        CompilingExpressionResult.end(), Returns.begin(), Returns.end());
+    break;
+  }
   case FunctionType::Kind::External:
   case FunctionType::Kind::CallCode:
   case FunctionType::Kind::DelegateCall:
@@ -1224,11 +1296,15 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
 }
 
 void IeleCompiler::endVisit(const Identifier &identifier) {
-  const std::string &name = identifier.name();
-
-  // Check if identifier is a reserved identifier.
+  // Get the corrent name for the identifier.
+  std::string name = identifier.name();
   const Declaration *declaration =
     identifier.annotation().referencedDeclaration;
+  if (const FunctionDefinition *functionDef =
+        dynamic_cast<const FunctionDefinition *>(declaration))
+    name = getIeleNameForFunction(*functionDef); 
+
+  // Check if identifier is a reserved identifier.
   if (const MagicVariableDeclaration *magicVar =
          dynamic_cast<const MagicVariableDeclaration *>(declaration)) {
     switch (magicVar->type()->category()) {
