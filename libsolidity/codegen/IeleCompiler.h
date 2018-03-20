@@ -7,6 +7,8 @@
 
 #include "llvm/Support/raw_ostream.h"
 
+#include <map>
+
 namespace dev {
 namespace iele {
 
@@ -93,13 +95,12 @@ private:
   // Appends one layer of function modifier code of the current function, or the function
   // body itself if the last modifier was reached.
   void appendModifierOrFunctionCode();
-  unsigned ModifierDepth = 0;
+  unsigned ModifierDepth = -1;
   FunctionDefinition const* CurrentFunction = nullptr;
   // This diverges from the evm compiler: they use CompilerContext::m_inheritanceHierarchy 
   // to loop through all contracts in the chain. We don't have inheritance for now, so 
   // let's keep it simple and use this as ashortcut. May need updating later when we support OO features.  
   ContractDefinition const* CurrentContract = nullptr; 
-  // ------------------------------------------------------------------------------------
 
   // Helpers for the compilation process.
   iele::IeleValue *compileExpression(const Expression &expression);
@@ -114,6 +115,14 @@ private:
                                   iele::IeleBlock *DestinationBlock);
   void appendRevert(iele::IeleValue *Condition = nullptr);
   void appendInvalid(iele::IeleValue *Condition = nullptr);
+
+  // Infrastructure for unique variable names generation and mapping
+  int NextUniqueIntToken = 0;
+  int getNextUniqueIntToken();
+  std::string getNextVarSuffix();
+  // It is not enough to map names to names; we need such a mapping for each "layer",
+  // that is for each function modifier. 
+  std::map<unsigned, std::map <std::string, std::string>> VarNameMap;
 };
 
 } // end namespace solidity

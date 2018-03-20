@@ -10,11 +10,11 @@ contract SimpleAuction {
 
 @ended = 5
 
-define @"init"(%_beneficiary, %_biddingTime) {
+define @"init"(%_beneficiary_0, %_biddingTime_1) {
 entry:
-  sstore %_beneficiary, @beneficiary
+  sstore %_beneficiary_0, @beneficiary
   %timestamp = call @iele.timestamp()
-  %tmp = add %timestamp, %_biddingTime
+  %tmp = add %timestamp, %_biddingTime_1
   sstore %tmp, @auctionEnd
   ret void
 }
