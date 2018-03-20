@@ -515,10 +515,10 @@ bool IeleCompiler::visit(
         TypePointer RHSType = RHSTypes[i];
         iele::IeleValue *RHSValue = RHSValues[i];
         solAssert(!shouldCopyStorageToStorage(LHSValue, RHSType),
-                  "IeleCompiler: found copy to storage in a variable "
+                  "IeleCompiler: found copy storage to storage in a variable "
                   "declaration statement");
         solAssert(!shouldCopyMemoryToStorage(LHSType, RHSType),
-                  "IeleCompiler: found copy to storage in a variable "
+                  "IeleCompiler: found copy memory to storage in a variable "
                   "declaration statement");
         if (shouldCopyStorageToMemory(LHSType, RHSType))
           RHSValue = appendIeleRuntimeStorageToMemoryCopy(RHSValue);
