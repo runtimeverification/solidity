@@ -1025,7 +1025,6 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
   ST = CompilingContract->getIeleValueSymbolTable();
   solAssert(ST,
          "IeleCompiler: failed to access compiling contract's symbol table.");
-  // if (iele::IeleValue *Identifier = ST->lookup(VarNameMap[ModifierDepth][name])) {
   if (iele::IeleValue *Identifier = ST->lookup(name)) {
     // If we aren't compiling an lvalue, we have to load the global variable.
     if (!CompilingLValue) {
