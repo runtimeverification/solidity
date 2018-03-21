@@ -184,8 +184,10 @@ IeleInstruction *IeleInstruction::CreateCondBr(
 }
 
 IeleInstruction *IeleInstruction::CreateAccountCall(
-    IeleLocalVariable *StatusValue, IeleGlobalVariable *Callee,
-    IeleValue *AddressValue, IeleValue *TransferValue, IeleValue *GasValue,
+    IeleLocalVariable *StatusValue,
+    llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
+    IeleGlobalVariable *Callee, IeleValue *AddressValue,
+    IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleInstruction *InsertBefore) {
   solAssert(Callee && AddressValue && TransferValue && GasValue,
@@ -194,6 +196,8 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
   IeleInstruction *AccountCallInst = new IeleInstruction(CallAt, InsertBefore);
   if (StatusValue)
     AccountCallInst->getIeleLValueList().push_back(StatusValue);
+  AccountCallInst->getIeleLValueList().insert(AccountCallInst->lvalue_end(),
+                                              LValues.begin(), LValues.end());
   AccountCallInst->getIeleOperandList().push_back(Callee);
   AccountCallInst->getIeleOperandList().push_back(AddressValue);
   AccountCallInst->getIeleOperandList().push_back(TransferValue);
@@ -206,8 +210,10 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
 }
 
 IeleInstruction *IeleInstruction::CreateAccountCall(
-    IeleLocalVariable *StatusValue, IeleGlobalVariable *Callee,
-    IeleValue *AddressValue, IeleValue *TransferValue, IeleValue *GasValue,
+    IeleLocalVariable *StatusValue,
+    llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
+    IeleGlobalVariable *Callee, IeleValue *AddressValue,
+    IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleBlock *InsertAtEnd) {
   solAssert(Callee && AddressValue && TransferValue && GasValue,
@@ -216,6 +222,8 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
   IeleInstruction *AccountCallInst = new IeleInstruction(CallAt, InsertAtEnd);
   if (StatusValue)
     AccountCallInst->getIeleLValueList().push_back(StatusValue);
+  AccountCallInst->getIeleLValueList().insert(AccountCallInst->lvalue_end(),
+                                              LValues.begin(), LValues.end());
   AccountCallInst->getIeleOperandList().push_back(Callee);
   AccountCallInst->getIeleOperandList().push_back(AddressValue);
   AccountCallInst->getIeleOperandList().push_back(TransferValue);
@@ -231,6 +239,9 @@ IeleInstruction *IeleInstruction::CreateIntrinsicCall(
     IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleInstruction *InsertBefore) {
+  solAssert(IntrinsicOpcode >= IeleIntrinsicsBegin &&
+            IntrinsicOpcode < IeleIntrinsicsEnd,
+            "CreateIntrinsicCall: Invalid opcode");
   IeleInstruction *IntrinsicCallInst =
     new IeleInstruction(IntrinsicOpcode, InsertBefore);
   if (Result)
@@ -255,6 +266,42 @@ IeleInstruction *IeleInstruction::CreateIntrinsicCall(
                                                  ArgumentValues.end());
 
   return IntrinsicCallInst;
+}
+
+IeleInstruction *IeleInstruction::CreateInternalCall(
+    llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
+    IeleGlobalVariable *Callee,
+    llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+    IeleInstruction *InsertBefore) {
+  solAssert(Callee, "CreateInternalCall: Invalid operands");
+
+  IeleInstruction *InternalCallInst = new IeleInstruction(Call, InsertBefore);
+  InternalCallInst->getIeleLValueList().insert(InternalCallInst->lvalue_end(),
+                                               LValues.begin(), LValues.end());
+  InternalCallInst->getIeleOperandList().push_back(Callee);
+  InternalCallInst->getIeleOperandList().insert(InternalCallInst->end(),
+                                                ArgumentValues.begin(),
+                                                ArgumentValues.end());
+
+  return InternalCallInst;
+}
+
+IeleInstruction *IeleInstruction::CreateInternalCall(
+    llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
+    IeleGlobalVariable *Callee,
+    llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+    IeleBlock *InsertAtEnd) {
+  solAssert(Callee, "CreateInternalCall: Invalid operands");
+
+  IeleInstruction *InternalCallInst = new IeleInstruction(Call, InsertAtEnd);
+  InternalCallInst->getIeleLValueList().insert(InternalCallInst->lvalue_end(),
+                                               LValues.begin(), LValues.end());
+  InternalCallInst->getIeleOperandList().push_back(Callee);
+  InternalCallInst->getIeleOperandList().insert(InternalCallInst->end(),
+                                                ArgumentValues.begin(),
+                                                ArgumentValues.end());
+
+  return InternalCallInst;
 }
 
 IeleInstruction *IeleInstruction::CreateAssign(
@@ -330,6 +377,29 @@ IeleInstruction *IeleInstruction::CreateSStore(
   SStoreInst->getIeleOperandList().push_back(AddressValue);
 
   return SStoreInst;
+}
+
+IeleInstruction *IeleInstruction::CreateStore(
+    IeleValue *DataValue, IeleValue *AddressValue,
+    IeleInstruction *InsertBefore) {
+  solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
+
+  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertBefore);
+  StoreInst->getIeleOperandList().push_back(DataValue);
+  StoreInst->getIeleOperandList().push_back(AddressValue);
+
+  return StoreInst;
+}
+
+IeleInstruction *IeleInstruction::CreateStore(
+    IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd) {
+  solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
+
+  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertAtEnd);
+  StoreInst->getIeleOperandList().push_back(DataValue);
+  StoreInst->getIeleOperandList().push_back(AddressValue);
+
+  return StoreInst;
 }
 
 IeleInstruction *IeleInstruction::CreateBinOp(
@@ -438,7 +508,8 @@ static void printCall(llvm::raw_ostream &OS, const IeleInstruction *I) {
 
   // Skip send and gaslimit arguments, in case of creation or account call
   auto SavedIt = It;
-  ++It;
+  if (I->getOpcode() != IeleInstruction::Call)
+    ++It;
   if (I->getOpcode() == IeleInstruction::CallAt)
     ++It;
 

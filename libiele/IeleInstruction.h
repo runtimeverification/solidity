@@ -33,7 +33,18 @@ public:
 
   // Enumeration of instruction opcodes
   enum IeleOps {
-#define HANDLE_IELE_INST(N, OPC, TXT) OPC = N,
+#define FIRST_IELE_OTHER_INST(N) IeleOthersBegin = N,
+#define HANDLE_IELE_OTHER_INST(N, OPC, TXT) OPC = N,
+#define LAST_IELE_OTHER_INST(N) IeleOthersEnd = N+1,
+
+#define FIRST_IELE_CALL_INST(N) IeleCallsBegin = N,
+#define HANDLE_IELE_CALL_INST(N, OPC, TXT) OPC = N,
+#define LAST_IELE_CALL_INST(N) IeleCallsEnd = N+1,
+
+#define FIRST_IELE_INTRINSIC_INST(N) IeleIntrinsicsBegin = N,
+#define HANDLE_IELE_INTRINSIC_INST(N, OPC, TXT) OPC = N,
+#define LAST_IELE_INTRINSIC_INST(N) IeleIntrinsicsEnd = N+1
+
 #include "IeleInstruction.def"
   };
 
@@ -163,13 +174,17 @@ public:
       IeleValue *Condition, IeleBlock *Target, IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateAccountCall(
-      IeleLocalVariable *StatusValue, IeleGlobalVariable *Callee,
-      IeleValue *AddressValue, IeleValue *TransferValue, IeleValue *GasValue,
+      IeleLocalVariable *StatusValue,
+      llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
+      IeleGlobalVariable *Callee, IeleValue *AddressValue,
+      IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateAccountCall(
-      IeleLocalVariable *StatusValue, IeleGlobalVariable *Callee,
-      IeleValue *AddressValue, IeleValue *TransferValue, IeleValue *GasValue,
+      IeleLocalVariable *StatusValue,
+      llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
+      IeleGlobalVariable *Callee, IeleValue *AddressValue,
+      IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleBlock *InsertAtEnd);
 
@@ -179,6 +194,17 @@ public:
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateIntrinsicCall(
       IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
+      IeleBlock *InsertAtEnd);
+
+  static IeleInstruction *CreateInternalCall(
+      llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
+      IeleGlobalVariable *Callee,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateInternalCall(
+      llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
+      IeleGlobalVariable *Callee,
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleBlock *InsertAtEnd);
 
@@ -200,6 +226,12 @@ public:
       IeleValue *DataValue, IeleValue *AddressValue,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateSStore(
+      IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
+
+  static IeleInstruction *CreateStore(
+      IeleValue *DataValue, IeleValue *AddressValue,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateBinOp(
