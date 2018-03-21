@@ -692,20 +692,21 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     // Get the current subexpression value, and save it in case of a postfix
     // oparation.
     iele::IeleValue *Before = appendLValueDereference(SubExprValue);
-    iele::IeleLocalVariable *Result = nullptr;
-    if (!unaryOperation.isPrefixOperation()) {
-      Result =
-        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-      iele::IeleInstruction::CreateAssign(Result, Before, CompilingBlock);
-    }
-
     // Generate code for the inc/dec operation.
     iele::IeleIntConstant *One = iele::IeleIntConstant::getOne(&Context);
     iele::IeleLocalVariable *After =
       appendBinaryOperator(BinOperator, Before, One);
-    // In case of a prefix operation, this is the result.
-    if (unaryOperation.isPrefixOperation())
+    iele::IeleLocalVariable *Result = nullptr;
+    if (!unaryOperation.isPrefixOperation()) {
+      // Save the initial subexpression value in case of a postfix oparation.
+      Result =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateAssign(Result, Before, CompilingBlock);
+    } else {
+      // In case of a prefix operation, the result is the value after the
+      // inc/dec operation.
       Result = After;
+    }
     // Generate assignment code.
     appendLValueAssign(SubExprValue, After);
     // Return result.
