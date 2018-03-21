@@ -30,19 +30,20 @@ public:
     RevertBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingLValue(false),
+    CompilingLValueKind(LValueKind::Reg),
     CompilingContractASTNode(nullptr),
     CompilingFunctionASTNode(nullptr),
     ModifierDepth(-1) { }
 
   // Compiles a contract.
   void compileContract(
-      ContractDefinition const &contract,
-      std::map<ContractDefinition const*, iele::IeleContract const*> const &contracts);
+      const ContractDefinition &contract,
+      const std::map<const ContractDefinition *, const iele::IeleContract *> &contracts);
 
   // Returns the compiled IeleContract.
-  iele::IeleContract const& assembly() const { return *CompiledContract; }
+  const iele::IeleContract &assembly() const { return *CompiledContract; }
 
-  std::string assemblyString(StringMap const& _sourceCodes = StringMap()) const {
+  std::string assemblyString(const StringMap &_sourceCodes = StringMap()) const {
     std::string ret;
     llvm::raw_string_ostream OS(ret);
     CompiledContract->print(OS);
@@ -96,6 +97,10 @@ private:
   iele::IeleBlock *AssertFailBlock;
   llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
   bool CompilingLValue;
+
+  enum LValueKind { Reg, Memory, Storage };
+  LValueKind CompilingLValueKind;
+
   // This diverges from the evm compiler: they use
   // CompilerContext::m_inheritanceHierarchy 
   // to loop through all contracts in the chain. We don't have inheritance for
@@ -138,26 +143,35 @@ private:
 
   void appendStateVariableInitialization();
 
-  iele::IeleValue *appendIeleRuntimeAllocateMemory(iele::IeleValue *NumElems);
-  iele::IeleValue *appendIeleRuntimeAllocateStorage(iele::IeleValue *NumElems);
-  iele::IeleValue *appendIeleRuntimeMemoryAddress(iele::IeleValue *Base,
+  iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
+      iele::IeleValue *NumElems);
+  iele::IeleLocalVariable *appendIeleRuntimeAllocateStorage(
+      iele::IeleValue *NumElems);
+  iele::IeleLocalVariable *appendIeleRuntimeMemoryAddress(iele::IeleValue *Base,
                                                   iele::IeleValue *Offset);
-  iele::IeleValue *appendIeleRuntimeStorageAddress(iele::IeleValue *Base,
-                                                   iele::IeleValue *Offset);
-  iele::IeleValue *appendIeleRuntimeMemoryLoad(iele::IeleValue *Base,
-                                               iele::IeleValue *Offset);
-  iele::IeleValue *appendIeleRuntimeStorageLoad(iele::IeleValue *Base,
-                                                iele::IeleValue *Offset);
-  iele::IeleValue *appendIeleRuntimeStorageToStorageCopy(iele::IeleValue *From);
-  iele::IeleValue *appendIeleRuntimeMemoryToStorageCopy(iele::IeleValue *From);
-  iele::IeleValue *appendIeleRuntimeStorageToMemoryCopy(iele::IeleValue *From);
+  iele::IeleLocalVariable *appendIeleRuntimeStorageAddress(
+      iele::IeleValue *Base, iele::IeleValue *Offset);
+  iele::IeleLocalVariable *appendIeleRuntimeMemoryLoad(iele::IeleValue *Base,
+                                                       iele::IeleValue *Offset);
+  iele::IeleLocalVariable *appendIeleRuntimeStorageLoad(
+      iele::IeleValue *Base, iele::IeleValue *Offset);
+  iele::IeleLocalVariable *appendIeleRuntimeStorageToStorageCopy(
+      iele::IeleValue *From);
+  iele::IeleLocalVariable *appendIeleRuntimeMemoryToStorageCopy(
+      iele::IeleValue *From);
+  iele::IeleLocalVariable *appendIeleRuntimeStorageToMemoryCopy(
+      iele::IeleValue *From);
+
+  iele::IeleLocalVariable *appendLValueDereference(iele::IeleValue *LValue);
+  void appendLValueAssign(iele::IeleValue *LValue, iele::IeleValue *RValue);
+
+  iele::IeleLocalVariable *appendBinaryOperator(
+      Token::Value Opcode, iele::IeleValue *LeftOperand,
+      iele::IeleValue *RightOperand);
 
   bool shouldCopyStorageToStorage(iele::IeleValue *To, TypePointer From) const;
   bool shouldCopyMemoryToStorage(TypePointer To, TypePointer From) const;
   bool shouldCopyStorageToMemory(TypePointer To, TypePointer From) const;
-
-  bool lvalueCompilesToStoragePtr(const Expression &LValue) const;
-  bool lvalueCompilesToMemoryPtr(const Expression &LValue) const;
 
   unsigned getStructMemberIndex(const StructType &type,
                                 const std::string &member) const;
