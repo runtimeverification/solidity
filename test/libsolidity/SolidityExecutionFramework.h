@@ -54,8 +54,8 @@ public:
 	{
 		bytes const& bytecode = compileContract(_sourceCode, _contractName, _libraryAddresses);
 		sendMessage(_arguments, "", bytecode, true, _value);
-		if (m_status.empty()) {
-			return m_status;
+		if (m_status != 0) {
+			return empty;
 		}
 		return bytecode;
 	}
@@ -91,6 +91,9 @@ public:
 
 protected:
 	dev::solidity::CompilerStack m_compiler;
+
+private:
+        bytes empty;
 };
 
 }

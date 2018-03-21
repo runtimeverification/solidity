@@ -19,6 +19,8 @@
  * @date 2016
  */
 
+#pragma once
+
 #if defined(_WIN32)
 #include <windows.h>
 #else
@@ -98,10 +100,10 @@ public:
 	struct TransactionReceipt
 	{
 		std::string gasUsed;
+		std::string contractAddress;
 		std::string status;
 		std::vector<LogEntry> logEntries;
 		std::string blockNumber;
-		std::vector<std::string> output;
 	};
 
 	static RPCSession& instance(std::string const& _path);
@@ -109,8 +111,9 @@ public:
 	std::string eth_getCode(std::string const& _address, std::string const& _blockNumber);
 	std::string eth_getTimestamp(std::string const& _blockNumber);
 	TransactionReceipt eth_getTransactionReceipt(std::string const& _transactionHash);
-	std::string eth_sendTransaction(TransactionData const& _td);
-	std::string eth_sendTransaction(std::string const& _transaction);
+	std::string iele_sendTransaction(TransactionData const& _td);
+	std::string iele_sendTransaction(std::string const& _transaction);
+	std::vector<std::string> iele_call(TransactionData const& _td);
 	std::string eth_getBalance(std::string const& _address, std::string const& _blockNumber);
 	bool eth_isStorageEmpty(std::string const& _address, std::string const& _blockNumber);
 	void test_rewindToBlock(size_t _blockNr);

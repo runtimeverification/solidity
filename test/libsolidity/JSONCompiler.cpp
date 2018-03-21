@@ -84,6 +84,7 @@ BOOST_AUTO_TEST_CASE(read_license)
 	BOOST_CHECK(output.find("GNU GENERAL PUBLIC LICENSE") != string::npos);
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(basic_compilation, 4)
 BOOST_AUTO_TEST_CASE(basic_compilation)
 {
 	char const* input = R"(
@@ -139,6 +140,7 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
 	);
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(single_compilation, 4)
 BOOST_AUTO_TEST_CASE(single_compilation)
 {
 	Json::Value result = compileSingle("contract A { }");

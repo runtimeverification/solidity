@@ -60,7 +60,7 @@ void IeleCompiler::compileContract(
     constructor->accept(*this);
   else {
     CompilingFunction =
-      iele::IeleFunction::Create(&Context, true, "init", CompilingContract);
+      iele::IeleFunction::Create(&Context, false, "init", CompilingContract);
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
     appendStateVariableInitialization();

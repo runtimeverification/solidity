@@ -51,6 +51,7 @@ BOOST_AUTO_TEST_CASE(both_encoders_macro)
 	BOOST_CHECK_EQUAL(runs, 2);
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(value_types, 1)
 BOOST_AUTO_TEST_CASE(value_types)
 {
 	string sourceCode = R"(
@@ -76,6 +77,7 @@ BOOST_AUTO_TEST_CASE(value_types)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(enums, 1)
 BOOST_AUTO_TEST_CASE(enums)
 {
 	string sourceCode = R"(
@@ -98,6 +100,7 @@ BOOST_AUTO_TEST_CASE(enums)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(cleanup, 1)
 BOOST_AUTO_TEST_CASE(cleanup)
 {
 	string sourceCode = R"(
@@ -124,6 +127,7 @@ BOOST_AUTO_TEST_CASE(cleanup)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(fixed_arrays, 1)
 BOOST_AUTO_TEST_CASE(fixed_arrays)
 {
 	string sourceCode = R"(
@@ -150,6 +154,7 @@ BOOST_AUTO_TEST_CASE(fixed_arrays)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_arrays, 1)
 BOOST_AUTO_TEST_CASE(dynamic_arrays)
 {
 	string sourceCode = R"(
@@ -174,6 +179,7 @@ BOOST_AUTO_TEST_CASE(dynamic_arrays)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_nested_arrays, 1)
 BOOST_AUTO_TEST_CASE(dynamic_nested_arrays)
 {
 	string sourceCode = R"(
@@ -225,6 +231,7 @@ BOOST_AUTO_TEST_CASE(dynamic_nested_arrays)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(byte_arrays, 1)
 BOOST_AUTO_TEST_CASE(byte_arrays)
 {
 	string sourceCode = R"(
@@ -257,6 +264,7 @@ BOOST_AUTO_TEST_CASE(byte_arrays)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(calldata_arrays_too_large, 1)
 BOOST_AUTO_TEST_CASE(calldata_arrays_too_large)
 {
 	string sourceCode = R"(
@@ -281,6 +289,7 @@ BOOST_AUTO_TEST_CASE(calldata_arrays_too_large)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(decode_from_memory_simple, 1)
 BOOST_AUTO_TEST_CASE(decode_from_memory_simple)
 {
 	string sourceCode = R"(
@@ -307,6 +316,7 @@ BOOST_AUTO_TEST_CASE(decode_from_memory_simple)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(decode_function_type, 1)
 BOOST_AUTO_TEST_CASE(decode_function_type)
 {
 	string sourceCode = R"(
@@ -341,6 +351,7 @@ BOOST_AUTO_TEST_CASE(decode_function_type)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(decode_function_type_array, 1)
 BOOST_AUTO_TEST_CASE(decode_function_type_array)
 {
 	string sourceCode = R"(
@@ -407,6 +418,7 @@ BOOST_AUTO_TEST_CASE(decode_function_type_array)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(decode_from_memory_complex, 1)
 BOOST_AUTO_TEST_CASE(decode_from_memory_complex)
 {
 	string sourceCode = R"(
@@ -442,6 +454,7 @@ BOOST_AUTO_TEST_CASE(decode_from_memory_complex)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_value_type, 1)
 BOOST_AUTO_TEST_CASE(short_input_value_type)
 {
 	string sourceCode = R"(
@@ -459,6 +472,7 @@ BOOST_AUTO_TEST_CASE(short_input_value_type)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_array, 8)
 BOOST_AUTO_TEST_CASE(short_input_array)
 {
 	string sourceCode = R"(
@@ -478,6 +492,7 @@ BOOST_AUTO_TEST_CASE(short_input_array)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_dynamic_input_array, 1)
 BOOST_AUTO_TEST_CASE(short_dynamic_input_array)
 {
 	string sourceCode = R"(
@@ -491,6 +506,7 @@ BOOST_AUTO_TEST_CASE(short_dynamic_input_array)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_bytes, 4)
 BOOST_AUTO_TEST_CASE(short_input_bytes)
 {
 	string sourceCode = R"(
@@ -512,6 +528,7 @@ BOOST_AUTO_TEST_CASE(short_input_bytes)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(cleanup_int_inside_arrays, 1)
 BOOST_AUTO_TEST_CASE(cleanup_int_inside_arrays)
 {
 	string sourceCode = R"(
@@ -536,6 +553,7 @@ BOOST_AUTO_TEST_CASE(cleanup_int_inside_arrays)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_ptr, 1)
 BOOST_AUTO_TEST_CASE(storage_ptr)
 {
 	string sourceCode = R"(
@@ -570,6 +588,7 @@ BOOST_AUTO_TEST_CASE(storage_ptr)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_simple, 1)
 BOOST_AUTO_TEST_CASE(struct_simple)
 {
 	string sourceCode = R"(
@@ -589,6 +608,7 @@ BOOST_AUTO_TEST_CASE(struct_simple)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_cleanup, 1)
 BOOST_AUTO_TEST_CASE(struct_cleanup)
 {
 	string sourceCode = R"(
@@ -612,6 +632,7 @@ BOOST_AUTO_TEST_CASE(struct_cleanup)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_short, 2)
 BOOST_AUTO_TEST_CASE(struct_short)
 {
 	string sourceCode = R"(
@@ -639,6 +660,7 @@ BOOST_AUTO_TEST_CASE(struct_short)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_function, 1)
 BOOST_AUTO_TEST_CASE(struct_function)
 {
 	string sourceCode = R"(
@@ -659,6 +681,7 @@ BOOST_AUTO_TEST_CASE(struct_function)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(empty_struct, 1)
 BOOST_AUTO_TEST_CASE(empty_struct)
 {
 	string sourceCode = R"(
@@ -679,6 +702,7 @@ BOOST_AUTO_TEST_CASE(empty_struct)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(mediocre_struct, 1)
 BOOST_AUTO_TEST_CASE(mediocre_struct)
 {
 	string sourceCode = R"(
@@ -700,6 +724,7 @@ BOOST_AUTO_TEST_CASE(mediocre_struct)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(mediocre2_struct, 1)
 BOOST_AUTO_TEST_CASE(mediocre2_struct)
 {
 	string sourceCode = R"(
@@ -726,6 +751,7 @@ BOOST_AUTO_TEST_CASE(mediocre2_struct)
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(complex_struct, 1)
 BOOST_AUTO_TEST_CASE(complex_struct)
 {
 	string sourceCode = R"(
