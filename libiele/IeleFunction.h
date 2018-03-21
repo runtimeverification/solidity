@@ -63,9 +63,8 @@ public:
     return new IeleFunction(Ctx, isPublic, false, false, Name, C);
   }
 
-  static IeleFunction *CreateInit(IeleContext *Ctx, bool isPublic,
-                                  IeleContract *C = nullptr) {
-    return new IeleFunction(Ctx, isPublic, true, false, "init", C);
+  static IeleFunction *CreateInit(IeleContext *Ctx, IeleContract *C = nullptr) {
+    return new IeleFunction(Ctx, false, true, false, "init", C);
   }
 
   static IeleFunction *CreateDeposit(IeleContext *Ctx, bool isPublic,

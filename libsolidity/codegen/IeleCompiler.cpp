@@ -74,11 +74,9 @@ void IeleCompiler::compileContract(
                                       fallback->isPartOfExternalInterface(),
                                       CompilingContract);
   }
-  if (const FunctionDefinition *constructor = contract.constructor()) {
+  if (contract.constructor()) {
     // Then add the constructor to the symbol table.
-    iele::IeleFunction::CreateInit(&Context,
-                                   constructor->isPartOfExternalInterface(),
-                                   CompilingContract);
+    iele::IeleFunction::CreateInit(&Context, CompilingContract);
   }
   // Add the rest of the functions.
   for (const FunctionDefinition *function : contract.definedFunctions()) {
@@ -99,7 +97,7 @@ void IeleCompiler::compileContract(
     constructor->accept(*this);
   else {
     CompilingFunction =
-      iele::IeleFunction::CreateInit(&Context, false, CompilingContract);
+      iele::IeleFunction::CreateInit(&Context, CompilingContract);
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
     appendStateVariableInitialization();
