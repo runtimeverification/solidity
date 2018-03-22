@@ -10,7 +10,7 @@ contract SimpleAuction {
 
 @ended = 5
 
-define @"init"(%_beneficiary_0, %_biddingTime_1) {
+define @init(%_beneficiary_0, %_biddingTime_1) {
 entry:
   sstore %_beneficiary_0, @beneficiary
   %timestamp = call @iele.timestamp()
