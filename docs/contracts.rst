@@ -402,7 +402,7 @@ State variables can be declared as ``constant``. In this case, they have to be
 assigned from an expression which is a constant at compile time. Any expression
 that accesses storage, blockchain data (e.g. ``now``, ``this.balance`` or
 ``block.number``) or
-execution data (``msg.gas``) or make calls to external contracts are disallowed. Expressions
+execution data (``msg.value`` or ``gasleft()``) or make calls to external contracts are disallowed. Expressions
 that might have a side-effect on memory allocation are allowed, but those that
 might have a side-effect on other memory objects are not. The built-in functions
 ``keccak256``, ``sha256``, ``ripemd160``, ``ecrecover``, ``addmod`` and ``mulmod``
@@ -472,8 +472,15 @@ The following statements are considered modifying the state:
 .. note::
   Getter methods are marked ``view``.
 
+.. note::
+  If invalid explicit type conversions are used, state modifications are possible
+  even though a ``view`` function was called.
+  You can switch the compiler to use ``STATICCALL`` when calling such functions and thus
+  prevent modifications to the state on the level of the EVM by adding
+  ``pragma experimental "v0.5.0";``
+
 .. warning::
-  Before version 0.4.17 the compiler didn't enforce that ``view`` is not modifying the state.
+  The compiler does not enforce yet that a ``view`` method is not modifying state. It raises a warning though.
 
 .. index:: ! pure function, function;pure
 
@@ -502,8 +509,20 @@ In addition to the list of state modifying statements explained above, the follo
         }
     }
 
+.. note::
+  If invalid explicit type conversions are used, state modifications are possible
+  even though a ``pure`` function was called.
+  You can switch the compiler to use ``STATICCALL`` when calling such functions and thus
+  prevent modifications to the state on the level of the EVM by adding
+  ``pragma experimental "v0.5.0";``
+
 .. warning::
-  Before version 0.4.17 the compiler didn't enforce that ``view`` is not reading the state.
+  It is not possible to prevent functions from reading the state at the level
+  of the EVM, it is only possible to prevent them from writing to the state
+  (i.e. only ``view`` can be enforced at the EVM level, ``pure`` can not).
+
+.. warning::
+  Before version 0.4.17 the compiler didn't enforce that ``pure`` is not reading the state.
 
 .. index:: ! fallback function, function;fallback
 

@@ -37,11 +37,9 @@ then
         echo "Usage: $0 [--junit_report <report_directory>]"
         exit 1
     fi
-    testargs_no_opt="--logger=JUNIT,test_suite,$2/no_opt.xml"
-    testargs_opt="--logger=JUNIT,test_suite,$2/opt.xml"
+    log_directory="$2"
 else
-    testargs_no_opt=''
-    testargs_opt=''
+    log_directory=""
 fi
 
 echo "Running commandline tests..."
@@ -61,12 +59,15 @@ function download_eth()
         ETH_PATH="eth"
     else
         mkdir -p /tmp/test
-        ETH_BINARY=eth_byzantium_artful
-        ETH_HASH="e527dd3e3dc17b983529dd7dcfb74a0d3a5aed4e"
         if grep -i trusty /etc/lsb-release >/dev/null 2>&1
         then
-            ETH_BINARY=eth_byzantium2
-            ETH_HASH="4dc3f208475f622be7c8e53bee720e14cd254c6f"
+            # built from 1ecff3cac12f0fbbeea3e645f331d5ac026b24d3 at 2018-03-06
+            ETH_BINARY=eth_byzantium_trusty
+            ETH_HASH="5432ea81c150e8a3547615bf597cd6dce9e1e27b"
+        else
+            # built from ?? at 2018-02-13 ?
+            ETH_BINARY=eth_byzantium_artful
+            ETH_HASH="e527dd3e3dc17b983529dd7dcfb74a0d3a5aed4e"
         fi
         wget -q -O /tmp/test/eth https://github.com/ethereum/cpp-ethereum/releases/download/solidityTester/$ETH_BINARY
         test "$(shasum /tmp/test/eth)" = "$ETH_HASH  /tmp/test/eth"
@@ -98,10 +99,26 @@ then
     progress=""
 fi
 
-echo "--> Running tests without optimizer..."
-"$REPO_ROOT"/build/test/soltest $testargs_no_opt $progress -- --ipcpath /tmp/test/geth.ipc
-echo "--> Running tests WITH optimizer..."
-"$REPO_ROOT"/build/test/soltest $testargs_opt $progress -- --optimize --ipcpath /tmp/test/geth.ipc
+# And then run the Solidity unit-tests in the matrix combination of optimizer / no optimizer
+# and homestead / byzantium VM, # pointing to that IPC endpoint.
+for optimize in "" "--optimize"
+do
+  for vm in homestead byzantium
+  do
+    echo "--> Running tests using "$optimize" --evm-version "$vm"..."
+    log=""
+    if [ -n "$log_directory" ]
+    then
+      if [ -n "$optimize" ]
+      then
+        log=--logger=JUNIT,test_suite,$log_directory/opt_$vm.xml $testargs
+      else
+        log=--logger=JUNIT,test_suite,$log_directory/noopt_$vm.xml $testargs_no_opt
+      fi
+    fi
+    "$REPO_ROOT"/build/test/soltest $progress $log -- "$optimize" --evm-version "$vm" --ipcpath /tmp/test/geth.ipc
+  done
+done
 
 wait $CMDLINE_PID
 

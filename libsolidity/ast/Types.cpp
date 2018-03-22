@@ -1589,8 +1589,6 @@ bool ArrayType::canBeUsedExternally(bool _inLibrary) const
 		return true;
 	else if (!m_baseType->canBeUsedExternally(_inLibrary))
 		return false;
-	else if (m_baseType->category() == Category::Array && m_baseType->isDynamicallySized())
-		return false;
 	else
 		return true;
 }
@@ -2346,6 +2344,7 @@ string FunctionType::richIdentifier() const
 	case Kind::Log2: id += "log2"; break;
 	case Kind::Log3: id += "log3"; break;
 	case Kind::Log4: id += "log4"; break;
+	case Kind::GasLeft: id += "gasleft"; break;
 	case Kind::Event: id += "event"; break;
 	case Kind::SetGas: id += "setgas"; break;
 	case Kind::SetValue: id += "setvalue"; break;

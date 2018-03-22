@@ -192,6 +192,11 @@ These are regular array indices into a list of source files usually called
 ``"sourceList"``, which is part of the combined-json and the output of
 the json / npm compiler.
 
+.. note ::
+    In the case of instructions that are not associated with any particular source file,
+    the source mapping assigns an integer identifier of ``-1``. This may happen for
+    bytecode sections stemming from compiler-generated inline assembly statements.
+
 The source mappings inside the AST use the following
 notation:
 
@@ -315,8 +320,9 @@ Global Variables
 - ``block.gaslimit`` (``uint``): current block gaslimit
 - ``block.number`` (``uint``): current block number
 - ``block.timestamp`` (``uint``): current block timestamp
+- ``gasleft() returns (uint256)``: remaining gas
 - ``msg.data`` (``bytes``): complete calldata
-- ``msg.gas`` (``uint``): remaining gas
+- ``msg.gas`` (``uint``): remaining gas - deprecated in version 0.4.21 and to be replaced by ``gasleft()``
 - ``msg.sender`` (``address``): sender of the message (current call)
 - ``msg.value`` (``uint``): number of wei sent with the message
 - ``now`` (``uint``): current block timestamp (alias for ``block.timestamp``)

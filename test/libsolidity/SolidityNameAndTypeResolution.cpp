@@ -22,6 +22,8 @@
 
 #include <test/libsolidity/AnalysisFramework.h>
 
+#include <test/TestHelper.h>
+
 #include <libsolidity/ast/AST.h>
 
 #include <libdevcore/SHA3.h>
@@ -100,7 +102,6 @@ BOOST_AUTO_TEST_CASE(double_variable_declaration_050)
 	)";
 	CHECK_WARNING_ALLOW_MULTI(text, (vector<string>{
 		"This declaration shadows an existing declaration.",
-		"Experimental features",
 		"Unused local variable",
 		"Unused local variable"
 	}));
@@ -131,7 +132,6 @@ BOOST_AUTO_TEST_CASE(double_variable_declaration_disjoint_scope_050)
 		}
 	)";
 	CHECK_WARNING_ALLOW_MULTI(text, (vector<string>{
-		"Experimental features",
 		"Unused local variable",
 		"Unused local variable"
 	}));
@@ -162,7 +162,6 @@ BOOST_AUTO_TEST_CASE(double_variable_declaration_disjoint_scope_activation_050)
 		}
 	)";
 	CHECK_WARNING_ALLOW_MULTI(text, (vector<string>{
-		"Experimental features",
 		"Unused local variable",
 		"Unused local variable"
 	}));
@@ -260,7 +259,7 @@ BOOST_AUTO_TEST_CASE(scoping_for)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Experimental features");
+	CHECK_SUCCESS_NO_WARNINGS(text);
 }
 
 BOOST_AUTO_TEST_CASE(scoping_for2)
@@ -274,7 +273,7 @@ BOOST_AUTO_TEST_CASE(scoping_for2)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Experimental features");
+	CHECK_SUCCESS_NO_WARNINGS(text);
 }
 
 BOOST_AUTO_TEST_CASE(scoping_for3)
@@ -977,6 +976,62 @@ BOOST_AUTO_TEST_CASE(functions_with_stucts_of_non_external_types_in_interface_ne
 		}
 	)";
 	CHECK_ERROR(text, TypeError, "Internal or recursive type is not allowed for public or external functions.");
+}
+
+BOOST_AUTO_TEST_CASE(returning_multi_dimensional_arrays_new_abi)
+{
+	char const* text = R"(
+		pragma experimental ABIEncoderV2;
+
+		contract C {
+			function f() public pure returns (string[][]) {}
+		}
+	)";
+	CHECK_WARNING(text, "Experimental features");
+}
+
+BOOST_AUTO_TEST_CASE(returning_multi_dimensional_arrays)
+{
+	char const* text = R"(
+		contract C {
+			function f() public pure returns (string[][]) {}
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "only supported in the new experimental ABI encoder");
+}
+
+BOOST_AUTO_TEST_CASE(returning_multi_dimensional_static_arrays)
+{
+	char const* text = R"(
+		contract C {
+			function f() public pure returns (uint[][2]) {}
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "only supported in the new experimental ABI encoder");
+}
+
+BOOST_AUTO_TEST_CASE(returning_arrays_in_structs_new_abi)
+{
+	char const* text = R"(
+		pragma experimental ABIEncoderV2;
+
+		contract C {
+			struct S { string[] s; }
+			function f() public pure returns (S) {}
+		}
+	)";
+	CHECK_WARNING(text, "Experimental features");
+}
+
+BOOST_AUTO_TEST_CASE(returning_arrays_in_structs_arrays)
+{
+	char const* text = R"(
+		contract C {
+			struct S { string[] s; }
+			function f() public pure returns (S x) {}
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "only supported in the new experimental ABI encoder");
 }
 
 BOOST_AUTO_TEST_CASE(function_external_call_allowed_conversion)
@@ -5891,10 +5946,11 @@ BOOST_AUTO_TEST_CASE(inline_assembly_unbalanced_negative_stack)
 BOOST_AUTO_TEST_CASE(inline_assembly_unbalanced_two_stack_load)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract c {
 			uint8 x;
 			function f() public {
-				assembly { x pop }
+				assembly { pop(x) }
 			}
 		}
 	)";
@@ -5904,6 +5960,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_unbalanced_two_stack_load)
 BOOST_AUTO_TEST_CASE(inline_assembly_in_modifier)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract test {
 			modifier m {
 				uint a = 1;
@@ -5912,7 +5969,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_in_modifier)
 				}
 				_;
 			}
-			function f() m {
+			function f() public m {
 			}
 		}
 	)";
@@ -5922,6 +5979,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_in_modifier)
 BOOST_AUTO_TEST_CASE(inline_assembly_storage)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract test {
 			uint x = 1;
 			function f() public {
@@ -5937,6 +5995,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_storage)
 BOOST_AUTO_TEST_CASE(inline_assembly_storage_in_modifiers)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract test {
 			uint x = 1;
 			modifier m {
@@ -5945,7 +6004,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_storage_in_modifiers)
 				}
 				_;
 			}
-			function f() m {
+			function f() public m {
 			}
 		}
 	)";
@@ -5955,6 +6014,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_storage_in_modifiers)
 BOOST_AUTO_TEST_CASE(inline_assembly_constant_assign)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract test {
 			uint constant x = 1;
 			function f() public {
@@ -5970,6 +6030,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_constant_assign)
 BOOST_AUTO_TEST_CASE(inline_assembly_constant_access)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract test {
 			uint constant x = 1;
 			function f() public {
@@ -5985,6 +6046,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_constant_access)
 BOOST_AUTO_TEST_CASE(inline_assembly_local_variable_access_out_of_functions)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract test {
 			function f() public {
 				uint a;
@@ -6000,6 +6062,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_local_variable_access_out_of_functions)
 BOOST_AUTO_TEST_CASE(inline_assembly_local_variable_access_out_of_functions_storage_ptr)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract test {
 			uint[] r;
 			function f() public {
@@ -6016,6 +6079,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_local_variable_access_out_of_functions_stor
 BOOST_AUTO_TEST_CASE(inline_assembly_storage_variable_access_out_of_functions)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract test {
 			uint a;
 			function f() pure public {
@@ -6046,6 +6110,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_constant_variable_via_offset)
 BOOST_AUTO_TEST_CASE(inline_assembly_calldata_variables)
 {
 	char const* text = R"(
+		pragma experimental "v0.5.0";
 		contract C {
 			function f(bytes bytesAsCalldata) external {
 				assembly {
@@ -6055,6 +6120,182 @@ BOOST_AUTO_TEST_CASE(inline_assembly_calldata_variables)
 		}
 	)";
 	CHECK_ERROR(text, TypeError, "Call data elements cannot be accessed directly.");
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_050_literals_on_stack)
+{
+	char const* text = R"(
+		pragma experimental "v0.5.0";
+		contract C {
+			function f() pure public {
+				assembly {
+					1
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::SyntaxError, "are not supposed to return"},
+		{Error::Type::DeclarationError, "Unbalanced stack"},
+	}));
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_literals_on_stack)
+{
+	char const* text = R"(
+		contract C {
+			function f() pure public {
+				assembly {
+					1
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "are not supposed to return"},
+		{Error::Type::DeclarationError, "Unbalanced stack"},
+	}));
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_050_bare_instructions)
+{
+	char const* text = R"(
+		pragma experimental "v0.5.0";
+		contract C {
+			function f() view public {
+				assembly {
+					address
+					pop
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::SyntaxError, "The use of non-functional"},
+		{Error::Type::SyntaxError, "The use of non-functional"}
+	}));
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_bare_instructions)
+{
+	char const* text = R"(
+		contract C {
+			function f() view public {
+				assembly {
+					address
+					pop
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "The use of non-functional"},
+		{Error::Type::Warning, "The use of non-functional"}
+	}));
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_050_labels)
+{
+	char const* text = R"(
+		pragma experimental "v0.5.0";
+		contract C {
+			function f() pure public {
+				assembly {
+					label:
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::SyntaxError, "Jump instructions and labels are low-level"},
+		{Error::Type::SyntaxError, "The use of labels is deprecated"}
+	}));
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_labels)
+{
+	char const* text = R"(
+		contract C {
+			function f() pure public {
+				assembly {
+					label:
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Jump instructions and labels are low-level"},
+		{Error::Type::Warning, "The use of labels is deprecated"}
+	}));
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_050_jump)
+{
+	char const* text = R"(
+		pragma experimental "v0.5.0";
+		contract C {
+			function f() pure public {
+				assembly {
+					jump(2)
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::SyntaxError, "Jump instructions and labels are low-level"}
+	}));
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_jump)
+{
+	char const* text = R"(
+		contract C {
+			function f() pure public {
+				assembly {
+					jump(2)
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::TypeError, "Function declared as pure"},
+		{Error::Type::Warning, "Jump instructions and labels are low-level"}
+	}));
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_050_leave_items_on_stack)
+{
+	char const* text = R"(
+		pragma experimental "v0.5.0";
+		contract C {
+			function f() pure public {
+				assembly {
+					mload(0)
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::SyntaxError, "are not supposed to return"},
+		{Error::Type::DeclarationError, "Unbalanced stack"},
+	}));
+}
+
+BOOST_AUTO_TEST_CASE(inline_assembly_leave_items_on_stack)
+{
+	char const* text = R"(
+		contract C {
+			function f() pure public {
+				assembly {
+					mload(0)
+				}
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "are not supposed to return"},
+		{Error::Type::DeclarationError, "Unbalanced stack"},
+	}));
 }
 
 BOOST_AUTO_TEST_CASE(invalid_mobile_type)
@@ -7009,6 +7250,8 @@ BOOST_AUTO_TEST_CASE(callable_crash)
 
 BOOST_AUTO_TEST_CASE(error_transfer_non_payable_fallback)
 {
+	// This used to be a test for a.transfer to generate a warning
+	// because A's fallback function is not payable.
 	char const* text = R"(
 		contract A {
 			function() public {}
@@ -7022,12 +7265,17 @@ BOOST_AUTO_TEST_CASE(error_transfer_non_payable_fallback)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Value transfer to a contract without a payable fallback function.");
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"transfer\" inherited from the address type is deprecated"},
+		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
+	}));
 }
 
 BOOST_AUTO_TEST_CASE(error_transfer_no_fallback)
 {
-	char const* text = R"(
+	// This used to be a test for a.transfer to generate a warning
+	// because A does not have a payable fallback function.
+	std::string text = R"(
 		contract A {}
 
 		contract B {
@@ -7038,12 +7286,17 @@ BOOST_AUTO_TEST_CASE(error_transfer_no_fallback)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Value transfer to a contract without a payable fallback function.");
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"transfer\" inherited from the address type is deprecated"},
+		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
+	}));
 }
 
 BOOST_AUTO_TEST_CASE(error_send_non_payable_fallback)
 {
-	char const* text = R"(
+	// This used to be a test for a.send to generate a warning
+	// because A does not have a payable fallback function.
+	std::string text = R"(
 		contract A {
 			function() public {}
 		}
@@ -7056,11 +7309,16 @@ BOOST_AUTO_TEST_CASE(error_send_non_payable_fallback)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Value transfer to a contract without a payable fallback function.");
+	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"send\" inherited from the address type is deprecated"},
+		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
+	}));
 }
 
 BOOST_AUTO_TEST_CASE(does_not_error_transfer_payable_fallback)
 {
+	// This used to be a test for a.transfer to generate a warning
+	// because A does not have a payable fallback function.
 	char const* text = R"(
 		contract A {
 			function() payable public {}
@@ -7074,7 +7332,7 @@ BOOST_AUTO_TEST_CASE(does_not_error_transfer_payable_fallback)
 			}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	CHECK_WARNING(text, "Using contract member \"transfer\" inherited from the address type is deprecated.");
 }
 
 BOOST_AUTO_TEST_CASE(does_not_error_transfer_regular_function)
@@ -7100,11 +7358,14 @@ BOOST_AUTO_TEST_CASE(returndatacopy_as_variable)
 	char const* text = R"(
 		contract c { function f() public { uint returndatasize; assembly { returndatasize }}}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
+	vector<pair<Error::Type, std::string>> expectations(vector<pair<Error::Type, std::string>>{
 		{Error::Type::Warning, "Variable is shadowed in inline assembly by an instruction of the same name"},
-		{Error::Type::DeclarationError, "Unbalanced stack"},
-		{Error::Type::Warning, "only available after the Metropolis"}
-	}));
+		{Error::Type::Warning, "The use of non-functional instructions is deprecated."},
+		{Error::Type::DeclarationError, "Unbalanced stack"}
+	});
+	if (!dev::test::Options::get().evmVersion().supportsReturndata())
+		expectations.emplace_back(make_pair(Error::Type::Warning, std::string("\"returndatasize\" instruction is only available for Byzantium-compatible")));
+	CHECK_ALLOW_MULTI(text, expectations);
 }
 
 BOOST_AUTO_TEST_CASE(create2_as_variable)
@@ -7114,8 +7375,9 @@ BOOST_AUTO_TEST_CASE(create2_as_variable)
 	)";
 	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
 		{Error::Type::Warning, "Variable is shadowed in inline assembly by an instruction of the same name"},
-		{Error::Type::Warning, "only available after the Metropolis"},
-		{Error::Type::DeclarationError, "Unbalanced stack"}
+		{Error::Type::Warning, "The \"create2\" instruction is not supported by the VM version"},
+		{Error::Type::DeclarationError, "Unbalanced stack"},
+		{Error::Type::Warning, "not supposed to return values"}
 	}));
 }
 
@@ -7409,6 +7671,50 @@ BOOST_AUTO_TEST_CASE(builtin_reject_gas)
 	CHECK_ERROR(text, TypeError, "Member \"gas\" not found or not visible after argument-dependent lookup");
 }
 
+BOOST_AUTO_TEST_CASE(gasleft)
+{
+	char const* text = R"(
+		contract C {
+			function f() public view returns (uint256 val) { return msg.gas; }
+		}
+	)";
+	CHECK_WARNING(text, "\"msg.gas\" has been deprecated in favor of \"gasleft()\"");
+
+	text = R"(
+		contract C {
+			function f() public view returns (uint256 val) { return gasleft(); }
+		}
+	)";
+	CHECK_SUCCESS_NO_WARNINGS(text);
+
+	text = R"(
+		pragma experimental "v0.5.0";
+		contract C {
+			function f() public returns (uint256 val) { return msg.gas; }
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "\"msg.gas\" has been deprecated in favor of \"gasleft()\"");
+}
+
+BOOST_AUTO_TEST_CASE(gasleft_shadowing)
+{
+	char const* text = R"(
+		contract C {
+			function gasleft() public pure returns (bytes32 val) { return "abc"; }
+			function f() public pure returns (bytes32 val) { return gasleft(); }
+		}
+	)";
+	CHECK_WARNING(text, "This declaration shadows a builtin symbol.");
+
+	text = R"(
+		contract C {
+			uint gasleft;
+			function f() public { gasleft = 42; }
+		}
+	)";
+	CHECK_WARNING(text, "This declaration shadows a builtin symbol.");
+}
+
 BOOST_AUTO_TEST_CASE(builtin_reject_value)
 {
 	char const* text = R"(
@@ -7670,7 +7976,7 @@ BOOST_AUTO_TEST_CASE(non_external_fallback)
 			function () external { }
 		}
 	)";
-	CHECK_WARNING(text, "Experimental features are turned on.");
+	CHECK_SUCCESS_NO_WARNINGS(text);
 	text = R"(
 		pragma experimental "v0.5.0";
 		contract C {
@@ -7988,6 +8294,134 @@ BOOST_AUTO_TEST_CASE(array_length_invalid_expression)
 	CHECK_ERROR(text, TypeError, "Operator / not compatible with types int_const 3 and int_const 0");
 }
 
+BOOST_AUTO_TEST_CASE(warn_about_address_members_on_contract)
+{
+	std::string text = R"(
+		contract C {
+			function f() view public {
+				this.balance;
+			}
+		}
+	)";
+	CHECK_WARNING(text, "Using contract member \"balance\" inherited from the address type is deprecated.");
+	text = R"(
+		contract C {
+			function f() view public {
+				this.transfer;
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"transfer\" inherited from the address type is deprecated"},
+		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
+	}));
+	text = R"(
+		contract C {
+			function f() view public {
+				this.send;
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"send\" inherited from the address type is deprecated"},
+		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
+	}));
+	text = R"(
+		contract C {
+			function f() view public {
+				this.call;
+			}
+		}
+	)";
+	CHECK_WARNING(text, "Using contract member \"call\" inherited from the address type is deprecated.");
+	text = R"(
+		contract C {
+			function f() view public {
+				this.callcode;
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"callcode\" inherited from the address type is deprecated"},
+		{Error::Type::Warning, "\"callcode\" has been deprecated in favour of \"delegatecall\""}
+	}));
+	text = R"(
+		contract C {
+			function f() view public {
+				this.delegatecall;
+			}
+		}
+	)";
+	CHECK_WARNING(text, "Using contract member \"delegatecall\" inherited from the address type is deprecated.");
+}
+
+BOOST_AUTO_TEST_CASE(warn_about_address_members_on_non_this_contract)
+{
+	std::string text = R"(
+		contract C {
+			function f() view public {
+				C c;
+				c.balance;
+			}
+		}
+	)";
+	CHECK_WARNING(text, "Using contract member \"balance\" inherited from the address type is deprecated");
+	text = R"(
+		contract C {
+			function f() view public {
+				C c;
+				c.transfer;
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"transfer\" inherited from the address type is deprecated"},
+		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
+	}));
+	text = R"(
+		contract C {
+			function f() view public {
+				C c;
+				c.send;
+			}
+		}
+	)";
+	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Using contract member \"send\" inherited from the address type is deprecated"},
+		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
+	}));
+	text = R"(
+		contract C {
+			function f() pure public {
+				C c;
+				c.call;
+			}
+		}
+	)";
+	CHECK_WARNING(text, "Using contract member \"call\" inherited from the address type is deprecated");
+	text = R"(
+		contract C {
+			function f() pure public {
+				C c;
+				c.callcode;
+			}
+		}
+	)";
+	CHECK_WARNING_ALLOW_MULTI(text, (std::vector<std::string>{
+		"Using contract member \"callcode\" inherited from the address type is deprecated",
+		"\"callcode\" has been deprecated in favour of \"delegatecall\""
+	}));
+	text = R"(
+		contract C {
+			function f() pure public {
+				C c;
+				c.delegatecall;
+			}
+		}
+	)";
+	CHECK_WARNING(text, "Using contract member \"delegatecall\" inherited from the address type is deprecated");
+}
+
 BOOST_AUTO_TEST_CASE(no_address_members_on_contract)
 {
 	char const* text = R"(
@@ -8044,6 +8478,20 @@ BOOST_AUTO_TEST_CASE(no_address_members_on_contract)
 		}
 	)";
 	CHECK_ERROR(text, TypeError, "Member \"delegatecall\" not found or not visible after argument-dependent lookup in contract");
+}
+
+BOOST_AUTO_TEST_CASE(no_warning_for_using_members_that_look_like_address_members)
+{
+	char const* text = R"(
+		pragma experimental "v0.5.0";
+		contract C {
+			function transfer(uint) public;
+			function f() public {
+				this.transfer(10);
+			}
+		}
+	)";
+	CHECK_SUCCESS_NO_WARNINGS(text);
 }
 
 BOOST_AUTO_TEST_CASE(emit_events)

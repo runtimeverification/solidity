@@ -56,7 +56,13 @@ bool parse(string const& _source, ErrorReporter& errorReporter)
 		if (parserResult)
 		{
 			assembly::AsmAnalysisInfo analysisInfo;
-			return (assembly::AsmAnalyzer(analysisInfo, errorReporter, assembly::AsmFlavour::IULIA)).analyze(*parserResult);
+			return (assembly::AsmAnalyzer(
+				analysisInfo,
+				errorReporter,
+				dev::test::Options::get().evmVersion(),
+				boost::none,
+				assembly::AsmFlavour::IULIA
+			)).analyze(*parserResult);
 		}
 	}
 	catch (FatalError const&)
