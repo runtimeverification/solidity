@@ -6,9 +6,13 @@
 using namespace dev;
 using namespace dev::iele;
 
-IeleFunction::IeleFunction(IeleContext *Ctx, bool isPublic,
-                           const llvm::Twine &Name, IeleContract *C) :
-  IeleGlobalValue(Ctx, Name, IeleValue::IeleFunctionVal), IsPublic(isPublic) {
+IeleFunction::IeleFunction(IeleContext *Ctx, bool isPublic, bool isInit,
+                           bool isDeposit, const llvm::Twine &Name,
+                           IeleContract *C) :
+  IeleGlobalValue(Ctx, Name, IeleValue::IeleFunctionVal),
+  IsPublic(isPublic),
+  IsInit(isInit),
+  IsDeposit(isDeposit) {
   SymTab = llvm::make_unique<IeleValueSymbolTable>();
 
   if (C) {
@@ -18,10 +22,20 @@ IeleFunction::IeleFunction(IeleContext *Ctx, bool isPublic,
 
 IeleFunction::~IeleFunction() { }
 
+void IeleFunction::printNameAsIeleText(llvm::raw_ostream &OS) const {
+  if (isPublic() && !(isInit() || isDeposit()))
+    OS << "@\"" << getName() << "\"";
+  else
+    OS << "@" << getName();
+}
+
 void IeleFunction::print(llvm::raw_ostream &OS, unsigned indent) const {
   std::string Indent(indent, ' ');
-  OS << Indent << "define " << (isPublic() ? "public " : "") << "@\"" << getName()
-     << "\"(";
+  OS << Indent << "define ";
+  if (isPublic())
+    OS << "public ";
+  printNameAsIeleText(OS);
+  OS << "(";
   bool isFirst = true;
   for (const IeleArgument &A : args()) {
     if (!isFirst)

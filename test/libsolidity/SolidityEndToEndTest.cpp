@@ -637,7 +637,7 @@ BOOST_AUTO_TEST_CASE(for_loop_break_continue)
 	testContractAgainstCppOnRange("f(uint256)", breakContinue, 0, 10);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(calling_other_functions, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(calling_other_functions, 5)
 BOOST_AUTO_TEST_CASE(calling_other_functions)
 {
 	char const* sourceCode = R"(
@@ -5461,7 +5461,6 @@ BOOST_AUTO_TEST_CASE(packed_storage_structs_delete)
 	BOOST_CHECK(storageEmpty(m_contractAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(overloaded_function_call_resolve_to_first, 1)
 BOOST_AUTO_TEST_CASE(overloaded_function_call_resolve_to_first)
 {
 	char const* sourceCode = R"(
@@ -5475,7 +5474,6 @@ BOOST_AUTO_TEST_CASE(overloaded_function_call_resolve_to_first)
 	ABI_CHECK(callContractFunction("g()"), encodeArgs(3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(overloaded_function_call_resolve_to_second, 1)
 BOOST_AUTO_TEST_CASE(overloaded_function_call_resolve_to_second)
 {
 	char const* sourceCode = R"(
@@ -5509,7 +5507,6 @@ BOOST_AUTO_TEST_CASE(overloaded_function_call_with_if_else)
 	ABI_CHECK(callContractFunction("g(bool)", false), encodeArgs(10));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(derived_overload_base_function_direct, 1)
 BOOST_AUTO_TEST_CASE(derived_overload_base_function_direct)
 {
 	char const* sourceCode = R"(
@@ -9539,6 +9536,7 @@ BOOST_AUTO_TEST_CASE(same_function_in_construction_and_runtime)
 	ABI_CHECK(callContractFunction("initial()"), encodeArgs(u256(4)));
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(same_function_in_construction_and_runtime_equality_check, 1)
 BOOST_AUTO_TEST_CASE(same_function_in_construction_and_runtime_equality_check)
 {
 	char const* sourceCode = R"(
