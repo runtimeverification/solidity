@@ -106,15 +106,22 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   CompilingFunctionASTNode = &function;
   unsigned NumOfModifiers = CompilingFunctionASTNode->modifiers().size();
 
-  // Visit formal arguments and return parameters.
+  // Visit formal arguments.
   for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
+    // TODO: "empty" params should not be added
     std::string genName = arg->name() + getNextVarSuffix();
     VarNameMap[NumOfModifiers][arg->name()] = genName; 
     iele::IeleArgument::Create(&Context, genName, CompilingFunction);
   }
 
+  // We store the return params names, which we'll use when generating a default `ret`
+  llvm::SmallVector<std::string, 4> ReturnParameterNames;
+
+  // Visit formal return parameters.
   for (const ASTPointer<const VariableDeclaration> &ret : function.returnParameters()) {
+    // TODO: "empty" params should not be added
     std::string genName = ret->name() + getNextVarSuffix();
+    ReturnParameterNames.push_back(genName);
     VarNameMap[NumOfModifiers][ret->name()] = genName; 
     iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
   }
@@ -140,9 +147,28 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   ModifierDepth = -1;
   appendModifierOrFunctionCode();
 
-  // Add a ret void if the last block doesn't end with a ret instruction.
-  if (!CompilingBlock->endsWithRet())
-    iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+  // Add a ret if the last block doesn't end with a ret instruction.
+  if (!CompilingBlock->endsWithRet()) {
+    if (function.returnParameters().size() == 0) { // add a ret void
+      iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+    } else { // return declared parameters
+        llvm::SmallVector<iele::IeleValue *, 4> Returns;
+
+        // Find Symbol Table for this function
+        iele::IeleValueSymbolTable *ST =
+          CompilingFunction->getIeleValueSymbolTable();
+        solAssert(ST,
+                  "IeleCompiler: failed to access compiling function's symbol "
+                  "table.");
+
+        // Prepare arguments for the `ret` instruction by fetching the param names
+        for (const std::string paramName : ReturnParameterNames)
+          Returns.push_back(ST->lookup(paramName));
+
+        // Create `ret` instruction
+        iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
+    }
+  }
 
   // Append the revert block if needed.
   if (RevertBlock) {
