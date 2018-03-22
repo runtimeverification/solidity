@@ -665,12 +665,8 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
 
   llvm::SmallVector<iele::IeleValue *, 4> Results;
 
-  if (tuple.components().size() > 0) {
-    for (unsigned i = 0; i < tuple.components().size(); i++)
-      Results.push_back(compileExpression(*tuple.components()[i]));
-  } else {
-      solAssert(false, "IeleCompiler: empty tuple not allowed (yet)?");
-    }
+  for (unsigned i = 0; i < tuple.components().size(); i++)
+    Results.push_back(compileExpression(*tuple.components()[i]));
 
   CompilingExpressionResult.insert(
     CompilingExpressionResult.end(), Results.begin(), Results.end());
