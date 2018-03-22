@@ -338,7 +338,6 @@ BOOST_AUTO_TEST_CASE(C99_scoping_activation)
 	ABI_CHECK(callContractFunction("i()"), encodeArgs(3, 3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(recursive_calls, 1)
 BOOST_AUTO_TEST_CASE(recursive_calls)
 {
 	char const* sourceCode = R"(
@@ -637,7 +636,6 @@ BOOST_AUTO_TEST_CASE(for_loop_break_continue)
 	testContractAgainstCppOnRange("f(uint256)", breakContinue, 0, 10);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(calling_other_functions, 5)
 BOOST_AUTO_TEST_CASE(calling_other_functions)
 {
 	char const* sourceCode = R"(
@@ -4381,7 +4379,6 @@ BOOST_AUTO_TEST_CASE(inline_member_init_inheritence_without_constructor)
 	ABI_CHECK(callContractFunction("getDMember()"), encodeArgs(6));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(external_function, 1)
 BOOST_AUTO_TEST_CASE(external_function)
 {
 	char const* sourceCode = R"(
@@ -5487,7 +5484,6 @@ BOOST_AUTO_TEST_CASE(overloaded_function_call_resolve_to_second)
 	ABI_CHECK(callContractFunction("g()"), encodeArgs(10));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(overloaded_function_call_with_if_else, 1)
 BOOST_AUTO_TEST_CASE(overloaded_function_call_with_if_else)
 {
 	char const* sourceCode = R"(
