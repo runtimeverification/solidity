@@ -141,7 +141,6 @@ BOOST_AUTO_TEST_CASE(conditional_expression_multiple)
 	ABI_CHECK(callContractFunction("f(uint256)", u256(40)), encodeArgs(u256(10)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(conditional_expression_with_return_values, 2)
 BOOST_AUTO_TEST_CASE(conditional_expression_with_return_values)
 {
 	char const* sourceCode = R"(
@@ -256,7 +255,7 @@ BOOST_AUTO_TEST_CASE(conditional_expression_string_literal)
 }
 */
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(conditional_expression_tuples, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(conditional_expression_tuples, 2)
 BOOST_AUTO_TEST_CASE(conditional_expression_tuples)
 {
 	char const* sourceCode = R"(
@@ -407,7 +406,6 @@ BOOST_AUTO_TEST_CASE(disorder_named_args)
 	ABI_CHECK(callContractFunction("b()", vector<bytes>()), encodeArgs(toBigEndian(u256(123))));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(while_loop, 5)
 BOOST_AUTO_TEST_CASE(while_loop)
 {
 	char const* sourceCode = R"(
@@ -434,7 +432,6 @@ BOOST_AUTO_TEST_CASE(while_loop)
 	testContractAgainstCppOnRange("f(uint256)", while_loop_cpp, 0, 5);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(do_while_loop, 5)
 BOOST_AUTO_TEST_CASE(do_while_loop)
 {
 	char const* sourceCode = R"(
@@ -515,7 +512,6 @@ BOOST_AUTO_TEST_CASE(nested_loops)
 	testContractAgainstCppOnRange("f(uint256)", nested_loops_cpp, 0, 12);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(for_loop, 5)
 BOOST_AUTO_TEST_CASE(for_loop)
 {
 	char const* sourceCode = R"(
@@ -540,7 +536,6 @@ BOOST_AUTO_TEST_CASE(for_loop)
 	testContractAgainstCppOnRange("f(uint256)", for_loop_cpp, 0, 5);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(for_loop_empty, 1)
 BOOST_AUTO_TEST_CASE(for_loop_empty)
 {
 	char const* sourceCode = R"(
@@ -570,7 +565,6 @@ BOOST_AUTO_TEST_CASE(for_loop_empty)
 	testContractAgainstCpp("f()", for_loop_empty_cpp);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(for_loop_simple_init_expr, 5)
 BOOST_AUTO_TEST_CASE(for_loop_simple_init_expr)
 {
 	char const* sourceCode = R"(
@@ -694,7 +688,6 @@ BOOST_AUTO_TEST_CASE(calling_other_functions)
 	testContractAgainstCpp("run(uint256)", collatz_cpp, u256(127));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(many_local_variables, 1)
 BOOST_AUTO_TEST_CASE(many_local_variables)
 {
 	char const* sourceCode = R"(
@@ -755,7 +748,6 @@ BOOST_AUTO_TEST_CASE(packing_signed_types)
 	);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(multiple_return_values, 1)
 BOOST_AUTO_TEST_CASE(multiple_return_values)
 {
 	char const* sourceCode = R"(
@@ -898,7 +890,6 @@ BOOST_AUTO_TEST_CASE(strings)
 	ABI_CHECK(callContractFunction("pipeThrough(bytes2,bool)", string("\0\x02", 2), true), encodeArgs(string("\0\x2", 2), true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inc_dec_operators, 1)
 BOOST_AUTO_TEST_CASE(inc_dec_operators)
 {
 	char const* sourceCode = R"(
@@ -937,7 +928,6 @@ BOOST_AUTO_TEST_CASE(bytes_comparison)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(state_smoke_test, 1)
 BOOST_AUTO_TEST_CASE(state_smoke_test)
 {
 	char const* sourceCode = R"(
@@ -1523,7 +1513,6 @@ BOOST_AUTO_TEST_CASE(balance)
 	ABI_CHECK(callContractFunction("getBalance()"), encodeArgs(23));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(blockchain, 1)
 BOOST_AUTO_TEST_CASE(blockchain)
 {
 	char const* sourceCode = R"(
@@ -2827,7 +2816,6 @@ BOOST_AUTO_TEST_CASE(internal_constructor)
 	BOOST_CHECK(compileAndRunWithoutCheck(sourceCode, 0, "C").empty());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_modifier, 1)
 BOOST_AUTO_TEST_CASE(function_modifier)
 {
 	char const* sourceCode = R"(
@@ -2856,7 +2844,6 @@ BOOST_AUTO_TEST_CASE(function_modifier_local_variables)
 	ABI_CHECK(callContractFunction("f(bool)", false), encodeArgs(3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_modifier_loop, 1)
 BOOST_AUTO_TEST_CASE(function_modifier_loop)
 {
 	char const* sourceCode = R"(
@@ -2869,7 +2856,6 @@ BOOST_AUTO_TEST_CASE(function_modifier_loop)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(10));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_modifier_multi_invocation, 2)
 BOOST_AUTO_TEST_CASE(function_modifier_multi_invocation)
 {
 	char const* sourceCode = R"(
@@ -3553,7 +3539,6 @@ BOOST_AUTO_TEST_CASE(event_indexed_string)
 	BOOST_CHECK_EQUAL(m_logs[0].topics[0], dev::keccak256(string("E(string,uint256[4])")));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(empty_name_input_parameter_with_named_one, 1)
 BOOST_AUTO_TEST_CASE(empty_name_input_parameter_with_named_one)
 {
 	char const* sourceCode = R"(
@@ -4339,7 +4324,6 @@ BOOST_AUTO_TEST_CASE(constructing_enums_from_ints)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_member_init, 1)
 BOOST_AUTO_TEST_CASE(inline_member_init)
 {
 	char const* sourceCode = R"(
@@ -5571,7 +5555,7 @@ BOOST_AUTO_TEST_CASE(super_overload)
 	ABI_CHECK(callContractFunction("h()"), encodeArgs(2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(bool_conversion, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(bool_conversion, 3)
 BOOST_AUTO_TEST_CASE(bool_conversion)
 {
 	char const* sourceCode = R"(
@@ -8964,7 +8948,7 @@ BOOST_AUTO_TEST_CASE(create_dynamic_array_with_zero_length)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_does_not_skip_modifier, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_does_not_skip_modifier, 2)
 BOOST_AUTO_TEST_CASE(return_does_not_skip_modifier)
 {
 	char const* sourceCode = R"(
@@ -9269,7 +9253,7 @@ BOOST_AUTO_TEST_CASE(non_payable_throw)
 	BOOST_CHECK_EQUAL(balanceAt(m_contractAddress), 0);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(no_nonpayable_circumvention_by_modifier, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(no_nonpayable_circumvention_by_modifier, 2)
 BOOST_AUTO_TEST_CASE(no_nonpayable_circumvention_by_modifier)
 {
 	char const* sourceCode = R"(
