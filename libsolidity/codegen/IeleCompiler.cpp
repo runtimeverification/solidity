@@ -108,10 +108,11 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
 
   // Visit formal arguments.
   for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
-    // TODO: "empty" params should not be added
     std::string genName = arg->name() + getNextVarSuffix();
-    VarNameMap[NumOfModifiers][arg->name()] = genName; 
     iele::IeleArgument::Create(&Context, genName, CompilingFunction);
+    // No need to keep track of the mapping for omitted args, since they will never be referenced.
+    if (!(arg->name() == ""))
+       VarNameMap[NumOfModifiers][arg->name()] = genName;
   }
 
   // We store the return params names, which we'll use when generating a default `ret`
@@ -119,11 +120,12 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
 
   // Visit formal return parameters.
   for (const ASTPointer<const VariableDeclaration> &ret : function.returnParameters()) {
-    // TODO: "empty" params should not be added
     std::string genName = ret->name() + getNextVarSuffix();
     ReturnParameterNames.push_back(genName);
-    VarNameMap[NumOfModifiers][ret->name()] = genName; 
     iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
+    // No need to keep track of the mapping for omitted return params, since they will never be referenced.
+    if (!(ret->name() == ""))
+      VarNameMap[NumOfModifiers][ret->name()] = genName; 
   }
 
   // Visit local variables.
