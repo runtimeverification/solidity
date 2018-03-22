@@ -634,11 +634,19 @@ bool IeleCompiler::visit(const Assignment &assignment) {
 }
 
 bool IeleCompiler::visit(const TupleExpression &tuple) {
-  if (tuple.components().size() == 1) {
-    tuple.components()[0].get()->accept(*this);
+
+  llvm::SmallVector<iele::IeleValue *, 4> Results;
+
+  if (tuple.components().size() > 0) {
+    for (unsigned i = 0; i < tuple.components().size(); i++)
+      Results.push_back(compileExpression(*tuple.components()[i]));
   } else {
-    solAssert(false, "not implemented yet");
-  }
+      solAssert(false, "IeleCompiler: empty tuple not allowed (yet)?");
+    }
+
+  CompilingExpressionResult.insert(
+    CompilingExpressionResult.end(), Results.begin(), Results.end());
+
   return false;
 }
 
