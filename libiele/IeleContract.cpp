@@ -11,6 +11,7 @@
 
 #include <cstdio>
 #include <fstream>
+#include <sstream>
 
 #include <boost/filesystem.hpp>
 
@@ -23,7 +24,9 @@ using namespace llvm::sys;
 
 IeleContract::IeleContract(IeleContext *Ctx, const llvm::Twine &Name,
                            IeleContract *C) :
-  IeleValue(Ctx, IeleValue::IeleContractVal), Parent(nullptr) {
+  IeleValue(Ctx, IeleValue::IeleContractVal), Parent(nullptr),
+  IncludeStorageRuntime(false),
+  IncludeMemoryRuntime(false) {
   SymTab = llvm::make_unique<IeleValueSymbolTable>();
 
   if (C) {
@@ -36,6 +39,32 @@ IeleContract::IeleContract(IeleContext *Ctx, const llvm::Twine &Name,
 }
 
 IeleContract::~IeleContract() { }
+
+void IeleContract::printRuntime(llvm::raw_ostream &OS, unsigned indent) const {
+  std::string RuntimeSourceCode;
+  if (!IncludeStorageRuntime && !IncludeMemoryRuntime)
+    return;
+
+  if (IncludeStorageRuntime)
+    RuntimeSourceCode.append(
+#include "iele-rt/iele-storage-rt.h"
+    );
+  if (IncludeMemoryRuntime)
+    if (IncludeStorageRuntime)
+      RuntimeSourceCode.push_back('\n');
+    RuntimeSourceCode.append(
+#include "iele-rt/iele-memory-rt.h"
+    );
+
+  std::istringstream rtstream(RuntimeSourceCode);
+  std::string line;
+  std::string Indent(indent, ' ');
+  OS << "\n";
+  while (!rtstream.eof()) {
+    std::getline(rtstream, line);
+    OS << Indent << line << "\n";
+  }
+}
 
 void IeleContract::print(llvm::raw_ostream &OS, unsigned indent) const {
   std::string Indent(indent, ' ');
@@ -57,6 +86,7 @@ void IeleContract::print(llvm::raw_ostream &OS, unsigned indent) const {
     F.print(OS, indent);
     isFirst = false;
   }
+  printRuntime(OS, indent);
   OS << "\n\n" << Indent << "}" << "\n";
 }
 

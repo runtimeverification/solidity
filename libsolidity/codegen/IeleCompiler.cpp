@@ -142,8 +142,8 @@ void IeleCompiler::compileContract(
   // Create IeleContract.
   CompilingContract = iele::IeleContract::Create(&Context, contract.name());
 
-  // Visit state variables.
-  bigint NextStorageAddress(1);
+  // Generate the IELE global variables for the contract by visiting state
+  // variables of this contract and its base contracts.
   std::vector<ContractDefinition const*> bases = contract.annotation().linearizedBaseContracts;
   // Store the current contract
   CompilingContractInheritanceHierarchy = bases;
@@ -199,6 +199,9 @@ void IeleCompiler::compileContract(
   if (const FunctionDefinition *fallback = contract.fallbackFunction())
     fallback->accept(*this);
 
+  // Visit base constructors. If any don't exist create an
+  // @<base-contract-name>init function that contains only state variable
+  // initialization.
   for (auto it = bases.rbegin(); it != bases.rend(); it++) {
     const ContractDefinition *base = *it;
     CompilingContractASTNode = base;
@@ -220,8 +223,7 @@ void IeleCompiler::compileContract(
     }
   }
 
-  // Visit constructor. If it doesn't exist create an empty @init function as
-  // constructor.
+  // Similarly visit the contract's constructor.
   if (const FunctionDefinition *constructor = contract.constructor())
     constructor->accept(*this);
   else {
@@ -251,6 +253,11 @@ void IeleCompiler::compileContract(
       appendAccessorFunction(stateVariable);
     }
   }
+
+  // Init storage next pointer, if we need to. This will append the
+  // initialization of the pointer at the start of the constructor function.
+  if (CompilingContract->getIncludeStorageRuntime())
+    appendStorageNextPtr();
 
   // Store compilation result.
   CompiledContract = CompilingContract;
@@ -312,17 +319,22 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   CompilingFunctionASTNode = &function;
   unsigned NumOfModifiers = CompilingFunctionASTNode->modifiers().size();
 
+  // We store the formal argument names, which we'll use when generating in-range
+  // checks in case of a public function.
   std::vector<iele::IeleArgument *> parameters;
+
   // Visit formal arguments.
   for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
     std::string genName = arg->name() + getNextVarSuffix();
     parameters.push_back(iele::IeleArgument::Create(&Context, genName, CompilingFunction));
-    // No need to keep track of the mapping for omitted args, since they will never be referenced.
+    // No need to keep track of the mapping for omitted args, since they will
+    // never be referenced.
     if (!(arg->name() == ""))
        VarNameMap[NumOfModifiers][arg->name()] = genName;
   }
 
-  // We store the return params names, which we'll use when generating a default `ret`
+  // We store the return params names, which we'll use when generating a default
+  // `ret`.
   llvm::SmallVector<std::string, 4> ReturnParameterNames;
 
   // Visit formal return parameters.
@@ -330,7 +342,8 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     std::string genName = ret->name() + getNextVarSuffix();
     ReturnParameterNames.push_back(genName);
     iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
-    // No need to keep track of the mapping for omitted return params, since they will never be referenced.
+    // No need to keep track of the mapping for omitted return params, since
+    // they will never be referenced.
     if (!(ret->name() == ""))
       VarNameMap[NumOfModifiers][ret->name()] = genName; 
   }
@@ -366,6 +379,15 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   // initialization code.
   if (function.isConstructor())
     appendStateVariableInitialization(CompilingContractASTNode);
+
+  // Visit and initialize local variables.
+  for (const VariableDeclaration *local: function.localVariables()) {
+    std::string genName = local->name() + getNextVarSuffix();
+    VarNameMap[NumOfModifiers][local->name()] = genName;
+    iele::IeleLocalVariable *Local =
+      iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
+    appendLocalVariableInitialization(Local, local);
+  }
 
   // Visit function body (inc modifiers). 
   CompilingFunctionASTNode = &function;
@@ -532,11 +554,13 @@ void IeleCompiler::appendModifierOrFunctionCode() {
         iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
       }
 
-      // Visit the modifier's local variables
+      // Visit and initialize the modifier's local variables
       for (const VariableDeclaration *local: modifier.localVariables()) {
         std::string genName = local->name() + getNextVarSuffix();
         VarNameMap[ModifierDepth][local->name()] = genName;
-        iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
+        iele::IeleLocalVariable *Local =
+          iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
+        appendLocalVariableInitialization(Local, local);
       }
 
       // Is the modifier invocation well formed?
@@ -891,7 +915,8 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of assignment");
 
   if (shouldCopyStorageToStorage(LHSValue, RHSType))
-    RHSValue = appendIeleRuntimeStorageToStorageCopy(RHSValue);
+    RHSValue = appendCopy(*RHSType, RHSValue, DataLocation::Storage,
+                          DataLocation::Storage);
 
   // Check for compound assignment.
   if (op != Token::Assign) {
@@ -1130,9 +1155,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     // Allocate memory for the struct.
     iele::IeleValue *StructValue =
-      appendIeleRuntimeAllocateMemory(
-        iele::IeleIntConstant::Create(&Context,
-                                      bigint(arguments.size())));
+      appendStructAllocation(structType, DataLocation::Memory);
 
     // Visit arguments and initialize struct fields.
     for (unsigned i = 0; i < arguments.size(); ++i) {
@@ -1285,8 +1308,14 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleValue *ArraySizeValue = compileExpression(*arguments[0]);
 
     // Allocate memory for the array.
+    const ArrayType &arrayType =
+      dynamic_cast<const ArrayType &>(*functionCall.annotation().type);
+    solAssert(arrayType.isDynamicallySized(),
+              "IeleCompiler: found fix-sized array type in new expression");
+    solAssert(arrayType.dataStoredIn(DataLocation::Memory),
+              "IeleCompiler: found storage allocation with new");
     iele::IeleValue *ArrayValue =
-      appendIeleRuntimeAllocateMemory(ArraySizeValue);
+      appendArrayAllocation(arrayType, DataLocation::Memory, ArraySizeValue);
 
     // Return pointer to allocated array.
     CompilingExpressionResult.push_back(ArrayValue);
@@ -2323,9 +2352,11 @@ void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {
 }
 
 void IeleCompiler::appendStateVariableInitialization(const ContractDefinition *contract) {
+  // Init state variables.
   bool found = false;
   for (const ContractDefinition *def : CompilingContractInheritanceHierarchy) {
     if (found) {
+      // Call the immediate base class init function.
       llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
       llvm::SmallVector<iele::IeleValue *, 4> Arguments;
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
@@ -2343,29 +2374,34 @@ void IeleCompiler::appendStateVariableInitialization(const ContractDefinition *c
       found = true;
     }
   }
+  // Init this contract's state variables.
   for (const VariableDeclaration *stateVariable :
          contract->stateVariables()) {
-    // Visit initialization value if it exists.
+    // Visit initialization value if it exists. Else, check if we need to
+    // allocate storage or memory for a reference type.
     iele::IeleValue *InitValue = nullptr;
     TypePointer type = stateVariable->annotation().type;
-    if (stateVariable->value())
-      InitValue = appendTypeConversion(compileExpression(*stateVariable->value()), *stateVariable->value()->annotation().type, *type);
-    // Else, check if we need to allocate storage memory for a reference type.
-    else if (type->dataStoredIn(DataLocation::Storage)) {
-      iele::IeleValue *SizeValue;
-      if (type->category() == Type::Category::Array) {
-        SizeValue = iele::IeleIntConstant::getZero(&Context);
-      } else {
-        solAssert(type->category() == Type::Category::Struct,
-                  "not implemented yet");
-        const StructType &structType =
-          dynamic_cast<const StructType &>(*type);
-        SizeValue =
-          iele::IeleIntConstant::Create(
-              &Context,
-              bigint(structType.structDefinition().members().size()));
-      }
-      InitValue = appendIeleRuntimeAllocateStorage(SizeValue);
+    if (type->isValueType()) {
+      if (stateVariable->value())
+        InitValue =
+          appendTypeConversion(compileExpression(*stateVariable->value()),
+                               *stateVariable->value()->annotation().type,
+                               *type);
+    } else if (type->category() == Type::Category::Array) {
+      solAssert(!stateVariable->value(), "not implemented yet");
+      const ArrayType &arrayType = dynamic_cast<const ArrayType &>(*type);
+      solAssert(arrayType.dataStoredIn(DataLocation::Storage),
+                "IeleCompiler: found array state variable to be stored in "
+                "memory");
+      InitValue = appendArrayAllocation(arrayType, DataLocation::Storage);
+    } else {
+      solAssert(type->category() == Type::Category::Struct,
+                "not implemented yet");
+      const StructType &structType = dynamic_cast<const StructType &>(*type);
+      solAssert(structType.dataStoredIn(DataLocation::Storage),
+                "IeleCompiler: found struct state variable to be stored in "
+                "memory");
+      InitValue = appendStructAllocation(structType, DataLocation::Storage);
     }
 
     if (!InitValue)
@@ -2386,129 +2422,262 @@ void IeleCompiler::appendStateVariableInitialization(const ContractDefinition *c
   }
 }
 
-iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateMemory(
-     iele::IeleValue *NumElems) {
-  iele::IeleLocalVariable *Result =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "iele.memory.allocate");
-  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
-  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, NumElems);
-  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
-                                            CompilingBlock);
-  return Result;
+void IeleCompiler::appendLocalVariableInitialization(
+    iele::IeleLocalVariable *Local, const VariableDeclaration *localVariable) {
+  // Local variable are always initialized to zero.
+  iele::IeleValue *InitValue = nullptr;
+  TypePointer type = localVariable->annotation().type;
+  if (type->isValueType())
+    InitValue = iele::IeleIntConstant::getZero(&Context);
+  // Else, check if we need to allocate storage or memory for a reference type.
+  else if (type->category() == Type::Category::Array) {
+    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(*type);
+    DataLocation Location =
+      arrayType.dataStoredIn(DataLocation::Storage) ?
+        DataLocation::Storage : DataLocation::Memory;
+    InitValue = appendArrayAllocation(arrayType, Location);
+  } else {
+    solAssert(type->category() == Type::Category::Struct,
+              "not implemented yet");
+    const StructType &structType = dynamic_cast<const StructType &>(*type);
+    DataLocation Location =
+      structType.dataStoredIn(DataLocation::Storage) ?
+        DataLocation::Storage : DataLocation::Memory;
+    InitValue = appendStructAllocation(structType, Location);
+  }
+  // Add assignment.
+  iele::IeleInstruction::CreateAssign(Local, InitValue, CompilingBlock);
 }
 
-iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateStorage(
-     iele::IeleValue *NumElems) {
-  iele::IeleLocalVariable *Result =
+iele::IeleValue *IeleCompiler::doArrayAllocation(
+    const ArrayType &type, iele::IeleValue *NumElemsValue,
+    DataLocation Location, iele::IeleValue *InitValue,
+    DataLocation InitLocation) {
+
+  bool inStorage = Location == DataLocation::Storage;
+  bool initInStorage = InitLocation == DataLocation::Storage;
+
+  // Get allocation size. We use NumElemsValue as the desired allocation size
+  // if provided, else the size of InitValue if provided, else the size is
+  // determined from the type. We also check if the size is known to be zero at
+  // compile time.
+  bool StaticZeroSize = false;
+  if (NumElemsValue) {
+    solAssert(!InitValue, "IeleCompiler: array copy with dictated allocation "
+                          "size for the copy");
+    if (const iele::IeleIntConstant *C =
+          llvm::dyn_cast<iele::IeleIntConstant>(NumElemsValue))
+    StaticZeroSize = C->getValue() == 0;
+  } else if (InitValue) {
+    NumElemsValue =
+      initInStorage ?
+        appendIeleRuntimeStorageSize(InitValue) :
+        appendIeleRuntimeMemorySize(InitValue);
+  } else if (type.isDynamicallySized()) {
+    NumElemsValue = iele::IeleIntConstant::getZero(&Context);
+    StaticZeroSize = true;
+  } else {
+    uint64_t NumElems = (uint64_t) type.length();
+    StaticZeroSize = NumElems == 0;
+    NumElemsValue =
+      iele::IeleIntConstant::Create(&Context, bigint(NumElems));
+  }
+
+  // Allocate the array.
+  iele::IeleValue *AllocValue =
+    inStorage ?
+      appendIeleRuntimeAllocateStorage(NumElemsValue) :
+      appendIeleRuntimeAllocateMemory(NumElemsValue);
+
+  if (StaticZeroSize) {
+    // Skip code generation for initialization and return the pointer to the
+    // top-level array allocation.
+    return AllocValue;
+  }
+
+  // Initialize each element in a loop.
+  const TypePointer &baseType = type.baseType();
+  // Init loop index. We will generate a loop that uses this index to initialize
+  // each element of the newly allocated array.
+  iele::IeleLocalVariable *IndexValue =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "iele.storage.allocate");
-  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
-  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, NumElems);
-  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
-                                            CompilingBlock);
-  return Result;
+  iele::IeleInstruction::CreateAssign(
+     IndexValue,
+     iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  // Create allocation loop block and start generating code for it.
+  iele::IeleBlock *AllocLoopBlock =
+    iele::IeleBlock::Create(&Context, "alloc.loop", CompilingFunction);
+  CompilingBlock = AllocLoopBlock;
+  // Create allocation exit block.
+  iele::IeleBlock *AllocExitBlock =
+    iele::IeleBlock::Create(&Context, "alloc.exit");
+  // Check for loop exit.
+  iele::IeleLocalVariable *AllocDoneValue =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpEq, AllocDoneValue, IndexValue,
+      NumElemsValue, CompilingBlock);
+  connectWithConditionalJump(AllocDoneValue, CompilingBlock, AllocExitBlock);
+  // Get initial element value from the array pointed by InitValue, if one such array
+  // is given.
+  iele::IeleValue *ElementInitValue = nullptr;
+  if (InitValue) {
+    ElementInitValue =
+      initInStorage ?
+        appendIeleRuntimeStorageLoad(InitValue, IndexValue) :
+        appendIeleRuntimeMemoryLoad(InitValue, IndexValue);
+  }
+  // Allocate the initialization element for the newly allocated array, in case
+  // of a non-scalar element type. Note that we use array/struct copying to
+  // allocate the element when we have to initialize from corresponding element of
+  // the array pointed by InitValue.
+  iele::IeleValue *AllocBaseValue = nullptr;
+  if (baseType->category() == Type::Category::Array) {
+    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(*baseType);
+    AllocBaseValue =
+      ElementInitValue ?
+        appendArrayCopy(arrayType, Location, ElementInitValue, InitLocation) :
+        appendArrayAllocation(arrayType, Location);
+  } else if (baseType->category() == Type::Category::Struct) {
+    const StructType &structType =
+      dynamic_cast<const StructType &>(*baseType);
+    AllocBaseValue =
+      ElementInitValue ?
+        appendStructCopy(structType, Location, ElementInitValue, InitLocation) :
+        appendStructAllocation(structType, Location);
+  } else
+    solAssert(baseType->isValueType(), "not implemented yet");
+  if (AllocBaseValue) {
+    // If we allocated the initialization element for the newly allocated
+    // array, we should use the pointer returned by the allocation as the
+    // initial element value.
+    ElementInitValue = AllocBaseValue;
+  } else if (!InitValue) {
+    // Else if no init value was provided, the element is zero'd.
+    ElementInitValue = iele::IeleIntConstant::getZero(&Context);
+  }
+  // Get target address in the newly allocated array.
+  iele::IeleValue *TargetAddressValue =
+    inStorage ?
+      appendIeleRuntimeStorageAddress(AllocValue, IndexValue) :
+      appendIeleRuntimeMemoryAddress(AllocValue, IndexValue);
+  // Store element reference to target address.
+  if (inStorage)
+    iele::IeleInstruction::CreateSStore(
+        ElementInitValue, TargetAddressValue, CompilingBlock);
+  else
+    iele::IeleInstruction::CreateStore(
+        ElementInitValue, TargetAddressValue, CompilingBlock);
+  // Increase index.
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, IndexValue, IndexValue,
+      iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+  // Jump to the beginning of the loop.
+  connectWithUnconditionalJump(CompilingBlock, AllocLoopBlock);
+  // Continue code generation in the loop exit block.
+  AllocExitBlock->insertInto(CompilingFunction);
+  CompilingBlock = AllocExitBlock;
+
+  // Return the pointer to the top-level array allocation.
+  return AllocValue;
 }
 
-iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeMemoryAddress(
-     iele::IeleValue *Base, iele::IeleValue *Offset) {
-  iele::IeleLocalVariable *Result =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "iele.memory.address");
-  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
-  llvm::SmallVector<iele::IeleValue *, 2> Arguments;
-  Arguments.push_back(Base);
-  Arguments.push_back(Offset);
-  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
-                                            CompilingBlock);
-  return Result;
+iele::IeleValue *IeleCompiler::doStructAllocation(
+    const StructType &type, DataLocation Location, iele::IeleValue *InitValue,
+    DataLocation InitLocation) {
+
+  bool inStorage = Location == DataLocation::Storage;
+  bool initInStorage = InitLocation == DataLocation::Storage;
+
+  // Get allocation size from the struct's type.
+  uint64_t NumElems = type.structDefinition().members().size();
+  iele::IeleValue *StructSizeValue =
+    iele::IeleIntConstant::Create(&Context, bigint(NumElems));
+
+  // Alocate the struct.
+  iele::IeleValue *AllocValue =
+    inStorage ?
+      appendIeleRuntimeAllocateStorage(StructSizeValue) :
+      appendIeleRuntimeAllocateMemory(StructSizeValue);
+
+  // Initialize each struct element.
+  uint64_t index = 0;
+  for (const auto &Elem : type.structDefinition().members()) {
+    const TypePointer &baseType = Elem->annotation().type;
+    iele::IeleValue *IndexValue =
+      iele::IeleIntConstant::Create(&Context, bigint(index));
+    // Get initial element value from the struct pointed by InitValue, if one
+    // such struct is given.
+    iele::IeleValue *ElementInitValue = nullptr;
+    if (InitValue) {
+      ElementInitValue =
+        initInStorage ?
+          appendIeleRuntimeStorageLoad(InitValue, IndexValue) :
+          appendIeleRuntimeMemoryLoad(InitValue, IndexValue);
+    }
+    // Allocate the initialization element for the newly allocated struct, in
+    // case of a non-scalar element type. Note that we use array/struct copying
+    // to allocate the element when we have to initialize from corresponding
+    // element of the struct pointed by InitValue.
+    iele::IeleValue *AllocBaseValue = nullptr;
+    if (baseType->category() == Type::Category::Array) {
+      const ArrayType &arrayType = dynamic_cast<const ArrayType &>(*baseType);
+      AllocBaseValue =
+        ElementInitValue ?
+          appendArrayCopy(arrayType, Location, ElementInitValue, InitLocation) :
+          appendArrayAllocation(arrayType, Location);
+    } else if (baseType->category() == Type::Category::Struct) {
+      const StructType &structType =
+        dynamic_cast<const StructType &>(*baseType);
+      AllocBaseValue =
+        ElementInitValue ?
+          appendStructCopy(structType, Location, ElementInitValue, InitLocation) :
+          appendStructAllocation(structType, Location);
+    } else
+      solAssert(baseType->isValueType(), "not implemented yet");
+    if (AllocBaseValue) {
+      // If we allocated the initialization element for the newly allocated
+      // struct, we should use the pointer returned by the allocation as the
+      // initial element value.
+      ElementInitValue = AllocBaseValue;
+    } else if (!InitValue) {
+      // Else if no init value was provided, the element is zero'd.
+      ElementInitValue = iele::IeleIntConstant::getZero(&Context);
+    }
+    // Get target address in the newly allocated struct.
+    iele::IeleValue *TargetAddressValue =
+      inStorage ?
+        appendIeleRuntimeStorageAddress(AllocValue, IndexValue) :
+        appendIeleRuntimeMemoryAddress(AllocValue, IndexValue);
+    // Store element reference to target address.
+    if (inStorage)
+      iele::IeleInstruction::CreateSStore(
+          ElementInitValue, TargetAddressValue, CompilingBlock);
+    else
+      iele::IeleInstruction::CreateStore(
+          ElementInitValue, TargetAddressValue, CompilingBlock);
+    ++index;
+  }
+
+  // Return the pointer to the top-level struct allocation.
+  return AllocValue;
 }
 
-iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageAddress(
-    iele::IeleValue *Base, iele::IeleValue *Offset) {
-  iele::IeleLocalVariable *Result =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "iele.storage.address");
-  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
-  llvm::SmallVector<iele::IeleValue *, 2> Arguments;
-  Arguments.push_back(Base);
-  Arguments.push_back(Offset);
-  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
-                                            CompilingBlock);
-  return Result;
-}
+iele::IeleValue *IeleCompiler::appendCopy(
+    const Type &type, iele::IeleValue *Source, DataLocation From,
+    DataLocation To) {
+  iele::IeleValue *CopiedValue;
+  if (type.category() == Type::Category::Array) {
+    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(type);
+    CopiedValue = appendArrayCopy(arrayType, To, Source, From);
+  } else {
+    solAssert(type.category() == Type::Category::Struct,
+              "not implemented yet");
+    const StructType &structType = dynamic_cast<const StructType &>(type);
+    CopiedValue = appendStructCopy(structType, To, Source, From);
+  }
 
-iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeMemoryLoad(
-    iele::IeleValue *Base, iele::IeleValue *Offset) {
-  iele::IeleLocalVariable *Result =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "iele.memory.load");
-  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
-  llvm::SmallVector<iele::IeleValue *, 2> Arguments;
-  Arguments.push_back(Base);
-  Arguments.push_back(Offset);
-  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
-                                            CompilingBlock);
-  return Result;
-}
-
-iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageLoad(
-    iele::IeleValue *Base, iele::IeleValue *Offset) {
-  iele::IeleLocalVariable *Result =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "iele.storage.load");
-  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
-  llvm::SmallVector<iele::IeleValue *, 2> Arguments;
-  Arguments.push_back(Base);
-  Arguments.push_back(Offset);
-  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
-                                            CompilingBlock);
-  return Result;
-}
-
-iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageToStorageCopy(
-    iele::IeleValue *From) {
-  iele::IeleLocalVariable *Result =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "iele.storage.copy.to.storage");
-  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
-  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, From);
-  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
-                                            CompilingBlock);
-  return Result;
-}
-
-iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeMemoryToStorageCopy(
-    iele::IeleValue *From) {
-  iele::IeleLocalVariable *Result =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "iele.memory.copy.to.storage");
-  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
-  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, From);
-  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
-                                            CompilingBlock);
-  return Result;
-}
-
-iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageToMemoryCopy(
-    iele::IeleValue *From) {
-  iele::IeleLocalVariable *Result =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "iele.storage.copy.to.memory");
-  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
-  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, From);
-  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
-                                            CompilingBlock);
-  return Result;
+  return CopiedValue;
 }
 
 iele::IeleLocalVariable *IeleCompiler::appendLValueDereference(
@@ -2766,9 +2935,11 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
   case Type::Category::Struct:
   case Type::Category::Array:
     if (shouldCopyStorageToMemory(TargetType, SourceType))
-      return appendIeleRuntimeStorageToMemoryCopy(Value);
+      return appendCopy(SourceType, Value, DataLocation::Storage,
+                        DataLocation::Memory);
     else if (shouldCopyMemoryToStorage(TargetType, SourceType))
-      return appendIeleRuntimeMemoryToStorageCopy(Value);
+      return appendCopy(SourceType, Value, DataLocation::Memory,
+                        DataLocation::Storage);
     return Value;
   case Type::Category::Integer:
   case Type::Category::RationalNumber:
@@ -2889,4 +3060,156 @@ unsigned IeleCompiler::getStructMemberIndex(const StructType &type,
 
   solAssert(false, "IeleCompiler: look up for non-existing member");
   return 0;
+}
+
+
+// IELE runtime implementation.
+void IeleCompiler::appendStorageNextPtr() {
+  // Generate a global variable for the next free storage location pointer.
+  iele::IeleGlobalVariable *StorageNextPtr =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.storage.next",
+                                     CompilingContract);
+  StorageNextPtr->setStorageAddress(iele::IeleIntConstant::Create(
+      &Context, NextStorageAddress++));
+  solAssert(NextStorageAddress != 0,
+         "IeleCompiler: Overflow: more state variables than currently "
+         "supported");
+  iele::IeleValue *AddressValue =
+    iele::IeleIntConstant::Create(&Context, NextStorageAddress);
+
+  // Fetch init function.
+  iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
+  solAssert(ST,
+            "IeleCompiler: failed to access compiling contract's symbol table.");
+  iele::IeleFunction *InitFunction =
+    llvm::dyn_cast<iele::IeleFunction>(ST->lookup("init"));
+  solAssert(InitFunction,
+            "IeleCompiler: failed to find init function in compiling contract's"
+            " symbol table");
+
+  // Store the new address value to the pointer. We insert this instruction
+  // at the beginning of the currently compiling function, since this should be
+  // called only to insert the instruction in the init function of the contract.
+  iele::IeleInstruction::CreateSStore(AddressValue, StorageNextPtr,
+                                      &*InitFunction->begin()->begin());
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateMemory(
+     iele::IeleValue *NumElems) {
+  CompilingContract->setIncludeMemoryRuntime(true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.memory.allocate");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
+  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, NumElems);
+  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
+                                            CompilingBlock);
+  return Result;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateStorage(
+     iele::IeleValue *NumElems) {
+  CompilingContract->setIncludeStorageRuntime(true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.storage.allocate");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
+  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, NumElems);
+  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
+                                            CompilingBlock);
+  return Result;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeMemorySize(
+    iele::IeleValue *Ptr) {
+  CompilingContract->setIncludeMemoryRuntime(true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.memory.size");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
+  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, Ptr);
+  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
+                                            CompilingBlock);
+  return Result;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageSize(
+    iele::IeleValue *Ptr) {
+  CompilingContract->setIncludeStorageRuntime(true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.storage.size");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
+  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, Ptr);
+  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
+                                            CompilingBlock);
+  return Result;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeMemoryAddress(
+     iele::IeleValue *Base, iele::IeleValue *Offset) {
+  CompilingContract->setIncludeMemoryRuntime(true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.memory.address");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
+  llvm::SmallVector<iele::IeleValue *, 2> Arguments;
+  Arguments.push_back(Base);
+  Arguments.push_back(Offset);
+  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
+                                            CompilingBlock);
+  return Result;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageAddress(
+    iele::IeleValue *Base, iele::IeleValue *Offset) {
+  CompilingContract->setIncludeStorageRuntime(true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.storage.address");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
+  llvm::SmallVector<iele::IeleValue *, 2> Arguments;
+  Arguments.push_back(Base);
+  Arguments.push_back(Offset);
+  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
+                                            CompilingBlock);
+  return Result;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeMemoryLoad(
+    iele::IeleValue *Base, iele::IeleValue *Offset) {
+  CompilingContract->setIncludeMemoryRuntime(true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.memory.load");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
+  llvm::SmallVector<iele::IeleValue *, 2> Arguments;
+  Arguments.push_back(Base);
+  Arguments.push_back(Offset);
+  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
+                                            CompilingBlock);
+  return Result;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeStorageLoad(
+    iele::IeleValue *Base, iele::IeleValue *Offset) {
+  CompilingContract->setIncludeStorageRuntime(true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.storage.load");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
+  llvm::SmallVector<iele::IeleValue *, 2> Arguments;
+  Arguments.push_back(Base);
+  Arguments.push_back(Offset);
+  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
+                                            CompilingBlock);
+  return Result;
 }

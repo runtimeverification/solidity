@@ -4084,7 +4084,6 @@ BOOST_AUTO_TEST_CASE(struct_containing_bytes_copy_and_delete)
 	BOOST_CHECK(storageEmpty(m_contractAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_copy_via_local, 1)
 BOOST_AUTO_TEST_CASE(struct_copy_via_local)
 {
 	char const* sourceCode = R"(
@@ -5279,7 +5278,6 @@ BOOST_AUTO_TEST_CASE(assignment_to_const_var_involving_keccak)
 //	ABI_CHECK(callContractFunction("f()"), encodeArgs(5));
 //}
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_storage_structs_uint, 1)
 BOOST_AUTO_TEST_CASE(packed_storage_structs_uint)
 {
 	char const* sourceCode = R"(
@@ -5768,7 +5766,6 @@ BOOST_AUTO_TEST_CASE(proper_order_of_overwriting_of_attributes)
 	ABI_CHECK(callContractFunction("ok()"), encodeArgs(false));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_assign_reference_to_struct, 1)
 BOOST_AUTO_TEST_CASE(struct_assign_reference_to_struct)
 {
 	char const* sourceCode = R"(
@@ -6012,7 +6009,7 @@ BOOST_AUTO_TEST_CASE(reusing_memory)
 	BOOST_REQUIRE(callContractFunction("f(uint256)", 0x34) == encodeArgs(dev::keccak256(dev::toBigEndian(u256(0x34)))));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_string, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_string, 3)
 BOOST_AUTO_TEST_CASE(return_string)
 {
 	char const* sourceCode = R"(
@@ -6602,7 +6599,6 @@ BOOST_AUTO_TEST_CASE(memory_arrays_dynamic_index_access_write)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(0x20), u256(4), data));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_structs_read_write, 1)
 BOOST_AUTO_TEST_CASE(memory_structs_read_write)
 {
 	char const* sourceCode = R"(
@@ -6648,7 +6644,6 @@ BOOST_AUTO_TEST_CASE(memory_structs_read_write)
 	ABI_CHECK(callContractFunction("testAssign()"), encodeArgs(u256(1), u256(2), u256(3), u256(4)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_structs_as_function_args, 1)
 BOOST_AUTO_TEST_CASE(memory_structs_as_function_args)
 {
 	char const* sourceCode = R"(
@@ -6677,7 +6672,6 @@ BOOST_AUTO_TEST_CASE(memory_structs_as_function_args)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(u256(1), u256(2), u256(3)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_structs_nested, 1)
 BOOST_AUTO_TEST_CASE(memory_structs_nested)
 {
 	char const* sourceCode = R"(
@@ -6710,7 +6704,6 @@ BOOST_AUTO_TEST_CASE(memory_structs_nested)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(u256(1), u256(2), u256(3), u256(4)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_structs_nested_load, 1)
 BOOST_AUTO_TEST_CASE(memory_structs_nested_load)
 {
 	char const* sourceCode = R"(
@@ -8869,7 +8862,6 @@ BOOST_AUTO_TEST_CASE(failed_create)
 	ABI_CHECK(callContractFunction("x()"), encodeArgs(u256(1)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(create_dynamic_array_with_zero_length, 1)
 BOOST_AUTO_TEST_CASE(create_dynamic_array_with_zero_length)
 {
 	char const* sourceCode = R"(
