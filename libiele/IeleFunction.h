@@ -200,6 +200,10 @@ public:
   size_t  lvar_size() const { return IeleLocalVariableList.size();  }
   bool   lvar_empty() const { return IeleLocalVariableList.empty(); }
 
+  // Helper that prints the function's name as it should appear in the IELE
+  // textual format.
+  void printNameAsIeleText(llvm::raw_ostream &OS) const;
+
   void print(llvm::raw_ostream &OS, unsigned indent = 0) const override;
 
   // Method for support type inquiry through isa, cast, and dyn_cast.

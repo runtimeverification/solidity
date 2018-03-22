@@ -22,15 +22,19 @@ IeleFunction::IeleFunction(IeleContext *Ctx, bool isPublic, bool isInit,
 
 IeleFunction::~IeleFunction() { }
 
+void IeleFunction::printNameAsIeleText(llvm::raw_ostream &OS) const {
+  if (isPublic() && !(isInit() || isDeposit()))
+    OS << "@\"" << getName() << "\"";
+  else
+    OS << "@" << getName();
+}
+
 void IeleFunction::print(llvm::raw_ostream &OS, unsigned indent) const {
   std::string Indent(indent, ' ');
   OS << Indent << "define ";
   if (isPublic())
     OS << "public ";
-  if (isPublic() && !(isInit() || isDeposit()))
-    OS << "@\"" << getName() << "\"";
-  else
-    OS << "@" << getName();
+  printNameAsIeleText(OS);
   OS << "(";
   bool isFirst = true;
   for (const IeleArgument &A : args()) {
