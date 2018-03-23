@@ -338,8 +338,12 @@ string RPCSession::TransactionData::toJson() const
 	json["gas"] = gas;
 	json["gasprice"] = gasPrice;
 	json["value"] = value;
-	json["data"] = data;
-	json["function"] = function;
+        if (to == "" || to == "0x") {
+		json["contractCode"] = data;
+		json["data"] = data; // migration pattern: pass both contractCode and data until we merge the PR for iele-semantics that updates everything to refer only to contractCode
+	} else {
+		json["function"] = function;
+	}
 	json["arguments"] = Json::arrayValue;
 	for (auto const& arg : arguments) {
 		json["arguments"].append(arg);
