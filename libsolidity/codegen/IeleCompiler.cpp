@@ -139,17 +139,26 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   CompilingFunctionASTNode = &function;
   unsigned NumOfModifiers = CompilingFunctionASTNode->modifiers().size();
 
-  // Visit formal arguments and return parameters.
+  // Visit formal arguments.
   for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
     std::string genName = arg->name() + getNextVarSuffix();
-    VarNameMap[NumOfModifiers][arg->name()] = genName; 
     iele::IeleArgument::Create(&Context, genName, CompilingFunction);
+    // No need to keep track of the mapping for omitted args, since they will never be referenced.
+    if (!(arg->name() == ""))
+       VarNameMap[NumOfModifiers][arg->name()] = genName;
   }
 
+  // We store the return params names, which we'll use when generating a default `ret`
+  llvm::SmallVector<std::string, 4> ReturnParameterNames;
+
+  // Visit formal return parameters.
   for (const ASTPointer<const VariableDeclaration> &ret : function.returnParameters()) {
     std::string genName = ret->name() + getNextVarSuffix();
-    VarNameMap[NumOfModifiers][ret->name()] = genName; 
+    ReturnParameterNames.push_back(genName);
     iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
+    // No need to keep track of the mapping for omitted return params, since they will never be referenced.
+    if (!(ret->name() == ""))
+      VarNameMap[NumOfModifiers][ret->name()] = genName; 
   }
 
   // Visit local variables.
@@ -173,9 +182,31 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   ModifierDepth = -1;
   appendModifierOrFunctionCode();
 
-  // Add a ret void if the last block doesn't end with a ret instruction.
-  if (!CompilingBlock->endsWithRet())
-    iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+  // Add a ret if the last block doesn't end with a ret instruction.
+  if (!CompilingBlock->endsWithRet()) {
+    if (function.returnParameters().size() == 0) { // add a ret void
+      iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+    } else { // return declared parameters
+        llvm::SmallVector<iele::IeleValue *, 4> Returns;
+
+        // Find Symbol Table for this function
+        iele::IeleValueSymbolTable *ST =
+          CompilingFunction->getIeleValueSymbolTable();
+        solAssert(ST,
+                  "IeleCompiler: failed to access compiling function's symbol "
+                  "table.");
+
+        // Prepare arguments for the `ret` instruction by fetching the param names
+        for (const std::string paramName : ReturnParameterNames) {
+          iele::IeleValue *param = ST->lookup(paramName);
+          solAssert(param, "IeleCompiler: couldn't find parameter name in symbol table.");
+          Returns.push_back(param);
+        }
+
+        // Create `ret` instruction
+        iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
+    }
+  }
 
   // Append the revert block if needed.
   if (RevertBlock) {
@@ -667,11 +698,15 @@ bool IeleCompiler::visit(const Assignment &assignment) {
 }
 
 bool IeleCompiler::visit(const TupleExpression &tuple) {
-  if (tuple.components().size() == 1) {
-    tuple.components()[0].get()->accept(*this);
-  } else {
-    solAssert(false, "not implemented yet");
-  }
+
+  llvm::SmallVector<iele::IeleValue *, 4> Results;
+
+  for (unsigned i = 0; i < tuple.components().size(); i++)
+    Results.push_back(compileExpression(*tuple.components()[i]));
+
+  CompilingExpressionResult.insert(
+    CompilingExpressionResult.end(), Results.begin(), Results.end());
+
   return false;
 }
 
