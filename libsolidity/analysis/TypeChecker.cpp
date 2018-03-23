@@ -34,6 +34,29 @@ using namespace std;
 using namespace dev;
 using namespace dev::solidity;
 
+namespace
+{
+
+bool typeSupportedByOldABIEncoder(Type const& _type)
+{
+	if (_type.dataStoredIn(DataLocation::Storage))
+		return true;
+	else if (_type.category() == Type::Category::Struct)
+		return false;
+	else if (_type.category() == Type::Category::Array)
+	{
+		auto const& arrayType = dynamic_cast<ArrayType const&>(_type);
+		auto base = arrayType.baseType();
+		if (!typeSupportedByOldABIEncoder(*base))
+			return false;
+		else if (base->category() == Type::Category::Array && base->isDynamicallySized())
+			return false;
+	}
+	return true;
+}
+
+}
+
 
 bool TypeChecker::checkTypeRequirements(ASTNode const& _contract)
 {
@@ -561,13 +584,12 @@ bool TypeChecker::visit(FunctionDefinition const& _function)
 			m_errorReporter.fatalTypeError(var->location(), "Internal or recursive type is not allowed for public or external functions.");
 		if (
 			_function.visibility() > FunctionDefinition::Visibility::Internal &&
-			type(*var)->category() == Type::Category::Struct &&
-			!type(*var)->dataStoredIn(DataLocation::Storage) &&
-			!_function.sourceUnit().annotation().experimentalFeatures.count(ExperimentalFeature::ABIEncoderV2)
+			!_function.sourceUnit().annotation().experimentalFeatures.count(ExperimentalFeature::ABIEncoderV2) &&
+			!typeSupportedByOldABIEncoder(*type(*var))
 		)
 			m_errorReporter.typeError(
 				var->location(),
-				"Structs are only supported in the new experimental ABI encoder. "
+				"This type is only supported in the new experimental ABI encoder. "
 				"Use \"pragma experimental ABIEncoderV2;\" to enable the feature."
 			);
 
@@ -872,9 +894,15 @@ bool TypeChecker::visit(InlineAssembly const& _inlineAssembly)
 	};
 	solAssert(!_inlineAssembly.annotation().analysisInfo, "");
 	_inlineAssembly.annotation().analysisInfo = make_shared<assembly::AsmAnalysisInfo>();
+	boost::optional<Error::Type> errorTypeForLoose =
+		m_scope->sourceUnit().annotation().experimentalFeatures.count(ExperimentalFeature::V050) ?
+		Error::Type::SyntaxError :
+		Error::Type::Warning;
 	assembly::AsmAnalyzer analyzer(
 		*_inlineAssembly.annotation().analysisInfo,
 		m_errorReporter,
+		m_evmVersion,
+		errorTypeForLoose,
 		assembly::AsmFlavour::Loose,
 		identifierAccess
 	);
@@ -1830,6 +1858,20 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 
 	if (exprType->category() == Type::Category::Contract)
 	{
+		// Warn about using address members on contracts
+		bool v050 = m_scope->sourceUnit().annotation().experimentalFeatures.count(ExperimentalFeature::V050);
+		for (auto const& addressMember: IntegerType(160, IntegerType::Modifier::Address).nativeMembers(nullptr))
+			if (addressMember.name == memberName && *annotation.type == *addressMember.type)
+			{
+				solAssert(!v050, "Address member still present on contract in v0.5.0.");
+				m_errorReporter.warning(
+					_memberAccess.location(),
+					"Using contract member \"" + memberName +"\" inherited from the address type is deprecated." +
+					" Convert the contract to \"address\" type to access the member."
+				);
+			}
+
+		// Warn about using send or transfer with a non-payable fallback function.
 		if (auto callType = dynamic_cast<FunctionType const*>(type(_memberAccess).get()))
 		{
 			auto kind = callType->kind();
@@ -2042,13 +2084,13 @@ void TypeChecker::endVisit(Literal const& _literal)
 			m_errorReporter.fatalTypeError(
 				_literal.location(),
 				"Hexadecimal numbers cannot be used with unit denominations. "
-				"You can use an expression of the form '0x1234 * 1 day' instead."
+				"You can use an expression of the form \"0x1234 * 1 day\" instead."
 			);
 		else
 			m_errorReporter.warning(
 				_literal.location(),
 				"Hexadecimal numbers with unit denominations are deprecated. "
-				"You can use an expression of the form '0x1234 * 1 day' instead."
+				"You can use an expression of the form \"0x1234 * 1 day\" instead."
 			);
 	}
 	if (!_literal.annotation().type)

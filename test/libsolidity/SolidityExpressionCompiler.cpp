@@ -132,7 +132,7 @@ bytes compileFirstExpression(
 		if (ContractDefinition* contract = dynamic_cast<ContractDefinition*>(node.get()))
 		{
 			ErrorReporter errorReporter(errors);
-			TypeChecker typeChecker(errorReporter);
+			TypeChecker typeChecker(dev::test::Options::get().evmVersion(), errorReporter);
 			BOOST_REQUIRE(typeChecker.checkTypeRequirements(*contract));
 		}
 	for (ASTPointer<ASTNode> const& node: sourceUnit->nodes())
@@ -141,7 +141,7 @@ bytes compileFirstExpression(
 			FirstExpressionExtractor extractor(*contract);
 			BOOST_REQUIRE(extractor.expression() != nullptr);
 
-			CompilerContext context;
+			CompilerContext context(dev::test::Options::get().evmVersion());
 			context.resetVisitedNodes(contract);
 			context.setInheritanceHierarchy(inheritanceHierarchy);
 			unsigned parametersSize = _localVariables.size(); // assume they are all one slot on the stack
@@ -512,6 +512,39 @@ BOOST_AUTO_TEST_CASE(blockhash)
 
 	bytes expectation({byte(Instruction::PUSH1), 0x03,
 					   byte(Instruction::BLOCKHASH)});
+	BOOST_CHECK_EQUAL_COLLECTIONS(code.begin(), code.end(), expectation.begin(), expectation.end());
+}
+
+BOOST_AUTO_TEST_CASE(gas_left)
+{
+	char const* sourceCode = R"(
+		contract test {
+			function f() returns (uint256 val) {
+				return msg.gas;
+			}
+		}
+	)";
+	bytes code = compileFirstExpression(
+		sourceCode, {}, {},
+		{make_shared<MagicVariableDeclaration>("msg", make_shared<MagicType>(MagicType::Kind::Message))}
+	);
+
+	bytes expectation({byte(Instruction::GAS)});
+	BOOST_CHECK_EQUAL_COLLECTIONS(code.begin(), code.end(), expectation.begin(), expectation.end());
+
+	sourceCode = R"(
+		contract test {
+			function f() returns (uint256 val) {
+				return gasleft();
+			}
+		}
+	)";
+	code = compileFirstExpression(
+		sourceCode, {}, {},
+		{make_shared<MagicVariableDeclaration>("gasleft", make_shared<FunctionType>(strings(), strings{"uint256"}, FunctionType::Kind::GasLeft))}
+	);
+
+	expectation = bytes({byte(Instruction::GAS)});
 	BOOST_CHECK_EQUAL_COLLECTIONS(code.begin(), code.end(), expectation.begin(), expectation.end());
 }
 

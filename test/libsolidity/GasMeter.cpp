@@ -49,13 +49,14 @@ public:
 		m_compiler.reset(false);
 		m_compiler.addSource("", "pragma solidity >=0.0;\n" + _sourceCode);
 		m_compiler.setOptimiserSettings(dev::test::Options::get().optimize);
+		m_compiler.setEVMVersion(m_evmVersion);
 		BOOST_REQUIRE_MESSAGE(m_compiler.compile(), "Compiling contract failed");
 
 		AssemblyItems const* items = nullptr; //m_compiler.runtimeAssemblyItems(m_compiler.lastContractName());
 		ASTNode const& sourceUnit = m_compiler.ast("");
 		BOOST_REQUIRE(items != nullptr);
 		m_gasCosts = GasEstimator::breakToStatementLevel(
-			GasEstimator::structuralEstimation(*items, vector<ASTNode const*>({&sourceUnit})),
+			GasEstimator(dev::test::Options::get().evmVersion()).structuralEstimation(*items, vector<ASTNode const*>({&sourceUnit})),
 			{&sourceUnit}
 		);
 	}
@@ -65,7 +66,7 @@ public:
 /*
 		compileAndRun(_sourceCode);
 		auto state = make_shared<KnownState>();
-		PathGasMeter meter(*m_compiler.assemblyItems(m_compiler.lastContractName()));
+		PathGasMeter meter(*m_compiler.assemblyItems(m_compiler.lastContractName()), dev::test::Options::get().evmVersion());
 		GasMeter::GasConsumption gas = meter.estimateMax(0, state);
 		u256 bytecodeSize(m_compiler.runtimeObject(m_compiler.lastContractName()).bytecode.size());
 		// costs for deployment
@@ -74,7 +75,7 @@ public:
 		gas += gasForTransaction(m_compiler.object(m_compiler.lastContractName()).bytecode, vector<bytes>());
 
 		BOOST_REQUIRE(!gas.isInfinite);
-		BOOST_CHECK(gas.value == m_gasUsed);
+		BOOST_CHECK_EQUAL(gas.value, m_gasUsed);
 */
 		BOOST_REQUIRE(false);
 	}
@@ -93,12 +94,12 @@ public:
 			gas = max(gas, gasForTransaction(_sig, arguments));
 		}
 
-		gas += GasEstimator::functionalEstimation(
+		gas += GasEstimator(dev::test::Options::get().evmVersion()).functionalEstimation(
 			*m_compiler.runtimeAssemblyItems(m_compiler.lastContractName()),
 			_sig
 		);
 		BOOST_REQUIRE(!gas.isInfinite);
-		BOOST_CHECK(gas.value == m_gasUsed);
+		BOOST_CHECK_EQUAL(gas.value, m_gasUsed);
 */
 		BOOST_REQUIRE(false);
 	}
