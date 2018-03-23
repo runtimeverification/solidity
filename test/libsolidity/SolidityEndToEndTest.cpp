@@ -1567,7 +1567,6 @@ BOOST_AUTO_TEST_CASE(msg_sig_after_internal_call_is_same)
 	ABI_CHECK(callContractFunction("foo(uint256)", 0), encodeArgs(asString(FixedHash<4>(dev::keccak256("foo(uint256)")).asBytes())));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(now, 1)
 BOOST_AUTO_TEST_CASE(now)
 {
 	char const* sourceCode = R"(
