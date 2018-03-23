@@ -197,8 +197,11 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
                   "table.");
 
         // Prepare arguments for the `ret` instruction by fetching the param names
-        for (const std::string paramName : ReturnParameterNames)
-          Returns.push_back(ST->lookup(paramName));
+        for (const std::string paramName : ReturnParameterNames) {
+          iele::IeleValue *param = ST->lookup(paramName);
+          solAssert(param, "IeleCompiler: couldn't find parameter name in symbol table.");
+          Returns.push_back(param);
+        }
 
         // Create `ret` instruction
         iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
