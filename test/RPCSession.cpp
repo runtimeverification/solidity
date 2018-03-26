@@ -340,7 +340,6 @@ string RPCSession::TransactionData::toJson() const
 	json["value"] = value;
         if (to == "" || to == "0x") {
 		json["contractCode"] = data;
-		json["data"] = data; // migration pattern: pass both contractCode and data until we merge the PR for iele-semantics that updates everything to refer only to contractCode
 	} else {
 		json["function"] = function;
 	}
