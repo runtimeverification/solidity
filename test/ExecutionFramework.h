@@ -235,7 +235,7 @@ public:
 		} else if (_val == 0) {
 			return bytes(1, 0);
 		}
-		return toBigEndian(_val / 256, true) + bytes(1, _val % 256);
+		return toBigEndian(_val / 256, _val % 256 < 128) + bytes(1, _val % 256);
 	}
 
 	static bytes toBigEndian(u256 _val, bool _partial = false)
@@ -245,7 +245,7 @@ public:
 		} else if (_val == 0) {
 			return bytes(1, 0);
 		}
-		return toBigEndian(_val / 256, true) + bytes(1, (unsigned char)_val % 256);
+		return toBigEndian(_val / 256, _val % 256 < 128) + bytes(1, (unsigned char)_val % 256);
 	}
 
 private:
