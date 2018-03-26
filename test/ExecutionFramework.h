@@ -129,11 +129,21 @@ public:
 		{
 			std::vector<bytes> contractResult = callContractFunction(_sig, argument);
 			std::vector<bytes> cppResult = callCppAndEncodeResult(_cppFunction, argument);
+			std::string message = "\nExpected: [ ";
+
+			for (bytes const& val : cppResult) {
+				message += toHex(val) + " ";
+			}
+			message += "]\nActual: [ ";
+			for (bytes const& val : contractResult) {
+				message += toHex(val) + " ";
+			}
 			BOOST_CHECK_MESSAGE(
 				contractResult == cppResult,
 				"Computed values do not match.\nContract: " +
 					std::string("\nArgument: ") +
-					toHex(encode(argument))
+					toHex(encode(argument)) +
+					message + "]\n"
 			);
 		}
 	}
