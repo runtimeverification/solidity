@@ -616,6 +616,16 @@ bool IeleCompiler::visit(const Conditional &condition) {
   iele::IeleValue *ConditionValue = compileExpression(condition.condition());
   solAssert(ConditionValue, "IeleCompiler: failed to compile conditional condition.");
 
+  iele::IeleLocalVariable *ResultValue =
+    appendConditional(ConditionValue, [&condition, this]{return compileExpression(condition.trueExpression()); }, [&condition, this]{return compileExpression(condition.falseExpression()); });
+  CompilingExpressionResult.push_back(ResultValue);
+  return false;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendConditional(
+  iele::IeleValue *ConditionValue,
+  const std::function<iele::IeleValue *(void)> &TrueExpression,
+  const std::function<iele::IeleValue *(void)> &FalseExpression) {
   // The condition target block is the if-true block.
   iele::IeleBlock *CondTargetBlock =
     iele::IeleBlock::Create(&Context, "if.true");
@@ -629,7 +639,7 @@ bool IeleCompiler::visit(const Conditional &condition) {
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
 
   // Append the expression for the if-false block and assign it to the result.
-  iele::IeleValue *FalseValue = compileExpression(condition.falseExpression());
+  iele::IeleValue *FalseValue = FalseExpression();
   iele::IeleInstruction::CreateAssign(
     ResultValue, FalseValue, CompilingBlock);
 
@@ -645,7 +655,7 @@ bool IeleCompiler::visit(const Conditional &condition) {
   CompilingBlock = IfTrueBlock;
 
   // Append the expression for the if-true block and assign it to the result.
-  iele::IeleValue *TrueValue = compileExpression(condition.trueExpression());
+  iele::IeleValue *TrueValue = TrueExpression();
   iele::IeleInstruction::CreateAssign(
     ResultValue, TrueValue, CompilingBlock);
 
@@ -653,8 +663,7 @@ bool IeleCompiler::visit(const Conditional &condition) {
   // the join block.
   JoinBlock->insertInto(CompilingFunction);
   CompilingBlock = JoinBlock;
-  CompilingExpressionResult.push_back(ResultValue);
-  return false;
+  return ResultValue;
 }
 
 bool IeleCompiler::visit(const Assignment &assignment) {
@@ -794,6 +803,14 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
 }
 
 bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
+  if (binaryOperation.getOperator() == Token::Or || binaryOperation.getOperator() == Token::And) {
+    iele::IeleValue *Result =
+      appendBooleanOperator(binaryOperation.getOperator(),
+                            binaryOperation.leftExpression(),
+                            binaryOperation.rightExpression());
+    CompilingExpressionResult.push_back(Result);
+    return false;
+  }
   // Visit operands.
   iele::IeleValue *LeftOperandValue = 
     compileExpression(binaryOperation.leftExpression());
@@ -1761,6 +1778,29 @@ void IeleCompiler::appendLValueAssign(iele::IeleValue *LValue,
   }
 }
 
+iele::IeleLocalVariable *IeleCompiler::appendBooleanOperator(
+    Token::Value Opcode,
+    const Expression &LeftOperand,
+    const Expression &RightOperand) {
+  solAssert(Opcode == Token::Or || Opcode == Token::And, "IeleCompiler: invalid boolean operator");
+
+  iele::IeleValue *LeftOperandValue = 
+    compileExpression(LeftOperand);
+  solAssert(LeftOperandValue, "IeleCompiler: Failed to compile left operand.");
+  if (Opcode == Token::Or) {
+
+    return appendConditional(
+      LeftOperandValue, 
+      [this]{return iele::IeleIntConstant::getOne(&Context); },
+      [&RightOperand, this]{return compileExpression(RightOperand);});
+  } else {
+    return appendConditional(
+      LeftOperandValue, 
+      [&RightOperand, this]{return compileExpression(RightOperand);},
+      [this]{return iele::IeleIntConstant::getZero(&Context); });
+  }
+}
+
 iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     Token::Value Opcode,
     iele::IeleValue *LeftOperand,
@@ -1780,6 +1820,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   case Token::LessThanOrEqual:    BinOpcode = iele::IeleInstruction::CmpLe; break;
   case Token::GreaterThan:        BinOpcode = iele::IeleInstruction::CmpGt; break;
   case Token::LessThan:           BinOpcode = iele::IeleInstruction::CmpLt; break;
+  
   default:
     solAssert(false, "not implemented yet");
     solAssert(false, "IeleCompiler: Invalid binary operator");
