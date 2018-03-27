@@ -1030,6 +1030,17 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
         CompilingExpressionResult.end(), Returns.begin(), Returns.end());
     break;
   }
+  case FunctionType::Kind::Selfdestruct: {
+    // Visit argument (target of the Selfdestruct)
+    iele::IeleValue *TargetAddress =
+      compileExpression(*arguments.front().get());
+    solAssert(TargetAddress,
+              "IeleCompiler: Failed to compile Selfdestruct target.");
+
+    // Make IELE instruction
+    iele::IeleInstruction::CreateSelfdestruct(TargetAddress, CompilingBlock);
+    break;
+  }
   case FunctionType::Kind::External:
   case FunctionType::Kind::CallCode:
   case FunctionType::Kind::DelegateCall:
@@ -1047,7 +1058,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Log3:
   case FunctionType::Kind::Log4:
   case FunctionType::Kind::Event:
-  case FunctionType::Kind::Selfdestruct:
   case FunctionType::Kind::SHA3:
   case FunctionType::Kind::BlockHash:
   case FunctionType::Kind::ECRecover:

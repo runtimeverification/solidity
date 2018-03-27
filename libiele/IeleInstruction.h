@@ -162,6 +162,11 @@ public:
       IeleLocalVariable *Result, IeleValue *ConditionValue,
       IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateSelfdestruct(
+      IeleValue *Target, IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateSelfdestruct(
+      IeleValue *Target, IeleBlock *InsertAtEnd);
+
   static IeleInstruction *CreateUncondBr(
       IeleBlock *Target, IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateUncondBr(

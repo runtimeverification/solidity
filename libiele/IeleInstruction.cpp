@@ -141,6 +141,28 @@ IeleInstruction *IeleInstruction::CreateIsZero(
   return IsZeroInst;
 }
 
+// NB: this is not currently used, but it has been added here for
+// consistency. Remove...?
+IeleInstruction *IeleInstruction::CreateSelfdestruct(
+    IeleValue *Target, IeleInstruction *InsertBefore) {
+  solAssert(Target, "Selfdestruct: Invalid target");
+
+  IeleInstruction *SelfdestructInst = new IeleInstruction(Selfdestruct, InsertBefore);
+  SelfdestructInst->getIeleOperandList().push_back(Target);
+
+  return SelfdestructInst;
+}
+
+IeleInstruction *IeleInstruction::CreateSelfdestruct(
+    IeleValue *Target, IeleBlock *InsertAtEnd) {
+  solAssert(Target, "Selfdestruct: Invalid target");
+
+  IeleInstruction *SelfdestructInst = new IeleInstruction(Selfdestruct, InsertAtEnd);
+  SelfdestructInst->getIeleOperandList().push_back(Target);
+
+  return SelfdestructInst;
+}
+
 IeleInstruction *IeleInstruction::CreateUncondBr(
     IeleBlock *Target, IeleInstruction *InsertBefore) {
   solAssert(Target, "CreateUncondBr: Invalid operands");
