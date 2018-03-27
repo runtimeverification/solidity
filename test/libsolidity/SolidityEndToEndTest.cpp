@@ -766,7 +766,6 @@ BOOST_AUTO_TEST_CASE(multiple_return_values)
 	ABI_CHECK(callContractFunction("run(bool,uint256)", true, 0xcd), encodeArgs(0xcd, true, 0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_circuiting, 1)
 BOOST_AUTO_TEST_CASE(short_circuiting)
 {
 	char const* sourceCode = R"(
