@@ -129,11 +129,21 @@ public:
 		{
 			std::vector<bytes> contractResult = callContractFunction(_sig, argument);
 			std::vector<bytes> cppResult = callCppAndEncodeResult(_cppFunction, argument);
+			std::string message = "\nExpected: [ ";
+
+			for (bytes const& val : cppResult) {
+				message += toHex(val) + " ";
+			}
+			message += "]\nActual: [ ";
+			for (bytes const& val : contractResult) {
+				message += toHex(val) + " ";
+			}
 			BOOST_CHECK_MESSAGE(
 				contractResult == cppResult,
 				"Computed values do not match.\nContract: " +
 					std::string("\nArgument: ") +
-					toHex(encode(argument))
+					toHex(encode(argument)) +
+					message + "]\n"
 			);
 		}
 	}
@@ -225,7 +235,7 @@ public:
 		} else if (_val == 0) {
 			return bytes(1, 0);
 		}
-		return toBigEndian(_val / 256, true) + bytes(1, _val % 256);
+		return toBigEndian(_val / 256, _val % 256 < 128) + bytes(1, _val % 256);
 	}
 
 	static bytes toBigEndian(u256 _val, bool _partial = false)
@@ -235,7 +245,7 @@ public:
 		} else if (_val == 0) {
 			return bytes(1, 0);
 		}
-		return toBigEndian(_val / 256, true) + bytes(1, (unsigned char)_val % 256);
+		return toBigEndian(_val / 256, _val % 256 < 128) + bytes(1, (unsigned char)_val % 256);
 	}
 
 private:
