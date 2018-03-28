@@ -1515,7 +1515,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
       const ContractType *type = dynamic_cast<const ContractType *>(magicVar->type().get());
       if (type->isSuper()) {
         //should only be reached if super is not part of a member access expression
-        // in this case we evaluate to the current object since that is the same as "thia" object
+        // in this case we evaluate to the current object since that is the same as "this" object
         llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
         iele::IeleLocalVariable *This =
           iele::IeleLocalVariable::Create(&Context, "super", CompilingFunction);
