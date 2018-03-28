@@ -101,6 +101,25 @@ const ContractDefinition *IeleCompiler::contractFor(const Declaration *d) const 
   return nullptr; //not reached
 }
 
+const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &function, const ContractDefinition &contract) {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+
+  auto it = find(CompilingContractInheritanceHierarchy.begin(), CompilingContractInheritanceHierarchy.end(), &contract);
+  solAssert(it != CompilingContractInheritanceHierarchy.end(), "Base not found in inheritance hierarchy.");
+  it++;
+
+  for (; it != CompilingContractInheritanceHierarchy.end(); it++) {
+    const ContractDefinition *contract = *it;
+    for (const FunctionDefinition *decl : contract->definedFunctions()) {
+      if (function.name() == decl->name() && !decl->isConstructor() && FunctionType(*decl).hasEqualArgumentTypes(FunctionType(function))) {
+        return decl;
+      }
+    }
+  }
+  solAssert(false, "Function definition not found.");
+  return nullptr; // not reached
+}
+
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
     const std::map<const ContractDefinition *, const iele::IeleContract *> &contracts) {
@@ -1222,6 +1241,22 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     return false;
   }
 
+  if (auto type = dynamic_cast<const ContractType *>(memberAccess.expression().annotation().type.get())) {
+    if (type->isSuper()) {
+      const FunctionDefinition *super = superFunction(dynamic_cast<const FunctionDefinition &>(*memberAccess.annotation().referencedDeclaration), type->contractDefinition());
+      std::string superName = getIeleNameForFunction(*super);
+      iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
+      solAssert(ST,
+                "IeleCompiler: failed to access compiling contract's symbol table.");
+      iele::IeleValue *Result = ST->lookup(superName);
+      solAssert(Result,
+                "IeleCompiler: failed to find function in compiling contract's"
+                " symbol table");
+      CompilingExpressionResult.push_back(Result);
+      return false;
+    }
+  }
+
   const Type &baseType = *memberAccess.expression().annotation().type;
 
   // Visit accessed exression (skip in case of magic base expression).
@@ -1388,7 +1423,6 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     break;
   }
   case Type::Category::Array:
-  case Type::Category::Contract:
   case Type::Category::Enum:
   case Type::Category::FixedBytes:
     solAssert(false, "not implemented yet");
@@ -1477,10 +1511,21 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
   if (const MagicVariableDeclaration *magicVar =
          dynamic_cast<const MagicVariableDeclaration *>(declaration)) {
     switch (magicVar->type()->category()) {
-    case Type::Category::Contract:
+    case Type::Category::Contract: {
+      const ContractType *type = dynamic_cast<const ContractType *>(magicVar->type().get());
+      if (type->isSuper()) {
+        //should only be reached if super is not part of a member access expression
+        // in this case we evaluate to the current object since that is the same as "thia" object
+        llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+        iele::IeleLocalVariable *This =
+          iele::IeleLocalVariable::Create(&Context, "super", CompilingFunction);
+        iele::IeleInstruction::CreateIntrinsicCall(iele::IeleInstruction::Address, This, EmptyArguments, CompilingBlock);
+        return;
+      }
       // Reserved identifiers: "this" or "super"
       solAssert(false, "not implemented yet");
       return;
+    }
     case Type::Category::Integer: {
       // Reserved identifier: now.
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;

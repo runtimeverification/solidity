@@ -58,6 +58,7 @@ public:
   bool isMostDerived(const FunctionDefinition *d) const;
   bool isMostDerived(const VariableDeclaration *d) const;
   const ContractDefinition *contractFor(const Declaration *d) const;
+  const FunctionDefinition *superFunction(const FunctionDefinition &function, const ContractDefinition &contract);
 
   // Visitor interface.
   virtual bool visit(const FunctionDefinition &function) override;
