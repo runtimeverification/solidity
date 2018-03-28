@@ -12,7 +12,7 @@
 using namespace dev;
 using namespace dev::solidity;
 
-static std::string getIeleNameForFunction(
+std::string IeleCompiler::getIeleNameForFunction(
     const FunctionDefinition &function) {
   std::string IeleFunctionName;
   if (function.isConstructor())
@@ -25,71 +25,165 @@ static std::string getIeleNameForFunction(
     // TODO: overloading on internal functions.
     IeleFunctionName = function.name();
 
-  return IeleFunctionName;
+  if (isMostDerived(&function)) {
+    return IeleFunctionName;
+  } else {
+    return contractFor(&function)->name() + "." + IeleFunctionName;
+  }
+}
+
+std::string IeleCompiler::getIeleNameForStateVariable(
+    const VariableDeclaration *stateVariable) {
+  std::string IeleVariableName;
+  if (isMostDerived(stateVariable)) {
+    return stateVariable->name();
+  } else {
+    return contractFor(stateVariable)->name() + "." + stateVariable->name();
+  }
 }
 
 // lookup a ModifierDefinition by name (borrowed from CompilerContext.cpp)
 const ModifierDefinition &IeleCompiler::functionModifier(
     const std::string &_name) const {
-  //solAssert(!m_inheritanceHierarchy.empty(), "No inheritance hierarchy set.");
-  //for (ContractDefinition const* contract: m_inheritanceHierarchy)
-  solAssert(CompilingContractASTNode, "CurrentContract not set.");
-  for (ModifierDefinition const* modifier: CompilingContractASTNode->functionModifiers())
-    if (modifier->name() == _name)
-      return *modifier;
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "CurrentContract not set.");
+  for (const ContractDefinition *CurrentContract : CompilingContractInheritanceHierarchy) {
+    for (ModifierDefinition const* modifier: CurrentContract->functionModifiers())
+      if (modifier->name() == _name)
+        return *modifier;
+  }
   solAssert(false, "IeleCompiler: Function modifier not found.");
+}
+
+bool IeleCompiler::isMostDerived(const FunctionDefinition *d) const {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+  for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
+    if (d->isConstructor()) {
+      return d == contract->constructor();
+    }
+    for (const FunctionDefinition *decl : contract->definedFunctions()) {
+      if (d->name() == decl->name() && !decl->isConstructor() && FunctionType(*decl).hasEqualArgumentTypes(FunctionType(*d))) {
+        return d == decl;
+      }
+    }
+  }
+  solAssert(false, "Function definition not found.");
+  return false; // not reached
+}
+
+bool IeleCompiler::isMostDerived(const VariableDeclaration *d) const {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+  for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
+    for (const VariableDeclaration *decl : contract->stateVariables()) {
+      if (d->name() == decl->name()) {
+        return d == decl;
+      }
+    }
+  }
+  solAssert(false, "Function definition not found.");
+  return false; // not reached
+}
+
+const ContractDefinition *IeleCompiler::contractFor(const Declaration *d) const {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+  for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
+    for (const VariableDeclaration *decl : contract->stateVariables()) {
+      if (d == decl) {
+        return contract;
+      }
+    }
+    for (const FunctionDefinition *decl : contract->definedFunctions()) {
+      if (d == decl) {
+        return contract;
+      }
+    }
+  }
+  solAssert(false, "Declaration not found.");
+  return nullptr; //not reached
 }
 
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
     const std::map<const ContractDefinition *, const iele::IeleContract *> &contracts) {
-  
-  // Store the current contract
-  CompilingContractASTNode = &contract;
-  
+
   // Create IeleContract.
   CompilingContract = iele::IeleContract::Create(&Context, contract.name());
-  CompilingContractASTNode = &contract;
 
   // Visit state variables.
   llvm::APInt NextStorageAddress(64, 1); // here we should use a true unbound
                                          // integer datatype but using llvm's
                                          // APINt for now.
-  for (const VariableDeclaration *stateVariable : contract.stateVariables()) {
-    iele::IeleGlobalVariable *GV =
-      iele::IeleGlobalVariable::Create(&Context, stateVariable->name(),
-                                       CompilingContract);
-    solAssert(NextStorageAddress != 0,
-           "IeleCompiler: Overflow: more state variables than currently "
-           "supported");
-    GV->setStorageAddress(iele::IeleIntConstant::Create(&Context,
-                                                        NextStorageAddress++));
-  }
+  std::vector<ContractDefinition const*> bases = contract.annotation().linearizedBaseContracts;
+  // Store the current contract
+  CompilingContractInheritanceHierarchy = bases;
+  bool most_derived = true;
 
+  for (const ContractDefinition *base : bases) {
+    CompilingContractASTNode = base;
+    for (const VariableDeclaration *stateVariable : base->stateVariables()) {
+      std::string VariableName = getIeleNameForStateVariable(stateVariable);
+      iele::IeleGlobalVariable *GV =
+        iele::IeleGlobalVariable::Create(&Context, VariableName,
+                                         CompilingContract);
+      solAssert(NextStorageAddress != 0,
+             "IeleCompiler: Overflow: more state variables than currently "
+             "supported");
+      GV->setStorageAddress(iele::IeleIntConstant::Create(&Context,
+                                                          NextStorageAddress++));
+    }
+  
+    if (base->constructor()) {
+      if (most_derived) {
+        // Then add the constructor to the symbol table.
+        iele::IeleFunction::CreateInit(&Context, CompilingContract);
+      } else {
+        solAssert(base->constructor()->parameters().empty(), "not implemented yet: base constructor parameters.");
+        iele::IeleFunction::Create(&Context, false, base->name() + ".init", CompilingContract);
+      }
+    }
+    // Add the rest of the functions.
+    for (const FunctionDefinition *function : base->definedFunctions()) {
+      if (function->isConstructor() || function->isFallback() || !function->isImplemented())
+        continue;
+      std::string FunctionName = getIeleNameForFunction(*function);
+      iele::IeleFunction::Create(&Context, function->isPublic(),
+                                 FunctionName, CompilingContract);
+    }
+    most_derived = false;
+  }
   // Add all functions to the contract's symbol table.
   if (const FunctionDefinition *fallback = contract.fallbackFunction()) {
     // First add the fallback to the symbol table, since it is not added by the
     // previous loop.
     iele::IeleFunction::CreateDeposit(&Context,
-                                      fallback->isPartOfExternalInterface(),
+                                      fallback->isPublic(),
                                       CompilingContract);
   }
-  if (contract.constructor()) {
-    // Then add the constructor to the symbol table.
-    iele::IeleFunction::CreateInit(&Context, CompilingContract);
-  }
-  // Add the rest of the functions.
-  for (const FunctionDefinition *function : contract.definedFunctions()) {
-    if (function->isConstructor() || function->isFallback())
-      continue;
-    std::string FunctionName = getIeleNameForFunction(*function);
-    iele::IeleFunction::Create(&Context, function->isPartOfExternalInterface(),
-                               FunctionName, CompilingContract);
-  }
+
+  CompilingContractASTNode = &contract;
 
   // Visit fallback.
   if (const FunctionDefinition *fallback = contract.fallbackFunction())
     fallback->accept(*this);
+
+  for (auto it = bases.rbegin(); it != bases.rend(); it++) {
+    const ContractDefinition *base = *it;
+    CompilingContractASTNode = base;
+    if (base == &contract) {
+      continue;
+    }
+    if (const FunctionDefinition *constructor = base->constructor()) {
+      constructor->accept(*this);
+    } else {
+      CompilingFunction =
+        iele::IeleFunction::Create(&Context, false, base->name() + ".init", CompilingContract);
+      CompilingBlock =
+        iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
+      appendStateVariableInitialization(base);
+      iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+      CompilingBlock = nullptr;
+      CompilingFunction = nullptr;
+    }
+  }
 
   // Visit constructor. If it doesn't exist create an empty @init function as
   // constructor.
@@ -100,17 +194,20 @@ void IeleCompiler::compileContract(
       iele::IeleFunction::CreateInit(&Context, CompilingContract);
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
-    appendStateVariableInitialization();
+    appendStateVariableInitialization(&contract);
     iele::IeleInstruction::CreateRetVoid(CompilingBlock);
     CompilingBlock = nullptr;
     CompilingFunction = nullptr;
   }
 
   // Visit functions.
-  for (const FunctionDefinition *function : contract.definedFunctions()) {
-    if (function->isConstructor() || function->isFallback())
-      continue;
-    function->accept(*this);
+  for (const ContractDefinition *base : bases) {
+    CompilingContractASTNode = base;
+    for (const FunctionDefinition *function : base->definedFunctions()) {
+      if (function->isConstructor() || function->isFallback() || !function->isImplemented())
+        continue;
+      function->accept(*this);
+    }
   }
 
   // Store compilation result.
@@ -175,7 +272,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   // If the function is a constructor, visit state variables and add
   // initialization code.
   if (function.isConstructor())
-    appendStateVariableInitialization();
+    appendStateVariableInitialization(CompilingContractASTNode);
 
   // Visit function body (inc modifiers). 
   CompilingFunctionASTNode = &function;
@@ -1571,9 +1668,29 @@ void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {
     connectWithUnconditionalJump(CompilingBlock, AssertFailBlock);
 }
 
-void IeleCompiler::appendStateVariableInitialization() {
+void IeleCompiler::appendStateVariableInitialization(const ContractDefinition *contract) {
+  bool found = false;
+  for (const ContractDefinition *def : CompilingContractInheritanceHierarchy) {
+    if (found) {
+      llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
+      llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+      iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
+      solAssert(ST,
+                "IeleCompiler: failed to access compiling function's symbol "
+                "table.");
+      iele::IeleValue *ConstructorValue = ST->lookup(def->name() + ".init");
+      solAssert(ConstructorValue, "IeleCompiler: failed to find constructor for contract " + def->name());
+      iele::IeleGlobalValue *CalleeValue =
+        llvm::dyn_cast<iele::IeleGlobalValue>(ConstructorValue);
+      iele::IeleInstruction::CreateInternalCall(Returns, CalleeValue, Arguments, CompilingBlock);
+      break;
+    }
+    if (def == contract) {
+      found = true;
+    }
+  }
   for (const VariableDeclaration *stateVariable :
-         CompilingContractASTNode->stateVariables()) {
+         contract->stateVariables()) {
     // Visit initialization value if it exists.
     iele::IeleValue *InitValue = nullptr;
     TypePointer type = stateVariable->annotation().type;
@@ -1607,7 +1724,7 @@ void IeleCompiler::appendStateVariableInitialization() {
     solAssert(ST,
               "IeleCompiler: failed to access compiling contract's symbol "
               "table.");
-    iele::IeleValue *LHSValue = ST->lookup(stateVariable->name());
+    iele::IeleValue *LHSValue = ST->lookup(getIeleNameForStateVariable(stateVariable));
     solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of state variable"
                         " initialization");
 

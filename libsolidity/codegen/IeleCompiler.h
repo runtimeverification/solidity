@@ -55,6 +55,9 @@ public:
     return {bytecode, std::map<size_t, std::string>()};
   }
 
+  bool isMostDerived(const FunctionDefinition *d) const;
+  bool isMostDerived(const VariableDeclaration *d) const;
+  const ContractDefinition *contractFor(const Declaration *d) const;
 
   // Visitor interface.
   virtual bool visit(const FunctionDefinition &function) override;
@@ -101,13 +104,12 @@ private:
   enum LValueKind { Reg, Memory, Storage };
   LValueKind CompilingLValueKind;
 
-  // This diverges from the evm compiler: they use
-  // CompilerContext::m_inheritanceHierarchy 
-  // to loop through all contracts in the chain. We don't have inheritance for
-  // now, so let's keep it simple and use this as ashortcut. May need updating
-  // later when we support OO features.  
+  std::vector<const ContractDefinition *> CompilingContractInheritanceHierarchy;
   const ContractDefinition *CompilingContractASTNode;
   const FunctionDefinition *CompilingFunctionASTNode;
+
+  std::string getIeleNameForFunction(const FunctionDefinition &function);
+  std::string getIeleNameForStateVariable(const VariableDeclaration *stateVariable);
 
   // Infrastructure for handling modifiers (borrowed from ContractCompiler.cpp)
   // Lookup function modifier by name
@@ -141,7 +143,7 @@ private:
   // that is for each function modifier. 
   std::map<unsigned, std::map <std::string, std::string>> VarNameMap;
 
-  void appendStateVariableInitialization();
+  void appendStateVariableInitialization(const ContractDefinition *contract);
 
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
       iele::IeleValue *NumElems);
