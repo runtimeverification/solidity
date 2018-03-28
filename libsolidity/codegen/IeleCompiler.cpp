@@ -98,7 +98,7 @@ void IeleCompiler::compileContract(
       if (function->isConstructor() || function->isFallback() || !function->isImplemented())
         continue;
       std::string FunctionName = getIeleNameForFunction(*function);
-      iele::IeleFunction::Create(&Context, function->isPartOfExternalInterface(),
+      iele::IeleFunction::Create(&Context, function->isPublic(),
                                  FunctionName, CompilingContract);
     }
     most_derived = false;
@@ -108,7 +108,7 @@ void IeleCompiler::compileContract(
     // First add the fallback to the symbol table, since it is not added by the
     // previous loop.
     iele::IeleFunction::CreateDeposit(&Context,
-                                      fallback->isPartOfExternalInterface(),
+                                      fallback->isPublic(),
                                       CompilingContract);
   }
 
