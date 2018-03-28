@@ -246,6 +246,14 @@ public:
   static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateNot(
+      IeleLocalVariable *Result, IeleValue *OperandValue,
+      IeleInstruction *InsertBefore = nullptr);
+
+  static IeleInstruction *CreateNot(
+      IeleLocalVariable *Result, IeleValue *OperandValue,
+      IeleBlock *InsertAtEnd);
+
   static IeleInstruction *CreateBinOp(
       IeleOps BinOpcode, IeleLocalVariable *Result, IeleValue *LeftOperandValue,
       IeleValue *RightOperandValue, IeleInstruction *InsertBefore = nullptr);

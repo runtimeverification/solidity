@@ -887,7 +887,19 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     CompilingExpressionResult.push_back(Result);
     break;
   }
-  case Token::BitNot: // ~
+  case Token::BitNot: { // ~
+    // Visit subexpression.
+    iele::IeleValue *SubExprValue =
+      compileExpression(unaryOperation.subExpression());
+    solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
+
+    // Compile as a bitwise negation.
+    iele::IeleLocalVariable *Result =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateNot(Result, SubExprValue, CompilingBlock);
+    CompilingExpressionResult.push_back(Result);
+    break;
+  }
   case Token::Delete: // delete
     solAssert(false, "not implemented yet");
     break;
@@ -1947,6 +1959,9 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   case Token::LessThanOrEqual:    BinOpcode = iele::IeleInstruction::CmpLe; break;
   case Token::GreaterThan:        BinOpcode = iele::IeleInstruction::CmpGt; break;
   case Token::LessThan:           BinOpcode = iele::IeleInstruction::CmpLt; break;
+  case Token::BitAnd:             BinOpcode = iele::IeleInstruction::And; break;
+  case Token::BitOr:              BinOpcode = iele::IeleInstruction::Or; break;
+  case Token::BitXor:             BinOpcode = iele::IeleInstruction::Xor; break;
   
   default:
     solAssert(false, "not implemented yet");
