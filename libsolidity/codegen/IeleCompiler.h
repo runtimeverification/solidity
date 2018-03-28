@@ -55,53 +55,9 @@ public:
     return {bytecode, std::map<size_t, std::string>()};
   }
 
-  bool isMostDerived(const FunctionDefinition *d) const {
-    solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
-    for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
-      if (d->isConstructor()) {
-        return d == contract->constructor();
-      }
-      for (const FunctionDefinition *decl : contract->definedFunctions()) {
-        if (d->name() == decl->name() && !decl->isConstructor() && FunctionType(*decl).hasEqualArgumentTypes(FunctionType(*d))) {
-          return d == decl;
-        }
-      }
-    }
-    solAssert(false, "Function definition not found.");
-    return false; // not reached
-  }
-
-  bool isMostDerived(const VariableDeclaration *d) const {
-    solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
-    for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
-      for (const VariableDeclaration *decl : contract->stateVariables()) {
-        if (d->name() == decl->name()) {
-          return d == decl;
-        }
-      }
-    }
-    solAssert(false, "Function definition not found.");
-    return false; // not reached
-  }
-
-  const ContractDefinition *contractFor(const Declaration *d) const {
-    solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
-    for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
-      for (const VariableDeclaration *decl : contract->stateVariables()) {
-        if (d == decl) {
-          return contract;
-        }
-      }
-      for (const FunctionDefinition *decl : contract->definedFunctions()) {
-        if (d == decl) {
-          return contract;
-        }
-      }
-    }
-    solAssert(false, "Declaration not found.");
-    return nullptr; //not reached
-  }
-
+  bool isMostDerived(const FunctionDefinition *d) const;
+  bool isMostDerived(const VariableDeclaration *d) const;
+  const ContractDefinition *contractFor(const Declaration *d) const;
 
   // Visitor interface.
   virtual bool visit(const FunctionDefinition &function) override;

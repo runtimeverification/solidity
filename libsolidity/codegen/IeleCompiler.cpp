@@ -54,6 +54,53 @@ const ModifierDefinition &IeleCompiler::functionModifier(
   solAssert(false, "IeleCompiler: Function modifier not found.");
 }
 
+bool IeleCompiler::isMostDerived(const FunctionDefinition *d) const {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+  for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
+    if (d->isConstructor()) {
+      return d == contract->constructor();
+    }
+    for (const FunctionDefinition *decl : contract->definedFunctions()) {
+      if (d->name() == decl->name() && !decl->isConstructor() && FunctionType(*decl).hasEqualArgumentTypes(FunctionType(*d))) {
+        return d == decl;
+      }
+    }
+  }
+  solAssert(false, "Function definition not found.");
+  return false; // not reached
+}
+
+bool IeleCompiler::isMostDerived(const VariableDeclaration *d) const {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+  for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
+    for (const VariableDeclaration *decl : contract->stateVariables()) {
+      if (d->name() == decl->name()) {
+        return d == decl;
+      }
+    }
+  }
+  solAssert(false, "Function definition not found.");
+  return false; // not reached
+}
+
+const ContractDefinition *IeleCompiler::contractFor(const Declaration *d) const {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+  for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
+    for (const VariableDeclaration *decl : contract->stateVariables()) {
+      if (d == decl) {
+        return contract;
+      }
+    }
+    for (const FunctionDefinition *decl : contract->definedFunctions()) {
+      if (d == decl) {
+        return contract;
+      }
+    }
+  }
+  solAssert(false, "Declaration not found.");
+  return nullptr; //not reached
+}
+
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
     const std::map<const ContractDefinition *, const iele::IeleContract *> &contracts) {
