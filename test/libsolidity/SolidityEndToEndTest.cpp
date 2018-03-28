@@ -2988,7 +2988,6 @@ BOOST_AUTO_TEST_CASE(crazy_elementary_typenames_on_stack)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(-7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(super, 1)
 BOOST_AUTO_TEST_CASE(super)
 {
 	char const* sourceCode = R"(
@@ -3001,7 +3000,6 @@ BOOST_AUTO_TEST_CASE(super)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(1 | 2 | 4 | 8));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(super_in_constructor, 1)
 BOOST_AUTO_TEST_CASE(super_in_constructor)
 {
 	char const* sourceCode = R"(
@@ -3014,7 +3012,6 @@ BOOST_AUTO_TEST_CASE(super_in_constructor)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(1 | 2 | 4 | 8));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(super_alone, 1)
 BOOST_AUTO_TEST_CASE(super_alone)
 {
 	char const* sourceCode = R"(
@@ -5528,7 +5525,6 @@ BOOST_AUTO_TEST_CASE(derived_overload_base_function_indirect)
 	ABI_CHECK(callContractFunction("h()"), encodeArgs(2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(super_overload, 1)
 BOOST_AUTO_TEST_CASE(super_overload)
 {
 	char const* sourceCode = R"(
