@@ -169,6 +169,16 @@ private:
       Token::Value Opcode, iele::IeleValue *LeftOperand,
       iele::IeleValue *RightOperand);
 
+  iele::IeleLocalVariable *appendBooleanOperator(
+      Token::Value Opcode,
+      const Expression &LeftOperand,
+      const Expression &RightOperand);
+
+  iele::IeleLocalVariable *appendConditional(
+      iele::IeleValue *ConditionValue,
+      const std::function<iele::IeleValue *(void)> &TrueValue,
+      const std::function<iele::IeleValue *(void)> &FalseValue);
+
   bool shouldCopyStorageToStorage(iele::IeleValue *To, TypePointer From) const;
   bool shouldCopyMemoryToStorage(TypePointer To, TypePointer From) const;
   bool shouldCopyStorageToMemory(TypePointer To, TypePointer From) const;
