@@ -10485,7 +10485,6 @@ BOOST_AUTO_TEST_CASE(invalid_instruction)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(assert_require, 1)
 BOOST_AUTO_TEST_CASE(assert_require)
 {
 	char const* sourceCode = R"(
