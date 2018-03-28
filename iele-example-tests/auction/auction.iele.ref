@@ -10,6 +10,30 @@ contract SimpleAuction {
 
 @ended = 5
 
+define public @"beneficiary()"() {
+entry:
+  %beneficiary.val = sload @beneficiary
+  ret %beneficiary.val
+}
+
+define public @"auctionEnd()"() {
+entry:
+  %auctionEnd.val = sload @auctionEnd
+  ret %auctionEnd.val
+}
+
+define public @"highestBidder()"() {
+entry:
+  %highestBidder.val = sload @highestBidder
+  ret %highestBidder.val
+}
+
+define public @"highestBid()"() {
+entry:
+  %highestBid.val = sload @highestBid
+  ret %highestBid.val
+}
+
 define @init(%_beneficiary_0, %_biddingTime_1) {
 entry:
   sstore %_beneficiary_0, @beneficiary
