@@ -2924,7 +2924,6 @@ BOOST_AUTO_TEST_CASE(function_modifier_calling_functions_in_creation_context)
 	ABI_CHECK(callContractFunction("getData()"), encodeArgs(0x4300));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_modifier_for_constructor, 1)
 BOOST_AUTO_TEST_CASE(function_modifier_for_constructor)
 {
 	char const* sourceCode = R"(
