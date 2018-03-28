@@ -1659,7 +1659,6 @@ void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {
   // Create the assert-fail block if it's not already created.
   if (!AssertFailBlock) {
     AssertFailBlock = iele::IeleBlock::Create(&Context, "invalid");
-    solAssert(false, "not implemented yet");
   }
 
   if (Condition)
