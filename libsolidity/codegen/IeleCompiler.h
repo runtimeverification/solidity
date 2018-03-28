@@ -146,6 +146,8 @@ private:
 
   void appendStateVariableInitialization(const ContractDefinition *contract);
 
+  void appendAccessorFunction(const VariableDeclaration *stateVariable);
+
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
       iele::IeleValue *NumElems);
   iele::IeleLocalVariable *appendIeleRuntimeAllocateStorage(
