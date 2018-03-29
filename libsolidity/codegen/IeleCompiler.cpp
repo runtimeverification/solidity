@@ -268,6 +268,8 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
   CompilingBlock =
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
 
+  appendPayableCheck();
+
   iele::IeleGlobalVariable *GV = llvm::dyn_cast<iele::IeleGlobalVariable>(ST->lookup(name));
   iele::IeleLocalVariable *LoadedValue =
     iele::IeleLocalVariable::Create(&Context, name + ".val",
@@ -278,6 +280,11 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
   Returns.push_back(LoadedValue);
 
   iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
+
+  RevertBlock->insertInto(CompilingFunction);
+  RevertBlock = nullptr;
+  CompilingBlock = nullptr;
+  CompilingFunction = nullptr;
 }
 
 bool IeleCompiler::visit(const FunctionDefinition &function) {
@@ -326,6 +333,10 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   // Create the entry block.
   CompilingBlock =
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
+
+  if (!function.isPayable()) {
+    appendPayableCheck();
+  }
 
   // If the function is a constructor, visit state variables and add
   // initialization code.
@@ -1735,6 +1746,18 @@ void IeleCompiler::connectWithConditionalJump(
     iele::IeleBlock *DestinationBlock) {
   iele::IeleInstruction::CreateCondBr(Condition, DestinationBlock,
                                       SourceBlock);
+}
+
+void IeleCompiler::appendPayableCheck() {
+  llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+
+  iele::IeleLocalVariable *CallvalueValue =
+    iele::IeleLocalVariable::Create(&Context, "callvalue", CompilingFunction);
+  iele::IeleInstruction::CreateIntrinsicCall(
+    iele::IeleInstruction::Callvalue, CallvalueValue, EmptyArguments,
+    CompilingBlock);
+
+  appendRevert(CallvalueValue);
 }
 
 void IeleCompiler::appendRevert(iele::IeleValue *Condition) {
