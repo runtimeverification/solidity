@@ -133,6 +133,7 @@ private:
                                   iele::IeleBlock *SouceBlock, 
                                   iele::IeleBlock *DestinationBlock);
 
+  void appendPayableCheck(void);
   void appendRevert(iele::IeleValue *Condition = nullptr);
   void appendInvalid(iele::IeleValue *Condition = nullptr);
 
