@@ -9215,7 +9215,6 @@ BOOST_AUTO_TEST_CASE(payable_function_calls_library)
 	ABI_CHECK(callContractFunctionWithValue("f()", 27), encodeArgs(u256(7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(non_payable_throw, 7)
 BOOST_AUTO_TEST_CASE(non_payable_throw)
 {
 	char const* sourceCode = R"(
@@ -9232,16 +9231,15 @@ BOOST_AUTO_TEST_CASE(non_payable_throw)
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunctionWithValue("f()", 27), encodeArgs());
 	BOOST_CHECK_EQUAL(balanceAt(m_contractAddress), 0);
-	ABI_CHECK(callContractFunction(""), encodeArgs());
+	ABI_CHECK(callFallback(), encodeArgs());
 	ABI_CHECK(callContractFunction("a()"), encodeArgs(u256(1)));
-	ABI_CHECK(callContractFunctionWithValue("", 27), encodeArgs());
+	ABI_CHECK(callFallbackWithValue(27), encodeArgs());
 	BOOST_CHECK_EQUAL(balanceAt(m_contractAddress), 0);
 	ABI_CHECK(callContractFunction("a()"), encodeArgs(u256(1)));
 	ABI_CHECK(callContractFunctionWithValue("a()", 27), encodeArgs());
 	BOOST_CHECK_EQUAL(balanceAt(m_contractAddress), 0);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(no_nonpayable_circumvention_by_modifier, 2)
 BOOST_AUTO_TEST_CASE(no_nonpayable_circumvention_by_modifier)
 {
 	char const* sourceCode = R"(
