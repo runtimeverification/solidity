@@ -148,6 +148,11 @@ void IeleCompiler::compileContract(
              "supported");
       GV->setStorageAddress(iele::IeleIntConstant::Create(&Context,
                                                           NextStorageAddress++));
+
+      if (stateVariable->isPublic()) {
+        iele::IeleFunction::Create(&Context, true, getIeleNameForStateVariable(stateVariable) + "()",
+                                   CompilingContract);
+      }
     }
   
     if (base->constructor()) {
@@ -227,6 +232,12 @@ void IeleCompiler::compileContract(
         continue;
       function->accept(*this);
     }
+    for (const VariableDeclaration *stateVariable : base->stateVariables()) {
+      if (!stateVariable->isPublic()) {
+        continue;
+      }
+      appendAccessorFunction(stateVariable);
+    }
   }
 
   // Store compilation result.
@@ -239,6 +250,34 @@ int IeleCompiler::getNextUniqueIntToken() {
 
 std::string IeleCompiler::getNextVarSuffix() {
   return ("_" + std::to_string(getNextUniqueIntToken()));
+}
+
+void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariable) {
+  std::string name = getIeleNameForStateVariable(stateVariable);
+
+   // Lookup function in the contract's symbol table.
+  iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
+  solAssert(ST,
+            "IeleCompiler: failed to access compiling contract's symbol table.");
+  CompilingFunction = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(name + "()"));
+  solAssert(CompilingFunction,
+            "IeleCompiler: failed to find function in compiling contract's"
+            " symbol table");
+
+  // Create the entry block.
+  CompilingBlock =
+    iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
+
+  iele::IeleGlobalVariable *GV = llvm::dyn_cast<iele::IeleGlobalVariable>(ST->lookup(name));
+  iele::IeleLocalVariable *LoadedValue =
+    iele::IeleLocalVariable::Create(&Context, name + ".val",
+                                    CompilingFunction);
+  iele::IeleInstruction::CreateSLoad(LoadedValue, GV, CompilingBlock);
+
+  llvm::SmallVector<iele::IeleValue *, 1> Returns;
+  Returns.push_back(LoadedValue);
+
+  iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
 }
 
 bool IeleCompiler::visit(const FunctionDefinition &function) {
