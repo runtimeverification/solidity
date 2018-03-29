@@ -12,35 +12,60 @@ contract SimpleAuction {
 
 define public @"beneficiary()"() {
 entry:
+  %callvalue = call @iele.callvalue()
+  br %callvalue, throw
   %beneficiary.val = sload @beneficiary
   ret %beneficiary.val
+
+throw:
+  revert -1
 }
 
 define public @"auctionEnd()"() {
 entry:
+  %callvalue = call @iele.callvalue()
+  br %callvalue, throw
   %auctionEnd.val = sload @auctionEnd
   ret %auctionEnd.val
+
+throw:
+  revert -1
 }
 
 define public @"highestBidder()"() {
 entry:
+  %callvalue = call @iele.callvalue()
+  br %callvalue, throw
   %highestBidder.val = sload @highestBidder
   ret %highestBidder.val
+
+throw:
+  revert -1
 }
 
 define public @"highestBid()"() {
 entry:
+  %callvalue = call @iele.callvalue()
+  br %callvalue, throw
   %highestBid.val = sload @highestBid
   ret %highestBid.val
+
+throw:
+  revert -1
 }
 
 define @init(%_beneficiary_0, %_biddingTime_1) {
 entry:
+  %callvalue = call @iele.callvalue()
+  br %callvalue, throw
   sstore %_beneficiary_0, @beneficiary
   %timestamp = call @iele.timestamp()
   %tmp = add %timestamp, %_biddingTime_1
   sstore %tmp, @auctionEnd
   ret void
+
+throw:
+  revert -1
 }
 
 define public @"bid()"() {
@@ -78,6 +103,8 @@ throw:
 
 define public @"settleAuction()"() {
 entry:
+  %callvalue = call @iele.callvalue()
+  br %callvalue, throw
   %timestamp = call @iele.timestamp()
   %auctionEnd.val = sload @auctionEnd
   %tmp = cmp ge %timestamp, %auctionEnd.val
