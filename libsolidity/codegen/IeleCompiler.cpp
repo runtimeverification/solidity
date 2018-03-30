@@ -128,9 +128,7 @@ void IeleCompiler::compileContract(
   CompilingContract = iele::IeleContract::Create(&Context, contract.name());
 
   // Visit state variables.
-  llvm::APInt NextStorageAddress(64, 1); // here we should use a true unbound
-                                         // integer datatype but using llvm's
-                                         // APINt for now.
+  bigint NextStorageAddress(1);
   std::vector<ContractDefinition const*> bases = contract.annotation().linearizedBaseContracts;
   // Store the current contract
   CompilingContractInheritanceHierarchy = bases;
@@ -143,9 +141,6 @@ void IeleCompiler::compileContract(
       iele::IeleGlobalVariable *GV =
         iele::IeleGlobalVariable::Create(&Context, VariableName,
                                          CompilingContract);
-      solAssert(NextStorageAddress != 0,
-             "IeleCompiler: Overflow: more state variables than currently "
-             "supported");
       GV->setStorageAddress(iele::IeleIntConstant::Create(&Context,
                                                           NextStorageAddress++));
 
@@ -1042,7 +1037,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleValue *StructValue =
       appendIeleRuntimeAllocateMemory(
         iele::IeleIntConstant::Create(&Context,
-                                      llvm::APInt(64, arguments.size())));
+                                      bigint(arguments.size())));
 
     // Visit arguments and initialize struct fields.
     for (unsigned i = 0; i < arguments.size(); ++i) {
@@ -1050,7 +1045,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleValue *AddressValue =
         appendIeleRuntimeMemoryAddress(
             StructValue,
-            iele::IeleIntConstant::Create(&Context, llvm::APInt(64, i)));
+            iele::IeleIntConstant::Create(&Context, bigint(i)));
       iele::IeleInstruction::CreateSStore(InitValue, AddressValue,
                                           CompilingBlock);
     }
@@ -1439,7 +1434,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     iele::IeleValue *OffsetValue =
       iele::IeleIntConstant::Create(
           &Context,
-          llvm::APInt(64, getStructMemberIndex(type, member)));
+          bigint(getStructMemberIndex(type, member)));
     switch (type.location()) {
     case DataLocation::Storage: {
       if (CompilingLValue) {
@@ -1653,7 +1648,7 @@ void IeleCompiler::endVisit(const Literal &literal) {
     iele::IeleIntConstant *LiteralValue =
       iele::IeleIntConstant::Create(
           &Context,
-          llvm::APInt(256, type->literalValue(&literal).str(), 10));
+          type->literalValue(&literal));
     CompilingExpressionResult.push_back(LiteralValue);
     break;
   }
@@ -1827,8 +1822,7 @@ void IeleCompiler::appendStateVariableInitialization(const ContractDefinition *c
         SizeValue =
           iele::IeleIntConstant::Create(
               &Context,
-              llvm::APInt(64,
-                          structType.structDefinition().members().size()));
+              bigint(structType.structDefinition().members().size()));
       }
       InitValue = appendIeleRuntimeAllocateStorage(SizeValue);
     }

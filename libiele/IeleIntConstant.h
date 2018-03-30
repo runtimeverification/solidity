@@ -1,20 +1,17 @@
 #pragma once
 
+#include <libdevcore/Common.h>
 #include "IeleConstant.h"
-
-#include "llvm/ADT/APInt.h"
 
 namespace dev {
 namespace iele {
 
 class IeleIntConstant : public IeleConstant {
 private:
-  // here we should use a true unbound integer datatype but using llvm's APInt
-  // for now.
-  llvm::APInt Val;
+  bigint Val;
 
 protected:
-  IeleIntConstant(IeleContext *Ctx, const llvm::APInt &V);
+  IeleIntConstant(IeleContext *Ctx, const bigint &V);
 
 public:
   IeleIntConstant(const IeleIntConstant&) = delete;
@@ -22,15 +19,15 @@ public:
 
   ~IeleIntConstant();
 
-  static IeleIntConstant *Create(IeleContext *Ctx, const llvm::APInt &V);
+  static IeleIntConstant *Create(IeleContext *Ctx, const bigint &V);
 
   static IeleIntConstant *getZero(IeleContext *Ctx);
   static IeleIntConstant *getOne(IeleContext *Ctx);
   static IeleIntConstant *getMinusOne(IeleContext *Ctx);
 
-  // Return the constant as an APInt value reference. This allows clients to
+  // Return the constant as a bigint value reference. This allows clients to
   // obtain a full-precision copy of the value.
-  inline const llvm::APInt &getValue() const {
+  inline const bigint &getValue() const {
     return Val;
   }
 
