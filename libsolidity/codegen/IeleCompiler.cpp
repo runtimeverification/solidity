@@ -1522,9 +1522,19 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     }
     break;
   }
+  case Type::Category::FixedBytes: {
+    const FixedBytesType &type = dynamic_cast<const FixedBytesType &>(baseType);
+    if (member != "length")
+      solAssert(false, "IeleCompiler: invalid member for bytesN value");
+    iele::IeleValue *LengthValue =
+      iele::IeleIntConstant::Create(
+        &Context,
+        bigint(type.numBytes()));
+    CompilingExpressionResult.push_back(LengthValue);
+    break;
+  }
   case Type::Category::Array:
   case Type::Category::Enum:
-  case Type::Category::FixedBytes:
     solAssert(false, "not implemented yet");
   default:
     solAssert(false, "IeleCompiler: Member access to unknown type.");
