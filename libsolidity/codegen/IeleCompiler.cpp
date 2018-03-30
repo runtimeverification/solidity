@@ -12,6 +12,9 @@
 using namespace dev;
 using namespace dev::solidity;
 
+const IntegerType &SInt = IntegerType(256, IntegerType::Modifier::Signed);
+const IntegerType &Address = IntegerType(160, IntegerType::Modifier::Address);
+
 std::string IeleCompiler::getIeleNameForFunction(
     const FunctionDefinition &function) {
   std::string IeleFunctionName;
@@ -738,14 +741,13 @@ bool IeleCompiler::visit(
         TypePointer LHSType = varDecl->annotation().type;
         TypePointer RHSType = RHSTypes[i];
         iele::IeleValue *RHSValue = RHSValues[i];
+        RHSValue = appendTypeConversion(RHSValue, *RHSType, *LHSType);
         solAssert(!shouldCopyStorageToStorage(LHSValue, RHSType),
                   "IeleCompiler: found copy storage to storage in a variable "
                   "declaration statement");
-        solAssert(!shouldCopyMemoryToStorage(LHSType, RHSType),
+        solAssert(!shouldCopyMemoryToStorage(*LHSType, *RHSType),
                   "IeleCompiler: found copy memory to storage in a variable "
                   "declaration statement");
-        if (shouldCopyStorageToMemory(LHSType, RHSType))
-          RHSValue = appendIeleRuntimeStorageToMemoryCopy(RHSValue);
 
         // Assign to RHS.
         iele::IeleInstruction::CreateAssign(
@@ -778,7 +780,15 @@ bool IeleCompiler::visit(const Conditional &condition) {
   solAssert(ConditionValue, "IeleCompiler: failed to compile conditional condition.");
 
   iele::IeleLocalVariable *ResultValue =
-    appendConditional(ConditionValue, [&condition, this]{return compileExpression(condition.trueExpression()); }, [&condition, this]{return compileExpression(condition.falseExpression()); });
+    appendConditional(ConditionValue, 
+      [&condition, this]{
+        iele::IeleValue *Result = compileExpression(condition.trueExpression());
+        return appendTypeConversion(Result, *condition.trueExpression().annotation().type, *condition.annotation().type);
+      },
+      [&condition, this]{
+        iele::IeleValue *Result = compileExpression(condition.falseExpression());
+        return appendTypeConversion(Result, *condition.falseExpression().annotation().type, *condition.annotation().type);
+      });
   CompilingExpressionResult.push_back(ResultValue);
   return false;
 }
@@ -834,29 +844,28 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   solAssert(LHS.annotation().type->category() != Type::Category::Tuple,
             "not implemented yet");
 
+  // Check if we need to do a memory or storage copy.
+  TypePointer LHSType = LHS.annotation().type;
+  TypePointer RHSType = RHS.annotation().type;
+
   // Visit RHS.
   iele::IeleValue *RHSValue = compileExpression(RHS);
   solAssert(RHSValue, "IeleCompiler: Failed to compile RHS of assignment");
+
+  RHSValue = appendTypeConversion(RHSValue, *RHSType, *LHSType);
 
   // Visit LHS.
   iele::IeleValue *LHSValue = compileLValue(LHS);
   solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of assignment");
 
-  // Check if we need to do a memory or storage copy.
-  TypePointer LHSType = LHS.annotation().type;
-  TypePointer RHSType = RHS.annotation().type;
   if (shouldCopyStorageToStorage(LHSValue, RHSType))
     RHSValue = appendIeleRuntimeStorageToStorageCopy(RHSValue);
-  else if (shouldCopyMemoryToStorage(LHSType, RHSType))
-    RHSValue = appendIeleRuntimeMemoryToStorageCopy(RHSValue);
-  else if (shouldCopyStorageToMemory(LHSType, RHSType))
-    RHSValue = appendIeleRuntimeStorageToMemoryCopy(RHSValue);
 
   // Check for compound assignment.
   if (op != Token::Assign) {
     Token::Value binOp = Token::AssignmentToBinaryOp(op);
     iele::IeleValue *LHSDeref = appendLValueDereference(LHSValue);
-    RHSValue = appendBinaryOperator(binOp, LHSDeref, RHSValue);
+    RHSValue = appendBinaryOperator(binOp, LHSDeref, RHSValue, assignment.annotation().type);
   }
 
   // Generate assignment code.
@@ -933,7 +942,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     // Generate code for the inc/dec operation.
     iele::IeleIntConstant *One = iele::IeleIntConstant::getOne(&Context);
     iele::IeleLocalVariable *After =
-      appendBinaryOperator(BinOperator, Before, One);
+      appendBinaryOperator(BinOperator, Before, One, unaryOperation.annotation().type);
     iele::IeleLocalVariable *Result = nullptr;
     if (!unaryOperation.isPrefixOperation()) {
       // Save the initial subexpression value in case of a postfix oparation.
@@ -992,10 +1001,29 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
     compileExpression(binaryOperation.rightExpression());
   solAssert(RightOperandValue, "IeleCompiler: Failed to compile right operand.");
 
+  const TypePointer &commonType = binaryOperation.annotation().commonType;
+  if (commonType->category() == Type::Category::RationalNumber) {
+    iele::IeleIntConstant *LiteralValue =
+      iele::IeleIntConstant::Create(
+        &Context,
+        commonType->literalValue(nullptr));
+    CompilingExpressionResult.push_back(LiteralValue);
+    return false;
+  }
+
+  LeftOperandValue = appendTypeConversion(LeftOperandValue,
+    *binaryOperation.leftExpression().annotation().type,
+    *commonType);
+  if (Token::isShiftOp(binaryOperation.getOperator())) {
+    RightOperandValue = appendTypeConversion(RightOperandValue,
+      *binaryOperation.rightExpression().annotation().type,
+      *commonType);
+  }
   // Append the IELE code for the binary operator.
   iele::IeleValue *Result =
     appendBinaryOperator(binaryOperation.getOperator(),
-                         LeftOperandValue, RightOperandValue);
+                         LeftOperandValue, RightOperandValue,
+                         binaryOperation.annotation().type);
 
   CompilingExpressionResult.push_back(Result);
   return false;
@@ -1004,7 +1032,16 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
 bool IeleCompiler::visit(const FunctionCall &functionCall) {
   // Not supported yet cases.
   if (functionCall.annotation().kind == FunctionCallKind::TypeConversion) {
-    solAssert(false, "not implemented yet");
+    solAssert(functionCall.arguments().size() == 1, "");
+    solAssert(functionCall.names().empty(), "");
+    iele::IeleValue *ArgumentValue =
+      compileExpression(*functionCall.arguments().front().get());
+    solAssert(ArgumentValue,
+           "IeleCompiler: Failed to compile conversion target.");
+    iele::IeleValue *ResultValue = appendTypeConversion(ArgumentValue,
+      *functionCall.arguments().front()->annotation().type,
+      *functionCall.annotation().type);
+    CompilingExpressionResult.push_back(ResultValue);
     return false;
   }
 
@@ -1042,6 +1079,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     // Visit arguments and initialize struct fields.
     for (unsigned i = 0; i < arguments.size(); ++i) {
       iele::IeleValue *InitValue = compileExpression(*arguments[i]);
+      InitValue = appendTypeConversion(InitValue, *arguments[i]->annotation().type, *functionType->parameterTypes()[i]);
       iele::IeleValue *AddressValue =
         appendIeleRuntimeMemoryAddress(
             StructValue,
@@ -1074,6 +1112,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     // Get transfer value.
     iele::IeleValue *TransferValue =
       compileExpression(*arguments.front().get());
+    TransferValue = appendTypeConversion(TransferValue,
+      *arguments.front()->annotation().type,
+      *function.parameterTypes().front());
     solAssert(TransferValue,
            "IeleCompiler: Failed to compile transfer value.");
 
@@ -1114,6 +1155,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     // Visit condition.
     iele::IeleValue *ConditionValue =
       compileExpression(*arguments.front().get());
+    ConditionValue = appendTypeConversion(ConditionValue,
+      *arguments.front()->annotation().type,
+      *function.parameterTypes().front());
     solAssert(ConditionValue,
            "IeleCompiler: Failed to compile require/assert condition.");
 
@@ -1130,12 +1174,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   }
   case FunctionType::Kind::AddMod: {
     iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
+    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, SInt);
     solAssert(Op1,
            "IeleCompiler: Failed to compile operand 1 of addmod.");
     iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
+    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, SInt);
     solAssert(Op2,
            "IeleCompiler: Failed to compile operand 2 of addmod.");
     iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
+    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, SInt);
     solAssert(Modulus,
            "IeleCompiler: Failed to compile modulus of addmod.");
 
@@ -1149,12 +1196,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   }
   case FunctionType::Kind::MulMod: {
     iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
+    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, SInt);
     solAssert(Op1,
            "IeleCompiler: Failed to compile operand 1 of addmod.");
     iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
+    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, SInt);
     solAssert(Op2,
            "IeleCompiler: Failed to compile operand 2 of addmod.");
     iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
+    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, SInt);
     solAssert(Modulus,
            "IeleCompiler: Failed to compile modulus of addmod.");
 
@@ -1192,10 +1242,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       // Check if we need to do a memory to/from storage copy.
       TypePointer ArgType = arguments[i]->annotation().type;
       TypePointer ParamType = function.parameterTypes()[i];
-      if (shouldCopyMemoryToStorage(ParamType, ArgType))
-        ArgValue = appendIeleRuntimeMemoryToStorageCopy(ArgValue);
-      else if (shouldCopyStorageToMemory(ParamType, ArgType))
-        ArgValue = appendIeleRuntimeStorageToMemoryCopy(ArgValue);
+      ArgValue = appendTypeConversion(ArgValue, *ArgType, *ParamType);
       Arguments.push_back(ArgValue);
     }
 
@@ -1224,6 +1271,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     // Visit argument (target of the Selfdestruct)
     iele::IeleValue *TargetAddress =
       compileExpression(*arguments.front().get());
+    TargetAddress = appendTypeConversion(TargetAddress,
+      *arguments.front()->annotation().type,
+      *function.parameterTypes().front());
     solAssert(TargetAddress,
               "IeleCompiler: Failed to compile Selfdestruct target.");
 
@@ -1408,10 +1458,15 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     solAssert(!(std::set<std::string>{"call", "callcode", "delegatecall"}).count(member),
               "IeleCompiler: member not supported in IELE");
     if (member == "transfer" || member == "send") {
-      // Simply forward the result (which should be an address).
+      ExprValue = appendTypeConversion(ExprValue,
+        *memberAccess.expression().annotation().type,
+        Address);
       solAssert(ExprValue, "IeleCompiler: Failed to compile address");
       CompilingExpressionResult.push_back(ExprValue);
     } else if (member == "balance") {
+      ExprValue = appendTypeConversion(ExprValue,
+        *memberAccess.expression().annotation().type,
+        Address);
       llvm::SmallVector<iele::IeleValue *, 0> Arguments(1, ExprValue);
       iele::IeleLocalVariable *BalanceValue =
         iele::IeleLocalVariable::Create(&Context, "balance", CompilingFunction);
@@ -1496,6 +1551,7 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
     // Visit index expression.
     iele::IeleValue *IndexValue =
       compileExpression(*indexAccess.indexExpression());
+    IndexValue = appendTypeConversion(IndexValue, *indexAccess.indexExpression()->annotation().type, IntegerType(256));
     solAssert(IndexValue,
               "IeleCompiler: failed to compile index expression for index "
               "access.");
@@ -1808,7 +1864,7 @@ void IeleCompiler::appendStateVariableInitialization(const ContractDefinition *c
     iele::IeleValue *InitValue = nullptr;
     TypePointer type = stateVariable->annotation().type;
     if (stateVariable->value())
-      InitValue = compileExpression(*stateVariable->value());
+      InitValue = appendTypeConversion(compileExpression(*stateVariable->value()), *stateVariable->value()->annotation().type, *type);
     // Else, check if we need to allocate storage memory for a reference type.
     else if (type->dataStoredIn(DataLocation::Storage)) {
       iele::IeleValue *SizeValue;
@@ -2043,16 +2099,80 @@ iele::IeleLocalVariable *IeleCompiler::appendBooleanOperator(
 iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     Token::Value Opcode,
     iele::IeleValue *LeftOperand,
-    iele::IeleValue *RightOperand) {
+    iele::IeleValue *RightOperand,
+    TypePointer ResultType) {
   // Find corresponding IELE binary opcode.
   iele::IeleInstruction::IeleOps BinOpcode;
+
+  bool fixed = false, issigned = false;
+  int nbytes;
+  switch (ResultType->category()) {
+  case Type::Category::Integer: {
+    const IntegerType *type = dynamic_cast<const IntegerType *>(ResultType.get());
+    fixed = type->numBits() != 256;
+    nbytes = type->numBits() / 8;
+    issigned = type->isSigned();
+    break;
+  }
+  case Type::Category::FixedBytes: {
+    const FixedBytesType *type = dynamic_cast<const FixedBytesType *>(ResultType.get());
+    fixed = true;
+    nbytes = type->numBytes();
+    break;
+  }
+  default: break;
+  }
+
   switch (Opcode) {
   case Token::Add:                BinOpcode = iele::IeleInstruction::Add; break;
   case Token::Sub:                BinOpcode = iele::IeleInstruction::Sub; break;
-  case Token::Mul:                BinOpcode = iele::IeleInstruction::Mul; break;
+  case Token::Mul: {
+    if (fixed) {
+      // Create the instruction.
+      iele::IeleValue *ModulusValue =
+        iele::IeleIntConstant::Create(&Context, bigint(1) << (nbytes * 8));
+      iele::IeleLocalVariable *Result =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateTernOp(
+        iele::IeleInstruction::MulMod, Result, LeftOperand, RightOperand,
+        ModulusValue, CompilingBlock);
+
+
+      iele::IeleValue *NBytesValue =
+        iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
+      if (issigned) {
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::SExt, Result,NBytesValue, Result,
+          CompilingBlock);
+      }
+      return Result;
+    }
+    BinOpcode = iele::IeleInstruction::Mul; break;
+  }
   case Token::Div:                BinOpcode = iele::IeleInstruction::Div; break;
   case Token::Mod:                BinOpcode = iele::IeleInstruction::Mod; break;
-  case Token::Exp:                BinOpcode = iele::IeleInstruction::Exp; break;
+  case Token::Exp: {
+    if (fixed) {
+      // Create the instruction.
+      iele::IeleValue *ModulusValue =
+        iele::IeleIntConstant::Create(&Context, bigint(1) << (nbytes * 8));
+      iele::IeleLocalVariable *Result =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateTernOp(
+        iele::IeleInstruction::ExpMod, Result, LeftOperand, RightOperand,
+        ModulusValue, CompilingBlock);
+
+      iele::IeleValue *NBytesValue =
+        iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
+      if (issigned) {
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::SExt, Result, NBytesValue, Result,
+          CompilingBlock);
+      }
+      return Result;
+    }
+    BinOpcode = iele::IeleInstruction::Exp; break;
+  }
   case Token::Equal:              BinOpcode = iele::IeleInstruction::CmpEq; break;
   case Token::NotEqual:           BinOpcode = iele::IeleInstruction::CmpNe; break;
   case Token::GreaterThanOrEqual: BinOpcode = iele::IeleInstruction::CmpGe; break;
@@ -2074,7 +2194,163 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   iele::IeleInstruction::CreateBinOp(
       BinOpcode, Result, LeftOperand, RightOperand, CompilingBlock);
 
+  if (fixed) {
+    switch(Opcode) {
+    case Token::Add:
+    case Token::Sub:
+    case Token::Div:
+    case Token::Mod:
+    case Token::SHL: appendMask(Result, Result, nbytes, issigned); break;
+    case Token::Mul:
+    case Token::Exp: break; //handled above
+    case Token::Equal:
+    case Token::NotEqual:
+    case Token::GreaterThanOrEqual:
+    case Token::LessThanOrEqual:
+    case Token::GreaterThan:
+    case Token::LessThan: // can't
+    case Token::BitAnd:
+    case Token::BitOr:
+    case Token::BitXor:
+    case Token::SAR: break; // can't overflow
+  
+    default:
+      solAssert(false, "not implemented yet");
+      solAssert(false, "IeleCompiler: Invalid binary operator");
+    }
+  }
+
   return Result;
+}
+
+void IeleCompiler::appendShiftBy(iele::IeleLocalVariable *ResultValue, iele::IeleValue *Value, int shiftAmount) {
+  iele::IeleIntConstant *ShiftValue =
+    iele::IeleIntConstant::Create(&Context, bigint(shiftAmount));
+  iele::IeleInstruction::CreateBinOp(
+    iele::IeleInstruction::Shift, ResultValue, Value, ShiftValue, CompilingBlock);
+}
+
+iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, const Type& SourceType, const Type& TargetType) {
+  if (SourceType == TargetType) {
+    return Value;
+  }
+  iele::IeleLocalVariable *convertedValue =
+    iele::IeleLocalVariable::Create(&Context, "type.converted", CompilingFunction);
+  switch (SourceType.category()) {
+  case Type::Category::FixedBytes: {
+    const FixedBytesType &srcType = dynamic_cast<const FixedBytesType &>(SourceType);
+    if (TargetType.category() == Type::Category::Integer) {
+      IntegerType const& targetType = dynamic_cast<const IntegerType &>(TargetType);
+      if (targetType.numBits() < srcType.numBytes() * 8) {
+        appendMask(convertedValue, Value, targetType.numBits() / 8, targetType.isSigned());
+        return convertedValue;
+      }
+      return Value;
+    } else {
+      solAssert(TargetType.category() == Type::Category::FixedBytes, "Invalid type conversion requested.");
+      const FixedBytesType &targetType = dynamic_cast<const FixedBytesType &>(TargetType);
+      appendShiftBy(convertedValue, Value, 8 * (targetType.numBytes() - srcType.numBytes()));
+      return convertedValue;
+    }
+  }
+  case Type::Category::Enum:
+  case Type::Category::FixedPoint:
+  case Type::Category::Tuple:
+  case Type::Category::Function: {
+    solAssert(false, "not implemented yet");
+    break;
+  case Type::Category::Struct:
+  case Type::Category::Array:
+    if (shouldCopyStorageToMemory(TargetType, SourceType))
+      return appendIeleRuntimeStorageToMemoryCopy(Value);
+    else if (shouldCopyMemoryToStorage(TargetType, SourceType))
+      return appendIeleRuntimeMemoryToStorageCopy(Value);
+    return Value;
+  case Type::Category::Integer:
+  case Type::Category::RationalNumber:
+  case Type::Category::Contract: {
+    switch(TargetType.category()) {
+    case Type::Category::FixedBytes: {
+      solAssert(SourceType.category() == Type::Category::Integer || SourceType.category() == Type::Category::RationalNumber,
+        "Invalid conversion to FixedBytesType requested.");
+      if (auto srcType = dynamic_cast<const IntegerType *>(&SourceType)) {
+        const FixedBytesType &targetType = dynamic_cast<const FixedBytesType &>(TargetType);
+        if (targetType.numBytes() * 8 < srcType->numBits()) {
+          appendMask(convertedValue, Value, targetType.numBytes(), false);
+          return convertedValue;
+        }
+      }
+      return Value;
+    }
+    case Type::Category::Enum:
+    case Type::Category::StringLiteral:
+      solAssert(false, "not implemented yet");
+      break;
+    case Type::Category::FixedPoint:
+      solUnimplemented("Not yet implemented - FixedPointType.");
+      break;
+    case Type::Category::Integer:
+    case Type::Category::Contract: {
+      IntegerType const& targetType = TargetType.category() == Type::Category::Integer
+        ? dynamic_cast<const IntegerType &>(TargetType) : Address;
+      if (SourceType.category() == Type::Category::RationalNumber) {
+        solAssert(!dynamic_cast<const RationalNumberType &>(SourceType).isFractional(), "not implemented yet");
+      }
+      if (targetType.numBits() == 256) {
+        if (!targetType.isSigned()) {
+          if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value)) {
+            if (constant->getValue() < 0) {
+              appendRevert();
+            }
+          } else {
+            iele::IeleLocalVariable *OutOfRange =
+              iele::IeleLocalVariable::Create(&Context, "integer.out.of.range", CompilingFunction);
+            iele::IeleInstruction::CreateBinOp(
+              iele::IeleInstruction::CmpLt, OutOfRange, Value,
+              iele::IeleIntConstant::getZero(&Context),
+              CompilingBlock);
+            appendRevert(OutOfRange);
+          }
+        }
+        return Value;
+      }
+      if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value)) {
+        if (constant->getValue() < (targetType.isSigned() ? bigint(1) << targetType.numBits() - 1 : bigint(1) << targetType.numBits())
+          && constant->getValue() >= (targetType.isSigned() ? -(bigint(1) << targetType.numBits() - 1) : bigint(0))) {
+          return Value;
+        }
+      }
+      appendMask(convertedValue, Value, targetType.numBits() / 8, targetType.isSigned());
+      return convertedValue;
+    }
+    default:
+      solAssert(false, "Invalid type conversion requested.");
+      return nullptr;
+    }
+  }
+  case Type::Category::Bool:
+    solAssert(SourceType == TargetType, "Invalid conversion for bool.");
+    return Value;
+  }
+  default:
+    solAssert(false, "Invalid type conversion requested.");
+    return nullptr;
+  }
+}
+
+void IeleCompiler::appendMask(iele::IeleLocalVariable *Result, iele::IeleValue *Value, int nbytes, bool issigned) {
+  iele::IeleValue *NBytesValue =
+    iele::IeleIntConstant::Create(&Context, bigint(nbytes));
+  iele::IeleInstruction::CreateBinOp(
+    iele::IeleInstruction::Twos, Result, NBytesValue, Value,
+    CompilingBlock);
+  if (issigned) {
+    NBytesValue =
+      iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::SExt, Result, NBytesValue, Result,
+      CompilingBlock);
+  }
 }
 
 bool IeleCompiler::shouldCopyStorageToStorage(iele::IeleValue *To,
@@ -2083,16 +2359,16 @@ bool IeleCompiler::shouldCopyStorageToStorage(iele::IeleValue *To,
          From->dataStoredIn(DataLocation::Storage);
 }
 
-bool IeleCompiler::shouldCopyMemoryToStorage(TypePointer To,
-                                             TypePointer From) const {
-  return To->dataStoredIn(DataLocation::Storage) &&
-         From->dataStoredIn(DataLocation::Memory);
+bool IeleCompiler::shouldCopyMemoryToStorage(const Type &To,
+                                             const Type &From) const {
+  return To.dataStoredIn(DataLocation::Storage) &&
+         From.dataStoredIn(DataLocation::Memory);
 }
 
-bool IeleCompiler::shouldCopyStorageToMemory(TypePointer To,
-                                             TypePointer From) const {
-  return To->dataStoredIn(DataLocation::Memory) &&
-         From->dataStoredIn(DataLocation::Storage);
+bool IeleCompiler::shouldCopyStorageToMemory(const Type &To,
+                                             const Type &From) const {
+  return To.dataStoredIn(DataLocation::Memory) &&
+         From.dataStoredIn(DataLocation::Storage);
 }
 
 unsigned IeleCompiler::getStructMemberIndex(const StructType &type,
