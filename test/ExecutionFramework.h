@@ -116,9 +116,19 @@ public:
 	{
 		std::vector<bytes> contractResult = callContractFunction(_sig, _arguments...);
 		std::vector<bytes> cppResult = callCppAndEncodeResult(_cppFunction, _arguments...);
+		std::string message = "\nExpected: [ ";
+
+		for (bytes const& val : cppResult) {
+			message += toHex(val) + " ";
+		}
+		message += "]\nActual: [ ";
+		for (bytes const& val : contractResult) {
+			message += toHex(val) + " ";
+		}
 		BOOST_CHECK_MESSAGE(
 			contractResult == cppResult,
-			"Computed values do not match.\nContract: "
+			"Computed values do not match.\nContract: " +
+				message + "]\n"
 		);
 	}
 
@@ -169,8 +179,7 @@ public:
 	static bytes encode(h256 const& _value) { return _value.asBytes(); }
 	static bytes encode(bytes const& _value, bool _padLeft = true)
 	{
-		bytes padding = bytes((32 - _value.size() % 32) % 32, 0);
-		return _padLeft ? padding + _value : _value + padding;
+		return _padLeft ? _value : _value;
 	}
 	static bytes encode(std::string const& _value) { return encode(asBytes(_value), false); }
 	template <class _T>
