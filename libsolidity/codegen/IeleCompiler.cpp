@@ -1598,8 +1598,52 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
     }
     break;
   }
+  case Type::Category::FixedBytes: {
+    const FixedBytesType &type = dynamic_cast<const FixedBytesType &>(baseType);
+
+    solAssert(indexAccess.indexExpression(),
+              "IeleCompiler: Index expression expected.");
+
+     // Visit index expression.
+    iele::IeleValue *IndexValue =
+      compileExpression(*indexAccess.indexExpression());
+    IndexValue = appendTypeConversion(IndexValue, *indexAccess.indexExpression()->annotation().type, IntegerType(256));
+    solAssert(IndexValue,
+              "IeleCompiler: failed to compile index expression for index "
+              "access.");
+
+    iele::IeleLocalVariable *OutOfRangeValue =
+      iele::IeleLocalVariable::Create(&Context, "index.out.of.range",
+                                      CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue, 
+      iele::IeleIntConstant::getZero(&Context),
+      CompilingBlock);
+    appendRevert(OutOfRangeValue);
+
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpLt, OutOfRangeValue, IndexValue,
+      iele::IeleIntConstant::Create(&Context, bigint(type.numBytes())),
+      CompilingBlock);
+    appendRevert(OutOfRangeValue);
+
+    iele::IeleLocalVariable *ShiftValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp",
+                                      CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Sub, ShiftValue, IndexValue,
+      iele::IeleIntConstant::Create(&Context, bigint(type.numBytes())),
+      CompilingBlock);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Shift, ShiftValue, ExprValue, ShiftValue, CompilingBlock);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::And, ShiftValue, ShiftValue,
+      iele::IeleIntConstant::Create(&Context, bigint(255)),
+      CompilingBlock);
+    CompilingExpressionResult.push_back(ShiftValue);
+    break;
+  }
   case Type::Category::Mapping:
-  case Type::Category::FixedBytes:
   case Type::Category::TypeType:
     solAssert(false, "not implemented yet");
   default:
