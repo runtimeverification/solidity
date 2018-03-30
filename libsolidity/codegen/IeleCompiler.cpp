@@ -2236,6 +2236,17 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   case Token::BitAnd:             BinOpcode = iele::IeleInstruction::And; break;
   case Token::BitOr:              BinOpcode = iele::IeleInstruction::Or; break;
   case Token::BitXor:             BinOpcode = iele::IeleInstruction::Xor; break;
+  case Token::SAR: {
+    iele::IeleLocalVariable *ShiftValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Sub, ShiftValue,
+      iele::IeleIntConstant::getZero(&Context),
+      RightOperand, CompilingBlock);
+    RightOperand = ShiftValue;
+    // fall through
+  }
+  case Token::SHL:                BinOpcode = iele::IeleInstruction::Shift; break;
   
   default:
     solAssert(false, "not implemented yet");
