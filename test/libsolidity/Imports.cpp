@@ -105,7 +105,6 @@ BOOST_AUTO_TEST_CASE(relative_import_multiplex)
 	BOOST_CHECK(c.compile());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(simple_alias, 1)
 BOOST_AUTO_TEST_CASE(simple_alias)
 {
 	CompilerStack c;
