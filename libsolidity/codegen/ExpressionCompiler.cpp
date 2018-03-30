@@ -319,7 +319,7 @@ bool ExpressionCompiler::visit(TupleExpression const& _tuple)
 	}
 	return false;
 }
-
+/*
 bool ExpressionCompiler::visit(UnaryOperation const& _unaryOperation)
 {
 	CompilerContext::LocationSetter locationSetter(m_context, _unaryOperation);
@@ -436,7 +436,7 @@ bool ExpressionCompiler::visit(BinaryOperation const& _binaryOperation)
 	// do not visit the child nodes, we already did that explicitly
 	return false;
 }
-
+*/
 bool ExpressionCompiler::visit(FunctionCall const& _functionCall)
 {
 	CompilerContext::LocationSetter locationSetter(m_context, _functionCall);
@@ -1381,7 +1381,7 @@ void ExpressionCompiler::endVisit(Identifier const& _identifier)
 		solAssert(false, "Identifier type not expected in expression context.");
 	}
 }
-
+/*
 void ExpressionCompiler::endVisit(Literal const& _literal)
 {
 	CompilerContext::LocationSetter locationSetter(m_context, _literal);
@@ -1400,7 +1400,7 @@ void ExpressionCompiler::endVisit(Literal const& _literal)
 		solUnimplemented("Only integer, boolean and string literals implemented for now.");
 	}
 }
-
+*/
 void ExpressionCompiler::appendAndOrOperatorCode(BinaryOperation const& _binaryOperation)
 {
 	Token::Value const c_op = _binaryOperation.getOperator();

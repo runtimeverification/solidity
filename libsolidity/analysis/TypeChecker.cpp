@@ -1955,7 +1955,7 @@ bool TypeChecker::visit(IndexAccess const& _access)
 				resultType = make_shared<TypeType>(make_shared<ArrayType>(
 					DataLocation::Memory,
 					typeType.actualType(),
-					length->literalValue(nullptr)
+					u256(length->literalValue(nullptr))
 				));
 			else
 				m_errorReporter.fatalTypeError(index->location(), "Integer constant expected.");

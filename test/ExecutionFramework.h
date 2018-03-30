@@ -151,11 +151,13 @@ public:
 	static std::pair<bool, std::string> compareAndCreateMessage(std::vector<bytes> const& _result, std::vector<bytes> const& _expectation);
 
 	static bytes encode(bool _value) { return encode(byte(_value)); }
-	static bytes encode(int _value) { return encode(u256(_value)); }
-	static bytes encode(size_t _value) { return encode(u256(_value)); }
+	static bytes encode(int _value) { return encode(bigint(_value)); }
+	static bytes encode(size_t _value) { return encode(bigint(_value)); }
 	static bytes encode(char const* _value) { return encode(std::string(_value)); }
 	static bytes encode(byte _value) { return bytes{_value}; }
-	static bytes encode(u256 const& _value) { return toBigEndian(_value); }
+	static bytes encode(u160 const& _value) { return encode(bigint(_value)); }
+	static bytes encode(u256 const& _value) { return encode(bigint(_value)); }
+        static bytes encode(bigint const& _value) { return toBigEndian(_value); }
 	/// @returns the fixed-point encoding of a rational number with a given
 	/// number of fractional bits.
 	static bytes encode(std::pair<rational, int> const& _valueAndPrecision)
@@ -238,14 +240,35 @@ public:
 		return toBigEndian(_val / 256, _val % 256 < 128) + bytes(1, _val % 256);
 	}
 
-	static bytes toBigEndian(u256 _val, bool _partial = false)
+	static bytes toBigEndian(bigint _val)
 	{
-		if (_val == 0 && _partial) {
-			return bytes();
+		if (_val >= 0)
+			return toBigEndian(_val, true);
+		bigint representation = -_val * 2 - 1;
+		unsigned int numBytes = 0;
+		while (representation > 0) {
+			representation >>= 8;
+			numBytes++;
+		}
+		bigint twos = _val % (1 << (numBytes * 8));
+		if (twos < 0) {
+			twos += (1 << (numBytes * 8));
+		}
+		return toBigEndian(twos, false);
+	}
+
+	static bytes toBigEndian(bigint _val, bool _positive) {
+		if (!_positive && _val < 256) {
+			return bytes(1, (unsigned char)_val);
 		} else if (_val == 0) {
 			return bytes(1, 0);
+		} else if (_positive && _val < 128) {
+			return bytes(1, (unsigned char)_val);
+		} else if (_val < 256) {
+			return bytes{0, (unsigned char)_val};
 		}
-		return toBigEndian(_val / 256, _val % 256 < 128) + bytes(1, (unsigned char)_val % 256);
+		return toBigEndian(_val / 256, _positive) + bytes(1, (unsigned char)_val % 256);
+
 	}
 
 private:

@@ -422,12 +422,12 @@ string IntegerType::toString(bool) const
 	return prefix + dev::toString(m_bits);
 }
 
-u256 IntegerType::literalValue(Literal const* _literal) const
+bigint IntegerType::literalValue(Literal const* _literal) const
 {
 	solAssert(m_modifier == Modifier::Address, "");
 	solAssert(_literal, "");
 	solAssert(_literal->value().substr(0, 2) == "0x", "");
-	return u256(_literal->value());
+	return bigint(_literal->value());
 }
 
 bigint IntegerType::minValue() const
@@ -981,7 +981,7 @@ string RationalNumberType::toString(bool) const
 	return "rational_const " + numerator + " / " + denominator;
 }
 
-u256 RationalNumberType::literalValue(Literal const*) const
+bigint RationalNumberType::literalValue(Literal const*) const
 {
 	// We ignore the literal and hope that the type was correctly determined to represent
 	// its value.
@@ -999,15 +999,7 @@ u256 RationalNumberType::literalValue(Literal const*) const
 		shiftedValue = (m_value.numerator() / m_value.denominator()) * pow(bigint(10), fractionalDigits);
 	}
 
-	// we ignore the literal and hope that the type was correctly determined
-	solAssert(shiftedValue <= u256(-1), "Integer constant too large.");
-	solAssert(shiftedValue >= -(bigint(1) << 255), "Number constant too small.");
-
-	if (m_value >= rational(0))
-		value = u256(shiftedValue);
-	else
-		value = s2u(s256(shiftedValue));
-	return value;
+	return shiftedValue;
 }
 
 TypePointer RationalNumberType::mobileType() const
@@ -1201,13 +1193,13 @@ bool FixedBytesType::operator==(Type const& _other) const
 	return other.m_bytes == m_bytes;
 }
 
-u256 BoolType::literalValue(Literal const* _literal) const
+bigint BoolType::literalValue(Literal const* _literal) const
 {
 	solAssert(_literal, "");
 	if (_literal->token() == Token::TrueLiteral)
-		return u256(1);
+		return bigint(1);
 	else if (_literal->token() == Token::FalseLiteral)
-		return u256(0);
+		return bigint(0);
 	else
 		solAssert(false, "Bool type constructed from non-boolean literal.");
 }

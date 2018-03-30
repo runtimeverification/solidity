@@ -265,7 +265,7 @@ public:
 	{
 		return canonicalName();
 	}
-	virtual u256 literalValue(Literal const*) const
+	virtual bigint literalValue(Literal const*) const
 	{
 		solAssert(false, "Literal value requested for type without literals: " + toString(false));
 	}
@@ -332,7 +332,7 @@ public:
 
 	virtual std::string toString(bool _short) const override;
 
-	virtual u256 literalValue(Literal const* _literal) const override;
+	virtual bigint literalValue(Literal const* _literal) const override;
 
 	virtual TypePointer encodingType() const override { return shared_from_this(); }
 	virtual TypePointer interfaceType(bool) const override { return shared_from_this(); }
@@ -427,7 +427,7 @@ public:
 	virtual bool canLiveOutsideStorage() const override { return false; }
 
 	virtual std::string toString(bool _short) const override;
-	virtual u256 literalValue(Literal const* _literal) const override;
+	virtual bigint literalValue(Literal const* _literal) const override;
 	virtual TypePointer mobileType() const override;
 
 	/// @returns the smallest integer type that can hold the value or an empty pointer if not possible.
@@ -540,7 +540,7 @@ public:
 	virtual bool isValueType() const override { return true; }
 
 	virtual std::string toString(bool) const override { return "bool"; }
-	virtual u256 literalValue(Literal const* _literal) const override;
+	virtual bigint literalValue(Literal const* _literal) const override;
 	virtual TypePointer encodingType() const override { return shared_from_this(); }
 	virtual TypePointer interfaceType(bool) const override { return shared_from_this(); }
 };
