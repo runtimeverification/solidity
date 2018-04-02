@@ -1783,7 +1783,6 @@ BOOST_AUTO_TEST_CASE(send_ether)
 	BOOST_CHECK_EQUAL(balanceAt(address), amount);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(transfer_ether, 1)
 BOOST_AUTO_TEST_CASE(transfer_ether)
 {
 	char const* sourceCode = R"(
@@ -2166,7 +2165,6 @@ BOOST_AUTO_TEST_CASE(ecrecover)
 	ABI_CHECK(callContractFunction("a(bytes32,uint8,bytes32,bytes32)", h, v, r, s), encodeArgs(addr));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inter_contract_calls, 1)
 BOOST_AUTO_TEST_CASE(inter_contract_calls)
 {
 	char const* sourceCode = R"(
@@ -2191,13 +2189,12 @@ BOOST_AUTO_TEST_CASE(inter_contract_calls)
 	u160 const c_helperAddress = m_contractAddress;
 	compileAndRun(sourceCode, 0, "Main");
 	BOOST_REQUIRE(callContractFunction("setHelper(address)", c_helperAddress) == vector<bytes>());
-	BOOST_REQUIRE(callContractFunction("getHelper()", c_helperAddress) == encodeArgs(c_helperAddress));
+	BOOST_REQUIRE(callContractFunction("getHelper()") == encodeArgs(c_helperAddress));
 	u256 a(3456789);
 	u256 b("0x282837623374623234aa74");
 	BOOST_REQUIRE(callContractFunction("callHelper(uint256,uint256)", a, b) == encodeArgs(a * b));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inter_contract_calls_with_complex_parameters, 1)
 BOOST_AUTO_TEST_CASE(inter_contract_calls_with_complex_parameters)
 {
 	char const* sourceCode = R"(
@@ -2222,14 +2219,13 @@ BOOST_AUTO_TEST_CASE(inter_contract_calls_with_complex_parameters)
 	u160 const c_helperAddress = m_contractAddress;
 	compileAndRun(sourceCode, 0, "Main");
 	BOOST_REQUIRE(callContractFunction("setHelper(address)", c_helperAddress) == vector<bytes>());
-	BOOST_REQUIRE(callContractFunction("getHelper()", c_helperAddress) == encodeArgs(c_helperAddress));
+	BOOST_REQUIRE(callContractFunction("getHelper()") == encodeArgs(c_helperAddress));
 	u256 a(3456789);
 	u256 b("0x282837623374623234aa74");
 	BOOST_REQUIRE(callContractFunction("callHelper(uint256,bool,uint256)", a, true, b) == encodeArgs(a * 3));
 	BOOST_REQUIRE(callContractFunction("callHelper(uint256,bool,uint256)", a, false, b) == encodeArgs(b * 3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inter_contract_calls_accessing_this, 1)
 BOOST_AUTO_TEST_CASE(inter_contract_calls_accessing_this)
 {
 	char const* sourceCode = R"(
@@ -2254,11 +2250,10 @@ BOOST_AUTO_TEST_CASE(inter_contract_calls_accessing_this)
 	u160 const c_helperAddress = m_contractAddress;
 	compileAndRun(sourceCode, 0, "Main");
 	BOOST_REQUIRE(callContractFunction("setHelper(address)", c_helperAddress) == vector<bytes>());
-	BOOST_REQUIRE(callContractFunction("getHelper()", c_helperAddress) == encodeArgs(c_helperAddress));
+	BOOST_REQUIRE(callContractFunction("getHelper()") == encodeArgs(c_helperAddress));
 	BOOST_REQUIRE(callContractFunction("callHelper()") == encodeArgs(c_helperAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(calls_to_this, 1)
 BOOST_AUTO_TEST_CASE(calls_to_this)
 {
 	char const* sourceCode = R"(
@@ -2286,7 +2281,7 @@ BOOST_AUTO_TEST_CASE(calls_to_this)
 	u160 const c_helperAddress = m_contractAddress;
 	compileAndRun(sourceCode, 0, "Main");
 	BOOST_REQUIRE(callContractFunction("setHelper(address)", c_helperAddress) == vector<bytes>());
-	BOOST_REQUIRE(callContractFunction("getHelper()", c_helperAddress) == encodeArgs(c_helperAddress));
+	BOOST_REQUIRE(callContractFunction("getHelper()") == encodeArgs(c_helperAddress));
 	u256 a(3456789);
 	u256 b("0x282837623374623234aa74");
 	BOOST_REQUIRE(callContractFunction("callHelper(uint256,uint256)", a, b) == encodeArgs(a * b + 10));
@@ -2322,13 +2317,12 @@ BOOST_AUTO_TEST_CASE(inter_contract_calls_with_local_vars)
 	u160 const c_helperAddress = m_contractAddress;
 	compileAndRun(sourceCode, 0, "Main");
 	BOOST_REQUIRE(callContractFunction("setHelper(address)", c_helperAddress) == vector<bytes>());
-	BOOST_REQUIRE(callContractFunction("getHelper()", c_helperAddress) == encodeArgs(c_helperAddress));
+	BOOST_REQUIRE(callContractFunction("getHelper()") == encodeArgs(c_helperAddress));
 	u256 a(3456789);
 	u256 b("0x282837623374623234aa74");
 	BOOST_REQUIRE(callContractFunction("callHelper(uint256,uint256)", a, b) == encodeArgs(a * b + 9));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(fixed_bytes_in_calls, 1)
 BOOST_AUTO_TEST_CASE(fixed_bytes_in_calls)
 {
 	char const* sourceCode = R"(
@@ -2353,8 +2347,8 @@ BOOST_AUTO_TEST_CASE(fixed_bytes_in_calls)
 	u160 const c_helperAddress = m_contractAddress;
 	compileAndRun(sourceCode, 0, "Main");
 	BOOST_REQUIRE(callContractFunction("setHelper(address)", c_helperAddress) == vector<bytes>());
-	BOOST_REQUIRE(callContractFunction("getHelper()", c_helperAddress) == encodeArgs(c_helperAddress));
-	ABI_CHECK(callContractFunction("callHelper(bytes2,bool)", string("\0a", 2), true), encodeArgs(string("\0a\0\0\0", 5)));
+	BOOST_REQUIRE(callContractFunction("getHelper()") == encodeArgs(c_helperAddress));
+	ABI_CHECK(callContractFunction("callHelper(bytes2,bool)", string("\0a\0", 3), true), encodeArgs(string("a\0\0", 3)));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(constructor_arguments_internal, 1)
@@ -9239,7 +9233,6 @@ BOOST_AUTO_TEST_CASE(no_nonpayable_circumvention_by_modifier)
 	BOOST_CHECK_EQUAL(balanceAt(m_contractAddress), 0);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(mem_resize_is_not_paid_at_call, 1)
 BOOST_AUTO_TEST_CASE(mem_resize_is_not_paid_at_call)
 {
 	// This tests that memory resize for return values is not paid during the call, which would
@@ -10561,7 +10554,6 @@ BOOST_AUTO_TEST_CASE(scientific_notation)
 	ABI_CHECK(callContractFunction("k()"), encodeArgs(u256(-25)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(interface_contract, 1)
 BOOST_AUTO_TEST_CASE(interface_contract)
 {
 	char const* sourceCode = R"(
