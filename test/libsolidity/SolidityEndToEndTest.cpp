@@ -1498,7 +1498,6 @@ BOOST_AUTO_TEST_CASE(struct_accessor)
 	ABI_CHECK(callContractFunction("data(uint256)", 7), encodeArgs(1, 2, true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(balance, 1)
 BOOST_AUTO_TEST_CASE(balance)
 {
 	char const* sourceCode = R"(
@@ -1766,7 +1765,6 @@ BOOST_AUTO_TEST_CASE(convert_uint_to_fixed_bytes_greater_size)
 	);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(send_ether, 1)
 BOOST_AUTO_TEST_CASE(send_ether)
 {
 	char const* sourceCode = R"(

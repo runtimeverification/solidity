@@ -1337,18 +1337,37 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
   }
 
   if (auto type = dynamic_cast<const ContractType *>(memberAccess.expression().annotation().type.get())) {
+ 
     if (type->isSuper()) {
-      const FunctionDefinition *super = superFunction(dynamic_cast<const FunctionDefinition &>(*memberAccess.annotation().referencedDeclaration), type->contractDefinition());
-      std::string superName = getIeleNameForFunction(*super);
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
       solAssert(ST,
                 "IeleCompiler: failed to access compiling contract's symbol table.");
+
+      const FunctionDefinition *super = superFunction(dynamic_cast<const FunctionDefinition &>(*memberAccess.annotation().referencedDeclaration), type->contractDefinition());
+      std::string superName = getIeleNameForFunction(*super);
       iele::IeleValue *Result = ST->lookup(superName);
       solAssert(Result,
                 "IeleCompiler: failed to find function in compiling contract's"
                 " symbol table");
       CompilingExpressionResult.push_back(Result);
       return false;
+    } else {
+      memberAccess.expression().accept(*this);
+      if (const Declaration *declaration = memberAccess.annotation().referencedDeclaration) {
+        std::string name;
+        // don't call getIeleNameFor here because this is part of an external call and therefore is only able to
+        // see the most-derived function
+        if (const auto *variable = dynamic_cast<const VariableDeclaration *>(declaration)) {
+          name = variable->name() + "()";
+        } else if (const auto *function = dynamic_cast<const FunctionDefinition *>(declaration)) {
+          name = function->externalSignature();
+        } else {
+          solAssert(false, "Contract member is neither variable nor function.");
+        }
+        iele::IeleValue *Result = iele::IeleFunction::Create(&Context, true, name);
+        CompilingExpressionResult.push_back(Result);
+        return false;
+      }
     }
   }
 
@@ -1454,6 +1473,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     else
       solAssert(false, "IeleCompiler: Unknown magic member.");
     break;
+  case Type::Category::Contract:
   case Type::Category::Integer: {
     solAssert(!(std::set<std::string>{"call", "callcode", "delegatecall"}).count(member),
               "IeleCompiler: member not supported in IELE");
@@ -1667,18 +1687,11 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
          dynamic_cast<const MagicVariableDeclaration *>(declaration)) {
     switch (magicVar->type()->category()) {
     case Type::Category::Contract: {
-      const ContractType *type = dynamic_cast<const ContractType *>(magicVar->type().get());
-      if (type->isSuper()) {
-        //should only be reached if super is not part of a member access expression
-        // in this case we evaluate to the current object since that is the same as "this" object
-        llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
-        iele::IeleLocalVariable *This =
-          iele::IeleLocalVariable::Create(&Context, "super", CompilingFunction);
-        iele::IeleInstruction::CreateIntrinsicCall(iele::IeleInstruction::Address, This, EmptyArguments, CompilingBlock);
-        return;
-      }
-      // Reserved identifiers: "this" or "super"
-      solAssert(false, "not implemented yet");
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *This =
+        iele::IeleLocalVariable::Create(&Context, "this", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(iele::IeleInstruction::Address, This, EmptyArguments, CompilingBlock);
+      CompilingExpressionResult.push_back(This);
       return;
     }
     case Type::Category::Integer: {
