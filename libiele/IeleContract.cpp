@@ -25,7 +25,6 @@ using namespace llvm::sys;
 IeleContract::IeleContract(IeleContext *Ctx, const llvm::Twine &Name,
                            IeleContract *C) :
   IeleValue(Ctx, IeleValue::IeleContractVal), Parent(nullptr),
-  IncludeStorageRuntime(false),
   IncludeMemoryRuntime(false) {
   SymTab = llvm::make_unique<IeleValueSymbolTable>();
 
@@ -42,16 +41,10 @@ IeleContract::~IeleContract() { }
 
 void IeleContract::printRuntime(llvm::raw_ostream &OS, unsigned indent) const {
   std::string RuntimeSourceCode;
-  if (!IncludeStorageRuntime && !IncludeMemoryRuntime)
+  if (!IncludeMemoryRuntime)
     return;
 
-  if (IncludeStorageRuntime)
-    RuntimeSourceCode.append(
-#include "iele-rt/iele-storage-rt.h"
-    );
   if (IncludeMemoryRuntime)
-    if (IncludeStorageRuntime)
-      RuntimeSourceCode.push_back('\n');
     RuntimeSourceCode.append(
 #include "iele-rt/iele-memory-rt.h"
     );

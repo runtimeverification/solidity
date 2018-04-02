@@ -87,6 +87,7 @@ void CompilerUtils::loadFromMemoryDynamic(
 	bool _keepUpdatedMemoryOffset
 )
 {		
+/*
 	if (_keepUpdatedMemoryOffset)
 		m_context << Instruction::DUP1;
 
@@ -108,6 +109,7 @@ void CompilerUtils::loadFromMemoryDynamic(
 			m_context << u256(numBytes) << Instruction::ADD;
 		}
 	}
+*/
 }
 
 void CompilerUtils::storeInMemory(unsigned _offset)
@@ -449,6 +451,7 @@ void CompilerUtils::convertType(
 	bool _asPartOfArgumentDecoding
 )
 {
+/*
 	// For a type extension, we need to remove all higher-order bits that we might have ignored in
 	// previous operations.
 	// @todo: store in the AST whether the operand might have "dirty" higher order bits
@@ -914,6 +917,7 @@ void CompilerUtils::pushZeroValue(Type const& _type)
 			_context << Instruction::POP;
 		}
 	);
+*/
 }
 
 void CompilerUtils::moveToStackVariable(VariableDeclaration const& _variable)

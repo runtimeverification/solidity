@@ -4599,7 +4599,6 @@ BOOST_AUTO_TEST_CASE(array_copy_storage_storage_dyn_dyn)
 	BOOST_CHECK(storageEmpty(m_contractAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_storage_storage_static_static, 1)
 BOOST_AUTO_TEST_CASE(array_copy_storage_storage_static_static)
 {
 	char const* sourceCode = R"(
@@ -5308,7 +5307,6 @@ BOOST_AUTO_TEST_CASE(packed_storage_structs_uint)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_storage_structs_enum, 1)
 BOOST_AUTO_TEST_CASE(packed_storage_structs_enum)
 {
 	char const* sourceCode = R"(
@@ -5853,7 +5851,6 @@ BOOST_AUTO_TEST_CASE(struct_delete_struct_in_mapping)
 	ABI_CHECK(callContractFunction("deleteIt()"), encodeArgs(0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(evm_exceptions_out_of_band_access, 1)
 BOOST_AUTO_TEST_CASE(evm_exceptions_out_of_band_access)
 {
 	char const* sourceCode = R"(
@@ -8599,7 +8596,7 @@ BOOST_AUTO_TEST_CASE(inline_assembly_for2)
 	ABI_CHECK(callContractFunction("f(uint256)", u256(2)), encodeArgs(u256(0), u256(2), u256(0)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(index_access_with_type_conversion, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(index_access_with_type_conversion, 2)
 BOOST_AUTO_TEST_CASE(index_access_with_type_conversion)
 {
 	// Test for a bug where higher order bits cleanup was not done for array index access.
@@ -8786,7 +8783,6 @@ BOOST_AUTO_TEST_CASE(cleanup_bytes_types)
 	ABI_CHECK(callContractFunction("f(bytes2,uint16)", string("abc"), u256(0x040102)), encodeArgs(0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(skip_dynamic_types, 1)
 BOOST_AUTO_TEST_CASE(skip_dynamic_types)
 {
 	// The EVM cannot provide access to dynamically-sized return values, so we have to skip them.
@@ -10432,7 +10428,6 @@ BOOST_AUTO_TEST_CASE(revert)
 	ABI_CHECK(callContractFunction("a()"), encodeArgs(u256(42)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(negative_stack_height, 1)
 BOOST_AUTO_TEST_CASE(negative_stack_height)
 {
 	// This code was causing negative stack height during code generation

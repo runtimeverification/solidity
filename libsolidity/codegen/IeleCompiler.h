@@ -110,7 +110,7 @@ private:
   iele::IeleValue *GasValue;
   iele::IeleValue *TransferValue;
 
-  unsigned NextStorageAddress;
+  bigint NextStorageAddress;
 
   std::vector<const ContractDefinition *> CompilingContractInheritanceHierarchy;
   const ContractDefinition *CompilingContractASTNode;
@@ -167,65 +167,33 @@ private:
   void appendLocalVariableInitialization(
           iele::IeleLocalVariable *Local, const VariableDeclaration *localVariable);
 
+  iele::IeleValue *getReferenceTypeSize(
+    const Type &type, iele::IeleValue *AddressValue);
+
+  // Helper function for memory array allocation. The optional NumElemsValue
+  // argument can be used to allocate dynamically-sized arrays, where the initial
+  // size is not known at compile time.
+  iele::IeleValue *appendArrayAllocation(
+      const ArrayType &type, iele::IeleValue *NumElemsValue = nullptr);
+
+  // Helper function for memory struct allocation.
+  iele::IeleValue *appendStructAllocation(const StructType &type);
+
+  // Helper functions for copying a reference type to a storage location.
+  void appendCopyFromStorageToStorage(
+      iele::IeleValue *To, const Type &type, iele::IeleValue *From);
+  void appendCopyFromMemoryToStorage(
+      iele::IeleValue *To, const Type &type, iele::IeleValue *From);
+
+  // Helper function for copying a storage reference type into a local newly
+  // allocated memory copy. Returns a pointer to the copy.
+  iele::IeleValue *appendCopyFromStorageToMemory(
+    const Type &type, iele::IeleValue *From);
+
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
-  // Helper function for array allocation. The optional NumElemsValue argument
-  // can be used to allocate dynamically-sized arrays, where the initial size
-  // is not known at compile time.
-  inline iele::IeleValue *appendArrayAllocation(
-      const ArrayType &type, DataLocation Location,
-      iele::IeleValue *NumElemsValue = nullptr) {
-    return doArrayAllocation(type, NumElemsValue, Location);
-  }
-
-  // Helper function for array copying between memory and storage.
-  inline iele::IeleValue *appendArrayCopy(
-      const ArrayType &type, DataLocation Location, iele::IeleValue *InitValue,
-      DataLocation InitLocation) {
-    return doArrayAllocation(type, nullptr, Location, InitValue, InitLocation);
-  }
-
-  // Low-level array allocation helper. Allocates an array of the given type to
-  // the given location (memory or storage). If the optional InitValue,
-  // InitLocation arguments are provided, then the newly allocated array is
-  // initialized as a copy of the array pointed by InitValue and located in
-  // InitLocation. If NumElemsValue is provided, it is used as the initial size
-  // of the array. If InitValue is provided the size of the newly allocated
-  // array is computed to be equal to the size of the array pointed by InitValue.
-  // Else the size is determined from the array's type.
-  iele::IeleValue *doArrayAllocation(
-      const ArrayType &type, iele::IeleValue *NumElemsValue,
-      DataLocation Location, iele::IeleValue *InitValue = nullptr,
-      DataLocation InitLocation = DataLocation::Storage);
-
-  // Helper function for struct allocation.
-  inline iele::IeleValue *appendStructAllocation(
-      const StructType &type, DataLocation Location) {
-    return doStructAllocation(type, Location);
-  }
-
-  // Helper function for struct copying between memory and storage.
-  inline iele::IeleValue *appendStructCopy(
-      const StructType &type, DataLocation Location, iele::IeleValue *InitValue,
-      DataLocation InitLocation) {
-    return doStructAllocation(type, Location, InitValue, InitLocation);
-  }
-
-  // Low-level struct allocation helper. Allocates a struct of the given type to
-  // the given location (memory or storage). If the optional InitValue,
-  // InitLocation arguments are provided, then the newly allocated struct is
-  // initialized as a copy of the struct pointed by InitValue and located in
-  // InitLocation.
-  iele::IeleValue *doStructAllocation(
-      const StructType &type, DataLocation Location,
-      iele::IeleValue *InitValue = nullptr,
-      DataLocation InitLocation = DataLocation::Storage);
-
-  iele::IeleValue *appendCopy(
-      const Type &type, iele::IeleValue *Source, DataLocation From,
-      DataLocation To);
-
-  void appendVariable(iele::IeleValue *Identifier, std::string name);
+  void appendVariable(iele::IeleValue *Identifier, std::string name,
+                      bool isValueType = true);
 
   iele::IeleLocalVariable *appendLValueDereference(iele::IeleValue *LValue);
   void appendLValueAssign(iele::IeleValue *LValue, iele::IeleValue *RValue);
@@ -254,12 +222,9 @@ private:
       const std::function<iele::IeleValue *(void)> &TrueValue,
       const std::function<iele::IeleValue *(void)> &FalseValue);
 
-  bool shouldCopyStorageToStorage(iele::IeleValue *To, TypePointer From) const;
-  bool shouldCopyMemoryToStorage(const Type &To, const Type &From) const;
+  bool shouldCopyStorageToStorage(const iele::IeleValue *To, const Type &From) const;
+  bool shouldCopyMemoryToStorage(const iele::IeleValue *To, const Type &From) const;
   bool shouldCopyStorageToMemory(const Type &To, const Type &From) const;
-
-  unsigned getStructMemberIndex(const StructType &type,
-                                const std::string &member) const;
 
   bool isMostDerived(const FunctionDefinition *d) const;
   bool isMostDerived(const VariableDeclaration *d) const;
@@ -269,23 +234,18 @@ private:
   const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function, std::vector<const ContractDefinition *>::iterator it);
 
   // IELE Runtime functionality. These methods append calls to the IELE memory
-  // and storage management runtime and indicate that the runtime should be
-  // included as part of the compiling contract.
-  void appendStorageNextPtr();
+  // management runtime and indicate that the runtime should be included as part
+  // of the compiling contract.
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
-      iele::IeleValue *NumElems);
-  iele::IeleLocalVariable *appendIeleRuntimeAllocateStorage(
-      iele::IeleValue *NumElems);
-  iele::IeleLocalVariable *appendIeleRuntimeMemorySize(iele::IeleValue *Ptr);
-  iele::IeleLocalVariable *appendIeleRuntimeStorageSize(iele::IeleValue *Ptr);
-  iele::IeleLocalVariable *appendIeleRuntimeMemoryAddress(
-      iele::IeleValue *Base, iele::IeleValue *Offset);
-  iele::IeleLocalVariable *appendIeleRuntimeStorageAddress(
-      iele::IeleValue *Base, iele::IeleValue *Offset);
-  iele::IeleLocalVariable *appendIeleRuntimeMemoryLoad(
-      iele::IeleValue *Base, iele::IeleValue *Offset);
-  iele::IeleLocalVariable *appendIeleRuntimeStorageLoad(
-      iele::IeleValue *Base, iele::IeleValue *Offset);
+      iele::IeleValue *NumSlots);
+  void appendIeleRuntimeCopyMemoryToMemory(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
+  void appendIeleRuntimeCopyStorageToMemory(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
+  void appendIeleRuntimeCopyStorageToStorage(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
+  void appendIeleRuntimeCopyMemoryToStorage(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
 };
 
 } // end namespace solidity

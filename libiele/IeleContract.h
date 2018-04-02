@@ -53,7 +53,6 @@ private:
   friend class SymbolTableListTraits<IeleContract>;
 
   // IELE runtime related.
-  bool IncludeStorageRuntime;
   bool IncludeMemoryRuntime;
   void printRuntime(llvm::raw_ostream &OS, unsigned indent = 0) const;
 
@@ -77,11 +76,6 @@ public:
 
   inline const IeleContract *getParent() const { return Parent; }
   inline       IeleContract *getParent()       { return Parent; }
-
-  bool getIncludeStorageRuntime() const { return IncludeStorageRuntime; }
-  void setIncludeStorageRuntime(bool includeStorageRuntime) {
-    IncludeStorageRuntime = includeStorageRuntime;
-  }
 
   bool getIncludeMemoryRuntime() const { return IncludeMemoryRuntime; }
   void setIncludeMemoryRuntime(bool includeMemoryRuntime) {

@@ -212,7 +212,7 @@ void StorageItem::retrieveValue(SourceLocation const&, bool _remove) const
 		}
 	}
 }
-
+/*
 void StorageItem::storeValue(Type const& _sourceType, SourceLocation const& _location, bool _move) const
 {
 	CompilerUtils utils(m_context);
@@ -416,6 +416,7 @@ void StorageItem::setToZero(SourceLocation const&, bool _removeReference) const
 		}
 	}
 }
+*/
 
 /// Used in StorageByteArrayElement
 static FixedBytesType byteType(1);
