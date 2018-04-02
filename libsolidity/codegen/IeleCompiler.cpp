@@ -1142,7 +1142,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleGlobalVariable *Deposit =
       iele::IeleGlobalVariable::Create(&Context, "deposit");
     iele::IeleLocalVariable *StatusValue =
-      iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
+      CompilingFunctionStatus;
     iele::IeleInstruction::CreateAccountCall(false, StatusValue, EmptyLValues, Deposit,
                                              TargetAddressValue,
                                              TransferValue, GasValue,
@@ -1153,7 +1153,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     if (function.kind() == FunctionType::Kind::Transfer) {
       // For transfer revert if status is not zero.
-      appendRevert(StatusValue);
+      appendRevert(StatusValue, StatusValue);
     }
     break;
   }
@@ -1304,7 +1304,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       CalleeValues[0];
 
     iele::IeleLocalVariable *StatusValue =
-      iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
+      CompilingFunctionStatus;
 
     bool StaticCall =
       function.stateMutability() <= StateMutability::View;
@@ -1962,8 +1962,10 @@ void IeleCompiler::appendRevert(iele::IeleValue *Condition, iele::IeleValue *Sta
           CompilingFunctionStatus, RevertStatusBlock);
     }
     Block = RevertStatusBlock;
-    iele::IeleInstruction::CreateAssign(
-        CompilingFunctionStatus, Status, CompilingBlock);
+    if (Status != CompilingFunctionStatus) {
+      iele::IeleInstruction::CreateAssign(
+          CompilingFunctionStatus, Status, CompilingBlock);
+    }
   } else {
     // Create the revert block if it's not already created.
     if (!RevertBlock) {
