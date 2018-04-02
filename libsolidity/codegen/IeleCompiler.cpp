@@ -198,6 +198,7 @@ void IeleCompiler::compileContract(
     } else {
       CompilingFunction =
         iele::IeleFunction::Create(&Context, false, base->name() + ".init", CompilingContract);
+      CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
       CompilingBlock =
         iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
       appendStateVariableInitialization(base);
@@ -214,6 +215,7 @@ void IeleCompiler::compileContract(
   else {
     CompilingFunction =
       iele::IeleFunction::CreateInit(&Context, CompilingContract);
+    CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
     appendStateVariableInitialization(&contract);
@@ -279,8 +281,7 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
 
   iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
 
-  RevertBlock->insertInto(CompilingFunction);
-  RevertBlock = nullptr;
+  appendRevertBlocks();
   CompilingBlock = nullptr;
   CompilingFunction = nullptr;
 }
@@ -328,6 +329,8 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
   }
 
+  CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
+
   // Create the entry block.
   CompilingBlock =
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
@@ -372,21 +375,27 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     }
   }
 
-  // Append the revert block if needed.
-  if (RevertBlock) {
-    RevertBlock->insertInto(CompilingFunction);
-    RevertBlock = nullptr;
-  }
-
-  // Append the assert fail block if needed.
-  if (AssertFailBlock) {
-    AssertFailBlock->insertInto(CompilingFunction);
-    AssertFailBlock = nullptr;
-  }
+  // Append the exception blocks if needed.
+  appendRevertBlocks();
 
   CompilingBlock = nullptr;
   CompilingFunction = nullptr;
   return false;
+}
+
+void IeleCompiler::appendRevertBlocks(void) {
+  if (RevertBlock) {
+    RevertBlock->insertInto(CompilingFunction);
+    RevertBlock = nullptr;
+  }
+  if (RevertStatusBlock) {
+    RevertStatusBlock->insertInto(CompilingFunction);
+    RevertStatusBlock = nullptr;
+  }
+  if (AssertFailBlock) {
+    AssertFailBlock->insertInto(CompilingFunction);
+    AssertFailBlock = nullptr;
+  }
 }
 
 bool IeleCompiler::visit(const IfStatement &ifStatement) {
@@ -1878,18 +1887,32 @@ void IeleCompiler::appendPayableCheck() {
   appendRevert(CallvalueValue);
 }
 
-void IeleCompiler::appendRevert(iele::IeleValue *Condition) {
-  // Create the revert block if it's not already created.
-  if (!RevertBlock) {
-    RevertBlock = iele::IeleBlock::Create(&Context, "throw");
-    iele::IeleInstruction::CreateRevert(
-        iele::IeleIntConstant::getMinusOne(&Context), RevertBlock);
+void IeleCompiler::appendRevert(iele::IeleValue *Condition, iele::IeleValue *Status) {
+  iele::IeleBlock *Block;
+  if (Status) {
+    if (!RevertStatusBlock) {
+      // Create the status-specific revert block if it's not already created.
+      RevertStatusBlock = iele::IeleBlock::Create(&Context, "throw.status");
+      iele::IeleInstruction::CreateRevert(
+          CompilingFunctionStatus, RevertStatusBlock);
+    }
+    Block = RevertStatusBlock;
+    iele::IeleInstruction::CreateAssign(
+        CompilingFunctionStatus, Status, CompilingBlock);
+  } else {
+    // Create the revert block if it's not already created.
+    if (!RevertBlock) {
+      RevertBlock = iele::IeleBlock::Create(&Context, "throw");
+      iele::IeleInstruction::CreateRevert(
+          iele::IeleIntConstant::getMinusOne(&Context), RevertBlock);
+    }
+    Block = RevertBlock;
   }
 
   if (Condition)
-    connectWithConditionalJump(Condition, CompilingBlock, RevertBlock);
+    connectWithConditionalJump(Condition, CompilingBlock, Block);
   else
-    connectWithUnconditionalJump(CompilingBlock, RevertBlock);
+    connectWithUnconditionalJump(CompilingBlock, Block);
 }
 
 void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {

@@ -24,10 +24,12 @@ public:
     CompiledContract(nullptr),
     CompilingContract(nullptr),
     CompilingFunction(nullptr),
+    CompilingFunctionStatus(nullptr),
     CompilingBlock(nullptr),
     BreakBlock(nullptr),
     ContinueBlock(nullptr),
     RevertBlock(nullptr),
+    RevertStatusBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingLValue(false),
     CompilingLValueKind(LValueKind::Reg),
@@ -94,10 +96,12 @@ private:
   iele::IeleContext Context;
   iele::IeleContract *CompilingContract;
   iele::IeleFunction *CompilingFunction;
+  iele::IeleLocalVariable *CompilingFunctionStatus;
   iele::IeleBlock *CompilingBlock;
   iele::IeleBlock *BreakBlock;
   iele::IeleBlock *ContinueBlock;
   iele::IeleBlock *RevertBlock;
+  iele::IeleBlock *RevertStatusBlock;
   iele::IeleBlock *AssertFailBlock;
   llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
   bool CompilingLValue;
@@ -134,8 +138,10 @@ private:
                                   iele::IeleBlock *DestinationBlock);
 
   void appendPayableCheck(void);
-  void appendRevert(iele::IeleValue *Condition = nullptr);
+  void appendRevert(iele::IeleValue *Condition = nullptr, iele::IeleValue *Status = nullptr);
   void appendInvalid(iele::IeleValue *Condition = nullptr);
+
+  void appendRevertBlocks(void);
 
   // Infrastructure for unique variable names generation and mapping
   int NextUniqueIntToken = 0;
