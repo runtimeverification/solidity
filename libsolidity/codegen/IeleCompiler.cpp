@@ -2273,7 +2273,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     case Token::GreaterThanOrEqual:
     case Token::LessThanOrEqual:
     case Token::GreaterThan:
-    case Token::LessThan: // can't
+    case Token::LessThan:
     case Token::BitAnd:
     case Token::BitOr:
     case Token::BitXor:
