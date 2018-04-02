@@ -173,7 +173,17 @@ private:
 
   iele::IeleLocalVariable *appendBinaryOperator(
       Token::Value Opcode, iele::IeleValue *LeftOperand,
-      iele::IeleValue *RightOperand);
+      iele::IeleValue *RightOperand,
+      TypePointer ResultType);
+
+  void appendShiftBy(iele::IeleLocalVariable *Result, iele::IeleValue *Value,
+      int shiftAmount);
+  void appendMask(iele::IeleLocalVariable *Result, iele::IeleValue *Value, 
+      int bytes, bool issigned);
+  iele::IeleValue *appendTypeConversion(
+      iele::IeleValue *Operand,
+      const Type& SourceType,
+      const Type& TargetType);
 
   iele::IeleLocalVariable *appendBooleanOperator(
       Token::Value Opcode,
@@ -186,8 +196,8 @@ private:
       const std::function<iele::IeleValue *(void)> &FalseValue);
 
   bool shouldCopyStorageToStorage(iele::IeleValue *To, TypePointer From) const;
-  bool shouldCopyMemoryToStorage(TypePointer To, TypePointer From) const;
-  bool shouldCopyStorageToMemory(TypePointer To, TypePointer From) const;
+  bool shouldCopyMemoryToStorage(const Type &To, const Type &From) const;
+  bool shouldCopyStorageToMemory(const Type &To, const Type &From) const;
 
   unsigned getStructMemberIndex(const StructType &type,
                                 const std::string &member) const;

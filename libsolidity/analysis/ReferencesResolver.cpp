@@ -229,7 +229,7 @@ void ReferencesResolver::endVisit(ArrayTypeName const& _typeName)
 		else if (lengthType->isNegative())
 			fatalTypeError(length->location(), "Array with negative length specified.");
 		else
-			_typeName.annotation().type = make_shared<ArrayType>(DataLocation::Storage, baseType, lengthType->literalValue(nullptr));
+			_typeName.annotation().type = make_shared<ArrayType>(DataLocation::Storage, baseType, u256(lengthType->literalValue(nullptr)));
 	}
 	else
 		_typeName.annotation().type = make_shared<ArrayType>(DataLocation::Storage, baseType);

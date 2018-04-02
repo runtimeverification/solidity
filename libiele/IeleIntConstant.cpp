@@ -5,12 +5,12 @@
 using namespace dev;
 using namespace dev::iele;
 
-IeleIntConstant::IeleIntConstant(IeleContext *Ctx, const llvm::APInt &V) :
+IeleIntConstant::IeleIntConstant(IeleContext *Ctx, const bigint &V) :
   IeleConstant(Ctx, IeleValue::IeleIntConstantVal), Val(V) { }
 
 
 IeleIntConstant *IeleIntConstant::Create(IeleContext *Ctx,
-                                         const llvm::APInt &V) {
+                                         const bigint &V) {
   std::unique_ptr<IeleIntConstant> &Slot = Ctx->IeleIntConstants[V];
   if (!Slot) {
     Slot.reset(new IeleIntConstant(Ctx, V));
@@ -21,18 +21,18 @@ IeleIntConstant *IeleIntConstant::Create(IeleContext *Ctx,
 IeleIntConstant::~IeleIntConstant() { }
 
 IeleIntConstant *IeleIntConstant::getZero(IeleContext *Ctx) {
-  return Create(Ctx, llvm::APInt(64, 0, true));
+  return Create(Ctx, bigint(0));
 }
 
 IeleIntConstant *IeleIntConstant::getOne(IeleContext *Ctx) {
-  return Create(Ctx, llvm::APInt(64, 1, true));
+  return Create(Ctx, bigint(1));
 }
 
 IeleIntConstant *IeleIntConstant::getMinusOne(IeleContext *Ctx) {
-  return Create(Ctx, llvm::APInt(64, UINT64_MAX, true));
+  return Create(Ctx, bigint(-1));
 }
 
 void IeleIntConstant::print(llvm::raw_ostream &OS, unsigned indent) const {
   std::string Indent(indent, ' ');
-  OS << Indent << Val;
+  OS << Indent << Val.str();
 }
