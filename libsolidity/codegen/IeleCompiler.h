@@ -132,6 +132,10 @@ private:
 
   // Helpers for the compilation process.
   iele::IeleValue *compileExpression(const Expression &expression);
+  void compileExpressions(
+      const Expression &Expression,
+      llvm::SmallVectorImpl<iele::IeleValue *> &Result,
+      unsigned numExpressions);
   void compileTuple(
       const Expression &expression,
       llvm::SmallVectorImpl<iele::IeleValue *> &Result);

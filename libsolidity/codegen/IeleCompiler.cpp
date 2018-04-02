@@ -1297,7 +1297,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     compileFunctionArguments(&Arguments, &Returns, arguments, function);
 
     llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
-    compileTuple(functionCall.expression(), CalleeValues);
+    compileExpressions(functionCall.expression(), CalleeValues, 2);
     iele::IeleGlobalValue *FunctionCalleeValue =
       llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValues[1]);
     iele::IeleValue *AddressValue =
@@ -1876,6 +1876,31 @@ iele::IeleValue *IeleCompiler::compileExpression(const Expression &expression) {
   CompilingExpressionResult.clear();
   CompilingLValue = SavedCompilingLValue;
   return Result;
+}
+
+void IeleCompiler::compileExpressions(
+  const Expression &expression, 
+  llvm::SmallVectorImpl<iele::IeleValue *> &Result,
+  unsigned numExpressions) {
+  // Save current expression compilation status.
+  bool SavedCompilingLValue = CompilingLValue;
+
+  // Visit expression.
+  CompilingLValue = false;
+  expression.accept(*this);
+
+  // Expression visitors should store the value that is the result of the
+  // compiled for the expression computation in the CompilingExpressionResult
+  // field. This helper should only be used when a scalar value (or void) is
+  // expected as the result of the corresponding expression computation.
+  solAssert(CompilingExpressionResult.size() >= numExpressions, "expression visitor did not set enough result values");
+  Result.insert(Result.end(),
+                CompilingExpressionResult.begin(),
+                CompilingExpressionResult.begin() + numExpressions);
+
+  // Restore expression compilation status and return result.
+  CompilingExpressionResult.clear();
+  CompilingLValue = SavedCompilingLValue;
 }
 
 void IeleCompiler::compileTuple(
