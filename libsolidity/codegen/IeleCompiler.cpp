@@ -1133,7 +1133,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleGlobalVariable::Create(&Context, "deposit");
     iele::IeleLocalVariable *StatusValue =
       iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
-    iele::IeleInstruction::CreateAccountCall(StatusValue, EmptyLValues, Deposit,
+    iele::IeleInstruction::CreateAccountCall(false, StatusValue, EmptyLValues, Deposit,
                                              TargetAddressValue,
                                              TransferValue, GasValue,
                                              EmptyArguments,
