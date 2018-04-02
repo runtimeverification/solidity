@@ -12,6 +12,7 @@
 using namespace dev;
 using namespace dev::solidity;
 
+const IntegerType &UInt = IntegerType(256);
 const IntegerType &SInt = IntegerType(256, IntegerType::Modifier::Signed);
 const IntegerType &Address = IntegerType(160, IntegerType::Modifier::Address);
 
@@ -1275,15 +1276,74 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleInstruction::CreateSelfdestruct(TargetAddress, CompilingBlock);
     break;
   }
-  case FunctionType::Kind::External:
+  case FunctionType::Kind::SetGas: {
+    functionCall.expression().accept(*this);
+
+    GasValue = compileExpression(*arguments.front());
+    GasValue = appendTypeConversion(GasValue, *arguments.front()->annotation().type, UInt);
+    break;
+  }
+  case FunctionType::Kind::SetValue: {
+    functionCall.expression().accept(*this);
+
+    TransferValue = compileExpression(*arguments.front());
+    TransferValue = appendTypeConversion(TransferValue, *arguments.front()->annotation().type, UInt);
+    break;
+  }
+  case FunctionType::Kind::External: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
+    compileFunctionArguments(&Arguments, &Returns, arguments, function);
+
+    llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
+    compileTuple(functionCall.expression(), CalleeValues);
+    iele::IeleGlobalValue *FunctionCalleeValue =
+      llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValues[1]);
+    iele::IeleValue *AddressValue =
+      CalleeValues[0];
+
+    iele::IeleLocalVariable *StatusValue =
+      iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
+
+    bool StaticCall =
+      function.stateMutability() <= StateMutability::View;
+
+    solAssert(!StaticCall || !function.valueSet(), "Value set for staticcall");
+
+    if (!StaticCall && !function.valueSet()) {
+      TransferValue = iele::IeleIntConstant::getZero(&Context);
+    }
+
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasValue =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasValue, EmptyArguments,
+        CompilingBlock);
+      this->GasValue = GasValue;
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      StaticCall, StatusValue, Returns, FunctionCalleeValue,
+      AddressValue, TransferValue, GasValue, Arguments,
+      CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    CompilingExpressionResult.insert(
+        CompilingExpressionResult.end(), Returns.begin(), Returns.end());
+    TransferValue = nullptr;
+    GasValue = nullptr;
+    break;
+  }
   case FunctionType::Kind::CallCode:
   case FunctionType::Kind::DelegateCall:
   case FunctionType::Kind::BareCall:
   case FunctionType::Kind::BareCallCode:
   case FunctionType::Kind::BareDelegateCall:
   case FunctionType::Kind::Creation:
-  case FunctionType::Kind::SetGas:
-  case FunctionType::Kind::SetValue:
   case FunctionType::Kind::ByteArrayPush:
   case FunctionType::Kind::ArrayPush:
   case FunctionType::Kind::Log0:

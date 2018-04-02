@@ -106,6 +106,9 @@ private:
   llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
   bool CompilingLValue;
 
+  iele::IeleValue *GasValue;
+  iele::IeleValue *TransferValue;
+
   enum LValueKind { Reg, Memory, Storage };
   LValueKind CompilingLValueKind;
 
