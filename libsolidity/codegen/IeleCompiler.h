@@ -124,6 +124,9 @@ private:
   void appendModifierOrFunctionCode();
   unsigned ModifierDepth;
 
+  template <class ArgClass, class ReturnClass>
+  void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<const Expression>> &arguments, const FunctionType &function);
+
   // Helpers for the compilation process.
   iele::IeleValue *compileExpression(const Expression &expression);
   void compileTuple(

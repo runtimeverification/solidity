@@ -1243,17 +1243,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Internal: {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
-    for (unsigned i = 0; i < arguments.size(); ++i) {
-      iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
-      solAssert(ArgValue,
-                "IeleCompiler: Failed to compile internal function call "
-                "argument");
-      // Check if we need to do a memory to/from storage copy.
-      TypePointer ArgType = arguments[i]->annotation().type;
-      TypePointer ParamType = function.parameterTypes()[i];
-      ArgValue = appendTypeConversion(ArgValue, *ArgType, *ParamType);
-      Arguments.push_back(ArgValue);
-    }
+    llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
+    compileFunctionArguments(&Arguments, &Returns, arguments, function);
 
     // Visit callee.
     iele::IeleGlobalValue *CalleeValue =
@@ -1262,12 +1253,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     solAssert(CalleeValue,
               "IeleCompiler: Failed to compile callee of internal function "
               "call");
-
-    // Prepare registers for return values.
-    llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
-    for (unsigned i = 0; i < function.returnParameterTypes().size(); ++i)
-      Returns.push_back(
-        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction));
 
     // Generate call and return values.
     iele::IeleInstruction::CreateInternalCall(Returns, CalleeValue, Arguments,
@@ -1319,6 +1304,26 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   }
 
   return false;
+}
+
+template <class ArgClass, class ReturnClass>
+void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const std::vector<ASTPointer<const Expression>> &arguments, const FunctionType &function) {
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call "
+                "argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type;
+      TypePointer ParamType = function.parameterTypes()[i];
+      ArgValue = appendTypeConversion(ArgValue, *ArgType, *ParamType);
+      Arguments->push_back(ArgValue);
+    }
+
+    // Prepare registers for return values.
+    for (unsigned i = 0; i < function.returnParameterTypes().size(); ++i)
+      Returns->push_back(
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction));
 }
 
 bool IeleCompiler::visit(const NewExpression &newExpression) {
