@@ -1460,8 +1460,10 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       } else {
         solAssert(false, "not implemented yet");
       }
-    } else if (dynamic_cast<const EnumType *>(type->actualType().get())) {
-      solAssert(false, "not implemented yet: enums");
+    } else if (auto enumType = dynamic_cast<const EnumType *>(type->actualType().get())) {
+      iele::IeleIntConstant *Result = iele::IeleIntConstant::Create(&Context, bigint(enumType->memberValue(memberAccess.memberName())));
+      CompilingExpressionResult.push_back(Result);
+      return false;
     } else {
       solAssert(false, "not implemented yet");
     }
@@ -1767,13 +1769,13 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
       iele::IeleLocalVariable::Create(&Context, "index.out.of.range",
                                       CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue, 
+      iele::IeleInstruction::CmpLt, OutOfRangeValue, IndexValue, 
       iele::IeleIntConstant::getZero(&Context),
       CompilingBlock);
     appendRevert(OutOfRangeValue);
 
     iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::CmpLt, OutOfRangeValue, IndexValue,
+      iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue,
       iele::IeleIntConstant::Create(&Context, bigint(type.numBytes())),
       CompilingBlock);
     appendRevert(OutOfRangeValue);
@@ -2508,6 +2510,8 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
     }
   }
   case Type::Category::Enum:
+    solAssert(SourceType == TargetType || TargetType.category() == Type::Category::Integer, "Invalid enum conversion");
+    return Value;
   case Type::Category::FixedPoint:
   case Type::Category::Tuple:
   case Type::Category::Function: {
@@ -2536,7 +2540,31 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
       }
       return Value;
     }
-    case Type::Category::Enum:
+    case Type::Category::Enum: {
+      auto &enumType = dynamic_cast<const EnumType &>(TargetType);
+      solAssert(enumType.numberOfMembers() > 0, "Invalid empty enum");
+      if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value)) {
+        if (constant->getValue() < 0 || constant->getValue() >= enumType.numberOfMembers()) {
+          appendRevert();
+        }
+      } else {
+        iele::IeleLocalVariable *OutOfRangeValue =
+          iele::IeleLocalVariable::Create(&Context, "enum.out.of.range",
+                                          CompilingFunction);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::CmpLt, OutOfRangeValue, Value, 
+          iele::IeleIntConstant::getZero(&Context),
+          CompilingBlock);
+        appendRevert(OutOfRangeValue);
+  
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::CmpGe, OutOfRangeValue, Value,
+          iele::IeleIntConstant::Create(&Context, bigint(enumType.numberOfMembers())),
+          CompilingBlock);
+        appendRevert(OutOfRangeValue);
+      }
+      return Value;
+    }
     case Type::Category::StringLiteral:
       solAssert(false, "not implemented yet");
       break;

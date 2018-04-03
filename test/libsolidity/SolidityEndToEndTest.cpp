@@ -4116,7 +4116,6 @@ BOOST_AUTO_TEST_CASE(struct_copy_via_local)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(using_enums, 1)
 BOOST_AUTO_TEST_CASE(using_enums)
 {
 	char const* sourceCode = R"(
@@ -4137,7 +4136,6 @@ BOOST_AUTO_TEST_CASE(using_enums)
 	ABI_CHECK(callContractFunction("getChoice()"), encodeArgs(2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(enum_explicit_overflow, 1)
 BOOST_AUTO_TEST_CASE(enum_explicit_overflow)
 {
 	char const* sourceCode = R"(
@@ -4219,7 +4217,6 @@ BOOST_AUTO_TEST_CASE(storing_invalid_boolean)
 }
 
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(using_contract_enums_with_explicit_contract_name, 1)
 BOOST_AUTO_TEST_CASE(using_contract_enums_with_explicit_contract_name)
 {
 	char const* sourceCode = R"(
@@ -4235,7 +4232,6 @@ BOOST_AUTO_TEST_CASE(using_contract_enums_with_explicit_contract_name)
 	ABI_CHECK(callContractFunction("answer()"), encodeArgs(1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(using_inherited_enum, 1)
 BOOST_AUTO_TEST_CASE(using_inherited_enum)
 {
 	char const* sourceCode = R"(
@@ -4254,7 +4250,6 @@ BOOST_AUTO_TEST_CASE(using_inherited_enum)
 	ABI_CHECK(callContractFunction("answer()"), encodeArgs(1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(using_inherited_enum_excplicitly, 1)
 BOOST_AUTO_TEST_CASE(using_inherited_enum_excplicitly)
 {
 	char const* sourceCode = R"(
@@ -4273,7 +4268,6 @@ BOOST_AUTO_TEST_CASE(using_inherited_enum_excplicitly)
 	ABI_CHECK(callContractFunction("answer()"), encodeArgs(1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(constructing_enums_from_ints, 1)
 BOOST_AUTO_TEST_CASE(constructing_enums_from_ints)
 {
 	char const* sourceCode = R"(
