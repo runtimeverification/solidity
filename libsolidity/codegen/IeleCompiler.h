@@ -59,11 +59,6 @@ public:
     return {bytecode, std::map<size_t, std::string>()};
   }
 
-  bool isMostDerived(const FunctionDefinition *d) const;
-  bool isMostDerived(const VariableDeclaration *d) const;
-  const ContractDefinition *contractFor(const Declaration *d) const;
-  const FunctionDefinition *superFunction(const FunctionDefinition &function, const ContractDefinition &contract);
-
   // Visitor interface.
   virtual bool visit(const FunctionDefinition &function) override;
   virtual bool visit(const IfStatement &ifStatement) override;
@@ -219,6 +214,14 @@ private:
 
   unsigned getStructMemberIndex(const StructType &type,
                                 const std::string &member) const;
+
+  bool isMostDerived(const FunctionDefinition *d) const;
+  bool isMostDerived(const VariableDeclaration *d) const;
+  const ContractDefinition *contractFor(const Declaration *d) const;
+  const FunctionDefinition *superFunction(const FunctionDefinition &function, const ContractDefinition &contract);
+  const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function);
+  const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function, std::vector<const ContractDefinition *>::iterator it);
+
 };
 
 } // end namespace solidity

@@ -105,13 +105,7 @@ const ContractDefinition *IeleCompiler::contractFor(const Declaration *d) const 
   return nullptr; //not reached
 }
 
-const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &function, const ContractDefinition &contract) {
-  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
-
-  auto it = find(CompilingContractInheritanceHierarchy.begin(), CompilingContractInheritanceHierarchy.end(), &contract);
-  solAssert(it != CompilingContractInheritanceHierarchy.end(), "Base not found in inheritance hierarchy.");
-  it++;
-
+const FunctionDefinition *IeleCompiler::resolveVirtualFunction(const FunctionDefinition &function, std::vector<const ContractDefinition *>::iterator it) {
   for (; it != CompilingContractInheritanceHierarchy.end(); it++) {
     const ContractDefinition *contract = *it;
     for (const FunctionDefinition *decl : contract->definedFunctions()) {
@@ -122,6 +116,21 @@ const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &
   }
   solAssert(false, "Function definition not found.");
   return nullptr; // not reached
+}
+
+const FunctionDefinition *IeleCompiler::resolveVirtualFunction(const FunctionDefinition &function) {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+  return resolveVirtualFunction(function, CompilingContractInheritanceHierarchy.begin());
+}
+
+const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &function, const ContractDefinition &contract) {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+
+  auto it = find(CompilingContractInheritanceHierarchy.begin(), CompilingContractInheritanceHierarchy.end(), &contract);
+  solAssert(it != CompilingContractInheritanceHierarchy.end(), "Base not found in inheritance hierarchy.");
+  it++;
+
+  return resolveVirtualFunction(function, it);
 }
 
 void IeleCompiler::compileContract(
@@ -1754,7 +1763,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     identifier.annotation().referencedDeclaration;
   if (const FunctionDefinition *functionDef =
         dynamic_cast<const FunctionDefinition *>(declaration))
-    name = getIeleNameForFunction(*functionDef); 
+    name = getIeleNameForFunction(*resolveVirtualFunction(*functionDef)); 
 
   // Check if identifier is a reserved identifier.
   if (const MagicVariableDeclaration *magicVar =
