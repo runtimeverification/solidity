@@ -1434,20 +1434,20 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
           } else {
             solAssert(false, "Function member not found");
           }
-          case FunctionType::Kind::External:
-          case FunctionType::Kind::Creation:
-          case FunctionType::Kind::Send:
-          case FunctionType::Kind::Transfer:
-            // handled below
-            actualType = type->actualType().get();
-            break;
-          case FunctionType::Kind::BareCall:
-          case FunctionType::Kind::BareCallCode:
-          case FunctionType::Kind::BareDelegateCall:
-          case FunctionType::Kind::DelegateCall:
-          case FunctionType::Kind::CallCode:
-          default:
-            solAssert(false, "not implemented yet");
+        case FunctionType::Kind::External:
+        case FunctionType::Kind::Creation:
+        case FunctionType::Kind::Send:
+        case FunctionType::Kind::Transfer:
+          // handled below
+          actualType = type->actualType().get();
+          break;
+        case FunctionType::Kind::BareCall:
+        case FunctionType::Kind::BareCallCode:
+        case FunctionType::Kind::BareDelegateCall:
+        case FunctionType::Kind::DelegateCall:
+        case FunctionType::Kind::CallCode:
+        default:
+          solAssert(false, "not implemented yet");
         }
       } else if (dynamic_cast<const TypeType *>(memberAccess.annotation().type.get())) {
         return false;
