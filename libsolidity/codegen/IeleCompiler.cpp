@@ -1352,20 +1352,24 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::BareCall:
   case FunctionType::Kind::BareCallCode:
   case FunctionType::Kind::BareDelegateCall:
+    solAssert(false, "low-level function calls not supported in IELE");
   case FunctionType::Kind::Creation:
-  case FunctionType::Kind::ByteArrayPush:
-  case FunctionType::Kind::ArrayPush:
+    solAssert(false, "not implemented yet: new");
   case FunctionType::Kind::Log0:
   case FunctionType::Kind::Log1:
   case FunctionType::Kind::Log2:
   case FunctionType::Kind::Log3:
   case FunctionType::Kind::Log4:
   case FunctionType::Kind::Event:
+    solAssert(false, "not implemented yet: logging");
   case FunctionType::Kind::SHA3:
   case FunctionType::Kind::BlockHash:
   case FunctionType::Kind::ECRecover:
   case FunctionType::Kind::SHA256:
   case FunctionType::Kind::RIPEMD160:
+    solAssert(false, "not implemented yet: cryptographic functions");
+  case FunctionType::Kind::ByteArrayPush:
+  case FunctionType::Kind::ArrayPush:
     solAssert(false, "not implemented yet");
     break;
   default:
