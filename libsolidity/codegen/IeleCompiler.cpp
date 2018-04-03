@@ -1362,9 +1362,51 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Log4:
   case FunctionType::Kind::Event:
     solAssert(false, "not implemented yet: logging");
+  case FunctionType::Kind::ECRecover: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
+    compileFunctionArguments(&Arguments, &Returns, arguments, function);
+
+    iele::IeleGlobalVariable *FunctionCalleeValue =
+      iele::IeleGlobalVariable::Create(&Context, "iele.ecrec");
+    iele::IeleValue *AddressValue =
+      iele::IeleIntConstant::getOne(&Context);
+
+    iele::IeleLocalVariable *StatusValue =
+      CompilingFunctionStatus;
+
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasValue =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasValue, EmptyArguments,
+        CompilingBlock);
+      this->GasValue = GasValue;
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      true, StatusValue, Returns, FunctionCalleeValue, AddressValue,
+      nullptr, GasValue, Arguments, CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+    iele::IeleLocalVariable *Failed =
+      iele::IeleLocalVariable::Create(&Context, "ecrec.failed", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpEq, Failed, Returns[0],
+      iele::IeleIntConstant::getMinusOne(&Context),
+      CompilingBlock);
+    appendRevert(Failed);
+
+    CompilingExpressionResult.insert(
+        CompilingExpressionResult.end(), Returns.begin(), Returns.end());
+    TransferValue = nullptr;
+    GasValue = nullptr;
+    break;
+  }
   case FunctionType::Kind::SHA3:
   case FunctionType::Kind::BlockHash:
-  case FunctionType::Kind::ECRecover:
   case FunctionType::Kind::SHA256:
   case FunctionType::Kind::RIPEMD160:
     solAssert(false, "not implemented yet: cryptographic functions");
