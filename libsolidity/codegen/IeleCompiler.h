@@ -33,6 +33,8 @@ public:
     AssertFailBlock(nullptr),
     CompilingLValue(false),
     CompilingLValueKind(LValueKind::Reg),
+    GasValue(nullptr),
+    TransferValue(nullptr),
     CompilingContractASTNode(nullptr),
     CompilingFunctionASTNode(nullptr),
     ModifierDepth(-1) { }
@@ -106,11 +108,11 @@ private:
   llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
   bool CompilingLValue;
 
-  iele::IeleValue *GasValue;
-  iele::IeleValue *TransferValue;
-
   enum LValueKind { Reg, Memory, Storage };
   LValueKind CompilingLValueKind;
+
+  iele::IeleValue *GasValue;
+  iele::IeleValue *TransferValue;
 
   std::vector<const ContractDefinition *> CompilingContractInheritanceHierarchy;
   const ContractDefinition *CompilingContractASTNode;
