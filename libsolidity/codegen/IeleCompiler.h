@@ -162,6 +162,8 @@ private:
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
+  void appendVariable(iele::IeleValue *Identifier, std::string name);
+
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
       iele::IeleValue *NumElems);
   iele::IeleLocalVariable *appendIeleRuntimeAllocateStorage(

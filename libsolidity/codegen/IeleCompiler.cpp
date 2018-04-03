@@ -1818,6 +1818,20 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
             "IeleCompiler: failed to access compiling contract's symbol "
             "table.");
   if (iele::IeleValue *Identifier = ST->lookup(name)) {
+    appendVariable(Identifier, name);
+    return;
+  }
+
+  // If not found, make a new IeleLocalVariable for the identifier.
+  iele::IeleLocalVariable *Identifier =
+    iele::IeleLocalVariable::Create(&Context, name, CompilingFunction);
+  if (CompilingLValue)
+    CompilingLValueKind = LValueKind::Reg;
+  CompilingExpressionResult.push_back(Identifier);
+  return;
+}
+
+void IeleCompiler::appendVariable(iele::IeleValue *Identifier, std::string name) {
     if (iele::IeleGlobalVariable *GV =
           llvm::dyn_cast<iele::IeleGlobalVariable>(Identifier)) {
       // In case of a global variable, if we aren't compiling an lvalue, we have
@@ -1837,16 +1851,6 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     }
 
     CompilingExpressionResult.push_back(Identifier);
-    return;
-  }
-
-  // If not found, make a new IeleLocalVariable for the identifier.
-  iele::IeleLocalVariable *Identifier =
-    iele::IeleLocalVariable::Create(&Context, name, CompilingFunction);
-  if (CompilingLValue)
-    CompilingLValueKind = LValueKind::Reg;
-  CompilingExpressionResult.push_back(Identifier);
-  return;
 }
 
 void IeleCompiler::endVisit(const Literal &literal) {
