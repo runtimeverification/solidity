@@ -2618,7 +2618,6 @@ BOOST_AUTO_TEST_CASE(value_for_constructor)
 	BOOST_REQUIRE(callContractFunction("getBalances()") == encodeArgs(12, 10));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(virtual_function_calls, 1)
 BOOST_AUTO_TEST_CASE(virtual_function_calls)
 {
 	char const* sourceCode = R"(
@@ -2679,7 +2678,6 @@ BOOST_AUTO_TEST_CASE(single_copy_with_multiple_inheritance)
 	ABI_CHECK(callContractFunction("getViaB()"), encodeArgs(23));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(explicit_base_class, 1)
 BOOST_AUTO_TEST_CASE(explicit_base_class)
 {
 	char const* sourceCode = R"(
@@ -2876,7 +2874,6 @@ BOOST_AUTO_TEST_CASE(function_modifier_overriding)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(false));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_modifier_calling_functions_in_creation_context, 1)
 BOOST_AUTO_TEST_CASE(function_modifier_calling_functions_in_creation_context)
 {
 	char const* sourceCode = R"(
@@ -6981,7 +6978,6 @@ BOOST_AUTO_TEST_CASE(accessor_for_const_state_variable)
 	ABI_CHECK(callContractFunction("ticketPrice()"), encodeArgs(u256(555)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(state_variable_under_contract_name, 1)
 BOOST_AUTO_TEST_CASE(state_variable_under_contract_name)
 {
 	char const* text = R"(
@@ -6997,7 +6993,6 @@ BOOST_AUTO_TEST_CASE(state_variable_under_contract_name)
 	ABI_CHECK(callContractFunction("getStateVar()"), encodeArgs(u256(42)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(state_variable_local_variable_mixture, 1)
 BOOST_AUTO_TEST_CASE(state_variable_local_variable_mixture)
 {
 	char const* sourceCode = R"(
@@ -7014,7 +7009,6 @@ BOOST_AUTO_TEST_CASE(state_variable_local_variable_mixture)
 	ABI_CHECK(callContractFunction("a()"), encodeArgs(u256(2)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inherited_function, 1)
 BOOST_AUTO_TEST_CASE(inherited_function) {
 	char const* sourceCode = R"(
 		contract A { function f() internal returns (uint) { return 1; } }
@@ -7046,7 +7040,6 @@ BOOST_AUTO_TEST_CASE(inherited_function_from_a_library) {
 	ABI_CHECK(callContractFunction("g()"), encodeArgs(u256(1)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inherited_constant_state_var, 1)
 BOOST_AUTO_TEST_CASE(inherited_constant_state_var)
 {
 	char const* sourceCode = R"(
@@ -7064,7 +7057,6 @@ BOOST_AUTO_TEST_CASE(inherited_constant_state_var)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(multiple_inherited_state_vars, 1)
 BOOST_AUTO_TEST_CASE(multiple_inherited_state_vars)
 {
 	char const* sourceCode = R"(
@@ -7349,7 +7341,6 @@ BOOST_AUTO_TEST_CASE(using_library_structs)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(7), u256(8)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_struct_as_an_expression, 1)
 BOOST_AUTO_TEST_CASE(library_struct_as_an_expression)
 {
 	char const* sourceCode = R"(
@@ -7371,7 +7362,6 @@ BOOST_AUTO_TEST_CASE(library_struct_as_an_expression)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(1)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_enum_as_an_expression, 1)
 BOOST_AUTO_TEST_CASE(library_enum_as_an_expression)
 {
 	char const* sourceCode = R"(

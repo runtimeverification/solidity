@@ -105,13 +105,7 @@ const ContractDefinition *IeleCompiler::contractFor(const Declaration *d) const 
   return nullptr; //not reached
 }
 
-const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &function, const ContractDefinition &contract) {
-  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
-
-  auto it = find(CompilingContractInheritanceHierarchy.begin(), CompilingContractInheritanceHierarchy.end(), &contract);
-  solAssert(it != CompilingContractInheritanceHierarchy.end(), "Base not found in inheritance hierarchy.");
-  it++;
-
+const FunctionDefinition *IeleCompiler::resolveVirtualFunction(const FunctionDefinition &function, std::vector<const ContractDefinition *>::iterator it) {
   for (; it != CompilingContractInheritanceHierarchy.end(); it++) {
     const ContractDefinition *contract = *it;
     for (const FunctionDefinition *decl : contract->definedFunctions()) {
@@ -122,6 +116,21 @@ const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &
   }
   solAssert(false, "Function definition not found.");
   return nullptr; // not reached
+}
+
+const FunctionDefinition *IeleCompiler::resolveVirtualFunction(const FunctionDefinition &function) {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+  return resolveVirtualFunction(function, CompilingContractInheritanceHierarchy.begin());
+}
+
+const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &function, const ContractDefinition &contract) {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+
+  auto it = find(CompilingContractInheritanceHierarchy.begin(), CompilingContractInheritanceHierarchy.end(), &contract);
+  solAssert(it != CompilingContractInheritanceHierarchy.end(), "Base not found in inheritance hierarchy.");
+  it++;
+
+  return resolveVirtualFunction(function, it);
 }
 
 void IeleCompiler::compileContract(
@@ -1343,20 +1352,24 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::BareCall:
   case FunctionType::Kind::BareCallCode:
   case FunctionType::Kind::BareDelegateCall:
+    solAssert(false, "low-level function calls not supported in IELE");
   case FunctionType::Kind::Creation:
-  case FunctionType::Kind::ByteArrayPush:
-  case FunctionType::Kind::ArrayPush:
+    solAssert(false, "not implemented yet: new");
   case FunctionType::Kind::Log0:
   case FunctionType::Kind::Log1:
   case FunctionType::Kind::Log2:
   case FunctionType::Kind::Log3:
   case FunctionType::Kind::Log4:
   case FunctionType::Kind::Event:
+    solAssert(false, "not implemented yet: logging");
   case FunctionType::Kind::SHA3:
   case FunctionType::Kind::BlockHash:
   case FunctionType::Kind::ECRecover:
   case FunctionType::Kind::SHA256:
   case FunctionType::Kind::RIPEMD160:
+    solAssert(false, "not implemented yet: cryptographic functions");
+  case FunctionType::Kind::ByteArrayPush:
+  case FunctionType::Kind::ArrayPush:
     solAssert(false, "not implemented yet");
     break;
   default:
@@ -1404,13 +1417,57 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     }
   }
 
-  if (dynamic_cast<const TypeType *>(
-          memberAccess.expression().annotation().type.get())) {
-    solAssert(false, "not implemented yet");
-    return false;
+  const Type *actualType = memberAccess.expression().annotation().type.get();
+  if (const TypeType *type = dynamic_cast<const TypeType *>(actualType)) {
+    if (dynamic_cast<const ContractType *>(type->actualType().get())) {
+      iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
+      solAssert(ST,
+                "IeleCompiler: failed to access compiling contract's symbol table.");
+      if (auto funType = dynamic_cast<const FunctionType *>(memberAccess.annotation().type.get())) {
+        switch(funType->kind()) {
+        case FunctionType::Kind::Internal:
+	  if (const auto * function = dynamic_cast<const FunctionDefinition *>(memberAccess.annotation().referencedDeclaration)) {
+            std::string name = getIeleNameForFunction(*function);
+            iele::IeleValue *Result = ST->lookup(name);
+            CompilingExpressionResult.push_back(Result);
+            return false;
+          } else {
+            solAssert(false, "Function member not found");
+          }
+        case FunctionType::Kind::External:
+        case FunctionType::Kind::Creation:
+        case FunctionType::Kind::Send:
+        case FunctionType::Kind::Transfer:
+          // handled below
+          actualType = type->actualType().get();
+          break;
+        case FunctionType::Kind::BareCall:
+        case FunctionType::Kind::BareCallCode:
+        case FunctionType::Kind::BareDelegateCall:
+        case FunctionType::Kind::DelegateCall:
+        case FunctionType::Kind::CallCode:
+        default:
+          solAssert(false, "not implemented yet");
+        }
+      } else if (dynamic_cast<const TypeType *>(memberAccess.annotation().type.get())) {
+        return false;
+        //noop
+      } else if (auto variable = dynamic_cast<const VariableDeclaration *>(memberAccess.annotation().referencedDeclaration)) {
+        std::string name = getIeleNameForStateVariable(variable);
+        iele::IeleValue *Result = ST->lookup(name);
+        appendVariable(Result, name);
+        return false;
+      } else {
+        solAssert(false, "not implemented yet");
+      }
+    } else if (dynamic_cast<const EnumType *>(type->actualType().get())) {
+      solAssert(false, "not implemented yet: enums");
+    } else {
+      solAssert(false, "not implemented yet");
+    }
   }
 
-  if (auto type = dynamic_cast<const ContractType *>(memberAccess.expression().annotation().type.get())) {
+  if (auto type = dynamic_cast<const ContractType *>(actualType)) {
  
     if (type->isSuper()) {
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
@@ -1445,7 +1502,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     }
   }
 
-  const Type &baseType = *memberAccess.expression().annotation().type;
+  const Type &baseType = *actualType;
 
   // Visit accessed exression (skip in case of magic base expression).
   iele::IeleValue *ExprValue = nullptr;
@@ -1754,7 +1811,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     identifier.annotation().referencedDeclaration;
   if (const FunctionDefinition *functionDef =
         dynamic_cast<const FunctionDefinition *>(declaration))
-    name = getIeleNameForFunction(*functionDef); 
+    name = getIeleNameForFunction(*resolveVirtualFunction(*functionDef)); 
 
   // Check if identifier is a reserved identifier.
   if (const MagicVariableDeclaration *magicVar =
@@ -1805,6 +1862,20 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
             "IeleCompiler: failed to access compiling contract's symbol "
             "table.");
   if (iele::IeleValue *Identifier = ST->lookup(name)) {
+    appendVariable(Identifier, name);
+    return;
+  }
+
+  // If not found, make a new IeleLocalVariable for the identifier.
+  iele::IeleLocalVariable *Identifier =
+    iele::IeleLocalVariable::Create(&Context, name, CompilingFunction);
+  if (CompilingLValue)
+    CompilingLValueKind = LValueKind::Reg;
+  CompilingExpressionResult.push_back(Identifier);
+  return;
+}
+
+void IeleCompiler::appendVariable(iele::IeleValue *Identifier, std::string name) {
     if (iele::IeleGlobalVariable *GV =
           llvm::dyn_cast<iele::IeleGlobalVariable>(Identifier)) {
       // In case of a global variable, if we aren't compiling an lvalue, we have
@@ -1824,16 +1895,6 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     }
 
     CompilingExpressionResult.push_back(Identifier);
-    return;
-  }
-
-  // If not found, make a new IeleLocalVariable for the identifier.
-  iele::IeleLocalVariable *Identifier =
-    iele::IeleLocalVariable::Create(&Context, name, CompilingFunction);
-  if (CompilingLValue)
-    CompilingLValueKind = LValueKind::Reg;
-  CompilingExpressionResult.push_back(Identifier);
-  return;
 }
 
 void IeleCompiler::endVisit(const Literal &literal) {
