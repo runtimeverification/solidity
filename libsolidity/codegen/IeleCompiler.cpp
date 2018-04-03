@@ -1767,13 +1767,13 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
       iele::IeleLocalVariable::Create(&Context, "index.out.of.range",
                                       CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue, 
+      iele::IeleInstruction::CmpLt, OutOfRangeValue, IndexValue, 
       iele::IeleIntConstant::getZero(&Context),
       CompilingBlock);
     appendRevert(OutOfRangeValue);
 
     iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::CmpLt, OutOfRangeValue, IndexValue,
+      iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue,
       iele::IeleIntConstant::Create(&Context, bigint(type.numBytes())),
       CompilingBlock);
     appendRevert(OutOfRangeValue);
