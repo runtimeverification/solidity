@@ -54,10 +54,10 @@ public:
 	{
 		bytes const& bytecode = compileContract(_sourceCode, _contractName, _libraryAddresses);
 		sendMessage(_arguments, "", bytecode, true, _value);
-		if (m_status != 0) {
-			return empty;
-		}
-		return bytecode;
+		BOOST_REQUIRE(m_status == 0);
+		m_output.clear();
+                m_output.push_back(bytecode);
+		return m_output[0];
 	}
 
 	bytes compileContract(
@@ -87,6 +87,7 @@ public:
 		}
 		eth::LinkerObject obj = m_compiler.object(_contractName.empty() ? m_compiler.lastContractName() : _contractName);
 		BOOST_REQUIRE(obj.linkReferences.empty());
+		BOOST_TEST_MESSAGE(obj.bytecode.size());
 		return obj.bytecode;
 	}
 
