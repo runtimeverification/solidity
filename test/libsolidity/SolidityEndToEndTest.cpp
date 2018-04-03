@@ -7341,7 +7341,6 @@ BOOST_AUTO_TEST_CASE(using_library_structs)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(7), u256(8)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_struct_as_an_expression, 1)
 BOOST_AUTO_TEST_CASE(library_struct_as_an_expression)
 {
 	char const* sourceCode = R"(
@@ -7363,7 +7362,6 @@ BOOST_AUTO_TEST_CASE(library_struct_as_an_expression)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(1)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_enum_as_an_expression, 1)
 BOOST_AUTO_TEST_CASE(library_enum_as_an_expression)
 {
 	char const* sourceCode = R"(
