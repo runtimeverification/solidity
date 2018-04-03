@@ -1417,10 +1417,51 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     }
   }
 
-  if (dynamic_cast<const TypeType *>(
+  if (const TypeType *type = dynamic_cast<const TypeType *>(
           memberAccess.expression().annotation().type.get())) {
-    solAssert(false, "not implemented yet");
-    return false;
+    if (dynamic_cast<const ContractType *>(type->actualType().get())) {
+      iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
+      solAssert(ST,
+                "IeleCompiler: failed to access compiling contract's symbol table.");
+      if (auto funType = dynamic_cast<const FunctionType *>(memberAccess.annotation().type.get())) {
+        switch(funType->kind()) {
+        case FunctionType::Kind::Internal:
+	  if (const auto * function = dynamic_cast<const FunctionDefinition *>(memberAccess.annotation().referencedDeclaration)) {
+            std::string name = getIeleNameForFunction(*function);
+            iele::IeleValue *Result = ST->lookup(name);
+            CompilingExpressionResult.push_back(Result);
+            return false;
+          } else {
+            solAssert(false, "Function member not found");
+          }
+          case FunctionType::Kind::External:
+          case FunctionType::Kind::Creation:
+          case FunctionType::Kind::DelegateCall:
+          case FunctionType::Kind::CallCode:
+          case FunctionType::Kind::Send:
+          case FunctionType::Kind::BareCall:
+          case FunctionType::Kind::BareCallCode:
+          case FunctionType::Kind::BareDelegateCall:
+          case FunctionType::Kind::Transfer:
+            break;
+          default:
+            solAssert(false, "not implemented yet");
+        }
+      } else if (dynamic_cast<const TypeType *>(memberAccess.annotation().type.get())) {
+        //noop
+      } else if (auto variable = dynamic_cast<const VariableDeclaration *>(memberAccess.annotation().referencedDeclaration)) {
+        std::string name = getIeleNameForStateVariable(variable);
+        iele::IeleValue *Result = ST->lookup(name);
+        appendVariable(Result, name);
+        return false;
+      } else {
+        solAssert(false, "not implemented yet");
+      }
+    } else if (dynamic_cast<const EnumType *>(type->actualType().get())) {
+      solAssert(false, "not implemented yet: enums");
+    } else {
+      solAssert(false, "not implemented yet");
+    }
   }
 
   if (auto type = dynamic_cast<const ContractType *>(memberAccess.expression().annotation().type.get())) {
