@@ -2,6 +2,8 @@
 
 #include <libsolidity/interface/Exceptions.h>
 
+#include <libdevcore/SHA3.h>
+
 #include "libiele/IeleContract.h"
 #include "libiele/IeleGlobalVariable.h"
 #include "libiele/IeleIntConstant.h"
@@ -1281,6 +1283,98 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleInstruction::CreateSelfdestruct(TargetAddress, CompilingBlock);
     break;
   }
+  case FunctionType::Kind::Event: {
+    llvm::SmallVector<iele::IeleValue *, 4> IndexedArguments;
+    llvm::SmallVector<iele::IeleValue *, 4> NonIndexedArguments;
+    unsigned numIndexed = 0;
+    
+    // Get the event definition
+    auto const& event = 
+      dynamic_cast<EventDefinition const&>(function.declaration());
+    
+    // Include Event ID as first indexed argument
+    // (but only if event is not anonymous!)
+    if (!event.isAnonymous()) {
+      iele::IeleIntConstant *EventID =
+        iele::IeleIntConstant::Create(
+          &Context,
+          bigint(u256(h256::Arith(dev::keccak256(
+            function.externalSignature())))),
+          true /* print as hex */);
+      IndexedArguments.push_back(EventID);
+      ++numIndexed;
+    }
+
+    // Visit indexed arguments.
+    for (unsigned arg = 0; arg < arguments.size(); ++arg) {
+      if (event.parameters()[arg]->isIndexed()) {
+        numIndexed++;
+        // Compile argument
+        iele::IeleValue *ArgValue = compileExpression(*arguments[arg]);
+        solAssert(ArgValue,
+                  "IeleCompiler: Failed to compile indexed event argument ");
+        // Store indexed argument
+        IndexedArguments.push_back(ArgValue);
+      }
+    }
+
+    // Max 4 indexed params allowed! 
+    solAssert(numIndexed <= 4, "Too many indexed arguments.");
+    
+    // Visit non indexed params
+    for (unsigned arg = 0; arg < arguments.size(); ++arg) {
+      if (!event.parameters()[arg]->isIndexed()) {
+        // Compile argument
+        iele::IeleValue *ArgValue = compileExpression(*arguments[arg]);
+        solAssert(ArgValue,
+                  "IeleCompiler: Failed to compile non-indexed event argument");
+        // Store indexed argument
+        NonIndexedArguments.push_back(ArgValue);
+      }
+    }
+
+    // Since we don't have encoding yet, we assume a single non-indexed args. 
+    // TODO: once we have encoding, remove this. 
+    solAssert(NonIndexedArguments.size() == 1, 
+              "Only a single non-indexed param is allowed (temporarily)");
+
+    // Find out next free location (will store encoding of non-indexed args)     
+    iele::IeleLocalVariable *LastUsed =
+        iele::IeleLocalVariable::Create(&Context, "last.used", 
+                                        CompilingFunction);
+    iele::IeleLocalVariable *NextFree =
+        iele::IeleLocalVariable::Create(&Context, "next.free", 
+                                        CompilingFunction);
+    // i.e. %last.used = load 0    
+    iele::IeleInstruction::CreateLoad(
+      LastUsed, 
+      iele::IeleIntConstant::getZero(&Context), 
+      CompilingBlock);
+    // i.e. %next.free = add %last.used, 1
+    iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Add,
+                                       NextFree,
+                                       LastUsed, 
+                                       iele::IeleIntConstant::getOne(&Context),
+                                       CompilingBlock);
+    // i.e. store %next.free, 0 (needed?)
+    // iele::IeleInstruction::CreateStore(NextFree,
+    //                                    iele::IeleIntConstant::getZero(&Context), 
+    //                                    CompilingBlock);
+
+
+    // Store non-indexed args in memory 
+    // TODO: encode non-indexed arguments into a single bytestring
+    //       (for now, only a single argument is supported)
+    iele::IeleInstruction::CreateStore(NonIndexedArguments[0],
+                                       NextFree, 
+                                       CompilingBlock);
+
+    // build Log instruction
+    iele::IeleInstruction::CreateLog(IndexedArguments,
+                                     NextFree, // Contains encoded data
+                                     CompilingBlock);
+    break;
+  }
   case FunctionType::Kind::External:
   case FunctionType::Kind::CallCode:
   case FunctionType::Kind::DelegateCall:
@@ -1297,7 +1391,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Log2:
   case FunctionType::Kind::Log3:
   case FunctionType::Kind::Log4:
-  case FunctionType::Kind::Event:
   case FunctionType::Kind::SHA3:
   case FunctionType::Kind::BlockHash:
   case FunctionType::Kind::ECRecover:
