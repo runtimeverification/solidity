@@ -1893,7 +1893,7 @@ void IeleCompiler::compileExpressions(
   // compiled for the expression computation in the CompilingExpressionResult
   // field. This helper should only be used when a scalar value (or void) is
   // expected as the result of the corresponding expression computation.
-  solAssert(CompilingExpressionResult.size() >= numExpressions, "expression visitor did not set enough result values");
+  solAssert(CompilingExpressionResult.size() == numExpressions, "expression visitor did not set enough result values");
   Result.insert(Result.end(),
                 CompilingExpressionResult.begin(),
                 CompilingExpressionResult.begin() + numExpressions);
