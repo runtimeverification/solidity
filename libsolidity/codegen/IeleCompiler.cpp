@@ -12,6 +12,7 @@
 using namespace dev;
 using namespace dev::solidity;
 
+const IntegerType &UInt = IntegerType(256);
 const IntegerType &SInt = IntegerType(256, IntegerType::Modifier::Signed);
 const IntegerType &Address = IntegerType(160, IntegerType::Modifier::Address);
 
@@ -198,6 +199,7 @@ void IeleCompiler::compileContract(
     } else {
       CompilingFunction =
         iele::IeleFunction::Create(&Context, false, base->name() + ".init", CompilingContract);
+      CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
       CompilingBlock =
         iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
       appendStateVariableInitialization(base);
@@ -214,6 +216,7 @@ void IeleCompiler::compileContract(
   else {
     CompilingFunction =
       iele::IeleFunction::CreateInit(&Context, CompilingContract);
+    CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
     appendStateVariableInitialization(&contract);
@@ -279,8 +282,7 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
 
   iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
 
-  RevertBlock->insertInto(CompilingFunction);
-  RevertBlock = nullptr;
+  appendRevertBlocks();
   CompilingBlock = nullptr;
   CompilingFunction = nullptr;
 }
@@ -328,6 +330,8 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
   }
 
+  CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
+
   // Create the entry block.
   CompilingBlock =
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
@@ -372,21 +376,27 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     }
   }
 
-  // Append the revert block if needed.
-  if (RevertBlock) {
-    RevertBlock->insertInto(CompilingFunction);
-    RevertBlock = nullptr;
-  }
-
-  // Append the assert fail block if needed.
-  if (AssertFailBlock) {
-    AssertFailBlock->insertInto(CompilingFunction);
-    AssertFailBlock = nullptr;
-  }
+  // Append the exception blocks if needed.
+  appendRevertBlocks();
 
   CompilingBlock = nullptr;
   CompilingFunction = nullptr;
   return false;
+}
+
+void IeleCompiler::appendRevertBlocks(void) {
+  if (RevertBlock) {
+    RevertBlock->insertInto(CompilingFunction);
+    RevertBlock = nullptr;
+  }
+  if (RevertStatusBlock) {
+    RevertStatusBlock->insertInto(CompilingFunction);
+    RevertStatusBlock = nullptr;
+  }
+  if (AssertFailBlock) {
+    AssertFailBlock->insertInto(CompilingFunction);
+    AssertFailBlock = nullptr;
+  }
 }
 
 bool IeleCompiler::visit(const IfStatement &ifStatement) {
@@ -1132,8 +1142,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleGlobalVariable *Deposit =
       iele::IeleGlobalVariable::Create(&Context, "deposit");
     iele::IeleLocalVariable *StatusValue =
-      iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
-    iele::IeleInstruction::CreateAccountCall(StatusValue, EmptyLValues, Deposit,
+      CompilingFunctionStatus;
+    iele::IeleInstruction::CreateAccountCall(false, StatusValue, EmptyLValues, Deposit,
                                              TargetAddressValue,
                                              TransferValue, GasValue,
                                              EmptyArguments,
@@ -1143,7 +1153,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     if (function.kind() == FunctionType::Kind::Transfer) {
       // For transfer revert if status is not zero.
-      appendRevert(StatusValue);
+      appendRevert(StatusValue, StatusValue);
     }
     break;
   }
@@ -1234,17 +1244,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Internal: {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
-    for (unsigned i = 0; i < arguments.size(); ++i) {
-      iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
-      solAssert(ArgValue,
-                "IeleCompiler: Failed to compile internal function call "
-                "argument");
-      // Check if we need to do a memory to/from storage copy.
-      TypePointer ArgType = arguments[i]->annotation().type;
-      TypePointer ParamType = function.parameterTypes()[i];
-      ArgValue = appendTypeConversion(ArgValue, *ArgType, *ParamType);
-      Arguments.push_back(ArgValue);
-    }
+    llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
+    compileFunctionArguments(&Arguments, &Returns, arguments, function);
 
     // Visit callee.
     iele::IeleGlobalValue *CalleeValue =
@@ -1253,12 +1254,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     solAssert(CalleeValue,
               "IeleCompiler: Failed to compile callee of internal function "
               "call");
-
-    // Prepare registers for return values.
-    llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
-    for (unsigned i = 0; i < function.returnParameterTypes().size(); ++i)
-      Returns.push_back(
-        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction));
 
     // Generate call and return values.
     iele::IeleInstruction::CreateInternalCall(Returns, CalleeValue, Arguments,
@@ -1281,15 +1276,74 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleInstruction::CreateSelfdestruct(TargetAddress, CompilingBlock);
     break;
   }
-  case FunctionType::Kind::External:
+  case FunctionType::Kind::SetGas: {
+    functionCall.expression().accept(*this);
+
+    GasValue = compileExpression(*arguments.front());
+    GasValue = appendTypeConversion(GasValue, *arguments.front()->annotation().type, UInt);
+    break;
+  }
+  case FunctionType::Kind::SetValue: {
+    functionCall.expression().accept(*this);
+
+    TransferValue = compileExpression(*arguments.front());
+    TransferValue = appendTypeConversion(TransferValue, *arguments.front()->annotation().type, UInt);
+    break;
+  }
+  case FunctionType::Kind::External: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
+    compileFunctionArguments(&Arguments, &Returns, arguments, function);
+
+    llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
+    compileExpressions(functionCall.expression(), CalleeValues, 2);
+    iele::IeleGlobalValue *FunctionCalleeValue =
+      llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValues[1]);
+    iele::IeleValue *AddressValue =
+      CalleeValues[0];
+
+    iele::IeleLocalVariable *StatusValue =
+      CompilingFunctionStatus;
+
+    bool StaticCall =
+      function.stateMutability() <= StateMutability::View;
+
+    solAssert(!StaticCall || !function.valueSet(), "Value set for staticcall");
+
+    if (!StaticCall && !function.valueSet()) {
+      TransferValue = iele::IeleIntConstant::getZero(&Context);
+    }
+
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasValue =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasValue, EmptyArguments,
+        CompilingBlock);
+      this->GasValue = GasValue;
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      StaticCall, StatusValue, Returns, FunctionCalleeValue,
+      AddressValue, TransferValue, GasValue, Arguments,
+      CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    CompilingExpressionResult.insert(
+        CompilingExpressionResult.end(), Returns.begin(), Returns.end());
+    TransferValue = nullptr;
+    GasValue = nullptr;
+    break;
+  }
   case FunctionType::Kind::CallCode:
   case FunctionType::Kind::DelegateCall:
   case FunctionType::Kind::BareCall:
   case FunctionType::Kind::BareCallCode:
   case FunctionType::Kind::BareDelegateCall:
   case FunctionType::Kind::Creation:
-  case FunctionType::Kind::SetGas:
-  case FunctionType::Kind::SetValue:
   case FunctionType::Kind::ByteArrayPush:
   case FunctionType::Kind::ArrayPush:
   case FunctionType::Kind::Log0:
@@ -1310,6 +1364,26 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   }
 
   return false;
+}
+
+template <class ArgClass, class ReturnClass>
+void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const std::vector<ASTPointer<const Expression>> &arguments, const FunctionType &function) {
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call "
+                "argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type;
+      TypePointer ParamType = function.parameterTypes()[i];
+      ArgValue = appendTypeConversion(ArgValue, *ArgType, *ParamType);
+      Arguments->push_back(ArgValue);
+    }
+
+    // Prepare registers for return values.
+    for (unsigned i = 0; i < function.returnParameterTypes().size(); ++i)
+      Returns->push_back(
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction));
 }
 
 bool IeleCompiler::visit(const NewExpression &newExpression) {
@@ -1337,18 +1411,37 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
   }
 
   if (auto type = dynamic_cast<const ContractType *>(memberAccess.expression().annotation().type.get())) {
+ 
     if (type->isSuper()) {
-      const FunctionDefinition *super = superFunction(dynamic_cast<const FunctionDefinition &>(*memberAccess.annotation().referencedDeclaration), type->contractDefinition());
-      std::string superName = getIeleNameForFunction(*super);
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
       solAssert(ST,
                 "IeleCompiler: failed to access compiling contract's symbol table.");
+
+      const FunctionDefinition *super = superFunction(dynamic_cast<const FunctionDefinition &>(*memberAccess.annotation().referencedDeclaration), type->contractDefinition());
+      std::string superName = getIeleNameForFunction(*super);
       iele::IeleValue *Result = ST->lookup(superName);
       solAssert(Result,
                 "IeleCompiler: failed to find function in compiling contract's"
                 " symbol table");
       CompilingExpressionResult.push_back(Result);
       return false;
+    } else {
+      memberAccess.expression().accept(*this);
+      if (const Declaration *declaration = memberAccess.annotation().referencedDeclaration) {
+        std::string name;
+        // don't call getIeleNameFor here because this is part of an external call and therefore is only able to
+        // see the most-derived function
+        if (const auto *variable = dynamic_cast<const VariableDeclaration *>(declaration)) {
+          name = variable->name() + "()";
+        } else if (const auto *function = dynamic_cast<const FunctionDefinition *>(declaration)) {
+          name = function->externalSignature();
+        } else {
+          solAssert(false, "Contract member is neither variable nor function.");
+        }
+        iele::IeleValue *Result = iele::IeleFunction::Create(&Context, true, name);
+        CompilingExpressionResult.push_back(Result);
+        return false;
+      }
     }
   }
 
@@ -1454,6 +1547,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     else
       solAssert(false, "IeleCompiler: Unknown magic member.");
     break;
+  case Type::Category::Contract:
   case Type::Category::Integer: {
     solAssert(!(std::set<std::string>{"call", "callcode", "delegatecall"}).count(member),
               "IeleCompiler: member not supported in IELE");
@@ -1667,18 +1761,11 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
          dynamic_cast<const MagicVariableDeclaration *>(declaration)) {
     switch (magicVar->type()->category()) {
     case Type::Category::Contract: {
-      const ContractType *type = dynamic_cast<const ContractType *>(magicVar->type().get());
-      if (type->isSuper()) {
-        //should only be reached if super is not part of a member access expression
-        // in this case we evaluate to the current object since that is the same as "this" object
-        llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
-        iele::IeleLocalVariable *This =
-          iele::IeleLocalVariable::Create(&Context, "super", CompilingFunction);
-        iele::IeleInstruction::CreateIntrinsicCall(iele::IeleInstruction::Address, This, EmptyArguments, CompilingBlock);
-        return;
-      }
-      // Reserved identifiers: "this" or "super"
-      solAssert(false, "not implemented yet");
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *This =
+        iele::IeleLocalVariable::Create(&Context, "this", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(iele::IeleInstruction::Address, This, EmptyArguments, CompilingBlock);
+      CompilingExpressionResult.push_back(This);
       return;
     }
     case Type::Category::Integer: {
@@ -1791,6 +1878,31 @@ iele::IeleValue *IeleCompiler::compileExpression(const Expression &expression) {
   return Result;
 }
 
+void IeleCompiler::compileExpressions(
+  const Expression &expression, 
+  llvm::SmallVectorImpl<iele::IeleValue *> &Result,
+  unsigned numExpressions) {
+  // Save current expression compilation status.
+  bool SavedCompilingLValue = CompilingLValue;
+
+  // Visit expression.
+  CompilingLValue = false;
+  expression.accept(*this);
+
+  // Expression visitors should store the value that is the result of the
+  // compiled for the expression computation in the CompilingExpressionResult
+  // field. This helper should only be used when a scalar value (or void) is
+  // expected as the result of the corresponding expression computation.
+  solAssert(CompilingExpressionResult.size() == numExpressions, "expression visitor did not set enough result values");
+  Result.insert(Result.end(),
+                CompilingExpressionResult.begin(),
+                CompilingExpressionResult.begin() + numExpressions);
+
+  // Restore expression compilation status and return result.
+  CompilingExpressionResult.clear();
+  CompilingLValue = SavedCompilingLValue;
+}
+
 void IeleCompiler::compileTuple(
     const Expression &expression,
     llvm::SmallVectorImpl<iele::IeleValue *> &Result) {
@@ -1865,18 +1977,34 @@ void IeleCompiler::appendPayableCheck() {
   appendRevert(CallvalueValue);
 }
 
-void IeleCompiler::appendRevert(iele::IeleValue *Condition) {
-  // Create the revert block if it's not already created.
-  if (!RevertBlock) {
-    RevertBlock = iele::IeleBlock::Create(&Context, "throw");
-    iele::IeleInstruction::CreateRevert(
-        iele::IeleIntConstant::getMinusOne(&Context), RevertBlock);
+void IeleCompiler::appendRevert(iele::IeleValue *Condition, iele::IeleValue *Status) {
+  iele::IeleBlock *Block;
+  if (Status) {
+    if (!RevertStatusBlock) {
+      // Create the status-specific revert block if it's not already created.
+      RevertStatusBlock = iele::IeleBlock::Create(&Context, "throw.status");
+      iele::IeleInstruction::CreateRevert(
+          CompilingFunctionStatus, RevertStatusBlock);
+    }
+    Block = RevertStatusBlock;
+    if (Status != CompilingFunctionStatus) {
+      iele::IeleInstruction::CreateAssign(
+          CompilingFunctionStatus, Status, CompilingBlock);
+    }
+  } else {
+    // Create the revert block if it's not already created.
+    if (!RevertBlock) {
+      RevertBlock = iele::IeleBlock::Create(&Context, "throw");
+      iele::IeleInstruction::CreateRevert(
+          iele::IeleIntConstant::getMinusOne(&Context), RevertBlock);
+    }
+    Block = RevertBlock;
   }
 
   if (Condition)
-    connectWithConditionalJump(Condition, CompilingBlock, RevertBlock);
+    connectWithConditionalJump(Condition, CompilingBlock, Block);
   else
-    connectWithUnconditionalJump(CompilingBlock, RevertBlock);
+    connectWithUnconditionalJump(CompilingBlock, Block);
 }
 
 void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {
