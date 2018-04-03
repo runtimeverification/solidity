@@ -213,13 +213,10 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
     IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleInstruction *InsertBefore) {
-  if (StaticCall) {
-    solAssert(Callee && StatusValue && AddressValue && !TransferValue && GasValue,
-              "CreateAccountCall: Invalid operands");
-  } else {
-    solAssert(Callee && StatusValue && AddressValue && TransferValue && GasValue,
-              "CreateAccountCall: Invalid operands");
-  }
+  solAssert(Callee && StatusValue && AddressValue && GasValue,
+            "CreateAccountCall: Invalid operands");
+  solAssert(!TransferValue == StaticCall,
+            "CreateAccountCall: Invalid operands");
   IeleInstruction *AccountCallInst = new IeleInstruction(StaticCall ? StaticCallAt : CallAt, InsertBefore);
   AccountCallInst->getIeleLValueList().push_back(StatusValue);
   AccountCallInst->getIeleLValueList().insert(AccountCallInst->lvalue_end(),
@@ -245,13 +242,10 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
     IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleBlock *InsertAtEnd) {
-  if (StaticCall) {
-    solAssert(Callee && StatusValue && AddressValue && !TransferValue && GasValue,
-              "CreateAccountCall: Invalid operands");
-  } else {
-    solAssert(Callee && StatusValue && AddressValue && TransferValue && GasValue,
-              "CreateAccountCall: Invalid operands");
-  }
+  solAssert(Callee && StatusValue && AddressValue && GasValue,
+            "CreateAccountCall: Invalid operands");
+  solAssert(!TransferValue == StaticCall,
+            "CreateAccountCall: Invalid operands");
 
   IeleInstruction *AccountCallInst = new IeleInstruction(StaticCall ? StaticCallAt : CallAt, InsertAtEnd);
   AccountCallInst->getIeleLValueList().push_back(StatusValue);
