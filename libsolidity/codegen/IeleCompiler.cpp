@@ -1417,8 +1417,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     }
   }
 
-  if (const TypeType *type = dynamic_cast<const TypeType *>(
-          memberAccess.expression().annotation().type.get())) {
+  const Type *actualType = memberAccess.expression().annotation().type.get();
+  if (const TypeType *type = dynamic_cast<const TypeType *>(actualType)) {
     if (dynamic_cast<const ContractType *>(type->actualType().get())) {
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
       solAssert(ST,
@@ -1436,18 +1436,21 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
           }
           case FunctionType::Kind::External:
           case FunctionType::Kind::Creation:
-          case FunctionType::Kind::DelegateCall:
-          case FunctionType::Kind::CallCode:
           case FunctionType::Kind::Send:
+          case FunctionType::Kind::Transfer:
+            // handled below
+            actualType = type->actualType().get();
+            break;
           case FunctionType::Kind::BareCall:
           case FunctionType::Kind::BareCallCode:
           case FunctionType::Kind::BareDelegateCall:
-          case FunctionType::Kind::Transfer:
-            break;
+          case FunctionType::Kind::DelegateCall:
+          case FunctionType::Kind::CallCode:
           default:
             solAssert(false, "not implemented yet");
         }
       } else if (dynamic_cast<const TypeType *>(memberAccess.annotation().type.get())) {
+        return false;
         //noop
       } else if (auto variable = dynamic_cast<const VariableDeclaration *>(memberAccess.annotation().referencedDeclaration)) {
         std::string name = getIeleNameForStateVariable(variable);
@@ -1464,7 +1467,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     }
   }
 
-  if (auto type = dynamic_cast<const ContractType *>(memberAccess.expression().annotation().type.get())) {
+  if (auto type = dynamic_cast<const ContractType *>(actualType)) {
  
     if (type->isSuper()) {
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
@@ -1499,7 +1502,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     }
   }
 
-  const Type &baseType = *memberAccess.expression().annotation().type;
+  const Type &baseType = *actualType;
 
   // Visit accessed exression (skip in case of magic base expression).
   iele::IeleValue *ExprValue = nullptr;
