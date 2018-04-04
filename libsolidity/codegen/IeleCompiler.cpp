@@ -1070,7 +1070,7 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
   LeftOperandValue = appendTypeConversion(LeftOperandValue,
     *binaryOperation.leftExpression().annotation().type,
     *commonType);
-  if (Token::isShiftOp(binaryOperation.getOperator())) {
+  if (!Token::isShiftOp(binaryOperation.getOperator())) {
     RightOperandValue = appendTypeConversion(RightOperandValue,
       *binaryOperation.rightExpression().annotation().type,
       *commonType);
@@ -2521,6 +2521,8 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   default: break;
   }
 
+  iele::IeleValue *OriginalRightOperand = RightOperand;
+
   switch (Opcode) {
   case Token::Add:                BinOpcode = iele::IeleInstruction::Add; break;
   case Token::Sub:                BinOpcode = iele::IeleInstruction::Sub; break;
@@ -2593,7 +2595,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   case Token::SHL: {
     BinOpcode = iele::IeleInstruction::Shift; 
     bigint min = 0;
-    appendRangeCheck(RightOperand, &min, nullptr);
+    appendRangeCheck(OriginalRightOperand, &min, nullptr);
     break;
   }
   default:
