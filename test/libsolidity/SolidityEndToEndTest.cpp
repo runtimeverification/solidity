@@ -3090,7 +3090,6 @@ BOOST_AUTO_TEST_CASE(event)
 	}
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(event_emit, 1)
 BOOST_AUTO_TEST_CASE(event_emit)
 {
 	char const* sourceCode = R"(
