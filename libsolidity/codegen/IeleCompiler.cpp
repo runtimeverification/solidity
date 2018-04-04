@@ -310,10 +310,11 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   CompilingFunctionASTNode = &function;
   unsigned NumOfModifiers = CompilingFunctionASTNode->modifiers().size();
 
+  std::vector<iele::IeleArgument *> parameters;
   // Visit formal arguments.
   for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
     std::string genName = arg->name() + getNextVarSuffix();
-    iele::IeleArgument::Create(&Context, genName, CompilingFunction);
+    parameters.push_back(iele::IeleArgument::Create(&Context, genName, CompilingFunction));
     // No need to keep track of the mapping for omitted args, since they will never be referenced.
     if (!(arg->name() == ""))
        VarNameMap[NumOfModifiers][arg->name()] = genName;
@@ -349,6 +350,16 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     appendPayableCheck();
   }
 
+  if (function.isPublic()) {
+    for (unsigned i = 0; i < function.parameters().size(); i++) {
+      const auto &arg = *function.parameters()[i];
+      iele::IeleArgument *ieleArg = parameters[i];
+      const auto &argType = *arg.type();
+      if (argType.isValueType()) {
+        appendRangeCheck(ieleArg, argType);
+      }
+    }
+  }
   // If the function is a constructor, visit state variables and add
   // initialization code.
   if (function.isConstructor())
