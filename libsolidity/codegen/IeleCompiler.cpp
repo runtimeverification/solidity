@@ -1048,15 +1048,8 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
     CompilingExpressionResult.push_back(Result);
     return false;
   }
-  // Visit operands.
-  iele::IeleValue *LeftOperandValue = 
-    compileExpression(binaryOperation.leftExpression());
-  solAssert(LeftOperandValue, "IeleCompiler: Failed to compile left operand.");
-  iele::IeleValue *RightOperandValue = 
-    compileExpression(binaryOperation.rightExpression());
-  solAssert(RightOperandValue, "IeleCompiler: Failed to compile right operand.");
-
   const TypePointer &commonType = binaryOperation.annotation().commonType;
+
   if (commonType->category() == Type::Category::RationalNumber) {
     iele::IeleIntConstant *LiteralValue =
       iele::IeleIntConstant::Create(
@@ -1065,6 +1058,14 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
     CompilingExpressionResult.push_back(LiteralValue);
     return false;
   }
+
+  // Visit operands.
+  iele::IeleValue *LeftOperandValue = 
+    compileExpression(binaryOperation.leftExpression());
+  solAssert(LeftOperandValue, "IeleCompiler: Failed to compile left operand.");
+  iele::IeleValue *RightOperandValue = 
+    compileExpression(binaryOperation.rightExpression());
+  solAssert(RightOperandValue, "IeleCompiler: Failed to compile right operand.");
 
   LeftOperandValue = appendTypeConversion(LeftOperandValue,
     *binaryOperation.leftExpression().annotation().type,
