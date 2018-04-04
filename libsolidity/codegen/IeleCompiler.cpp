@@ -1195,11 +1195,14 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
                                              EmptyArguments,
                                              CompilingBlock);
     
-    CompilingExpressionResult.push_back(StatusValue);
-
     if (function.kind() == FunctionType::Kind::Transfer) {
       // For transfer revert if status is not zero.
       appendRevert(StatusValue, StatusValue);
+    } else {
+      iele::IeleLocalVariable *ResultValue =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateIsZero(ResultValue, StatusValue, CompilingBlock);
+      CompilingExpressionResult.push_back(ResultValue);
     }
     break;
   }
