@@ -79,6 +79,7 @@ IeleInstruction *IeleInstruction::CreateLog(
 
   IeleInstruction *LogInst = new IeleInstruction(Log, InsertBefore);
   
+  LogInst->getIeleOperandList().insert(LogInst->end(), NonIndexedArguments);
   LogInst->getIeleOperandList().insert(LogInst->end(), 
                                        IndexedArguments.begin(), 
                                        IndexedArguments.end());
