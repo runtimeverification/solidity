@@ -1337,8 +1337,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       }
     }
 
-    // Since we don't have encoding yet, we assume a single non-indexed args. 
-    // TODO: once we have encoding, remove this. 
+    // Since we don't have encoding of multiple values into a bytestring yet, 
+    // we assume at most a single non-indexed arg for now. TODO: once we have encoding, remove this. 
     solAssert(NonIndexedArguments.size() <= 1, 
               "Only a single non-indexed param is allowed (temporarily)");
 
@@ -1360,25 +1360,22 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
                                        LastUsed, 
                                        iele::IeleIntConstant::getOne(&Context),
                                        CompilingBlock);
+
     // i.e. store %next.free, 0 (needed?)
     // iele::IeleInstruction::CreateStore(NextFree,
     //                                    iele::IeleIntConstant::getZero(&Context), 
     //                                    CompilingBlock);
 
     // Store non-indexed args in memory (for now, only one)
-    // TODO: encode non-indexed arguments into a single bytestring
-    // TODO: we now use default dummy value of 0, but once we have encoding,
-    //       this should be handled by the encoding function. 
-
-    if (NonIndexedArguments.size() > 0) {
+    // TODO: encode multiple non-indexed arguments into a single bytestring
+    if (NonIndexedArguments.size() > 0)
       iele::IeleInstruction::CreateStore(NonIndexedArguments[0],
                                         NextFree, 
                                         CompilingBlock);
-    }
 
     // build Log instruction
     iele::IeleInstruction::CreateLog(IndexedArguments,
-                                     NextFree, // Contains encoded data
+                                     NextFree, // Contains encoded data, or is uninitilised in case of no non-indexed args
                                      CompilingBlock);
     break;
   }
