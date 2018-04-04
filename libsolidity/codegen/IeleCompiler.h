@@ -24,13 +24,17 @@ public:
     CompiledContract(nullptr),
     CompilingContract(nullptr),
     CompilingFunction(nullptr),
+    CompilingFunctionStatus(nullptr),
     CompilingBlock(nullptr),
     BreakBlock(nullptr),
     ContinueBlock(nullptr),
     RevertBlock(nullptr),
+    RevertStatusBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingLValue(false),
     CompilingLValueKind(LValueKind::Reg),
+    GasValue(nullptr),
+    TransferValue(nullptr),
     CompilingContractASTNode(nullptr),
     CompilingFunctionASTNode(nullptr),
     ModifierDepth(-1) { }
@@ -54,11 +58,6 @@ public:
     bytes bytecode = CompiledContract->toBinary();
     return {bytecode, std::map<size_t, std::string>()};
   }
-
-  bool isMostDerived(const FunctionDefinition *d) const;
-  bool isMostDerived(const VariableDeclaration *d) const;
-  const ContractDefinition *contractFor(const Declaration *d) const;
-  const FunctionDefinition *superFunction(const FunctionDefinition &function, const ContractDefinition &contract);
 
   // Visitor interface.
   virtual bool visit(const FunctionDefinition &function) override;
@@ -94,16 +93,21 @@ private:
   iele::IeleContext Context;
   iele::IeleContract *CompilingContract;
   iele::IeleFunction *CompilingFunction;
+  iele::IeleLocalVariable *CompilingFunctionStatus;
   iele::IeleBlock *CompilingBlock;
   iele::IeleBlock *BreakBlock;
   iele::IeleBlock *ContinueBlock;
   iele::IeleBlock *RevertBlock;
+  iele::IeleBlock *RevertStatusBlock;
   iele::IeleBlock *AssertFailBlock;
   llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
   bool CompilingLValue;
 
   enum LValueKind { Reg, Memory, Storage };
   LValueKind CompilingLValueKind;
+
+  iele::IeleValue *GasValue;
+  iele::IeleValue *TransferValue;
 
   std::vector<const ContractDefinition *> CompilingContractInheritanceHierarchy;
   const ContractDefinition *CompilingContractASTNode;
@@ -120,8 +124,15 @@ private:
   void appendModifierOrFunctionCode();
   unsigned ModifierDepth;
 
+  template <class ArgClass, class ReturnClass>
+  void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<const Expression>> &arguments, const FunctionType &function);
+
   // Helpers for the compilation process.
   iele::IeleValue *compileExpression(const Expression &expression);
+  void compileExpressions(
+      const Expression &Expression,
+      llvm::SmallVectorImpl<iele::IeleValue *> &Result,
+      unsigned numExpressions);
   void compileTuple(
       const Expression &expression,
       llvm::SmallVectorImpl<iele::IeleValue *> &Result);
@@ -134,8 +145,10 @@ private:
                                   iele::IeleBlock *DestinationBlock);
 
   void appendPayableCheck(void);
-  void appendRevert(iele::IeleValue *Condition = nullptr);
+  void appendRevert(iele::IeleValue *Condition = nullptr, iele::IeleValue *Status = nullptr);
   void appendInvalid(iele::IeleValue *Condition = nullptr);
+
+  void appendRevertBlocks(void);
 
   // Infrastructure for unique variable names generation and mapping
   int NextUniqueIntToken = 0;
@@ -148,6 +161,8 @@ private:
   void appendStateVariableInitialization(const ContractDefinition *contract);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
+
+  void appendVariable(iele::IeleValue *Identifier, std::string name);
 
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
       iele::IeleValue *NumElems);
@@ -201,6 +216,14 @@ private:
 
   unsigned getStructMemberIndex(const StructType &type,
                                 const std::string &member) const;
+
+  bool isMostDerived(const FunctionDefinition *d) const;
+  bool isMostDerived(const VariableDeclaration *d) const;
+  const ContractDefinition *contractFor(const Declaration *d) const;
+  const FunctionDefinition *superFunction(const FunctionDefinition &function, const ContractDefinition &contract);
+  const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function);
+  const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function, std::vector<const ContractDefinition *>::iterator it);
+
 };
 
 } // end namespace solidity

@@ -189,6 +189,7 @@ public:
       IeleValue *Condition, IeleBlock *Target, IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateAccountCall(
+      bool StaticCall,
       IeleLocalVariable *StatusValue,
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
       IeleGlobalValue *Callee, IeleValue *AddressValue,
@@ -196,6 +197,7 @@ public:
       llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateAccountCall(
+      bool StaticCall,
       IeleLocalVariable *StatusValue,
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
       IeleGlobalValue *Callee, IeleValue *AddressValue,
