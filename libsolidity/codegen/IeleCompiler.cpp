@@ -2590,8 +2590,12 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     RightOperand = ShiftValue;
     // fall through
   }
-  case Token::SHL:                BinOpcode = iele::IeleInstruction::Shift; break;
-  
+  case Token::SHL: {
+    BinOpcode = iele::IeleInstruction::Shift; 
+    bigint min = 0;
+    appendRangeCheck(RightOperand, &min, nullptr);
+    break;
+  }
   default:
     solAssert(false, "not implemented yet");
     solAssert(false, "IeleCompiler: Invalid binary operator");
