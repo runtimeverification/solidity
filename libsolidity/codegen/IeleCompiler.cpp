@@ -1339,7 +1339,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     // Since we don't have encoding yet, we assume a single non-indexed args. 
     // TODO: once we have encoding, remove this. 
-    solAssert(NonIndexedArguments.size() == 1, 
+    solAssert(NonIndexedArguments.size() > 1, 
               "Only a single non-indexed param is allowed (temporarily)");
 
     // Find out next free location (will store encoding of non-indexed args)     
