@@ -1832,20 +1832,9 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
               "IeleCompiler: failed to compile index expression for index "
               "access.");
 
-    iele::IeleLocalVariable *OutOfRangeValue =
-      iele::IeleLocalVariable::Create(&Context, "index.out.of.range",
-                                      CompilingFunction);
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::CmpLt, OutOfRangeValue, IndexValue, 
-      iele::IeleIntConstant::getZero(&Context),
-      CompilingBlock);
-    appendRevert(OutOfRangeValue);
-
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue,
-      iele::IeleIntConstant::Create(&Context, bigint(type.numBytes())),
-      CompilingBlock);
-    appendRevert(OutOfRangeValue);
+    bigint min = 0;
+    bigint max = type.numBytes() - 1;
+    appendRangeCheck(IndexValue, &min, &max);
 
     iele::IeleLocalVariable *ShiftValue =
       iele::IeleLocalVariable::Create(&Context, "tmp",
@@ -1871,6 +1860,88 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
   }
 
   return false;
+}
+
+void IeleCompiler::appendRangeCheck(iele::IeleValue *Value, bigint *min, bigint *max) {
+    if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value)) {
+      if ((min && constant->getValue() < *min) || (max && constant->getValue() > *max)) {
+        appendRevert();
+      }
+      return;
+    }
+    iele::IeleLocalVariable *OutOfRangeValue =
+      iele::IeleLocalVariable::Create(&Context, "out.of.range",
+                                      CompilingFunction);
+    if (min) {
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::CmpLt, OutOfRangeValue, Value, 
+        iele::IeleIntConstant::Create(&Context, *min),
+        CompilingBlock);
+      appendRevert(OutOfRangeValue);
+    }
+
+    if (max) {
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::CmpGt, OutOfRangeValue, Value,
+        iele::IeleIntConstant::Create(&Context, *max),
+        CompilingBlock);
+      appendRevert(OutOfRangeValue);
+    }
+}
+
+void IeleCompiler::appendRangeCheck(iele::IeleValue *Value, const Type &Type) {
+  bigint min, max;
+  switch(Type.category()) {
+  case Type::Category::Integer: {
+    const IntegerType &type = dynamic_cast<const IntegerType &>(Type);
+    if (type.numBits() == 256 && type.isSigned()) {
+      return;
+    } else if (type.numBits() == 256) {
+      bigint min = 0;
+      if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value)) {
+        if (constant->getValue() < 0) {
+          appendRevert();
+        }
+      } else {
+        appendRangeCheck(Value, &min, nullptr);
+      }
+      return;
+    } else if (type.isSigned()) {
+      min = -(bigint(1) << (type.numBits() - 1));
+      max = (bigint(1) << (type.numBits() - 1)) - 1;
+    } else {
+      min = 0;
+      max = (bigint(1) << type.numBits()) - 1;
+    }
+    break;
+  }
+  case Type::Category::Bool: {
+    min = 0;
+    max = 1;
+    break;
+  }
+  case Type::Category::FixedBytes: {
+    const FixedBytesType &type = dynamic_cast<const FixedBytesType &>(Type);
+    min = 0;
+    max = (bigint(1) << (type.numBytes() * 8)) - 1;
+    break;
+  }
+  case Type::Category::Contract: {
+    min = 0;
+    max = (bigint(1) << 160) - 1;
+    break;
+  }
+  case Type::Category::Enum: {
+    const EnumType &type = dynamic_cast<const EnumType &>(Type);
+    solAssert(type.numberOfMembers() > 0, "Invalid empty enum");
+    min = 0;
+    max = type.numberOfMembers() - 1;
+    break;
+  }
+  default:
+    solAssert(false, "not implemented yet");
+  }
+  appendRangeCheck(Value, &min, &max);
 }
 
 void IeleCompiler::endVisit(const Identifier &identifier) {
@@ -2608,28 +2679,7 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
       return Value;
     }
     case Type::Category::Enum: {
-      auto &enumType = dynamic_cast<const EnumType &>(TargetType);
-      solAssert(enumType.numberOfMembers() > 0, "Invalid empty enum");
-      if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value)) {
-        if (constant->getValue() < 0 || constant->getValue() >= enumType.numberOfMembers()) {
-          appendRevert();
-        }
-      } else {
-        iele::IeleLocalVariable *OutOfRangeValue =
-          iele::IeleLocalVariable::Create(&Context, "enum.out.of.range",
-                                          CompilingFunction);
-        iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::CmpLt, OutOfRangeValue, Value, 
-          iele::IeleIntConstant::getZero(&Context),
-          CompilingBlock);
-        appendRevert(OutOfRangeValue);
-  
-        iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::CmpGe, OutOfRangeValue, Value,
-          iele::IeleIntConstant::Create(&Context, bigint(enumType.numberOfMembers())),
-          CompilingBlock);
-        appendRevert(OutOfRangeValue);
-      }
+      appendRangeCheck(Value, TargetType);
       return Value;
     }
     case Type::Category::StringLiteral:

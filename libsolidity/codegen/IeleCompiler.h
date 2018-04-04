@@ -147,6 +147,8 @@ private:
   void appendPayableCheck(void);
   void appendRevert(iele::IeleValue *Condition = nullptr, iele::IeleValue *Status = nullptr);
   void appendInvalid(iele::IeleValue *Condition = nullptr);
+  void appendRangeCheck(iele::IeleValue *Value, bigint *min, bigint *max);
+  void appendRangeCheck(iele::IeleValue *Value, const Type &Type);
 
   void appendRevertBlocks(void);
 
