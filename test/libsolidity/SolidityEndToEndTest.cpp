@@ -3334,7 +3334,6 @@ BOOST_AUTO_TEST_CASE(events_with_same_name_inherited_emit)
 	BOOST_CHECK_EQUAL(m_logs[0].topics[0], dev::keccak256(string("Deposit(address,uint256)")));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(event_anonymous, 1)
 BOOST_AUTO_TEST_CASE(event_anonymous)
 {
 	char const* sourceCode = R"(
