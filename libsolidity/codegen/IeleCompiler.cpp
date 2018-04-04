@@ -989,6 +989,31 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     iele::IeleLocalVariable *Result =
       iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
     iele::IeleInstruction::CreateNot(Result, SubExprValue, CompilingBlock);
+
+    bool fixed = false, issigned = false;
+    int nbytes;
+    TypePointer ResultType = unaryOperation.annotation().type;
+    switch (ResultType->category()) {
+    case Type::Category::Integer: {
+      const IntegerType *type = dynamic_cast<const IntegerType *>(ResultType.get());
+      fixed = type->numBits() != 256;
+      nbytes = type->numBits() / 8;
+      issigned = type->isSigned();
+      break;
+    }
+    case Type::Category::FixedBytes: {
+      const FixedBytesType *type = dynamic_cast<const FixedBytesType *>(ResultType.get());
+      fixed = true;
+      nbytes = type->numBytes();
+      break;
+    }
+    default: break;
+    }
+
+    if (fixed && !issigned) {
+      appendMask(Result, Result, nbytes, false);
+    }
+
     CompilingExpressionResult.push_back(Result);
     break;
   }
