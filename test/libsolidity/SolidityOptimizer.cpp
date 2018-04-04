@@ -376,7 +376,7 @@ BOOST_AUTO_TEST_CASE(sequence_number_for_calls)
 	compareVersions("f(string,string)", 0x40, 0x80, 3, "abc", 3, "def");
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(computing_constants, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(computing_constants, 2)
 BOOST_AUTO_TEST_CASE(computing_constants)
 {
 	char const* sourceCode = R"(
