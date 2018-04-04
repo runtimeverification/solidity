@@ -3113,7 +3113,6 @@ BOOST_AUTO_TEST_CASE(event_emit)
 	BOOST_CHECK_EQUAL(m_logs[0].topics[2], h256(id));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(event_no_arguments, 1)
 BOOST_AUTO_TEST_CASE(event_no_arguments)
 {
 	char const* sourceCode = R"(
@@ -3134,7 +3133,6 @@ BOOST_AUTO_TEST_CASE(event_no_arguments)
 	BOOST_CHECK_EQUAL(m_logs[0].topics[0], dev::keccak256(string("Deposit()")));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(event_access_through_base_name, 1)
 BOOST_AUTO_TEST_CASE(event_access_through_base_name)
 {
 	char const* sourceCode = R"(
@@ -3157,7 +3155,6 @@ BOOST_AUTO_TEST_CASE(event_access_through_base_name)
 	BOOST_CHECK_EQUAL(m_logs[0].topics[0], dev::keccak256(string("x()")));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(event_access_through_base_name_emit, 1)
 BOOST_AUTO_TEST_CASE(event_access_through_base_name_emit)
 {
 	char const* sourceCode = R"(
