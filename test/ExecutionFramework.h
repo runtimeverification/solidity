@@ -259,9 +259,9 @@ public:
 			representation >>= 8;
 			numBytes++;
 		}
-		bigint twos = _val % (1 << (numBytes * 8));
+		bigint twos = _val % (bigint(1) << (numBytes * 8));
 		if (twos < 0) {
-			twos += (1 << (numBytes * 8));
+			twos += (bigint(1) << (numBytes * 8));
 		}
 		return toBigEndian(twos, false);
 	}
