@@ -1365,10 +1365,13 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     //                                    iele::IeleIntConstant::getZero(&Context), 
     //                                    CompilingBlock);
 
-
-    // Store non-indexed args in memory 
+    // Store non-indexed args in memory (for now, only one)
     // TODO: encode non-indexed arguments into a single bytestring
-    //       (for now, only a single argument is supported)
+    // TODO: we now use default dummy value of 0, but once we have encoding,
+    //       this should be handled by the encoding function. 
+    if (NonIndexedArguments.size() == 0)
+        NonIndexedArguments.push_back(iele::IeleIntConstant::getZero(&Context));
+
     iele::IeleInstruction::CreateStore(NonIndexedArguments[0],
                                        NextFree, 
                                        CompilingBlock);
