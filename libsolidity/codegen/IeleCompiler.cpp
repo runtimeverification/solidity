@@ -1369,12 +1369,12 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     // TODO: encode non-indexed arguments into a single bytestring
     // TODO: we now use default dummy value of 0, but once we have encoding,
     //       this should be handled by the encoding function. 
-    if (NonIndexedArguments.size() == 0)
-        NonIndexedArguments.push_back(iele::IeleIntConstant::getZero(&Context));
 
-    iele::IeleInstruction::CreateStore(NonIndexedArguments[0],
-                                       NextFree, 
-                                       CompilingBlock);
+    if (NonIndexedArguments.size() > 0) {
+      iele::IeleInstruction::CreateStore(NonIndexedArguments[0],
+                                        NextFree, 
+                                        CompilingBlock);
+    }
 
     // build Log instruction
     iele::IeleInstruction::CreateLog(IndexedArguments,
