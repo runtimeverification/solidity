@@ -276,7 +276,7 @@ bool CompilerStack::compile()
 		if (!parseAndAnalyze())
 			return false;
 
-	map<ContractDefinition const*, iele::IeleContract const*> compiledContracts;
+	map<ContractDefinition const*, iele::IeleContract *> compiledContracts;
 	for (Source const* source: m_sourceOrder)
 		for (ASTPointer<ASTNode> const& node: source->ast->nodes())
 			if (auto contract = dynamic_cast<ContractDefinition const*>(node.get()))
@@ -682,7 +682,7 @@ bool onlySafeExperimentalFeaturesActivated(set<ExperimentalFeature> const& featu
 
 void CompilerStack::compileContract(
 	ContractDefinition const& _contract,
-	map<ContractDefinition const*, iele::IeleContract const*>& _compiledContracts
+	map<ContractDefinition const*, iele::IeleContract *>& _compiledContracts
 )
 {
 	if (

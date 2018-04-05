@@ -137,7 +137,9 @@ const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &
 
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
-    const std::map<const ContractDefinition *, const iele::IeleContract *> &contracts) {
+    const std::map<const ContractDefinition *, iele::IeleContract *> &contracts) {
+
+  CompiledContracts = contracts;
 
   // Create IeleContract.
   CompilingContract = iele::IeleContract::Create(&Context, contract.name());
