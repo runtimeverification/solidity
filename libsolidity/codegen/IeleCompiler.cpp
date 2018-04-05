@@ -1417,17 +1417,23 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     break;
   }
   case FunctionType::Kind::SetGas: {
-    functionCall.expression().accept(*this);
+    llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
+    compileTuple(functionCall.expression(), CalleeValues);
 
     GasValue = compileExpression(*arguments.front());
     GasValue = appendTypeConversion(GasValue, *arguments.front()->annotation().type, UInt);
+    CompilingExpressionResult.insert(
+        CompilingExpressionResult.end(), CalleeValues.begin(), CalleeValues.end());
     break;
   }
   case FunctionType::Kind::SetValue: {
-    functionCall.expression().accept(*this);
+    llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
+    compileTuple(functionCall.expression(), CalleeValues);
 
     TransferValue = compileExpression(*arguments.front());
     TransferValue = appendTypeConversion(TransferValue, *arguments.front()->annotation().type, UInt);
+    CompilingExpressionResult.insert(
+        CompilingExpressionResult.end(), CalleeValues.begin(), CalleeValues.end());
     break;
   }
   case FunctionType::Kind::External: {
@@ -1679,7 +1685,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
 
   // Visit accessed exression (skip in case of magic base expression).
   iele::IeleValue *ExprValue = nullptr;
-  if (baseType.category() != Type::Category::Magic) {
+  if (baseType.category() != Type::Category::Magic && baseType.category() != Type::Category::Function) {
     ExprValue = compileExpression(memberAccess.expression());
     solAssert(ExprValue,
               "IeleCompiler: failed to compile base expression for member "
@@ -1803,7 +1809,13 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     break;
   }
   case Type::Category::Function:
-    if (member == "selector")
+    if (member == "value" || member == "gas") {
+      llvm::SmallVector<iele::IeleValue*, 4> CalleeValues;
+      compileTuple(memberAccess.expression(), CalleeValues);
+      CompilingExpressionResult.insert(
+          CompilingExpressionResult.end(), CalleeValues.begin(), CalleeValues.end());
+    }
+    else if (member == "selector")
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else
       solAssert(false, "IeleCompiler: invalid member for function value");
