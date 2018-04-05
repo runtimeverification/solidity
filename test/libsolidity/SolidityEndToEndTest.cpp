@@ -2342,7 +2342,7 @@ BOOST_AUTO_TEST_CASE(fixed_bytes_in_calls)
 	compileAndRun(sourceCode, 0, "Main");
 	BOOST_REQUIRE(callContractFunction("setHelper(address)", c_helperAddress) == vector<bytes>());
 	BOOST_REQUIRE(callContractFunction("getHelper()") == encodeArgs(c_helperAddress));
-	ABI_CHECK(callContractFunction("callHelper(bytes2,bool)", string("\0a\0", 3), true), encodeArgs(string("a\0\0", 3)));
+	ABI_CHECK(callContractFunction("callHelper(bytes2,bool)", string("\0a\0", 3), true), encodeArgs(string("a\0\0\0\0", 5)));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(constructor_arguments_internal, 1)
