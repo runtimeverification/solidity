@@ -1361,11 +1361,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
                                        iele::IeleIntConstant::getOne(&Context),
                                        CompilingBlock);
 
-    // i.e. store %next.free, 0 (needed?)
-    // iele::IeleInstruction::CreateStore(NextFree,
-    //                                    iele::IeleIntConstant::getZero(&Context), 
-    //                                    CompilingBlock);
-
     // Store non-indexed args in memory (for now, only one)
     // TODO: encode multiple non-indexed arguments into a single bytestring
     if (NonIndexedArguments.size() > 0)

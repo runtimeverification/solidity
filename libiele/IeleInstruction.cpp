@@ -110,7 +110,6 @@ IeleInstruction *IeleInstruction::CreateRet(
                                        ReturnValues.end());
 
   return RetInst;
-
 }
 
 IeleInstruction *IeleInstruction::CreateRet(

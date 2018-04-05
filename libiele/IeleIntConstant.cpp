@@ -42,5 +42,3 @@ void IeleIntConstant::print(llvm::raw_ostream &OS, unsigned indent) const {
     OS << Indent << Val.str();
   }
 }
-
-// format(Val) % x1 % x2
