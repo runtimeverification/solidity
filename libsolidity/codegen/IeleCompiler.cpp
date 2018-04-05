@@ -540,8 +540,12 @@ bool IeleCompiler::visit(const Return &returnStatement) {
   }
 
   // Visit return expression.
-  llvm::SmallVector<iele::IeleValue*, 4> ReturnValues;
-  compileTuple(*returnExpr, ReturnValues);
+  llvm::SmallVector<iele::IeleValue*, 4> Values;
+  compileTuple(*returnExpr, Values);
+
+  llvm::SmallVector<iele::IeleValue *, 4> ReturnValues;
+  
+  appendTypeConversions(ReturnValues, Values, returnExpr->annotation().type, FunctionType(*CompilingFunctionASTNode).returnParameterTypes());
   iele::IeleInstruction::CreateRet(ReturnValues, CompilingBlock);
 
   return false;
@@ -859,24 +863,45 @@ bool IeleCompiler::visit(const Conditional &condition) {
   iele::IeleValue *ConditionValue = compileExpression(condition.condition());
   solAssert(ConditionValue, "IeleCompiler: failed to compile conditional condition.");
 
-  iele::IeleLocalVariable *ResultValue =
-    appendConditional(ConditionValue, 
-      [&condition, this]{
-        iele::IeleValue *Result = compileExpression(condition.trueExpression());
-        return appendTypeConversion(Result, *condition.trueExpression().annotation().type, *condition.annotation().type);
-      },
-      [&condition, this]{
-        iele::IeleValue *Result = compileExpression(condition.falseExpression());
-        return appendTypeConversion(Result, *condition.falseExpression().annotation().type, *condition.annotation().type);
-      });
-  CompilingExpressionResult.push_back(ResultValue);
+  llvm::SmallVector<iele::IeleLocalVariable *, 4> Results;
+  appendConditional(ConditionValue, Results,
+    [&condition, this](llvm::SmallVectorImpl<iele::IeleValue *> &Results){
+      appendConditionalBranch(Results, condition.trueExpression(), condition.annotation().type);
+    },
+    [&condition, this](llvm::SmallVectorImpl<iele::IeleValue *> &Results){
+      appendConditionalBranch(Results, condition.falseExpression(), condition.annotation().type);
+    });
+  CompilingExpressionResult.insert(
+    CompilingExpressionResult.end(), Results.begin(), Results.end());
   return false;
 }
 
-iele::IeleLocalVariable *IeleCompiler::appendConditional(
+void IeleCompiler::appendConditionalBranch(
+  llvm::SmallVectorImpl<iele::IeleValue *> &Results,
+  const Expression &Expression,
+  TypePointer Type) {
+
+  llvm::SmallVector<iele::IeleValue *, 4> RHSValues;
+  compileTuple(Expression, RHSValues);
+
+  TypePointers LHSTypes;
+  if (const TupleType *tupleType =
+        dynamic_cast<const TupleType *>(Type.get())) {
+    LHSTypes = tupleType->components();
+  } else {
+    LHSTypes = TypePointers{Type};
+  }
+
+  appendTypeConversions(Results, RHSValues, Expression.annotation().type, LHSTypes);
+}
+
+
+
+void IeleCompiler::appendConditional(
   iele::IeleValue *ConditionValue,
-  const std::function<iele::IeleValue *(void)> &TrueExpression,
-  const std::function<iele::IeleValue *(void)> &FalseExpression) {
+  llvm::SmallVectorImpl<iele::IeleLocalVariable *> &ResultValues,
+  const std::function<void(llvm::SmallVectorImpl<iele::IeleValue *> &)> &TrueExpression,
+  const std::function<void(llvm::SmallVectorImpl<iele::IeleValue *> &)> &FalseExpression) {
   // The condition target block is the if-true block.
   iele::IeleBlock *CondTargetBlock =
     iele::IeleBlock::Create(&Context, "if.true");
@@ -885,14 +910,17 @@ iele::IeleLocalVariable *IeleCompiler::appendConditional(
   // block.
   connectWithConditionalJump(ConditionValue, CompilingBlock, CondTargetBlock);
 
-  // Declare the final result of the conditional.
-  iele::IeleLocalVariable *ResultValue =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-
   // Append the expression for the if-false block and assign it to the result.
-  iele::IeleValue *FalseValue = FalseExpression();
-  iele::IeleInstruction::CreateAssign(
-    ResultValue, FalseValue, CompilingBlock);
+  llvm::SmallVector<iele::IeleValue *, 4> FalseValues;
+  FalseExpression(FalseValues);
+
+  for (iele::IeleValue *FalseValue : FalseValues) {
+    iele::IeleLocalVariable *ResultValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateAssign(
+      ResultValue, FalseValue, CompilingBlock);
+    ResultValues.push_back(ResultValue);
+  }
 
   iele::IeleBlock *IfTrueBlock = CondTargetBlock;
 
@@ -906,15 +934,21 @@ iele::IeleLocalVariable *IeleCompiler::appendConditional(
   CompilingBlock = IfTrueBlock;
 
   // Append the expression for the if-true block and assign it to the result.
-  iele::IeleValue *TrueValue = TrueExpression();
-  iele::IeleInstruction::CreateAssign(
-    ResultValue, TrueValue, CompilingBlock);
+  llvm::SmallVector<iele::IeleValue *, 4> TrueValues;
+  TrueExpression(TrueValues);
+  solAssert(TrueValues.size() == FalseValues.size(), "mismatch in number of result values of conditional");
+
+  for (unsigned i = 0; i < TrueValues.size(); i++) {
+    iele::IeleValue *TrueValue = TrueValues[i];
+    iele::IeleLocalVariable *ResultValue = ResultValues[i];
+    iele::IeleInstruction::CreateAssign(
+      ResultValue, TrueValue, CompilingBlock);
+  }
 
   // Add the join block at the end of the function and compilation continues in
 
   JoinBlock->insertInto(CompilingFunction);
   CompilingBlock = JoinBlock;
-  return ResultValue;
 }
 
 bool IeleCompiler::visit(const Assignment &assignment) {
@@ -2799,17 +2833,21 @@ iele::IeleLocalVariable *IeleCompiler::appendBooleanOperator(
   iele::IeleValue *LeftOperandValue = 
     compileExpression(LeftOperand);
   solAssert(LeftOperandValue, "IeleCompiler: Failed to compile left operand.");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results;
   if (Opcode == Token::Or) {
-
-    return appendConditional(
-      LeftOperandValue, 
-      [this]{return iele::IeleIntConstant::getOne(&Context); },
-      [&RightOperand, this]{return compileExpression(RightOperand);});
+    appendConditional(
+      LeftOperandValue, Results,
+      [this](llvm::SmallVectorImpl<iele::IeleValue *> &Results){ Results.push_back(iele::IeleIntConstant::getOne(&Context)); },
+      [&RightOperand, this](llvm::SmallVectorImpl<iele::IeleValue *> &Results){Results.push_back(compileExpression(RightOperand));});
+    solAssert(Results.size() == 1, "Boolean operators have a single results");
+    return Results[0];
   } else {
-    return appendConditional(
-      LeftOperandValue, 
-      [&RightOperand, this]{return compileExpression(RightOperand);},
-      [this]{return iele::IeleIntConstant::getZero(&Context); });
+    appendConditional(
+      LeftOperandValue, Results,
+      [&RightOperand, this](llvm::SmallVectorImpl<iele::IeleValue *> &Results){Results.push_back(compileExpression(RightOperand));},
+      [this](llvm::SmallVectorImpl<iele::IeleValue *> &Results){Results.push_back(iele::IeleIntConstant::getZero(&Context)); });
+    solAssert(Results.size() == 1, "Boolean operators have a single results");
+    return Results[0];
   }
 }
 
@@ -2963,6 +3001,36 @@ void IeleCompiler::appendShiftBy(iele::IeleLocalVariable *ResultValue, iele::Iel
   iele::IeleInstruction::CreateBinOp(
     iele::IeleInstruction::Shift, ResultValue, Value, ShiftValue, CompilingBlock);
 }
+
+ void IeleCompiler::appendTypeConversions(
+  llvm::SmallVectorImpl<iele::IeleValue *> &Results, 
+  llvm::SmallVectorImpl<iele::IeleValue *> &RHSValues,
+  TypePointer SourceType, TypePointers TargetTypes) {
+
+  TypePointers RHSTypes;
+  if (const TupleType *tupleType =
+        dynamic_cast<const TupleType *>(SourceType.get())) {
+    RHSTypes = tupleType->components();
+  } else {
+    RHSTypes = TypePointers{SourceType};
+  }
+
+  solAssert(RHSValues.size() == RHSTypes.size(),
+            "IeleCompiler: Missing value in tuple in conditional expression");
+
+  solAssert(TargetTypes.size() == RHSTypes.size(),
+            "IeleCompiler: Missing value in tuple in conditional expression");
+
+  int i = 0;
+  for (iele::IeleValue *RHSValue : RHSValues) {
+    TypePointer LHSType = TargetTypes[i];
+    TypePointer RHSType = RHSTypes[i];
+    iele::IeleValue *Result = appendTypeConversion(RHSValue, *RHSType, *LHSType);
+    Results.push_back(Result);
+    i++;
+  }
+}
+
 
 iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, const Type& SourceType, const Type& TargetType) {
   if (SourceType == TargetType) {
