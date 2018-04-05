@@ -1,5 +1,6 @@
 #include "IeleInstruction.h"
 
+#include "IeleContract.h"
 #include "IeleFunction.h"
 #include "IeleGlobalVariable.h"
 
@@ -231,6 +232,70 @@ IeleInstruction *IeleInstruction::CreateCondBr(
   CondBrInst->getIeleOperandList().push_back(Target);
 
   return CondBrInst;
+}
+
+IeleInstruction *IeleInstruction::CreateCreate(
+    bool Copy,
+    IeleLocalVariable *StatusValue,
+    IeleLocalVariable *ReturnValue,
+    IeleContract *Contract,
+    IeleValue *AddressValue,
+    IeleValue *TransferValue,
+    llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+    IeleInstruction *InsertBefore) {
+  solAssert(StatusValue && ReturnValue && TransferValue,
+            "CreateCreate: Invalid operands");
+  solAssert(!Contract == Copy,
+            "CreateCreate: Invalid operands");
+  solAssert(!!AddressValue == Copy,
+            "CreateCreate: Invalid Operands");
+  IeleInstruction *CreateInst = new IeleInstruction(Copy ? CopyCreate : Create, InsertBefore);
+  CreateInst->getIeleLValueList().push_back(StatusValue);
+  CreateInst->getIeleLValueList().push_back(ReturnValue);
+  if (Copy) {
+    CreateInst->getIeleOperandList().push_back(AddressValue); 
+  } else {
+    CreateInst->getIeleOperandList().push_back(Contract); 
+  }
+
+  CreateInst->getIeleOperandList().push_back(TransferValue);
+  CreateInst->getIeleOperandList().insert(CreateInst->end(),
+                                        ArgumentValues.begin(),
+                                        ArgumentValues.end());
+
+  return CreateInst;  
+}
+
+IeleInstruction *IeleInstruction::CreateCreate(
+    bool Copy,
+    IeleLocalVariable *StatusValue,
+    IeleLocalVariable *ReturnValue,
+    IeleContract *Contract,
+    IeleValue *AddressValue,
+    IeleValue *TransferValue,
+    llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+    IeleBlock *InsertAtEnd) {
+  solAssert(StatusValue && ReturnValue && TransferValue,
+            "CreateCreate: Invalid operands");
+  solAssert(!Contract == Copy,
+            "CreateCreate: Invalid operands");
+  solAssert(!!AddressValue == Copy,
+            "CreateCreate: Invalid Operands");
+  IeleInstruction *CreateInst = new IeleInstruction(Copy ? CopyCreate : Create, InsertAtEnd);
+  CreateInst->getIeleLValueList().push_back(StatusValue);
+  CreateInst->getIeleLValueList().push_back(ReturnValue);
+  if (Copy) {
+    CreateInst->getIeleOperandList().push_back(AddressValue); 
+  } else {
+    CreateInst->getIeleOperandList().push_back(Contract); 
+  }
+
+  CreateInst->getIeleOperandList().push_back(TransferValue);
+  CreateInst->getIeleOperandList().insert(CreateInst->end(),
+                                        ArgumentValues.begin(),
+                                        ArgumentValues.end());
+
+  return CreateInst;  
 }
 
 IeleInstruction *IeleInstruction::CreateAccountCall(

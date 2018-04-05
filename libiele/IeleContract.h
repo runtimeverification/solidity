@@ -15,15 +15,14 @@ namespace iele {
 class IeleValueSymbolTable;
 
 class IeleContract :
-  public IeleValue,
-  public llvm::ilist_node_with_parent<IeleContract, IeleContract> {
+  public IeleValue {
 public:
   // The type for the list of functions.
   using IeleFunctionListType = SymbolTableList<IeleFunction>;
   // The type for the list of global variables.
   using IeleGlobalVariableListType = SymbolTableList<IeleGlobalVariable>;
   // The type for the list of external contracts.
-  using IeleContractListType = SymbolTableList<IeleContract>;
+  using IeleContractListType = std::vector<IeleContract *>;
 
   // The function iterator.
   using iterator = IeleFunctionListType::iterator;
@@ -45,10 +44,6 @@ private:
   IeleGlobalVariableListType IeleGlobalVariableList;
   IeleContractListType IeleContractList;
   std::unique_ptr<IeleValueSymbolTable> SymTab;
-  IeleContract *Parent;
-
-  // Used by SymbolTableListTraits.
-  void setParent(IeleContract *parent) { Parent = parent; }
 
   friend class SymbolTableListTraits<IeleContract>;
 
@@ -73,9 +68,6 @@ public:
                               IeleContract *C = nullptr) {
     return new IeleContract(Ctx, Name, C);
   }
-
-  inline const IeleContract *getParent() const { return Parent; }
-  inline       IeleContract *getParent()       { return Parent; }
 
   bool getIncludeMemoryRuntime() const { return IncludeMemoryRuntime; }
   void setIncludeMemoryRuntime(bool includeMemoryRuntime) {
@@ -184,13 +176,6 @@ public:
   }
   const_contract_iterator contract_end() const {
     return IeleContractList.end();
-  }
-
-  llvm::iterator_range<contract_iterator> contracts() {
-    return make_range(contract_begin(), contract_end());
-  }
-  llvm::iterator_range<const_contract_iterator> contracts() const {
-    return make_range(contract_begin(), contract_end());
   }
 
   size_t  contract_size() const { return IeleContractList.size();  }

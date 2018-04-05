@@ -137,7 +137,9 @@ const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &
 
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
-    const std::map<const ContractDefinition *, const iele::IeleContract *> &contracts) {
+    const std::map<const ContractDefinition *, iele::IeleContract *> &contracts) {
+
+  CompiledContracts = contracts;
 
   // Create IeleContract.
   CompilingContract = iele::IeleContract::Create(&Context, contract.name());
@@ -1489,17 +1491,23 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     break;
   }
   case FunctionType::Kind::SetGas: {
-    functionCall.expression().accept(*this);
+    llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
+    compileTuple(functionCall.expression(), CalleeValues);
 
     GasValue = compileExpression(*arguments.front());
     GasValue = appendTypeConversion(GasValue, *arguments.front()->annotation().type, UInt);
+    CompilingExpressionResult.insert(
+        CompilingExpressionResult.end(), CalleeValues.begin(), CalleeValues.end());
     break;
   }
   case FunctionType::Kind::SetValue: {
-    functionCall.expression().accept(*this);
+    llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
+    compileTuple(functionCall.expression(), CalleeValues);
 
     TransferValue = compileExpression(*arguments.front());
     TransferValue = appendTypeConversion(TransferValue, *arguments.front()->annotation().type, UInt);
+    CompilingExpressionResult.insert(
+        CompilingExpressionResult.end(), CalleeValues.begin(), CalleeValues.end());
     break;
   }
   case FunctionType::Kind::External: {
@@ -1556,8 +1564,36 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::BareCallCode:
   case FunctionType::Kind::BareDelegateCall:
     solAssert(false, "low-level function calls not supported in IELE");
-  case FunctionType::Kind::Creation:
-    solAssert(false, "not implemented yet: new");
+  case FunctionType::Kind::Creation: {
+    solAssert(!function.gasSet(), "Gas limit set for contract creation.");
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 1> Returns;
+    compileFunctionArguments(&Arguments, &Returns, arguments, function);
+    solAssert(Returns.size() == 1, "New expression returns a single result.");
+
+    iele::IeleValue *Callee = compileExpression(functionCall.expression());
+    auto Contract = dynamic_cast<iele::IeleContract *>(Callee);
+    solAssert(Contract, "invalid value passed to contract creation");
+
+    iele::IeleLocalVariable *StatusValue =
+      CompilingFunctionStatus;
+
+    if (!function.valueSet()) {
+      TransferValue = iele::IeleIntConstant::getZero(&Context);
+    }
+
+    iele::IeleInstruction::CreateCreate(
+      false, StatusValue, Returns[0], Contract, nullptr,
+      TransferValue, Arguments, CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    CompilingExpressionResult.insert(
+        CompilingExpressionResult.end(), Returns.begin(), Returns.end());
+    TransferValue = nullptr;
+    GasValue = nullptr;
+    break;
+  }
   case FunctionType::Kind::Log0:
   case FunctionType::Kind::Log1:
   case FunctionType::Kind::Log2:
@@ -1643,7 +1679,14 @@ void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Re
 }
 
 bool IeleCompiler::visit(const NewExpression &newExpression) {
-  solAssert(false, "not implemented yet");
+  const Type &Type = *newExpression.typeName().annotation().type;
+  const ContractType *contractType = dynamic_cast<const ContractType *>(&Type);
+  solAssert(contractType, "not implemented yet");
+  const ContractDefinition &ContractDefinition = contractType->contractDefinition();
+  iele::IeleContract *Contract = CompiledContracts[&ContractDefinition];
+  CompilingContract->getIeleContractList().push_back(Contract);
+  solAssert(Contract, "Could not find compiled contract for new expression");
+  CompilingExpressionResult.push_back(Contract);
   return false;
 }
 
@@ -1873,7 +1916,13 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     break;
   }
   case Type::Category::Function:
-    if (member == "selector")
+    if (member == "value" || member == "gas") {
+      llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
+      compileTuple(memberAccess.expression(), CalleeValues);
+      CompilingExpressionResult.insert(
+          CompilingExpressionResult.end(), CalleeValues.begin(), CalleeValues.end());
+    }
+    else if (member == "selector")
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else
       solAssert(false, "IeleCompiler: invalid member for function value");

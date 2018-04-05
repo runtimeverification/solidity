@@ -2480,7 +2480,6 @@ BOOST_AUTO_TEST_CASE(functions_called_by_constructor)
 	BOOST_REQUIRE(callContractFunction("getName()") == encodeArgs("abc"));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(contracts_as_addresses, 1)
 BOOST_AUTO_TEST_CASE(contracts_as_addresses)
 {
 	char const* sourceCode = R"(
@@ -2501,7 +2500,6 @@ BOOST_AUTO_TEST_CASE(contracts_as_addresses)
 	BOOST_REQUIRE(callContractFunction("getBalance()") == encodeArgs(u256(20 - 5), u256(5)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(gas_and_value_basic, 1)
 BOOST_AUTO_TEST_CASE(gas_and_value_basic)
 {
 	char const* sourceCode = R"(
@@ -5553,7 +5551,6 @@ BOOST_AUTO_TEST_CASE(packed_storage_signed)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(external_types_in_calls, 1)
 BOOST_AUTO_TEST_CASE(external_types_in_calls)
 {
 	char const* sourceCode = R"(
@@ -5956,7 +5953,6 @@ BOOST_AUTO_TEST_CASE(failing_send)
 	BOOST_REQUIRE(callContractFunction("callHelper(address)", c_helperAddress) == encodeArgs(true, 20));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(send_zero_ether, 1)
 BOOST_AUTO_TEST_CASE(send_zero_ether)
 {
 	// Sending zero ether to a contract should still invoke the fallback function
@@ -7484,7 +7480,6 @@ BOOST_AUTO_TEST_CASE(calldata_offset)
 	ABI_CHECK(callContractFunction("last()", encodeArgs()), encodeDyn(string("nd")));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(contract_binary_dependencies, 1)
 BOOST_AUTO_TEST_CASE(contract_binary_dependencies)
 {
 	char const* sourceCode = R"(
@@ -8828,7 +8823,6 @@ BOOST_AUTO_TEST_CASE(skip_dynamic_types_for_structs)
 	ABI_CHECK(callContractFunction("g()"), encodeArgs(u256(2), u256(6)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(failed_create, 1)
 BOOST_AUTO_TEST_CASE(failed_create)
 {
 	char const* sourceCode = R"(
@@ -10741,7 +10735,6 @@ BOOST_AUTO_TEST_CASE(constant_string)
 	ABI_CHECK(callContractFunction("h()"), encodeDyn(string("hello")));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(address_overload_resolution, 1)
 BOOST_AUTO_TEST_CASE(address_overload_resolution)
 {
 	char const* sourceCode = R"(
@@ -11069,7 +11062,6 @@ BOOST_AUTO_TEST_CASE(snark)
 	BOOST_CHECK(callContractFunction("verifyTx()") == encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(staticcall_for_view_and_pure, 1)
 BOOST_AUTO_TEST_CASE(staticcall_for_view_and_pure)
 {
 	char const* sourceCode = R"(

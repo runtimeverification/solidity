@@ -188,6 +188,25 @@ public:
   static IeleInstruction *CreateCondBr(
       IeleValue *Condition, IeleBlock *Target, IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateCreate(
+      bool Copy,
+      IeleLocalVariable *StatusValue,
+      IeleLocalVariable *ReturnValue,
+      IeleContract *Contract,
+      IeleValue *AddressValue,
+      IeleValue *TransferValue,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateCreate(
+      bool Copy,
+      IeleLocalVariable *StatusValue,
+      IeleLocalVariable *ReturnValue,
+      IeleContract *Contract,
+      IeleValue *AddressValue,
+      IeleValue *TransferValue,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      IeleBlock *InsertAtEnd);
+
   static IeleInstruction *CreateAccountCall(
       bool StaticCall,
       IeleLocalVariable *StatusValue,

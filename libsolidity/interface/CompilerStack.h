@@ -287,7 +287,7 @@ private:
 	/// Compile a single contract and put the result in @a _compiledContracts.
 	void compileContract(
 		ContractDefinition const& _contract,
-		std::map<ContractDefinition const*, iele::IeleContract const*>& _compiledContracts
+		std::map<ContractDefinition const*, iele::IeleContract *>& _compiledContracts
 	);
 	void link();
 

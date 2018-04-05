@@ -43,10 +43,10 @@ public:
   // Compiles a contract.
   void compileContract(
       const ContractDefinition &contract,
-      const std::map<const ContractDefinition *, const iele::IeleContract *> &contracts);
+      const std::map<const ContractDefinition *, iele::IeleContract *> &contracts);
 
   // Returns the compiled IeleContract.
-  const iele::IeleContract &assembly() const { return *CompiledContract; }
+  iele::IeleContract &assembly() const { return *CompiledContract; }
 
   std::string assemblyString(const StringMap &_sourceCodes = StringMap()) const {
     std::string ret;
@@ -90,7 +90,8 @@ public:
   virtual void endVisit(const Literal &literal) override;
 
 private:
-  const iele::IeleContract *CompiledContract;
+  iele::IeleContract *CompiledContract;
+  std::map<const ContractDefinition *, iele::IeleContract *> CompiledContracts;
   iele::IeleContext Context;
   iele::IeleContract *CompilingContract;
   iele::IeleFunction *CompilingFunction;
