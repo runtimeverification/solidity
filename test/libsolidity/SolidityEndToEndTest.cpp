@@ -2672,7 +2672,6 @@ BOOST_AUTO_TEST_CASE(explicit_base_class)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(base_constructor_arguments, 1)
 BOOST_AUTO_TEST_CASE(base_constructor_arguments)
 {
 	char const* sourceCode = R"(
@@ -2695,7 +2694,6 @@ BOOST_AUTO_TEST_CASE(base_constructor_arguments)
 	ABI_CHECK(callContractFunction("getA()"), encodeArgs(7 * 7));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_usage_in_constructor_arguments, 1)
 BOOST_AUTO_TEST_CASE(function_usage_in_constructor_arguments)
 {
 	char const* sourceCode = R"(
@@ -2716,7 +2714,6 @@ BOOST_AUTO_TEST_CASE(function_usage_in_constructor_arguments)
 	ABI_CHECK(callContractFunction("getA()"), encodeArgs(2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(virtual_function_usage_in_constructor_arguments, 1)
 BOOST_AUTO_TEST_CASE(virtual_function_usage_in_constructor_arguments)
 {
 	char const* sourceCode = R"(
@@ -2739,7 +2736,6 @@ BOOST_AUTO_TEST_CASE(virtual_function_usage_in_constructor_arguments)
 	ABI_CHECK(callContractFunction("getA()"), encodeArgs(2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(constructor_argument_overriding, 1)
 BOOST_AUTO_TEST_CASE(constructor_argument_overriding)
 {
 	char const* sourceCode = R"(

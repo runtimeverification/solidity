@@ -128,8 +128,8 @@ private:
   void appendModifierOrFunctionCode();
   unsigned ModifierDepth;
 
-  template <class ArgClass, class ReturnClass>
-  void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<const Expression>> &arguments, const FunctionType &function);
+  template <class ArgClass, class ReturnClass, class ExpressionClass>
+  void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function);
 
   // Infrastructure for unique variable names generation and mapping
   int NextUniqueIntToken = 0;
@@ -164,7 +164,7 @@ private:
 
   void appendRevertBlocks(void);
 
-  void appendStateVariableInitialization(const ContractDefinition *contract);
+  void appendDefaultConstructor(const ContractDefinition *contract);
   void appendLocalVariableInitialization(
           iele::IeleLocalVariable *Local, const VariableDeclaration *localVariable);
 
