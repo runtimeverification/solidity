@@ -5933,7 +5933,6 @@ BOOST_AUTO_TEST_CASE(positive_integers_to_signed)
 	ABI_CHECK(callContractFunction("q()"), encodeArgs(250));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(failing_send, 1)
 BOOST_AUTO_TEST_CASE(failing_send)
 {
 	char const* sourceCode = R"(
