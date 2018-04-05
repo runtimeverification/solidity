@@ -1633,6 +1633,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Log2:
   case FunctionType::Kind::Log3:
   case FunctionType::Kind::Log4:
+    solAssert(false, "not implemented yet: logging");
   case FunctionType::Kind::ECRecover: {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
