@@ -1,14 +1,14 @@
 contract SimpleAuction {
 
-@beneficiary = 1
+@beneficiary = 0
 
-@auctionEnd = 2
+@auctionEnd = 1
 
-@highestBidder = 3
+@highestBidder = 2
 
-@highestBid = 4
+@highestBid = 3
 
-@ended = 5
+@ended = 4
 
 define public @"beneficiary()"() {
 entry:

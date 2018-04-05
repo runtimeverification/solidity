@@ -34,6 +34,7 @@ using namespace solidity;
 
 void ArrayUtils::copyArrayToStorage(ArrayType const& _targetType, ArrayType const& _sourceType) const
 {
+/*
 	// this copies source to target and also clears target if it was larger
 	// need to leave "target_ref target_byte_off" on the stack at the end
 
@@ -280,10 +281,12 @@ void ArrayUtils::copyArrayToStorage(ArrayType const& _targetType, ArrayType cons
 			_context << Instruction::POP;
 		}
 	);
+*/
 }
 
 void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWordBoundaries) const
 {
+/*
 	solUnimplementedAssert(
 		!_sourceType.baseType()->isDynamicallySized(),
 		"Nested dynamic arrays not implemented here."
@@ -517,10 +520,12 @@ void ArrayUtils::copyArrayToMemory(ArrayType const& _sourceType, bool _padToWord
 		}
 		m_context << loopEnd << Instruction::POP << Instruction::POP;
 	}
+*/
 }
 
 void ArrayUtils::clearArray(ArrayType const& _typeIn) const
 {
+/*
 	TypePointer type = _typeIn.shared_from_this();
 	m_context.callLowLevelFunction(
 		"$clearArray_" + _typeIn.identifier(),
@@ -583,10 +588,12 @@ void ArrayUtils::clearArray(ArrayType const& _typeIn) const
 			solAssert(_context.stackHeight() == stackHeightStart - 2, "");
 		}
 	);
+*/
 }
 
 void ArrayUtils::clearDynamicArray(ArrayType const& _type) const
 {
+/*
 	solAssert(_type.location() == DataLocation::Storage, "");
 	solAssert(_type.isDynamicallySized(), "");
 
@@ -622,10 +629,12 @@ void ArrayUtils::clearDynamicArray(ArrayType const& _type) const
 	// cleanup
 	m_context << endTag;
 	m_context << Instruction::POP;
+*/
 }
 
 void ArrayUtils::resizeDynamicArray(ArrayType const& _typeIn) const
 {
+/*
 	TypePointer type = _typeIn.shared_from_this();
 	m_context.callLowLevelFunction(
 		"$resizeDynamicArray_" + _typeIn.identifier(),
@@ -772,10 +781,12 @@ void ArrayUtils::resizeDynamicArray(ArrayType const& _typeIn) const
 			solAssert(_context.stackHeight() == stackHeightStart - 2, "");
 		}
 	);
+*/
 }
 
 void ArrayUtils::clearStorageLoop(TypePointer const& _type) const
 {
+/*
 	m_context.callLowLevelFunction(
 		"$clearStorageLoop_" + _type->identifier(),
 		2,
@@ -819,10 +830,12 @@ void ArrayUtils::clearStorageLoop(TypePointer const& _type) const
 			solAssert(_context.stackHeight() == stackHeightStart - 1, "");
 		}
 	);
+*/
 }
 
 void ArrayUtils::convertLengthToSize(ArrayType const& _arrayType, bool _pad) const
 {
+/*
 	if (_arrayType.location() == DataLocation::Storage)
 	{
 		if (_arrayType.baseType()->storageSize() <= 1)
@@ -856,10 +869,12 @@ void ArrayUtils::convertLengthToSize(ArrayType const& _arrayType, bool _pad) con
 				<< u256(32) << Instruction::DUP1
 				<< Instruction::SWAP2 << Instruction::DIV << Instruction::MUL;
 	}
+*/
 }
 
 void ArrayUtils::retrieveLength(ArrayType const& _arrayType, unsigned _stackDepth) const
 {
+/*
 	if (!_arrayType.isDynamicallySized())
 		m_context << _arrayType.length();
 	else
@@ -889,10 +904,12 @@ void ArrayUtils::retrieveLength(ArrayType const& _arrayType, unsigned _stackDept
 			break;
 		}
 	}
+*/
 }
 
 void ArrayUtils::accessIndex(ArrayType const& _arrayType, bool _doBoundsCheck) const
 {
+/*
 	/// Stack: reference [length] index
 	DataLocation location = _arrayType.location();
 
@@ -978,10 +995,12 @@ void ArrayUtils::accessIndex(ArrayType const& _arrayType, bool _doBoundsCheck) c
 	default:
 		solAssert(false, "");
 	}
+*/
 }
 
 void ArrayUtils::incrementByteOffset(unsigned _byteSize, unsigned _byteOffsetPosition, unsigned _storageOffsetPosition) const
 {
+/*
 	solAssert(_byteSize < 32, "");
 	solAssert(_byteSize != 0, "");
 	// We do the following, but avoiding jumps:
@@ -1015,4 +1034,5 @@ void ArrayUtils::incrementByteOffset(unsigned _byteSize, unsigned _byteOffsetPos
 		m_context
 			<< dupInstruction(_byteOffsetPosition + 1) << Instruction::MUL
 			<< swapInstruction(_byteOffsetPosition) << Instruction::POP;
+*/
 }

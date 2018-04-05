@@ -35,6 +35,7 @@ public:
     CompilingLValueKind(LValueKind::Reg),
     GasValue(nullptr),
     TransferValue(nullptr),
+    NextStorageAddress(0),
     CompilingContractASTNode(nullptr),
     CompilingFunctionASTNode(nullptr),
     ModifierDepth(-1) { }
@@ -109,6 +110,8 @@ private:
   iele::IeleValue *GasValue;
   iele::IeleValue *TransferValue;
 
+  bigint NextStorageAddress;
+
   std::vector<const ContractDefinition *> CompilingContractInheritanceHierarchy;
   const ContractDefinition *CompilingContractASTNode;
   const FunctionDefinition *CompilingFunctionASTNode;
@@ -126,6 +129,14 @@ private:
 
   template <class ArgClass, class ReturnClass>
   void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<const Expression>> &arguments, const FunctionType &function);
+
+  // Infrastructure for unique variable names generation and mapping
+  int NextUniqueIntToken = 0;
+  int getNextUniqueIntToken();
+  std::string getNextVarSuffix();
+  // It is not enough to map names to names; we need such a mapping for each "layer",
+  // that is for each function modifier.
+  std::map<unsigned, std::map <std::string, std::string>> VarNameMap;
 
   // Helpers for the compilation process.
   iele::IeleValue *compileExpression(const Expression &expression);
@@ -152,38 +163,37 @@ private:
 
   void appendRevertBlocks(void);
 
-  // Infrastructure for unique variable names generation and mapping
-  int NextUniqueIntToken = 0;
-  int getNextUniqueIntToken();
-  std::string getNextVarSuffix();
-  // It is not enough to map names to names; we need such a mapping for each "layer",
-  // that is for each function modifier. 
-  std::map<unsigned, std::map <std::string, std::string>> VarNameMap;
-
   void appendStateVariableInitialization(const ContractDefinition *contract);
+  void appendLocalVariableInitialization(
+          iele::IeleLocalVariable *Local, const VariableDeclaration *localVariable);
+
+  iele::IeleValue *getReferenceTypeSize(
+    const Type &type, iele::IeleValue *AddressValue);
+
+  // Helper function for memory array allocation. The optional NumElemsValue
+  // argument can be used to allocate dynamically-sized arrays, where the initial
+  // size is not known at compile time.
+  iele::IeleValue *appendArrayAllocation(
+      const ArrayType &type, iele::IeleValue *NumElemsValue = nullptr);
+
+  // Helper function for memory struct allocation.
+  iele::IeleValue *appendStructAllocation(const StructType &type);
+
+  // Helper functions for copying a reference type to a storage location.
+  void appendCopyFromStorageToStorage(
+      iele::IeleValue *To, const Type &type, iele::IeleValue *From);
+  void appendCopyFromMemoryToStorage(
+      iele::IeleValue *To, const Type &type, iele::IeleValue *From);
+
+  // Helper function for copying a storage reference type into a local newly
+  // allocated memory copy. Returns a pointer to the copy.
+  iele::IeleValue *appendCopyFromStorageToMemory(
+    const Type &type, iele::IeleValue *From);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
-  void appendVariable(iele::IeleValue *Identifier, std::string name);
-
-  iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
-      iele::IeleValue *NumElems);
-  iele::IeleLocalVariable *appendIeleRuntimeAllocateStorage(
-      iele::IeleValue *NumElems);
-  iele::IeleLocalVariable *appendIeleRuntimeMemoryAddress(iele::IeleValue *Base,
-                                                  iele::IeleValue *Offset);
-  iele::IeleLocalVariable *appendIeleRuntimeStorageAddress(
-      iele::IeleValue *Base, iele::IeleValue *Offset);
-  iele::IeleLocalVariable *appendIeleRuntimeMemoryLoad(iele::IeleValue *Base,
-                                                       iele::IeleValue *Offset);
-  iele::IeleLocalVariable *appendIeleRuntimeStorageLoad(
-      iele::IeleValue *Base, iele::IeleValue *Offset);
-  iele::IeleLocalVariable *appendIeleRuntimeStorageToStorageCopy(
-      iele::IeleValue *From);
-  iele::IeleLocalVariable *appendIeleRuntimeMemoryToStorageCopy(
-      iele::IeleValue *From);
-  iele::IeleLocalVariable *appendIeleRuntimeStorageToMemoryCopy(
-      iele::IeleValue *From);
+  void appendVariable(iele::IeleValue *Identifier, std::string name,
+                      bool isValueType = true);
 
   iele::IeleLocalVariable *appendLValueDereference(iele::IeleValue *LValue);
   void appendLValueAssign(iele::IeleValue *LValue, iele::IeleValue *RValue);
@@ -212,12 +222,9 @@ private:
       const std::function<iele::IeleValue *(void)> &TrueValue,
       const std::function<iele::IeleValue *(void)> &FalseValue);
 
-  bool shouldCopyStorageToStorage(iele::IeleValue *To, TypePointer From) const;
-  bool shouldCopyMemoryToStorage(const Type &To, const Type &From) const;
+  bool shouldCopyStorageToStorage(const iele::IeleValue *To, const Type &From) const;
+  bool shouldCopyMemoryToStorage(const iele::IeleValue *To, const Type &From) const;
   bool shouldCopyStorageToMemory(const Type &To, const Type &From) const;
-
-  unsigned getStructMemberIndex(const StructType &type,
-                                const std::string &member) const;
 
   bool isMostDerived(const FunctionDefinition *d) const;
   bool isMostDerived(const VariableDeclaration *d) const;
@@ -226,6 +233,19 @@ private:
   const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function);
   const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function, std::vector<const ContractDefinition *>::iterator it);
 
+  // IELE Runtime functionality. These methods append calls to the IELE memory
+  // management runtime and indicate that the runtime should be included as part
+  // of the compiling contract.
+  iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
+      iele::IeleValue *NumSlots);
+  void appendIeleRuntimeCopyMemoryToMemory(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
+  void appendIeleRuntimeCopyStorageToMemory(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
+  void appendIeleRuntimeCopyStorageToStorage(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
+  void appendIeleRuntimeCopyMemoryToStorage(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
 };
 
 } // end namespace solidity
