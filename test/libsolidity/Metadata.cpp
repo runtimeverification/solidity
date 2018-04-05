@@ -93,6 +93,7 @@ BOOST_AUTO_TEST_CASE(metadata_stamp_experimental)
 	BOOST_CHECK(std::equal(expectation.begin(), expectation.end(), bytecode.end() - metadataCBORSize - 2));
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(metadata_relevant_sources, 1)
 BOOST_AUTO_TEST_CASE(metadata_relevant_sources)
 {
 	CompilerStack compilerStack;
@@ -123,6 +124,7 @@ BOOST_AUTO_TEST_CASE(metadata_relevant_sources)
 	BOOST_CHECK(metadata["sources"].isMember("A"));
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(metadata_relevant_sources_imports, 1)
 BOOST_AUTO_TEST_CASE(metadata_relevant_sources_imports)
 {
 	CompilerStack compilerStack;

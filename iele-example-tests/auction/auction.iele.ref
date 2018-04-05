@@ -58,6 +58,12 @@ define @init(%_beneficiary_0, %_biddingTime_1) {
 entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
+  %out.of.range = cmp lt %_beneficiary_0, 0
+  br %out.of.range, throw
+  %out.of.range = cmp gt %_beneficiary_0, 1461501637330902918203684832716283019655932542975
+  br %out.of.range, throw
+  %out.of.range1 = cmp lt %_biddingTime_1, 0
+  br %out.of.range1, throw
   sstore %_beneficiary_0, @beneficiary
   %timestamp = call @iele.timestamp()
   %tmp = add %timestamp, %_biddingTime_1

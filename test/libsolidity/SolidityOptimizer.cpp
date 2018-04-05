@@ -77,8 +77,8 @@ public:
 		bytes nonOptimizedBytecode = compileAndRunWithOptimizer(_sourceCode, _value, _contractName, false, _optimizeRuns);
 		m_nonOptimizedContract = m_contractAddress;
 		bytes optimizedBytecode = compileAndRunWithOptimizer(_sourceCode, _value, _contractName, true, _optimizeRuns);
-		size_t nonOptimizedSize = numInstructions(nonOptimizedBytecode);
-		size_t optimizedSize = numInstructions(optimizedBytecode);
+		size_t nonOptimizedSize = nonOptimizedBytecode.size();
+		size_t optimizedSize = optimizedBytecode.size();
 		BOOST_CHECK_MESSAGE(
 			_optimizeRuns < 50 || optimizedSize < nonOptimizedSize,
 			string("Optimizer did not reduce bytecode size. Non-optimized size: ") +
@@ -376,7 +376,7 @@ BOOST_AUTO_TEST_CASE(sequence_number_for_calls)
 	compareVersions("f(string,string)", 0x40, 0x80, 3, "abc", 3, "def");
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(computing_constants, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(computing_constants, 2)
 BOOST_AUTO_TEST_CASE(computing_constants)
 {
 	char const* sourceCode = R"(
