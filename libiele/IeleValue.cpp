@@ -18,6 +18,9 @@ using namespace dev::iele;
 static bool getSymTab(IeleValue *V, IeleValueSymbolTable *&ST) {
   ST = nullptr;
   if (llvm::isa<IeleContract>(V)) {
+    ST = nullptr;
+    // contracts are not stored in a symbol table, because they
+    // can have more than one parent contract
   } else if (IeleBlock *B = llvm::dyn_cast<IeleBlock>(V)) {
     if (IeleFunction *P = B->getParent())
       ST = P->getIeleValueSymbolTable();
