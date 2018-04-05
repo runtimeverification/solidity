@@ -2146,7 +2146,6 @@ BOOST_AUTO_TEST_CASE(packed_ripemd160)
 	testContractAgainstCpp("a(bytes32)", f, u256(-1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(ecrecover, 1)
 BOOST_AUTO_TEST_CASE(ecrecover)
 {
 	char const* sourceCode = R"(
@@ -9026,7 +9025,6 @@ BOOST_AUTO_TEST_CASE(mutex)
 	BOOST_CHECK_EQUAL(balanceAt(fund), 460);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(failing_ecrecover_invalid_input, 1)
 BOOST_AUTO_TEST_CASE(failing_ecrecover_invalid_input)
 {
 	// ecrecover should return zero for malformed input
@@ -9040,7 +9038,7 @@ BOOST_AUTO_TEST_CASE(failing_ecrecover_invalid_input)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("f()"), encodeArgs());
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(failing_ecrecover_invalid_input_proper, 1)
