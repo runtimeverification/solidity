@@ -1845,7 +1845,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
   }
   case Type::Category::Function:
     if (member == "value" || member == "gas") {
-      llvm::SmallVector<iele::IeleValue*, 4> CalleeValues;
+      llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
       compileTuple(memberAccess.expression(), CalleeValues);
       CompilingExpressionResult.insert(
           CompilingExpressionResult.end(), CalleeValues.begin(), CalleeValues.end());
