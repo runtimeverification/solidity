@@ -47,6 +47,10 @@ private:
 
   friend class SymbolTableListTraits<IeleContract>;
 
+  // IELE runtime related.
+  bool IncludeMemoryRuntime;
+  void printRuntime(llvm::raw_ostream &OS, unsigned indent = 0) const;
+
   // IeleContract ctor - If the (optional) IeleContract argument is specified,
   // the contract is automatically inserted into the end of the external
   // contract list for the given contract.
@@ -63,6 +67,11 @@ public:
   static IeleContract *Create(IeleContext *Ctx, const llvm::Twine &Name = "",
                               IeleContract *C = nullptr) {
     return new IeleContract(Ctx, Name, C);
+  }
+
+  bool getIncludeMemoryRuntime() const { return IncludeMemoryRuntime; }
+  void setIncludeMemoryRuntime(bool includeMemoryRuntime) {
+    IncludeMemoryRuntime = includeMemoryRuntime;
   }
 
   // Get the underlying elements of the IeleContract.

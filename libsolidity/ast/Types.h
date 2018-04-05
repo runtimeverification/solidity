@@ -64,13 +64,13 @@ public:
 	/// of the elements of @a _types.
 	void computeOffsets(TypePointers const& _types);
 	/// @returns the offset of the given member, might be null if the member is not part of storage.
-	std::pair<u256, unsigned> const* offset(size_t _index) const;
+	std::pair<bigint, unsigned> const* offset(size_t _index) const;
 	/// @returns the total number of slots occupied by all members.
-	u256 const& storageSize() const { return m_storageSize; }
+	bigint const& storageSize() const { return m_storageSize; }
 
 private:
-	u256 m_storageSize;
-	std::map<size_t, std::pair<u256, unsigned>> m_offsets;
+	bigint m_storageSize;
+	std::map<size_t, std::pair<bigint, unsigned>> m_offsets;
 };
 
 /**
@@ -120,9 +120,9 @@ public:
 	}
 	/// @returns the offset of the given member in storage slots and bytes inside a slot or
 	/// a nullptr if the member is not part of storage.
-	std::pair<u256, unsigned> const* memberStorageOffset(std::string const& _name) const;
+	std::pair<bigint, unsigned> const* memberStorageOffset(std::string const& _name) const;
 	/// @returns the number of storage slots occupied by the members.
-	u256 const& storageSize() const;
+	bigint const& storageSize() const;
 
 	MemberMap::const_iterator begin() const { return m_memberTypes.begin(); }
 	MemberMap::const_iterator end() const { return m_memberTypes.end(); }
@@ -203,9 +203,8 @@ public:
 	/// @note: This should actually not be called on types, where isDynamicallyEncoded returns true.
 	/// If @a _padded then it is assumed that each element is padded to a multiple of 32 bytes.
 	virtual unsigned calldataEncodedSize(bool _padded) const { (void)_padded; return 0; }
-	/// @returns the size of this data type in bytes when stored in memory. For memory-reference
-	/// types, this is the size of the memory pointer.
-	virtual unsigned memoryHeadSize() const { return calldataEncodedSize(); }
+	/// @returns the size of this data type in bytes when stored in memory.
+	virtual bigint memorySize() const { return storageSize(); }
 	/// Convenience version of @see calldataEncodedSize(bool)
 	unsigned calldataEncodedSize() const { return calldataEncodedSize(true); }
 	/// @returns true if the type is a dynamic array
@@ -214,7 +213,7 @@ public:
 	virtual bool isDynamicallyEncoded() const { return false; }
 	/// @returns the number of storage slots required to hold this value in storage.
 	/// For dynamically "allocated" types, it returns the size of the statically allocated head,
-	virtual u256 storageSize() const { return 1; }
+	virtual bigint storageSize() const { return 1; }
 	/// Multiple small types can be packed into a single storage slot. If such a packing is possible
 	/// this function @returns the size in bytes smaller than 32. Data is moved to the next slot if
 	/// it does not fit.
@@ -560,7 +559,6 @@ public:
 	{
 		return TypePointer();
 	}
-	virtual unsigned memoryHeadSize() const override { return 32; }
 
 	/// @returns a copy of this type with location (recursively) changed to @a _location,
 	/// whereas isPointer is only shallowly changed - the deep copy is always a bound reference.
@@ -622,7 +620,7 @@ public:
 	{
 	}
 	/// Constructor for a fixed-size array type ("type[20]")
-	ArrayType(DataLocation _location, TypePointer const& _baseType, u256 const& _length):
+	ArrayType(DataLocation _location, TypePointer const& _baseType, bigint const& _length):
 		ReferenceType(_location),
 		m_baseType(copyForLocationIfReference(_baseType)),
 		m_hasDynamicLength(false),
@@ -636,7 +634,7 @@ public:
 	virtual unsigned calldataEncodedSize(bool _padded) const override;
 	virtual bool isDynamicallySized() const override { return m_hasDynamicLength; }
 	virtual bool isDynamicallyEncoded() const override;
-	virtual u256 storageSize() const override;
+	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return m_baseType->canLiveOutsideStorage(); }
 	virtual unsigned sizeOnStack() const override;
 	virtual std::string toString(bool _short) const override;
@@ -656,8 +654,7 @@ public:
 	/// @returns true if this is a string
 	bool isString() const { return m_arrayKind == ArrayKind::String; }
 	TypePointer const& baseType() const { solAssert(!!m_baseType, ""); return m_baseType;}
-	u256 const& length() const { return m_length; }
-	u256 memorySize() const;
+	bigint const& length() const { return m_length; }
 
 	TypePointer copyForLocation(DataLocation _location, bool _isPointer) const override;
 
@@ -671,7 +668,7 @@ private:
 	ArrayKind m_arrayKind = ArrayKind::Ordinary;
 	TypePointer m_baseType;
 	bool m_hasDynamicLength = true;
-	u256 m_length;
+	bigint m_length;
 };
 
 /**
@@ -723,7 +720,7 @@ public:
 
 	/// @returns a list of all state variables (including inherited) of the contract and their
 	/// offsets in storage.
-	std::vector<std::tuple<VariableDeclaration const*, u256, unsigned>> stateVariables() const;
+	std::vector<std::tuple<VariableDeclaration const*, bigint, unsigned>> stateVariables() const;
 
 private:
 	static void addNonConflictingAddressMembers(MemberList::MemberMap& _members);
@@ -750,8 +747,8 @@ public:
 	virtual bool operator==(Type const& _other) const override;
 	virtual unsigned calldataEncodedSize(bool _padded) const override;
 	virtual bool isDynamicallyEncoded() const override;
-	u256 memorySize() const;
-	virtual u256 storageSize() const override;
+	virtual bigint memorySize() const override;
+	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return true; }
 	virtual std::string toString(bool _short) const override;
 
@@ -772,8 +769,8 @@ public:
 	/// and a memory struct of this type.
 	FunctionTypePointer constructorType() const;
 
-	std::pair<u256, unsigned> const& storageOffsetsOfMember(std::string const& _name) const;
-	u256 memoryOffsetOfMember(std::string const& _name) const;
+	std::pair<bigint, unsigned> const& storageOffsetsOfMember(std::string const& _name) const;
+	bigint memoryOffsetOfMember(std::string const& _name) const;
 
 	StructDefinition const& structDefinition() const { return m_struct; }
 
@@ -847,7 +844,7 @@ public:
 	virtual TypePointer binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
 	virtual std::string toString(bool) const override;
 	virtual bool canBeStored() const override { return false; }
-	virtual u256 storageSize() const override;
+	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return false; }
 	virtual unsigned sizeOnStack() const override;
 	virtual TypePointer mobileType() const override;
@@ -986,7 +983,7 @@ public:
 	virtual std::string toString(bool _short) const override;
 	virtual unsigned calldataEncodedSize(bool _padded) const override;
 	virtual bool canBeStored() const override { return m_kind == Kind::Internal || m_kind == Kind::External; }
-	virtual u256 storageSize() const override;
+	virtual bigint storageSize() const override;
 	virtual unsigned storageBytes() const override;
 	virtual bool isValueType() const override { return true; }
 	virtual bool canLiveOutsideStorage() const override { return m_kind == Kind::Internal || m_kind == Kind::External; }
@@ -1121,7 +1118,7 @@ public:
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
 	virtual bool canBeStored() const override { return false; }
-	virtual u256 storageSize() const override;
+	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return false; }
 	virtual unsigned sizeOnStack() const override;
 	virtual std::string toString(bool _short) const override { return "type(" + m_actualType->toString(_short) + ")"; }
@@ -1143,7 +1140,7 @@ public:
 
 	virtual TypePointer binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
 	virtual bool canBeStored() const override { return false; }
-	virtual u256 storageSize() const override;
+	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return false; }
 	virtual unsigned sizeOnStack() const override { return 0; }
 	virtual std::string richIdentifier() const override;

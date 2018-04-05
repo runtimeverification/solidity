@@ -43,13 +43,13 @@ BOOST_AUTO_TEST_CASE(storage_layout_simple)
 		{string("second"), Type::fromElementaryTypeName("uint120")},
 		{string("wraps"), Type::fromElementaryTypeName("uint16")}
 	}));
-	BOOST_REQUIRE_EQUAL(u256(2), members.storageSize());
+	BOOST_REQUIRE_EQUAL(u256(3), members.storageSize());
 	BOOST_REQUIRE(members.memberStorageOffset("first") != nullptr);
 	BOOST_REQUIRE(members.memberStorageOffset("second") != nullptr);
 	BOOST_REQUIRE(members.memberStorageOffset("wraps") != nullptr);
-	BOOST_CHECK(*members.memberStorageOffset("first") == make_pair(u256(0), unsigned(0)));
-	BOOST_CHECK(*members.memberStorageOffset("second") == make_pair(u256(0), unsigned(16)));
-	BOOST_CHECK(*members.memberStorageOffset("wraps") == make_pair(u256(1), unsigned(0)));
+	BOOST_CHECK(*members.memberStorageOffset("first") == make_pair(bigint(0), unsigned(0)));
+	BOOST_CHECK(*members.memberStorageOffset("second") == make_pair(bigint(1), unsigned(0)));
+	BOOST_CHECK(*members.memberStorageOffset("wraps") == make_pair(bigint(2), unsigned(0)));
 }
 
 BOOST_AUTO_TEST_CASE(storage_layout_mapping)
@@ -71,19 +71,19 @@ BOOST_AUTO_TEST_CASE(storage_layout_mapping)
 	BOOST_REQUIRE(members.memberStorageOffset("second") != nullptr);
 	BOOST_REQUIRE(members.memberStorageOffset("third") != nullptr);
 	BOOST_REQUIRE(members.memberStorageOffset("final") != nullptr);
-	BOOST_CHECK(*members.memberStorageOffset("first") == make_pair(u256(0), unsigned(0)));
-	BOOST_CHECK(*members.memberStorageOffset("second") == make_pair(u256(1), unsigned(0)));
-	BOOST_CHECK(*members.memberStorageOffset("third") == make_pair(u256(2), unsigned(0)));
-	BOOST_CHECK(*members.memberStorageOffset("final") == make_pair(u256(3), unsigned(0)));
+	BOOST_CHECK(*members.memberStorageOffset("first") == make_pair(bigint(0), unsigned(0)));
+	BOOST_CHECK(*members.memberStorageOffset("second") == make_pair(bigint(1), unsigned(0)));
+	BOOST_CHECK(*members.memberStorageOffset("third") == make_pair(bigint(2), unsigned(0)));
+	BOOST_CHECK(*members.memberStorageOffset("final") == make_pair(bigint(3), unsigned(0)));
 }
 
 BOOST_AUTO_TEST_CASE(storage_layout_arrays)
 {
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(1), 32).storageSize() == 1);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(1), 33).storageSize() == 2);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(2), 31).storageSize() == 2);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(7), 8).storageSize() == 2);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(7), 9).storageSize() == 3);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(1), 32).storageSize() == 32);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(1), 33).storageSize() == 33);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(2), 31).storageSize() == 31);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(7), 8).storageSize() == 8);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(7), 9).storageSize() == 9);
 	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(31), 9).storageSize() == 9);
 	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(32), 9).storageSize() == 9);
 }

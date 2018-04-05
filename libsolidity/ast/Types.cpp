@@ -39,47 +39,30 @@
 
 #include <limits>
 
+#define MAX_ARRAY_SIZE (bigint(1) << 256)
+
 using namespace std;
 using namespace dev;
 using namespace dev::solidity;
 
 void StorageOffsets::computeOffsets(TypePointers const& _types)
 {
-	bigint slotOffset = 0;
-	unsigned byteOffset = 0;
-	map<size_t, pair<u256, unsigned>> offsets;
-	for (size_t i = 0; i < _types.size(); ++i)
-	{
-		TypePointer const& type = _types[i];
-		if (!type->canBeStored())
-			continue;
-		if (byteOffset + type->storageBytes() > 32)
-		{
-			// would overflow, go to next slot
-			++slotOffset;
-			byteOffset = 0;
-		}
-		if (slotOffset >= bigint(1) << 256)
-			BOOST_THROW_EXCEPTION(Error(Error::Type::TypeError) << errinfo_comment("Object too large for storage."));
-		offsets[i] = make_pair(u256(slotOffset), byteOffset);
-		solAssert(type->storageSize() >= 1, "Invalid storage size.");
-		if (type->storageSize() == 1 && byteOffset + type->storageBytes() <= 32)
-			byteOffset += type->storageBytes();
-		else
-		{
-			slotOffset += type->storageSize();
-			byteOffset = 0;
-		}
-	}
-	if (byteOffset > 0)
-		++slotOffset;
-	if (slotOffset >= bigint(1) << 256)
-		BOOST_THROW_EXCEPTION(Error(Error::Type::TypeError) << errinfo_comment("Object too large for storage."));
-	m_storageSize = u256(slotOffset);
+    bigint slotOffset = 0;
+    map<size_t, pair<bigint, unsigned>> offsets;
+    for (size_t i = 0; i < _types.size(); ++i)
+    {
+        TypePointer const& type = _types[i];
+        if (!type->canBeStored())
+            continue;
+        offsets[i] = make_pair(slotOffset, 0);
+        solAssert(type->storageSize() >= 1, "Invalid storage size.");
+        slotOffset += type->storageSize();
+    }
+    m_storageSize = slotOffset;
 	swap(m_offsets, offsets);
 }
 
-pair<u256, unsigned> const* StorageOffsets::offset(size_t _index) const
+pair<bigint, unsigned> const* StorageOffsets::offset(size_t _index) const
 {
 	if (m_offsets.count(_index))
 		return &m_offsets.at(_index);
@@ -101,7 +84,7 @@ void MemberList::combine(MemberList const & _other)
 	m_memberTypes += _other.m_memberTypes;
 }
 
-pair<u256, unsigned> const* MemberList::memberStorageOffset(string const& _name) const
+pair<bigint, unsigned> const* MemberList::memberStorageOffset(string const& _name) const
 {
 	if (!m_storageOffsets)
 	{
@@ -118,7 +101,7 @@ pair<u256, unsigned> const* MemberList::memberStorageOffset(string const& _name)
 	return nullptr;
 }
 
-u256 const& MemberList::storageSize() const
+bigint const& MemberList::storageSize() const
 {
 	// trigger lazy computation
 	memberStorageOffset("");
@@ -1437,25 +1420,14 @@ bool ArrayType::isDynamicallyEncoded() const
 	return isDynamicallySized() || baseType()->isDynamicallyEncoded();
 }
 
-u256 ArrayType::storageSize() const
+bigint ArrayType::storageSize() const
 {
 	if (isDynamicallySized())
-		return 1;
+		return MAX_ARRAY_SIZE + 1; // One extra slot for the length
 
-	bigint size;
-	unsigned baseBytes = baseType()->storageBytes();
-	if (baseBytes == 0)
-		size = 1;
-	else if (baseBytes < 32)
-	{
-		unsigned itemsPerSlot = 32 / baseBytes;
-		size = (bigint(length()) + (itemsPerSlot - 1)) / itemsPerSlot;
-	}
-	else
-		size = bigint(length()) * baseType()->storageSize();
-	if (size >= bigint(1) << 256)
-		BOOST_THROW_EXCEPTION(Error(Error::Type::TypeError) << errinfo_comment("Array too large for storage."));
-	return max<u256>(1, u256(size));
+	if (length() > MAX_ARRAY_SIZE)
+		BOOST_THROW_EXCEPTION(Error(Error::Type::TypeError) << errinfo_comment("Array too large."));
+	return length() * baseType()->storageSize();
 }
 
 unsigned ArrayType::sizeOnStack() const
@@ -1583,15 +1555,6 @@ bool ArrayType::canBeUsedExternally(bool _inLibrary) const
 		return false;
 	else
 		return true;
-}
-
-u256 ArrayType::memorySize() const
-{
-	solAssert(!isDynamicallySized(), "");
-	solAssert(m_location == DataLocation::Memory, "");
-	bigint size = bigint(m_length) * m_baseType->memoryHeadSize();
-	solAssert(size <= numeric_limits<unsigned>::max(), "Array size does not fit u256.");
-	return u256(size);
 }
 
 TypePointer ArrayType::copyForLocation(DataLocation _location, bool _isPointer) const
@@ -1724,7 +1687,7 @@ shared_ptr<FunctionType const> const& ContractType::newExpressionType() const
 	return m_constructorType;
 }
 
-vector<tuple<VariableDeclaration const*, u256, unsigned>> ContractType::stateVariables() const
+vector<tuple<VariableDeclaration const*, bigint, unsigned>> ContractType::stateVariables() const
 {
 	vector<VariableDeclaration const*> variables;
 	for (ContractDefinition const* contract: boost::adaptors::reverse(m_contract.annotation().linearizedBaseContracts))
@@ -1737,7 +1700,7 @@ vector<tuple<VariableDeclaration const*, u256, unsigned>> ContractType::stateVar
 	StorageOffsets offsets;
 	offsets.computeOffsets(types);
 
-	vector<tuple<VariableDeclaration const*, u256, unsigned>> variablesAndOffsets;
+	vector<tuple<VariableDeclaration const*, bigint, unsigned>> variablesAndOffsets;
 	for (size_t index = 0; index < variables.size(); ++index)
 		if (auto const* offset = offsets.offset(index))
 			variablesAndOffsets.push_back(make_tuple(variables[index], offset->first, offset->second));
@@ -1799,17 +1762,17 @@ bool StructType::isDynamicallyEncoded() const
 	return false;
 }
 
-u256 StructType::memorySize() const
+bigint StructType::memorySize() const
 {
-	u256 size;
+	bigint size;
 	for (auto const& t: memoryMemberTypes())
-		size += t->memoryHeadSize();
+		size += t->memorySize();
 	return size;
 }
 
-u256 StructType::storageSize() const
+bigint StructType::storageSize() const
 {
-	return max<u256>(1, members(nullptr).storageSize());
+	return max<bigint>(1, members(nullptr).storageSize());
 }
 
 string StructType::toString(bool _short) const
@@ -1920,21 +1883,21 @@ FunctionTypePointer StructType::constructorType() const
 	);
 }
 
-pair<u256, unsigned> const& StructType::storageOffsetsOfMember(string const& _name) const
+pair<bigint, unsigned> const& StructType::storageOffsetsOfMember(string const& _name) const
 {
 	auto const* offsets = members(nullptr).memberStorageOffset(_name);
 	solAssert(offsets, "Storage offset of non-existing member requested.");
 	return *offsets;
 }
 
-u256 StructType::memoryOffsetOfMember(string const& _name) const
+bigint StructType::memoryOffsetOfMember(string const& _name) const
 {
-	u256 offset;
+	bigint offset;
 	for (auto const& member: members(nullptr))
 		if (member.name == _name)
 			return offset;
 		else
-			offset += member.type->memoryHeadSize();
+			offset += member.type->memorySize();
 	solAssert(false, "Member not found in struct.");
 	return 0;
 }
@@ -2099,7 +2062,7 @@ string TupleType::toString(bool _short) const
 	return str + ")";
 }
 
-u256 TupleType::storageSize() const
+bigint TupleType::storageSize() const
 {
 	solAssert(false, "Storage size of non-storable tuple type requested.");
 }
@@ -2453,7 +2416,7 @@ unsigned FunctionType::calldataEncodedSize(bool _padded) const
 	return size;
 }
 
-u256 FunctionType::storageSize() const
+bigint FunctionType::storageSize() const
 {
 	if (m_kind == Kind::External || m_kind == Kind::Internal)
 		return 1;
@@ -2840,7 +2803,7 @@ bool TypeType::operator==(Type const& _other) const
 	return *actualType() == *other.actualType();
 }
 
-u256 TypeType::storageSize() const
+bigint TypeType::storageSize() const
 {
 	solAssert(false, "Storage size of non-storable type type requested.");
 }
@@ -2907,7 +2870,7 @@ ModifierType::ModifierType(const ModifierDefinition& _modifier)
 	swap(params, m_parameterTypes);
 }
 
-u256 ModifierType::storageSize() const
+bigint ModifierType::storageSize() const
 {
 	solAssert(false, "Storage size of non-storable type type requested.");
 }

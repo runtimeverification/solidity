@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(cleanup)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(fixed_arrays, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(fixed_arrays, 2)
 BOOST_AUTO_TEST_CASE(fixed_arrays)
 {
 	string sourceCode = R"(
