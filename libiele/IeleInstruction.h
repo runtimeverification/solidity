@@ -144,6 +144,16 @@ public:
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateRetVoid(IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateLog(
+    llvm::SmallVectorImpl<IeleValue *> &IndexedArguments,
+    IeleValue * NonIndexedArguments,
+    IeleInstruction *InsertBefore);
+
+  static IeleInstruction *CreateLog(
+    llvm::SmallVectorImpl<IeleValue *> &IndexedArguments,
+    IeleValue * NonIndexedArguments,
+    IeleBlock *InsertAfter);
+
   static IeleInstruction *CreateRet(
       llvm::SmallVectorImpl<IeleValue *> &ReturnValues,
       IeleInstruction *InsertBefore = nullptr);
