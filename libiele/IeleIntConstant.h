@@ -8,10 +8,11 @@ namespace iele {
 
 class IeleIntConstant : public IeleConstant {
 private:
-  bigint Val;
 
+  bigint Val;
+  bool PrintAsHex;
 protected:
-  IeleIntConstant(IeleContext *Ctx, const bigint &V);
+  IeleIntConstant(IeleContext *Ctx, const bigint &V, bool PrintAsHex);
 
 public:
   IeleIntConstant(const IeleIntConstant&) = delete;
@@ -19,7 +20,7 @@ public:
 
   ~IeleIntConstant();
 
-  static IeleIntConstant *Create(IeleContext *Ctx, const bigint &V);
+  static IeleIntConstant *Create(IeleContext *Ctx, const bigint &V, bool PrintAsHex = false);
 
   static IeleIntConstant *getZero(IeleContext *Ctx);
   static IeleIntConstant *getOne(IeleContext *Ctx);

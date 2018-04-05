@@ -72,6 +72,34 @@ IeleInstruction *IeleInstruction::CreateRetVoid(IeleBlock *InsertAtEnd) {
   return new IeleInstruction(Ret, InsertAtEnd);
 }
 
+IeleInstruction *IeleInstruction::CreateLog(
+    llvm::SmallVectorImpl<IeleValue *> &IndexedArguments,
+    IeleValue * NonIndexedArguments,
+    IeleInstruction *InsertBefore) {
+
+  IeleInstruction *LogInst = new IeleInstruction(Log, InsertBefore);
+  
+  LogInst->getIeleOperandList().insert(LogInst->end(), NonIndexedArguments);
+  LogInst->getIeleOperandList().insert(LogInst->end(), 
+                                       IndexedArguments.begin(), 
+                                       IndexedArguments.end());
+  return LogInst;
+}
+
+IeleInstruction *IeleInstruction::CreateLog(
+    llvm::SmallVectorImpl<IeleValue *> &IndexedArguments,
+    IeleValue * NonIndexedArguments,
+    IeleBlock *InsertAtEnd) {
+
+  IeleInstruction *LogInst = new IeleInstruction(Log, InsertAtEnd);
+  
+  LogInst->getIeleOperandList().insert(LogInst->end(), NonIndexedArguments);
+  LogInst->getIeleOperandList().insert(LogInst->end(), 
+                                       IndexedArguments.begin(), 
+                                       IndexedArguments.end());
+  return LogInst;
+}
+
 IeleInstruction *IeleInstruction::CreateRet(
     llvm::SmallVectorImpl<IeleValue *> &ReturnValues,
     IeleInstruction *InsertBefore) {
