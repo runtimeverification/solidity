@@ -17,9 +17,7 @@ using namespace dev::iele;
 
 static bool getSymTab(IeleValue *V, IeleValueSymbolTable *&ST) {
   ST = nullptr;
-  if (IeleContract *C = llvm::dyn_cast<IeleContract>(V)) {
-    if (IeleContract *P = C->getParent())
-      ST = P->getIeleValueSymbolTable();
+  if (llvm::isa<IeleContract>(V)) {
   } else if (IeleBlock *B = llvm::dyn_cast<IeleBlock>(V)) {
     if (IeleFunction *P = B->getParent())
       ST = P->getIeleValueSymbolTable();

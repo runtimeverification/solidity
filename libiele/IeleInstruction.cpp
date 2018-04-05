@@ -1,5 +1,6 @@
 #include "IeleInstruction.h"
 
+#include "IeleContract.h"
 #include "IeleFunction.h"
 #include "IeleGlobalVariable.h"
 

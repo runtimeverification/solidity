@@ -23,7 +23,7 @@ using namespace llvm::sys;
 
 IeleContract::IeleContract(IeleContext *Ctx, const llvm::Twine &Name,
                            IeleContract *C) :
-  IeleValue(Ctx, IeleValue::IeleContractVal), Parent(nullptr) {
+  IeleValue(Ctx, IeleValue::IeleContractVal) {
   SymTab = llvm::make_unique<IeleValueSymbolTable>();
 
   if (C) {
@@ -39,8 +39,20 @@ IeleContract::~IeleContract() { }
 
 void IeleContract::print(llvm::raw_ostream &OS, unsigned indent) const {
   std::string Indent(indent, ' ');
+  for (const IeleContract *Contract : IeleContractList) {
+    Contract->print(OS, indent);
+    OS << "\n";
+  }
   OS << Indent << "contract " << getName() << " {\n";
   bool isFirst = true;
+  for (const IeleContract *Contract : IeleContractList) {
+    OS << "\n";
+    if (!isFirst)
+      OS << "\n";
+    OS << "external contract ";
+    OS << Contract->getName();
+    isFirst = false;
+  }
   for (const IeleGlobalVariable &GV : globals()) {
     OS << "\n";
     if (!isFirst)
