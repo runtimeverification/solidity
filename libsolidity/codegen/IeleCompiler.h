@@ -213,15 +213,26 @@ private:
       const Type& SourceType,
       const Type& TargetType);
 
+  void appendTypeConversions(
+    llvm::SmallVectorImpl<iele::IeleValue *> &Results, 
+    llvm::SmallVectorImpl<iele::IeleValue *> &RHSValues,
+    TypePointer SourceType, TypePointers TargetTypes);
+
   iele::IeleLocalVariable *appendBooleanOperator(
       Token::Value Opcode,
       const Expression &LeftOperand,
       const Expression &RightOperand);
 
-  iele::IeleLocalVariable *appendConditional(
+  void appendConditional(
       iele::IeleValue *ConditionValue,
-      const std::function<iele::IeleValue *(void)> &TrueValue,
-      const std::function<iele::IeleValue *(void)> &FalseValue);
+      llvm::SmallVectorImpl<iele::IeleLocalVariable *> &Results,
+      const std::function<void(llvm::SmallVectorImpl<iele::IeleValue *> &)> &TrueExpression,
+      const std::function<void(llvm::SmallVectorImpl<iele::IeleValue *> &)> &FalseExpression);
+
+  void appendConditionalBranch(
+    llvm::SmallVectorImpl<iele::IeleValue *> &Results,
+    const Expression &Branch,
+    TypePointer Type);
 
   bool shouldCopyStorageToStorage(const iele::IeleValue *To, const Type &From) const;
   bool shouldCopyMemoryToStorage(const iele::IeleValue *To, const Type &From) const;
