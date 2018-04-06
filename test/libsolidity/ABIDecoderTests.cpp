@@ -51,7 +51,6 @@ BOOST_AUTO_TEST_CASE(both_encoders_macro)
 	BOOST_CHECK_EQUAL(runs, 2);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(value_types, 1)
 BOOST_AUTO_TEST_CASE(value_types)
 {
 	string sourceCode = R"(
