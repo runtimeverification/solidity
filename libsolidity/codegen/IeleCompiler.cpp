@@ -28,8 +28,7 @@ std::string IeleCompiler::getIeleNameForFunction(
   else if (function.isPublic())
     IeleFunctionName = function.externalSignature();
   else
-    // TODO: overloading on internal functions.
-    IeleFunctionName = function.name();
+    IeleFunctionName = function.name() + "." + function.type()->identifier();
 
   if (isMostDerived(&function)) {
     return IeleFunctionName;
