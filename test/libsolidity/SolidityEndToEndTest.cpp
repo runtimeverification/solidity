@@ -3049,7 +3049,6 @@ BOOST_AUTO_TEST_CASE(short_data_calls_fallback)
 	ABI_CHECK(callContractFunction("x()"), encodeArgs(3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(event, 1)
 BOOST_AUTO_TEST_CASE(event)
 {
 	char const* sourceCode = R"(
