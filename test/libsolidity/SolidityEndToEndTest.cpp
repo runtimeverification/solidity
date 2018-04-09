@@ -1823,7 +1823,7 @@ BOOST_AUTO_TEST_CASE(log0)
 	callContractFunction("a()");
 	BOOST_REQUIRE_EQUAL(m_logs.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].address, m_contractAddress);
-	BOOST_CHECK_EQUAL(h256(m_logs[0].data/* , h256::AlignRight */), h256(u256(1)));
+	BOOST_CHECK_EQUAL(h256(m_logs[0].data), h256(u256(1)));
 	BOOST_CHECK_EQUAL(m_logs[0].topics.size(), 0);
 }
 
@@ -1840,7 +1840,7 @@ BOOST_AUTO_TEST_CASE(log1)
 	callContractFunction("a()");
 	BOOST_REQUIRE_EQUAL(m_logs.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].address, m_contractAddress);
-	BOOST_CHECK_EQUAL(h256(m_logs[0].data/* , h256::AlignRight */), h256(u256(1)));
+	BOOST_CHECK_EQUAL(h256(m_logs[0].data), h256(u256(1)));
 	BOOST_REQUIRE_EQUAL(m_logs[0].topics.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].topics[0], h256(u256(2)));
 }
@@ -1858,7 +1858,7 @@ BOOST_AUTO_TEST_CASE(log2)
 	callContractFunction("a()");
 	BOOST_REQUIRE_EQUAL(m_logs.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].address, m_contractAddress);
-	BOOST_CHECK_EQUAL(h256(m_logs[0].data/* , h256::AlignRight */), h256(u256(1)));
+	BOOST_CHECK_EQUAL(h256(m_logs[0].data), h256(u256(1)));
 	BOOST_REQUIRE_EQUAL(m_logs[0].topics.size(), 2);
 	for (unsigned i = 0; i < 2; ++i)
 		BOOST_CHECK_EQUAL(m_logs[0].topics[i], h256(u256(i + 2)));
@@ -1877,7 +1877,7 @@ BOOST_AUTO_TEST_CASE(log3)
 	callContractFunction("a()");
 	BOOST_REQUIRE_EQUAL(m_logs.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].address, m_contractAddress);
-	BOOST_CHECK_EQUAL(h256(m_logs[0].data/* , h256::AlignRight */), h256(u256(1)));
+	BOOST_CHECK_EQUAL(h256(m_logs[0].data), h256(u256(1)));
 	BOOST_REQUIRE_EQUAL(m_logs[0].topics.size(), 3);
 	for (unsigned i = 0; i < 3; ++i)
 		BOOST_CHECK_EQUAL(m_logs[0].topics[i], h256(u256(i + 2)));
@@ -1896,7 +1896,7 @@ BOOST_AUTO_TEST_CASE(log4)
 	callContractFunction("a()");
 	BOOST_REQUIRE_EQUAL(m_logs.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].address, m_contractAddress);
-	BOOST_CHECK_EQUAL(h256(m_logs[0].data/* , h256::AlignRight */), h256(u256(1)));
+	BOOST_CHECK_EQUAL(h256(m_logs[0].data), h256(u256(1)));
 	BOOST_REQUIRE_EQUAL(m_logs[0].topics.size(), 4);
 	for (unsigned i = 0; i < 4; ++i)
 		BOOST_CHECK_EQUAL(m_logs[0].topics[i], h256(u256(i + 2)));
@@ -1914,7 +1914,7 @@ BOOST_AUTO_TEST_CASE(log_in_constructor)
 	compileAndRun(sourceCode);
 	BOOST_REQUIRE_EQUAL(m_logs.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].address, m_contractAddress);
-	BOOST_CHECK_EQUAL(h256(m_logs[0].data/* , h256::AlignRight */), h256(u256(1)));
+	BOOST_CHECK_EQUAL(h256(m_logs[0].data), h256(u256(1)));
 	BOOST_REQUIRE_EQUAL(m_logs[0].topics.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].topics[0], h256(u256(2)));
 }
