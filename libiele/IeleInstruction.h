@@ -276,6 +276,13 @@ public:
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
+  
+  static IeleInstruction *CreateStore1(
+      IeleValue *DataValue, IeleValue *AddressValue,
+      IeleValue *OffsetValue, IeleValue *WidthValue, IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateStore1(
+      IeleValue *DataValue, IeleValue *AddressValue,
+      IeleValue *OffsetValue, IeleValue *WidthValue, IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateNot(
       IeleLocalVariable *Result, IeleValue *OperandValue,
