@@ -1632,7 +1632,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Log2:
   case FunctionType::Kind::Log3:
   case FunctionType::Kind::Log4: {
-    llvm::SmallVector<iele::IeleValue *, 4> CompiledArguments; // TODO: rename
+    llvm::SmallVector<iele::IeleValue *, 4> CompiledArguments;
 
     // First arg is the data part
     iele::IeleValue *DataArg = compileExpression(*arguments[0]);
@@ -1669,9 +1669,11 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
                                        CompilingBlock);
 
     // Store the data argument in memory
-    iele::IeleInstruction::CreateStore(DataArg,
-                                       NextFree, 
-                                       CompilingBlock);
+    iele::IeleInstruction::CreateStore1(DataArg,
+                                        NextFree, 
+                                        iele::IeleIntConstant::getZero(&Context),
+                                        iele::IeleIntConstant::Create(&Context, bigint(32)),
+                                        CompilingBlock);
 
     // make log instruction 
     iele::IeleInstruction::CreateLog(CompiledArguments,

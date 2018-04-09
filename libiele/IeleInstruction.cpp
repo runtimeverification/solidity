@@ -550,6 +550,37 @@ IeleInstruction *IeleInstruction::CreateStore(
   return StoreInst;
 }
 
+// Same as CreateStore, but also accept OffsetValue and WidthValue as args. 
+// Alternatively, we could also extend CreateStore by passing those as 
+// optional args...
+IeleInstruction *IeleInstruction::CreateStore1(
+    IeleValue *DataValue, IeleValue *AddressValue,
+    IeleValue *OffsetValue, IeleValue *WidthValue, IeleInstruction *InsertBefore) {
+  solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
+
+  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertBefore);
+  StoreInst->getIeleOperandList().push_back(DataValue);
+  StoreInst->getIeleOperandList().push_back(AddressValue);
+  StoreInst->getIeleOperandList().push_back(OffsetValue);
+  StoreInst->getIeleOperandList().push_back(WidthValue);
+
+  return StoreInst;
+}
+
+IeleInstruction *IeleInstruction::CreateStore1(
+    IeleValue *DataValue, IeleValue *AddressValue,
+    IeleValue *OffsetValue, IeleValue *WidthValue, IeleBlock *InsertAtEnd) {
+  solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
+
+  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertAtEnd);
+  StoreInst->getIeleOperandList().push_back(DataValue);
+  StoreInst->getIeleOperandList().push_back(AddressValue);
+  StoreInst->getIeleOperandList().push_back(OffsetValue);
+  StoreInst->getIeleOperandList().push_back(WidthValue);
+
+  return StoreInst;
+}
+
 IeleInstruction *IeleInstruction::CreateNot(
     IeleLocalVariable *Result, IeleValue *OperandValue,
     IeleInstruction *InsertBefore) {
