@@ -971,9 +971,9 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   // Check if we need to do a memory/storage to storage copy. Only happens when
   // assigning to a state variable of refernece type.
   if (shouldCopyStorageToStorage(LHSValue, *RHSType))
-    appendCopyFromStorageToStorage(LHSValue, *LHSType, RHSValue);
+    appendCopyFromStorageToStorage(LHSValue, *LHSType, RHSValue, *RHSType);
   else if (shouldCopyMemoryToStorage(LHSValue, *RHSType))
-    appendCopyFromMemoryToStorage(LHSValue, *LHSType, RHSValue);
+    appendCopyFromMemoryToStorage(LHSValue, *LHSType, RHSValue, *RHSType);
   else {
     // Check for compound assignment.
     if (op != Token::Assign) {
@@ -1234,12 +1234,14 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleValue *SizeValue =
         iele::IeleIntConstant::Create(&Context, memberSize);
 
+
       // Do the copy.
       solAssert(!memberType.dataStoredIn(DataLocation::Storage),
                 "IeleCompiler: found init value for struct member in storage "
                 "after type conversion");
       if (memberType.dataStoredIn(DataLocation::Memory))
-        appendIeleRuntimeCopyMemoryToMemory(InitValue, AddressValue, SizeValue);
+        appendIeleRuntimeCopy(InitValue, AddressValue, SizeValue,
+                              DataLocation::Memory, DataLocation::Memory);
       else
         iele::IeleInstruction::CreateStore(InitValue, AddressValue,
                                            CompilingBlock);
@@ -2726,9 +2728,9 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
                 "not implemented yet");
       // Add struct copy in constructor's body.
       if (shouldCopyStorageToStorage(LHSValue, *rhsType))
-        appendCopyFromStorageToStorage(LHSValue, *type, InitValue);
+        appendCopyFromStorageToStorage(LHSValue, *type, InitValue, *rhsType);
       else if (shouldCopyMemoryToStorage(LHSValue, *rhsType))
-        appendCopyFromMemoryToStorage(LHSValue, *type, InitValue);
+        appendCopyFromMemoryToStorage(LHSValue, *type, InitValue, *rhsType);
     }
   }
 }
@@ -2769,15 +2771,42 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
     const ArrayType &arrayType = dynamic_cast<const ArrayType &>(type);
     if (arrayType.isDynamicallySized()) {
       // The size value can be found in the first slot of the array.
-      SizeValue =
+      iele::IeleLocalVariable *SizeVariable =
         iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      SizeValue = SizeVariable;
       inStorage ?
         iele::IeleInstruction::CreateSLoad(
-            llvm::cast<iele::IeleLocalVariable>(SizeValue), AddressValue,
+            SizeVariable, AddressValue,
             CompilingBlock) :
         iele::IeleInstruction::CreateLoad(
-            llvm::cast<iele::IeleLocalVariable>(SizeValue), AddressValue,
+            SizeVariable, AddressValue,
             CompilingBlock) ;
+
+      const Type &elementType = *arrayType.baseType();
+      solAssert(!elementType.isDynamicallyEncoded(), "Cannot statically compute size of array of dynamic types");
+      // Generate code for the access.
+      bigint elementSize;
+      switch (arrayType.location()) {
+      case DataLocation::Storage: {
+        elementSize = elementType.storageSize();
+        break;
+      }
+      case DataLocation::Memory: {
+        elementSize = elementType.memorySize();
+        break;
+      }
+      case DataLocation::CallData:
+        solAssert(false, "not supported by IELE.");
+      }
+ 
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Mul, SizeVariable, SizeValue, 
+        iele::IeleIntConstant::Create(&Context, elementSize),
+        CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, SizeVariable, SizeValue,
+        iele::IeleIntConstant::getOne(&Context),
+        CompilingBlock);
     } else {
       SizeValue =
         iele::IeleIntConstant::Create(&Context, arrayType.memorySize());
@@ -2786,6 +2815,7 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
   }
   case (Type::Category::Struct) : {
     const StructType &structType = dynamic_cast<const StructType &>(type);
+    solAssert(!structType.isDynamicallyEncoded(), "Cannot statically compute size of struct of dynamic types");
     SizeValue =
       iele::IeleIntConstant::Create(&Context, structType.memorySize());
     break;
@@ -2846,22 +2876,285 @@ iele::IeleValue *IeleCompiler::appendStructAllocation(const StructType &type) {
   return StructAllocValue;
 }
 
+void IeleCompiler::appendCopy(
+    iele::IeleValue *To, const Type &ToType,
+    iele::IeleValue *From, const Type &FromType,
+    DataLocation ToLoc, DataLocation FromLoc) {
+  if (FromType.isValueType()) {
+    solAssert(ToType.isValueType(), "invalid conversion");
+    iele::IeleLocalVariable *LoadedValue =
+      iele::IeleLocalVariable::Create(&Context, "copy.from.val", CompilingFunction);
+    if (FromLoc == DataLocation::Storage) {
+      iele::IeleInstruction::CreateSLoad(LoadedValue, From, CompilingBlock);
+    } else {
+      solAssert(FromLoc == DataLocation::Memory, "not supported in IELE");
+      iele::IeleInstruction::CreateLoad(LoadedValue, From, CompilingBlock);
+    }
+    iele::IeleValue *ConvertedValue = appendTypeConversion(LoadedValue, FromType, ToType);
+    if (ToLoc == DataLocation::Storage) {
+      iele::IeleInstruction::CreateSStore(ConvertedValue, To, CompilingBlock);
+    } else {
+      solAssert(ToLoc == DataLocation::Memory, "not supported in IELE");
+      iele::IeleInstruction::CreateStore(ConvertedValue, To, CompilingBlock);
+    }
+    return;
+  }
+
+  if (!FromType.isDynamicallyEncoded() && FromType == ToType) {
+    iele::IeleValue *SizeValue = getReferenceTypeSize(FromType, From);
+    appendIeleRuntimeCopy(From, To, SizeValue, FromLoc, ToLoc);
+    return;
+  }
+  switch (FromType.category()) {
+  case Type::Category::Struct: {
+    const StructType &structType = dynamic_cast<const StructType &>(FromType);
+    const StructType &toStructType = dynamic_cast<const StructType &>(ToType);
+    for (auto decl : structType.structDefinition().members()) {
+      // First compute the offset from the start of the struct.
+      bigint offset;
+      switch (FromLoc) {
+      case DataLocation::Storage: {
+        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
+        offset = offsets.first;
+        break;
+      }
+      case DataLocation::Memory: {
+        offset = structType.memoryOffsetOfMember(decl->name());
+        break;
+      case DataLocation::CallData: 
+        solAssert(false, "Call data not supported in IELE");
+      }
+      }
+
+      iele::IeleLocalVariable *MemberFrom =
+        iele::IeleLocalVariable::Create(&Context, "copy.from.address", CompilingFunction);
+      iele::IeleValue *OffsetValue =
+        iele::IeleIntConstant::Create(&Context, offset);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, MemberFrom, From, OffsetValue,
+        CompilingBlock);
+
+      iele::IeleLocalVariable *MemberTo =
+        iele::IeleLocalVariable::Create(&Context, "copy.to.address", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, MemberTo, To, OffsetValue,
+        CompilingBlock);
+
+      for (auto toDecl : toStructType.structDefinition().members()) {
+        if (decl->name() == toDecl->name()) {
+          appendCopy(MemberTo, *toDecl->type(), MemberFrom, *decl->type(), ToLoc, FromLoc);
+          break;
+        }
+      }
+
+    }
+    break;
+  }
+  case Type::Category::Array: {
+    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(FromType);
+    const ArrayType &toArrayType = dynamic_cast<const ArrayType &>(ToType);
+    const Type &elementType = *arrayType.baseType();
+    const Type &toElementType = *toArrayType.baseType();
+
+    iele::IeleLocalVariable *SizeVariableFrom =
+      iele::IeleLocalVariable::Create(&Context, "from.length", CompilingFunction);
+    iele::IeleLocalVariable *SizeVariableTo =
+      iele::IeleLocalVariable::Create(&Context, "to.length", CompilingFunction);
+
+    iele::IeleLocalVariable *ElementFrom =
+      iele::IeleLocalVariable::Create(&Context, "copy.from.address", CompilingFunction);
+
+    iele::IeleLocalVariable *ElementTo =
+      iele::IeleLocalVariable::Create(&Context, "copy.to.address", CompilingFunction);
+
+    if (FromType.isDynamicallySized()) {
+      FromLoc == DataLocation::Storage ?
+        iele::IeleInstruction::CreateSLoad(
+          SizeVariableFrom, From,
+          CompilingBlock) :
+        iele::IeleInstruction::CreateLoad(
+          SizeVariableFrom, From,
+          CompilingBlock) ;
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, ElementFrom, From,
+          iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+    } else {
+      iele::IeleInstruction::CreateAssign(
+        SizeVariableFrom, iele::IeleIntConstant::Create(&Context, bigint(arrayType.length())),
+        CompilingBlock);
+      iele::IeleInstruction::CreateAssign(
+        ElementFrom, From, CompilingBlock);
+    }
+
+    // copy the size field
+    if (ToType.isDynamicallySized()) {
+      ToLoc == DataLocation::Storage ?
+        iele::IeleInstruction::CreateSLoad(
+          SizeVariableTo, To,
+          CompilingBlock) :
+        iele::IeleInstruction::CreateLoad(
+          SizeVariableTo, To,
+          CompilingBlock) ;
+
+      ToLoc == DataLocation::Storage ?
+        iele::IeleInstruction::CreateSStore(
+          SizeVariableFrom, To,
+          CompilingBlock) :
+        iele::IeleInstruction::CreateStore(
+          SizeVariableFrom, To,
+          CompilingBlock) ;
+
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, ElementTo, To,
+          iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+    } else {
+      iele::IeleInstruction::CreateAssign(
+        SizeVariableTo, iele::IeleIntConstant::Create(&Context, bigint(toArrayType.length())),
+        CompilingBlock);
+      iele::IeleInstruction::CreateAssign(
+        ElementTo, To, CompilingBlock);
+    }
+ 
+    bigint elementSize, toElementSize;
+    switch (FromLoc) {
+    case DataLocation::Storage: {
+      elementSize = elementType.storageSize();
+      break;
+    }
+    case DataLocation::Memory: {
+      elementSize = elementType.memorySize();
+      break;
+    }
+    case DataLocation::CallData:
+      solAssert(false, "not supported by IELE.");
+    }
+
+    switch (ToLoc) {
+    case DataLocation::Storage: {
+      toElementSize = toElementType.storageSize();
+      break;
+    }
+    case DataLocation::Memory: {
+      toElementSize = toElementType.memorySize();
+      break;
+    }
+    case DataLocation::CallData:
+      solAssert(false, "not supported by IELE.");
+    }
+
+    iele::IeleValue *FromElementSizeValue =
+        iele::IeleIntConstant::Create(&Context, elementSize);
+    iele::IeleValue *ToElementSizeValue =
+        iele::IeleIntConstant::Create(&Context, toElementSize);
+
+    iele::IeleLocalVariable *FillLoc, *FillSize;
+    if (!elementType.isDynamicallyEncoded() && elementType == toElementType) {
+      iele::IeleLocalVariable *CopySize =
+        iele::IeleLocalVariable::Create(&Context, "copy.size", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Mul, CopySize, SizeVariableFrom, FromElementSizeValue,
+        CompilingBlock);
+      appendIeleRuntimeCopy(ElementFrom, ElementTo, CopySize, FromLoc, ToLoc);
+
+      FillLoc = iele::IeleLocalVariable::Create(&Context, "fill.address", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, FillLoc, ElementTo, CopySize,
+        CompilingBlock);
+
+      FillSize = iele::IeleLocalVariable::Create(&Context, "fill.size", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Mul, FillSize, SizeVariableTo, ToElementSizeValue,
+        CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Sub, FillSize, FillSize, CopySize,
+        CompilingBlock);
+    } else {
+      iele::IeleBlock *LoopBodyBlock =
+        iele::IeleBlock::Create(&Context, "copy.loop", CompilingFunction);
+      CompilingBlock = LoopBodyBlock;
+  
+      iele::IeleBlock *LoopExitBlock =
+        iele::IeleBlock::Create(&Context, "copy.loop.end");
+  
+      iele::IeleLocalVariable *DoneValue =
+        iele::IeleLocalVariable::Create(&Context, "done", CompilingFunction);
+      iele::IeleInstruction::CreateIsZero(
+        DoneValue, SizeVariableFrom, CompilingBlock);
+      connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
+ 
+      appendCopy(ElementTo, toElementType, ElementFrom, elementType, ToLoc, FromLoc);
+  
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, ElementFrom, ElementFrom,
+          FromElementSizeValue,
+          CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, ElementTo, ElementTo,
+          ToElementSizeValue,
+          CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Sub, SizeVariableFrom, SizeVariableFrom,
+          iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Sub, SizeVariableTo, SizeVariableTo,
+          iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+  
+      connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
+      LoopExitBlock->insertInto(CompilingFunction);
+      CompilingBlock = LoopExitBlock;
+
+      FillLoc = ElementTo;
+      FillSize = SizeVariableTo;
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Mul, SizeVariableTo, SizeVariableTo, ToElementSizeValue);
+    }
+
+    iele::IeleLocalVariable *CondValue =
+      iele::IeleLocalVariable::Create(&Context, "should.not.fill", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpLe, CondValue,
+      FillSize, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  
+    iele::IeleBlock *JoinBlock =
+      iele::IeleBlock::Create(&Context, "if.end");
+    connectWithConditionalJump(CondValue, CompilingBlock, JoinBlock);
+    
+    appendIeleRuntimeFill(FillLoc, FillSize,
+      iele::IeleIntConstant::getZero(&Context),
+      ToLoc);
+
+    JoinBlock->insertInto(CompilingFunction);
+    CompilingBlock = JoinBlock;
+
+    break;
+  }
+  default:
+    solAssert(false, "Invalid type in appendCopy");
+  }
+}
+
 void IeleCompiler::appendCopyFromStorageToStorage(
-    iele::IeleValue *To, const Type &type, iele::IeleValue *From) {
-  iele::IeleValue *SizeValue = getReferenceTypeSize(type, From);
-  appendIeleRuntimeCopyStorageToStorage(From, To, SizeValue);
+    iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType) {
+  appendCopy(To, ToType, From, FromType, DataLocation::Storage, DataLocation::Storage);
 }
 void IeleCompiler::appendCopyFromMemoryToStorage(
-    iele::IeleValue *To, const Type &type, iele::IeleValue *From) {
-  iele::IeleValue *SizeValue = getReferenceTypeSize(type, From);
-  appendIeleRuntimeCopyMemoryToStorage(From, To, SizeValue);
+    iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType) {
+  appendCopy(To, ToType, From, FromType, DataLocation::Storage, DataLocation::Memory);
+}
+void IeleCompiler::appendCopyFromMemoryToMemory(
+    iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType) {
+  appendCopy(To, ToType, From, FromType, DataLocation::Memory, DataLocation::Memory);
 }
 
 iele::IeleValue *IeleCompiler::appendCopyFromStorageToMemory(
     const Type &type, iele::IeleValue *From) {
   iele::IeleValue *SizeValue = getReferenceTypeSize(type, From);
   iele::IeleValue *To = appendIeleRuntimeAllocateMemory(SizeValue);
-  appendIeleRuntimeCopyStorageToMemory(From, To, SizeValue);
+  appendIeleRuntimeCopy(From, To, SizeValue, DataLocation::Storage, DataLocation::Memory);
   return To;
 }
 
@@ -3286,6 +3579,34 @@ bool IeleCompiler::shouldCopyStorageToMemory(const Type &To,
          From.dataStoredIn(DataLocation::Storage);
 }
 
+void IeleCompiler::appendIeleRuntimeFillMemory(
+     iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value) {
+  CompilingContract->setIncludeMemoryRuntime(true);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.memory.fill");
+  llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
+  llvm::SmallVector<iele::IeleValue *, 3> Arguments;
+  Arguments.push_back(To);
+  Arguments.push_back(NumSlots);
+  Arguments.push_back(Value);
+  iele::IeleInstruction::CreateInternalCall(EmptyResults, Callee, Arguments,
+                                            CompilingBlock);
+}
+
+void IeleCompiler::appendIeleRuntimeFillStorage(
+     iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value) {
+  CompilingContract->setIncludeMemoryRuntime(true);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.storage.fill");
+  llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
+  llvm::SmallVector<iele::IeleValue *, 3> Arguments;
+  Arguments.push_back(To);
+  Arguments.push_back(NumSlots);
+  Arguments.push_back(Value);
+  iele::IeleInstruction::CreateInternalCall(EmptyResults, Callee, Arguments,
+                                            CompilingBlock);
+}
+
 iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateMemory(
      iele::IeleValue *NumSlots) {
   CompilingContract->setIncludeMemoryRuntime(true);
@@ -3300,54 +3621,25 @@ iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateMemory(
   return Result;
 }
 
-void IeleCompiler::appendIeleRuntimeCopyMemoryToMemory(
-    iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots) {
+void IeleCompiler::appendIeleRuntimeCopy(
+    iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots,
+    DataLocation FromLoc, DataLocation ToLoc) {
   CompilingContract->setIncludeMemoryRuntime(true);
+  std::string name;
+  if (FromLoc == DataLocation::Storage && ToLoc == DataLocation::Storage) {
+    name = "ielert.storage.copy.to.storage";
+  } else if (FromLoc == DataLocation::Storage && ToLoc == DataLocation::Memory) {
+    name = "ielert.storage.copy.to.memory";
+  } else if (FromLoc == DataLocation::Memory && ToLoc == DataLocation::Memory) {
+    name = "ielert.memory.copy.to.memory";
+  } else if (FromLoc == DataLocation::Memory && ToLoc == DataLocation::Storage) {
+    name = "ielert.memory.copy.to.storage";
+  } else {
+    solAssert(false, "Not implemented in IELE");
+  }
+  
   iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "ielert.memory.copy.to.memory");
-  llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
-  llvm::SmallVector<iele::IeleValue *, 3> Arguments;
-  Arguments.push_back(From);
-  Arguments.push_back(To);
-  Arguments.push_back(NumSlots);
-  iele::IeleInstruction::CreateInternalCall(EmptyResults, Callee, Arguments,
-                                            CompilingBlock);
-}
-
-void IeleCompiler::appendIeleRuntimeCopyStorageToMemory(
-    iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots) {
-  CompilingContract->setIncludeMemoryRuntime(true);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "ielert.storage.copy.to.memory");
-  llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
-  llvm::SmallVector<iele::IeleValue *, 3> Arguments;
-  Arguments.push_back(From);
-  Arguments.push_back(To);
-  Arguments.push_back(NumSlots);
-  iele::IeleInstruction::CreateInternalCall(EmptyResults, Callee, Arguments,
-                                            CompilingBlock);
-}
-
-void IeleCompiler::appendIeleRuntimeCopyStorageToStorage(
-    iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots) {
-  CompilingContract->setIncludeMemoryRuntime(true);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context,
-                                     "ielert.storage.copy.to.storage");
-  llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
-  llvm::SmallVector<iele::IeleValue *, 3> Arguments;
-  Arguments.push_back(From);
-  Arguments.push_back(To);
-  Arguments.push_back(NumSlots);
-  iele::IeleInstruction::CreateInternalCall(EmptyResults, Callee, Arguments,
-                                            CompilingBlock);
-}
-
-void IeleCompiler::appendIeleRuntimeCopyMemoryToStorage(
-    iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots) {
-  CompilingContract->setIncludeMemoryRuntime(true);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "ielert.memory.copy.to.storage");
+    iele::IeleGlobalVariable::Create(&Context, name);
   llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
   llvm::SmallVector<iele::IeleValue *, 3> Arguments;
   Arguments.push_back(From);

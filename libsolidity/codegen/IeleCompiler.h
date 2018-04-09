@@ -182,14 +182,20 @@ private:
 
   // Helper functions for copying a reference type to a storage location.
   void appendCopyFromStorageToStorage(
-      iele::IeleValue *To, const Type &type, iele::IeleValue *From);
+      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
   void appendCopyFromMemoryToStorage(
-      iele::IeleValue *To, const Type &type, iele::IeleValue *From);
+      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
+
+  void appendCopyFromMemoryToMemory(
+      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
 
   // Helper function for copying a storage reference type into a local newly
   // allocated memory copy. Returns a pointer to the copy.
   iele::IeleValue *appendCopyFromStorageToMemory(
     const Type &type, iele::IeleValue *From);
+
+  void appendCopy(
+      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType, DataLocation ToLoc, DataLocation FromLoc);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
@@ -250,14 +256,13 @@ private:
   // of the compiling contract.
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
       iele::IeleValue *NumSlots);
-  void appendIeleRuntimeCopyMemoryToMemory(
-      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
-  void appendIeleRuntimeCopyStorageToMemory(
-      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
-  void appendIeleRuntimeCopyStorageToStorage(
-      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
-  void appendIeleRuntimeCopyMemoryToStorage(
-      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
+  void appendIeleRuntimeFillMemory(
+      iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value);
+  void appendIeleRuntimeFillStorage(
+      iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value);
+  void appendIeleRuntimeCopy(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots,
+      DataLocation FromLoc, DataLocation ToLoc);
 };
 
 } // end namespace solidity
