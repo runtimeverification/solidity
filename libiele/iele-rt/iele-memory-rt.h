@@ -17,6 +17,32 @@ entry:
   ret %ptr
 }
 
+define @ielert.memory.fill(%to, %size, %data) {
+fill.loop:
+  %done = iszero %size
+  br %done, exit
+  store %data, %to
+  %to = add %to, 1
+  %size = sub %size, 1
+  br fill.loop
+
+exit:
+  ret void
+}
+
+define @ielert.storage.fill(%to, %size, %data) {
+fill.loop:
+  %done = iszero %size
+  br %done, exit
+  sstore %data, %to
+  %to = add %to, 1
+  %size = sub %size, 1
+  br fill.loop
+
+exit:
+  ret void
+}
+
 define @ielert.memory.copy.to.memory(%from, %to, %size) {
 copy.loop:
   %done = iszero %size
