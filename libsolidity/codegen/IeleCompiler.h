@@ -262,10 +262,9 @@ private:
   // of the compiling contract.
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
       iele::IeleValue *NumSlots);
-  void appendIeleRuntimeFillMemory(
-      iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value);
-  void appendIeleRuntimeFillStorage(
-      iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value);
+  void appendIeleRuntimeFill(
+      iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value,
+      DataLocation Loc);
   void appendIeleRuntimeCopy(
       iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots,
       DataLocation FromLoc, DataLocation ToLoc);

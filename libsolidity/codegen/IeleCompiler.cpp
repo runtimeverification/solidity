@@ -1139,12 +1139,14 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
   if (!type->isDynamicallyEncoded()) {
     iele::IeleValue *SizeValue = getReferenceTypeSize(*type, LValue);
     if (type->dataStoredIn(DataLocation::Storage)) {
-      appendIeleRuntimeFillStorage(LValue, SizeValue, 
-        iele::IeleIntConstant::getZero(&Context));
+      appendIeleRuntimeFill(LValue, SizeValue, 
+        iele::IeleIntConstant::getZero(&Context),
+        DataLocation::Storage);
     } else {
       solAssert(type->dataStoredIn(DataLocation::Memory), "reference type should be in memory or storage");
-      appendIeleRuntimeFillMemory(LValue, SizeValue, 
-        iele::IeleIntConstant::getZero(&Context));
+      appendIeleRuntimeFill(LValue, SizeValue, 
+        iele::IeleIntConstant::getZero(&Context),
+        DataLocation::Memory);
     }
     return;
   }
@@ -1185,14 +1187,9 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
     const Type &elementType = *arrayType.baseType();
     if (!elementType.isDynamicallyEncoded()) {
       iele::IeleValue *SizeValue = getReferenceTypeSize(*type, LValue);
-      if (type->dataStoredIn(DataLocation::Storage)) {
-        appendIeleRuntimeFillStorage(LValue, SizeValue, 
-          iele::IeleIntConstant::getZero(&Context));
-      } else {
-        solAssert(type->dataStoredIn(DataLocation::Memory), "not supported in IELE");
-        appendIeleRuntimeFillMemory(LValue, SizeValue, 
-          iele::IeleIntConstant::getZero(&Context));
-      }
+        appendIeleRuntimeFill(LValue, SizeValue, 
+          iele::IeleIntConstant::getZero(&Context),
+          arrayType.location());
       return;
     }
 
@@ -3514,13 +3511,15 @@ void IeleCompiler::appendArrayLengthResize(
     iele::IeleInstruction::Mul, DeleteSize, DeleteSize, 
     ElementSize, CompilingBlock); 
   if (Storage) {
-    appendIeleRuntimeFillStorage(
+    appendIeleRuntimeFill(
       NewEnd, DeleteSize,
-      iele::IeleIntConstant::getZero(&Context));
+      iele::IeleIntConstant::getZero(&Context),
+      DataLocation::Storage);
   } else {
-    appendIeleRuntimeFillMemory(
+    appendIeleRuntimeFill(
       NewEnd, DeleteSize,
-      iele::IeleIntConstant::getZero(&Context));
+      iele::IeleIntConstant::getZero(&Context),
+      DataLocation::Memory);
   }
 
   JoinBlock->insertInto(CompilingFunction);
@@ -3896,25 +3895,24 @@ bool IeleCompiler::shouldCopyStorageToMemory(const Type &To,
          From.dataStoredIn(DataLocation::Storage);
 }
 
-void IeleCompiler::appendIeleRuntimeFillMemory(
-     iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value) {
+void IeleCompiler::appendIeleRuntimeFill(
+     iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value,
+     DataLocation Loc) {
+  std::string name;
+  switch(Loc) {
+  case DataLocation::Storage:
+    name = "ielert.storage.fill";
+    break;
+  case DataLocation::Memory:
+    name = "ielert.memory.fill";
+    break;
+  case DataLocation::CallData:
+    solAssert(false, "not implemented in IELE");
+    break;
+  }
   CompilingContract->setIncludeMemoryRuntime(true);
   iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "ielert.memory.fill");
-  llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
-  llvm::SmallVector<iele::IeleValue *, 3> Arguments;
-  Arguments.push_back(To);
-  Arguments.push_back(NumSlots);
-  Arguments.push_back(Value);
-  iele::IeleInstruction::CreateInternalCall(EmptyResults, Callee, Arguments,
-                                            CompilingBlock);
-}
-
-void IeleCompiler::appendIeleRuntimeFillStorage(
-     iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value) {
-  CompilingContract->setIncludeMemoryRuntime(true);
-  iele::IeleGlobalVariable *Callee =
-    iele::IeleGlobalVariable::Create(&Context, "ielert.storage.fill");
+    iele::IeleGlobalVariable::Create(&Context, name);
   llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
   llvm::SmallVector<iele::IeleValue *, 3> Arguments;
   Arguments.push_back(To);
