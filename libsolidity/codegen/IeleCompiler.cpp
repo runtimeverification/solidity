@@ -2533,8 +2533,81 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
     CompilingExpressionResult.push_back(ShiftValue);
     break;
   }
-  case Type::Category::Mapping:
-    solAssert(false, "not implemented yet: mappings");
+  case Type::Category::Mapping: {
+    const MappingType &type = dynamic_cast<const MappingType &>(baseType);
+    const Type &keyType = *type.keyType();
+    const Type &valueType = *type.valueType();
+
+    // Visit accessed exression.
+    iele::IeleValue *ExprValue = compileLValue(indexAccess.baseExpression());
+    solAssert(ExprValue,
+              "IeleCompiler: failed to compile base expression for index "
+              "access.");
+
+    // Visit index expression.
+    solAssert(indexAccess.indexExpression(),
+              "IeleCompiler: Index expression expected.");
+    iele::IeleValue *IndexValue =
+      compileExpression(*indexAccess.indexExpression());
+    IndexValue =
+      appendTypeConversion(
+          IndexValue,
+          *indexAccess.indexExpression()->annotation().type, keyType);
+    solAssert(IndexValue,
+              "IeleCompiler: failed to compile index expression for index "
+              "access.");
+
+    // Encode index expression to an unsigned integer.
+    solAssert(keyType.category() == Type::Category::Integer ||
+              keyType.category() == Type::Category::FixedBytes ||
+              keyType.category() == Type::Category::Contract,
+              "not implmented yet");
+
+    // Hash index if needed.
+    solAssert(!type.hasHashedKeyspace(), "not implemented yet");
+
+    // Generate code for the access.
+    // First compute the address of the accessed value.
+    iele::IeleLocalVariable *AddressValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    if (type.hasInfiniteKeyspace()) {
+      // In this case AddressValue = ExprValue + IndexValue < nbits(StorageSize)
+      iele::IeleIntConstant *StorageOffset =
+        iele::IeleIntConstant::Create(
+            &Context, bigint(dev::bitsRequired(NextStorageAddress)));
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Shift, AddressValue, IndexValue, StorageOffset,
+          CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
+          CompilingBlock);
+    } else {
+      // In this case AddressValue = ExprValue + IndexValue * ValueTypeSize
+      iele::IeleValue *ValueTypeSize =
+        iele::IeleIntConstant::Create(&Context, valueType.storageSize());
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Mul, AddressValue, IndexValue,
+          ValueTypeSize, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
+          CompilingBlock);
+    }
+    // Then dereference the address if needed and return the expression's result.
+    if (CompilingLValue || !valueType.isValueType()) {
+      // Return the address in case of an lvalue evaluation or for reference
+      // types.
+      CompilingExpressionResult.push_back(AddressValue);
+      CompilingLValueKind = LValueKind::Storage;
+    } else {
+      // Load the contents in case of an rvalue evaluation of a value type.
+      iele::IeleLocalVariable *LoadedValue =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateSLoad(
+          LoadedValue, AddressValue, CompilingBlock);
+      CompilingExpressionResult.push_back(LoadedValue);
+    }
+    break;
+  }
   case Type::Category::TypeType:
     solAssert(false, "not implemented yet: typetype");
   default:
@@ -3036,14 +3109,18 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
     } else if (type->category() == Type::Category::Array) {
       // Add array copy in constructor's body.
       solAssert(!stateVariable->value(), "not implemented yet");
-    } else { // this is the struct case
-      solAssert(type->category() == Type::Category::Struct,
-                "not implemented yet");
+    } else if (type->category() == Type::Category::Struct) {
       // Add struct copy in constructor's body.
       if (shouldCopyStorageToStorage(LHSValue, *rhsType))
         appendCopyFromStorageToStorage(LHSValue, *type, InitValue, *rhsType);
       else if (shouldCopyMemoryToStorage(LHSValue, *rhsType))
         appendCopyFromMemoryToStorage(LHSValue, *type, InitValue, *rhsType);
+    } else {
+      solAssert(type->category() == Type::Category::Mapping,
+                "IeleCompiler: found state variable initializer of unknown "
+                "type");
+      solAssert(false, "IeleCompiler: found state variable initializer for a "
+                       "mapping");
     }
   }
 }
@@ -3065,8 +3142,10 @@ void IeleCompiler::appendLocalVariableInitialization(
       InitValue = appendStructAllocation(structType);
   }
   else {
-    solAssert(type->isValueType(), "not implmented yet");
-    // Local variable are always automatically initialized to zero. We don't
+    solAssert(type->isValueType() ||
+              type->category() == Type::Category::Mapping,
+              "IeleCompiler: found local variable of unknown type");
+    // Local variables are always automatically initialized to zero. We don't
     // need to do anything here.
   }
 
@@ -3477,6 +3556,8 @@ void IeleCompiler::appendCopy(
 
     break;
   }
+  case Type::Category::Mapping:
+    solAssert(false, "not implemented yet");
   default:
     solAssert(false, "Invalid type in appendCopy");
   }
