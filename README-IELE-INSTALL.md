@@ -5,7 +5,7 @@ These instructions will help you to install the solidity compiler with the IELE 
 ```
 # install dependencies
 sudo apt-get update
-sudo apt-get make gcc cmake build-essential libboost-all-dev llvm-5.0 libz3-dev zlib1g-dev
+sudo apt-get install make gcc cmake build-essential libboost-all-dev llvm-5.0 libz3-dev zlib1g-dev
 
 # build compiler, it is important to build into a subdir named "build" as
 # suggested in order to run the test scripts correctly
