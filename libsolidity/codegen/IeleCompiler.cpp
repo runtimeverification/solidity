@@ -1631,8 +1631,57 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Log1:
   case FunctionType::Kind::Log2:
   case FunctionType::Kind::Log3:
-  case FunctionType::Kind::Log4:
-    solAssert(false, "not implemented yet: logging");
+  case FunctionType::Kind::Log4: {
+    llvm::SmallVector<iele::IeleValue *, 4> CompiledArguments;
+
+    // First arg is the data part
+    iele::IeleValue *DataArg = compileExpression(*arguments[0]);
+    solAssert(DataArg,
+              "IeleCompiler: Failed to compile data argument of log operation ");
+
+    // Remaining args are the topics
+    for (unsigned arg = 1; arg < arguments.size(); arg++)
+    {
+        iele::IeleValue *ArgValue = compileExpression(*arguments[arg]);
+        solAssert(ArgValue,
+                  "IeleCompiler: Failed to compile indexed log argument ");
+        CompiledArguments.push_back(ArgValue);
+    }
+
+    // Find out next free location (will store encoding of non-indexed args)     
+    // TODO: this is the same as in the events code. Refactor after encodings are done?
+    iele::IeleLocalVariable *LastUsed =
+        iele::IeleLocalVariable::Create(&Context, "last.used", 
+                                        CompilingFunction);
+    iele::IeleLocalVariable *NextFree =
+        iele::IeleLocalVariable::Create(&Context, "next.free", 
+                                        CompilingFunction);
+    // i.e. %last.used = load 0    
+    iele::IeleInstruction::CreateLoad(
+      LastUsed, 
+      iele::IeleIntConstant::getZero(&Context), 
+      CompilingBlock);
+    // i.e. %next.free = add %last.used, 1
+    iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Add,
+                                       NextFree,
+                                       LastUsed, 
+                                       iele::IeleIntConstant::getOne(&Context),
+                                       CompilingBlock);
+
+    // Store the data argument in memory
+    iele::IeleInstruction::CreateStore1(DataArg,
+                                        NextFree, 
+                                        iele::IeleIntConstant::getZero(&Context),
+                                        iele::IeleIntConstant::Create(&Context, bigint(32)),
+                                        CompilingBlock);
+
+    // make log instruction 
+    iele::IeleInstruction::CreateLog(CompiledArguments,
+                                     NextFree,
+                                     CompilingBlock);
+
+    break;
+  }
   case FunctionType::Kind::ECRecover: {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
