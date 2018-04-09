@@ -23,7 +23,7 @@ IeleFunction::IeleFunction(IeleContext *Ctx, bool isPublic, bool isInit,
 IeleFunction::~IeleFunction() { }
 
 void IeleFunction::printNameAsIeleText(llvm::raw_ostream &OS) const {
-  if (isPublic() && !(isInit() || isDeposit()))
+  if (!(isInit() || isDeposit()))
     OS << "@\"" << getName() << "\"";
   else
     OS << "@" << getName();

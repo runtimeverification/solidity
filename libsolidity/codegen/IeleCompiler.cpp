@@ -28,8 +28,7 @@ std::string IeleCompiler::getIeleNameForFunction(
   else if (function.isPublic())
     IeleFunctionName = function.externalSignature();
   else
-    // TODO: overloading on internal functions.
-    IeleFunctionName = function.name();
+    IeleFunctionName = function.name() + "." + function.type()->identifier();
 
   if (isMostDerived(&function)) {
     return IeleFunctionName;
@@ -2454,7 +2453,17 @@ void IeleCompiler::endVisit(const Literal &literal) {
     CompilingExpressionResult.push_back(LiteralValue);
     break;
   }
-  case Type::Category::StringLiteral:
+  case Type::Category::StringLiteral: {
+    const auto &literalType = dynamic_cast<const StringLiteralType &>(*type);
+    std::string value = literalType.value();
+    bigint value_integer = bigint(toHex(asBytes(value), 2, HexPrefix::Add));
+    iele::IeleIntConstant *LiteralValue =
+      iele::IeleIntConstant::Create(
+        &Context,
+        value_integer);
+    CompilingExpressionResult.push_back(LiteralValue);
+    break;
+  }
   default:
     solAssert(false, "not implemented yet");
     break;
@@ -3184,6 +3193,28 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
   case Type::Category::Bool:
     solAssert(SourceType == TargetType, "Invalid conversion for bool.");
     return Value;
+  }
+  case Type::Category::StringLiteral: {
+    const auto &literalType = dynamic_cast<const StringLiteralType &>(SourceType);
+    std::string value = literalType.value();
+    switch(TargetType.category()) {
+    case Type::Category::FixedBytes: {
+      const FixedBytesType &targetType = dynamic_cast<const FixedBytesType &>(TargetType);
+      unsigned len = targetType.numBytes();
+      if (value.size() < len)
+        len = value.size();
+      std::string choppedValue = value.substr(0, len);
+      char paddedValue[32] = {0};
+      memcpy(paddedValue, choppedValue.c_str(), len);
+      std::string paddedValueStr = std::string(paddedValue, targetType.numBytes());
+      bigint value = bigint(u256(h256(bytesConstRef(paddedValueStr), h256::AlignRight)));
+      iele::IeleIntConstant *Result = iele::IeleIntConstant::Create(
+        &Context, value, true);
+      return Result;
+    }
+    default:
+      solAssert(false, "not implemented yet");
+    }
   }
   default:
     solAssert(false, "Invalid type conversion requested.");
