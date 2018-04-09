@@ -2360,7 +2360,7 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
       // Add 1 to skip the first slot that holds the size.
       iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, OffsetValue, OffsetValue,
-          iele::IeleIntConstant::Create(&Context, bigint(1)), CompilingBlock);
+          iele::IeleIntConstant::getOne(&Context), CompilingBlock);
     }
     // Then compute the size of the array.
     iele::IeleValue *SizeValue = nullptr;
@@ -2384,11 +2384,11 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
       iele::IeleLocalVariable::Create(&Context, "index.out.of.range",
                                       CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::CmpLt, OutOfRangeValue, OffsetValue, 
+        iele::IeleInstruction::CmpLt, OutOfRangeValue, IndexValue, 
         iele::IeleIntConstant::getZero(&Context), CompilingBlock);
     appendRevert(OutOfRangeValue);
     iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::CmpGe, OutOfRangeValue, OffsetValue, 
+        iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue, 
         SizeValue, CompilingBlock);
     appendRevert(OutOfRangeValue);
     // Then compute the address of the accessed element and check for
@@ -2462,8 +2462,9 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
     break;
   }
   case Type::Category::Mapping:
+    solAssert(false, "not implemented yet: mappings");
   case Type::Category::TypeType:
-    solAssert(false, "not implemented yet");
+    solAssert(false, "not implemented yet: typetype");
   default:
     solAssert(false, "IeleCompiler: Index access to unknown type.");
   }
@@ -3076,15 +3077,31 @@ iele::IeleValue *IeleCompiler::appendArrayAllocation(
   if (NumElemsValue) {
     solAssert(type.isDynamicallySized(),
               "IeleCompiler: custom size requestd for fix-sized array");
+    const Type &elementType = *type.baseType();
+    bigint elementSize;
+    switch (type.location()) {
+    case DataLocation::Storage: {
+      elementSize = elementType.storageSize();
+      break;
+    }
+    case DataLocation::Memory: {
+      elementSize = elementType.memorySize();
+      break;
+    }
+    case DataLocation::CallData:
+      solAssert(false, "not supported by IELE.");
+    }
+
     SizeValue =
       iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Mul,
-        llvm::cast<iele::IeleLocalVariable>(SizeValue), SizeValue,
+        llvm::cast<iele::IeleLocalVariable>(SizeValue),
+        iele::IeleIntConstant::Create(&Context, elementSize),
         NumElemsValue, CompilingBlock);
     // Onr extra slot for storing length.
     iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul,
+        iele::IeleInstruction::Add,
         llvm::cast<iele::IeleLocalVariable>(SizeValue), SizeValue,
         iele::IeleIntConstant::getOne(&Context), CompilingBlock);
   } else {
@@ -3098,7 +3115,7 @@ iele::IeleValue *IeleCompiler::appendArrayAllocation(
 
   // Save length for dynamically sized arrays.
   if (type.isDynamicallySized()) {
-    iele::IeleInstruction::CreateStore(SizeValue, ArrayAllocValue,
+    iele::IeleInstruction::CreateStore(SizeValue, NumElemsValue,
                                        CompilingBlock);
   }
 
