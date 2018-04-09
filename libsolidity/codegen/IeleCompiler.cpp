@@ -183,8 +183,6 @@ void IeleCompiler::compileContract(
       } else {
         // Generate a proxy function for the base contract's constructor and add
         // it to the symbol table.
-        solAssert(base->constructor()->parameters().empty(), 
-                  "not implemented yet: base constructor parameters.");
         iele::IeleFunction::Create(&Context, false, base->name() + ".init",
                                    CompilingContract);
       }
@@ -235,7 +233,7 @@ void IeleCompiler::compileContract(
       CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
       CompilingBlock =
         iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
-      appendStateVariableInitialization(base);
+      appendDefaultConstructor(base);
       iele::IeleInstruction::CreateRetVoid(CompilingBlock);
       CompilingBlock = nullptr;
       CompilingFunction = nullptr;
@@ -251,7 +249,7 @@ void IeleCompiler::compileContract(
     CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
-    appendStateVariableInitialization(&contract);
+    appendDefaultConstructor(&contract);
     iele::IeleInstruction::CreateRetVoid(CompilingBlock);
     CompilingBlock = nullptr;
     CompilingFunction = nullptr;
@@ -393,7 +391,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   // If the function is a constructor, visit state variables and add
   // initialization code.
   if (function.isConstructor())
-    appendStateVariableInitialization(CompilingContractASTNode);
+    appendDefaultConstructor(CompilingContractASTNode);
 
   // Initialize local variables and return params.
   iele::IeleValueSymbolTable *FunST =
@@ -1741,8 +1739,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   return false;
 }
 
-template <class ArgClass, class ReturnClass>
-void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const std::vector<ASTPointer<const Expression>> &arguments, const FunctionType &function) {
+template <class ArgClass, class ReturnClass, class ExpressionClass>
+void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function) {
     for (unsigned i = 0; i < arguments.size(); ++i) {
       iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
       solAssert(ArgValue,
@@ -2635,14 +2633,45 @@ void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {
     connectWithUnconditionalJump(CompilingBlock, AssertFailBlock);
 }
 
-void IeleCompiler::appendStateVariableInitialization(const ContractDefinition *contract) {
+void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) {
   // Init state variables.
   bool found = false;
+  std::map<const FunctionDefinition *, const std::vector<ASTPointer<Expression>> *> baseArguments;
   for (const ContractDefinition *def : CompilingContractInheritanceHierarchy) {
+    if (const FunctionDefinition *constructor = def->constructor()) {
+      for (auto const& modifier : constructor->modifiers()) {
+        auto baseContract = dynamic_cast<const ContractDefinition *>(
+          modifier->name()->annotation().referencedDeclaration);
+        if (baseContract) {
+          if (baseArguments.count(baseContract->constructor()) == 0) {
+            baseArguments[baseContract->constructor()] = &modifier->arguments();
+          }
+        }
+      }
+    }
+
+    for (const auto &base : def->baseContracts()) {
+      auto baseContract = dynamic_cast<const ContractDefinition *>(
+        base->name().annotation().referencedDeclaration);
+      solAssert(baseContract, "Must find base contract in inheritance specifier");
+      if (baseArguments.count(baseContract->constructor()) == 0) {
+        baseArguments[baseContract->constructor()] = &base->arguments();
+      }
+    }
     if (found) {
       // Call the immediate base class init function.
-      llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
+      llvm::SmallVector<iele::IeleLocalVariable *, 0> Returns;
       llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+
+      if (const FunctionDefinition *decl = def->constructor()) {
+        auto arguments = *baseArguments[decl];
+
+        const FunctionType &function = FunctionType(*decl);
+
+        compileFunctionArguments(&Arguments, &Returns, arguments, function);
+
+        solAssert(Returns.size() == 0, "Constructor doesn't return anything");
+      }
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
       solAssert(ST,
                 "IeleCompiler: failed to access compiling function's symbol "
