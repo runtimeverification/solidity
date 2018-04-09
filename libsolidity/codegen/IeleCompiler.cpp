@@ -1115,15 +1115,170 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     CompilingExpressionResult.push_back(Result);
     break;
   }
-  case Token::Delete: // delete
-    solAssert(false, "not implemented yet");
+  case Token::Delete: { // delete
+    llvm::SmallVector<iele::IeleValue*, 4> LValues;
+    compileLValues(unaryOperation.subExpression(), LValues);
+
+    solAssert(LValues.size() == 1, "not implemented yet");
+    appendLValueDelete(LValues[0], unaryOperation.subExpression().annotation().type);
     break;
+  }
   default:
     solAssert(false, "IeleCompiler: Invalid unary operator");
     break;
   }
 
   return false;
+}
+
+void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type) {
+  if (type->isValueType()) {
+    appendLValueAssign(LValue, iele::IeleIntConstant::getZero(&Context));
+    return;
+  }
+  if (!type->isDynamicallyEncoded()) {
+    iele::IeleValue *SizeValue = getReferenceTypeSize(*type, LValue);
+    if (type->dataStoredIn(DataLocation::Storage)) {
+      appendIeleRuntimeFillStorage(LValue, SizeValue, 
+        iele::IeleIntConstant::getZero(&Context));
+    } else {
+      solAssert(type->dataStoredIn(DataLocation::Memory), "reference type should be in memory or storage");
+      appendIeleRuntimeFillMemory(LValue, SizeValue, 
+        iele::IeleIntConstant::getZero(&Context));
+    }
+    return;
+  }
+  switch (type->category()) {
+  case Type::Category::Struct: {
+    const StructType &structType = dynamic_cast<const StructType &>(*type);
+    for (auto decl : structType.structDefinition().members()) {
+      // First compute the offset from the start of the struct.
+      bigint offset;
+      switch (structType.location()) {
+      case DataLocation::Storage: {
+        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
+        offset = offsets.first;
+        break;
+      }
+      case DataLocation::Memory: {
+        offset = structType.memoryOffsetOfMember(decl->name());
+        break;
+      case DataLocation::CallData: 
+        solAssert(false, "Call data not supported in IELE");
+      }
+      }
+
+      iele::IeleLocalVariable *Member =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleValue *OffsetValue =
+        iele::IeleIntConstant::Create(&Context, offset);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, Member, LValue, OffsetValue,
+        CompilingBlock);
+
+      appendLValueDelete(Member, decl->type());
+    }
+    break;
+  }
+  case Type::Category::Array: {
+    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(*type);
+    const Type &elementType = *arrayType.baseType();
+    if (!elementType.isDynamicallyEncoded()) {
+      iele::IeleValue *SizeValue = getReferenceTypeSize(*type, LValue);
+      if (type->dataStoredIn(DataLocation::Storage)) {
+        appendIeleRuntimeFillStorage(LValue, SizeValue, 
+          iele::IeleIntConstant::getZero(&Context));
+      } else {
+        solAssert(type->dataStoredIn(DataLocation::Memory), "not supported in IELE");
+        appendIeleRuntimeFillMemory(LValue, SizeValue, 
+          iele::IeleIntConstant::getZero(&Context));
+      }
+      return;
+    }
+
+    iele::IeleLocalVariable *SizeVariable =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleLocalVariable *Element =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    if (type->isDynamicallySized()) {
+      arrayType.location() == DataLocation::Storage ?
+        iele::IeleInstruction::CreateSLoad(
+          SizeVariable, LValue,
+          CompilingBlock) :
+        iele::IeleInstruction::CreateLoad(
+          SizeVariable, LValue,
+          CompilingBlock) ;
+
+      // copy the size field
+      arrayType.location() == DataLocation::Storage ?
+        iele::IeleInstruction::CreateSStore(
+          iele::IeleIntConstant::getZero(&Context), LValue,
+          CompilingBlock) :
+        iele::IeleInstruction::CreateStore(
+          iele::IeleIntConstant::getZero(&Context), LValue,
+          CompilingBlock) ;
+
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, Element, LValue,
+          iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+    } else {
+      iele::IeleInstruction::CreateAssign(
+        SizeVariable, iele::IeleIntConstant::Create(&Context, bigint(arrayType.length())),
+        CompilingBlock);
+      iele::IeleInstruction::CreateAssign(
+        Element, LValue, CompilingBlock);
+    }
+
+    iele::IeleBlock *LoopBodyBlock =
+      iele::IeleBlock::Create(&Context, "delete.loop", CompilingFunction);
+    CompilingBlock = LoopBodyBlock;
+
+    iele::IeleBlock *LoopExitBlock =
+      iele::IeleBlock::Create(&Context, "delete.loop.end");
+
+    iele::IeleLocalVariable *DoneValue =
+      iele::IeleLocalVariable::Create(&Context, "done", CompilingFunction);
+    iele::IeleInstruction::CreateIsZero(
+      DoneValue, SizeVariable, CompilingBlock);
+    connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
+
+    bigint elementSize;
+    switch (arrayType.location()) {
+    case DataLocation::Storage: {
+      elementSize = elementType.storageSize();
+      break;
+    }
+    case DataLocation::Memory: {
+      elementSize = elementType.memorySize();
+      break;
+    }
+    case DataLocation::CallData:
+      solAssert(false, "not supported by IELE.");
+    }
+
+    appendLValueDelete(Element, arrayType.baseType());
+
+    iele::IeleValue *ElementSizeValue =
+        iele::IeleIntConstant::Create(&Context, elementSize);
+
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, Element, Element,
+        ElementSizeValue,
+        CompilingBlock);
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Sub, SizeVariable, SizeVariable,
+        iele::IeleIntConstant::getOne(&Context),
+        CompilingBlock);
+
+    connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
+    LoopExitBlock->insertInto(CompilingFunction);
+    CompilingBlock = LoopExitBlock;
+    break;
+  }
+  default:
+    solAssert(false, "not implemented yet");
+  }
 }
 
 bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
@@ -2568,6 +2723,36 @@ iele::IeleValue *IeleCompiler::compileLValue(const Expression &expression) {
   CompilingLValue = SavedCompilingLValue;
   return Result;
 }
+
+void IeleCompiler::compileLValues(
+    const Expression &expression,
+    llvm::SmallVectorImpl<iele::IeleValue *> &Result) {
+  // Save current expression compilation status.
+  bool SavedCompilingLValue = CompilingLValue;
+
+  // Visit expression as LValue.
+  CompilingLValue = true;
+  expression.accept(*this);
+
+  // Expression visitors should store the value that is the result of the
+  // compiled for the expression computation in the CompilingExpressionResult
+  // field. This helper should only be used when a scalar lvalue is expected as
+  // the result of the corresponding expression computation.
+  solAssert(CompilingExpressionResult.size() > 0, "expression visitor did not set a result value");
+  Result.insert(Result.end(),
+                CompilingExpressionResult.begin(),
+                CompilingExpressionResult.end());
+  for (iele::IeleValue *Value : Result) {
+    solAssert(llvm::isa<iele::IeleLocalVariable>(Value) ||
+              llvm::isa<iele::IeleGlobalVariable>(Value),
+              "IeleCompiler: Invalid compilation for an lvalue");
+  }
+
+  // Restore expression compilation status and return result.
+  CompilingExpressionResult.clear();
+  CompilingLValue = SavedCompilingLValue;
+}
+
 
 void IeleCompiler::connectWithUnconditionalJump(
     iele::IeleBlock *SourceBlock, iele::IeleBlock *DestinationBlock) {

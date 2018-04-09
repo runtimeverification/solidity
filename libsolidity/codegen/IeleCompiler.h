@@ -149,6 +149,9 @@ private:
       const Expression &expression,
       llvm::SmallVectorImpl<iele::IeleValue *> &Result);
   iele::IeleValue *compileLValue(const Expression &expression);
+  void compileLValues(
+      const Expression &expression,
+      llvm::SmallVectorImpl<iele::IeleValue *> &Result);
 
   void connectWithUnconditionalJump(iele::IeleBlock *SourceBlock, 
                                     iele::IeleBlock *DestinationBlock);
@@ -204,6 +207,8 @@ private:
 
   iele::IeleLocalVariable *appendLValueDereference(iele::IeleValue *LValue);
   void appendLValueAssign(iele::IeleValue *LValue, iele::IeleValue *RValue);
+  void appendLValueDelete(iele::IeleValue *LValue, TypePointer Type);
+  void appendArrayLengthResize(bool Storage, iele::IeleValue *LValue, iele::IeleValue *NewLength);
 
   iele::IeleLocalVariable *appendBinaryOperator(
       Token::Value Opcode, iele::IeleValue *LeftOperand,
