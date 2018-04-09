@@ -2346,7 +2346,7 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
       break;
     }
     case DataLocation::CallData:
-      solAssert(false, "not implemented yet.");
+      solAssert(false, "not supported by IELE.");
     }
     // First compute the offset from the start of the array.
     iele::IeleValue *ElementSizeValue =
@@ -3811,13 +3811,8 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
               appendRevert();
             }
           } else {
-            iele::IeleLocalVariable *OutOfRange =
-              iele::IeleLocalVariable::Create(&Context, "integer.out.of.range", CompilingFunction);
-            iele::IeleInstruction::CreateBinOp(
-              iele::IeleInstruction::CmpLt, OutOfRange, Value,
-              iele::IeleIntConstant::getZero(&Context),
-              CompilingBlock);
-            appendRevert(OutOfRange);
+            bigint min = 0;
+            appendRangeCheck(Value, &min, nullptr);
           }
         }
         return Value;
