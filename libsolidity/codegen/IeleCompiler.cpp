@@ -1171,7 +1171,7 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
       }
 
       iele::IeleLocalVariable *Member =
-        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+        iele::IeleLocalVariable::Create(&Context, "fill.address", CompilingFunction);
       iele::IeleValue *OffsetValue =
         iele::IeleIntConstant::Create(&Context, offset);
       iele::IeleInstruction::CreateBinOp(
@@ -1194,9 +1194,9 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
     }
 
     iele::IeleLocalVariable *SizeVariable =
-      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleLocalVariable::Create(&Context, "array.size", CompilingFunction);
     iele::IeleLocalVariable *Element =
-      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleLocalVariable::Create(&Context, "fill.address", CompilingFunction);
     if (type->isDynamicallySized()) {
       arrayType.location() == DataLocation::Storage ?
         iele::IeleInstruction::CreateSLoad(
@@ -1254,7 +1254,15 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
       solAssert(false, "not supported by IELE.");
     }
 
-    appendLValueDelete(Element, arrayType.baseType());
+    iele::IeleLocalVariable *LoadedValue;
+    if (elementType.isDynamicallySized() && arrayType.location() == DataLocation::Memory) {
+      LoadedValue = iele::IeleLocalVariable::Create(&Context, "array.dereferenced", CompilingFunction);
+      iele::IeleInstruction::CreateLoad(LoadedValue, Element, CompilingBlock);
+    } else {
+      LoadedValue = Element;
+    }
+
+    appendLValueDelete(LoadedValue, arrayType.baseType());
 
     iele::IeleValue *ElementSizeValue =
         iele::IeleIntConstant::Create(&Context, elementSize);
@@ -2238,7 +2246,12 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
   case Type::Category::Array: {
     const ArrayType &type = dynamic_cast<const ArrayType &>(baseType);
     if (member == "length") {
-      iele::IeleValue *ExprValue = compileLValue(memberAccess.expression());
+      iele::IeleValue *ExprValue;
+      if (type.isDynamicallySized() && type.location() == DataLocation::Memory) {
+        ExprValue = compileExpression(memberAccess.expression());
+      } else {
+        ExprValue = compileLValue(memberAccess.expression());
+      }
       solAssert(ExprValue,
                 "IeleCompiler: failed to compile base expression for member "
                 "access.");
@@ -2308,7 +2321,14 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
     const Type &elementType = *type.baseType();
 
     // Visit accessed exression.
-    iele::IeleValue *ExprValue = compileLValue(indexAccess.baseExpression());
+    iele::IeleValue *ExprValue;
+    if (type.isDynamicallySized() && type.location() == DataLocation::Memory) {
+      // dynamically sized memory arrays are poinetrs, so we need to evaluate as an
+      // rvalue
+      ExprValue = compileExpression(indexAccess.baseExpression());
+    } else {
+      ExprValue = compileLValue(indexAccess.baseExpression());
+    }
     solAssert(ExprValue,
               "IeleCompiler: failed to compile base expression for index "
               "access.");
@@ -2396,7 +2416,8 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
         iele::IeleInstruction::Add, AddressValue, ExprValue, OffsetValue,
         CompilingBlock);
 
-    if (CompilingLValue || !elementType.isValueType()) {
+    if (CompilingLValue || (!elementType.isValueType() && 
+        (!elementType.isDynamicallySized() || type.location() == DataLocation::Storage))) {
       // Return the address in case of an lvalue evaluation or for reference
       // types.
       CompilingExpressionResult.push_back(AddressValue);
@@ -3112,7 +3133,7 @@ iele::IeleValue *IeleCompiler::appendArrayAllocation(
 
   // Save length for dynamically sized arrays.
   if (type.isDynamicallySized()) {
-    iele::IeleInstruction::CreateStore(SizeValue, NumElemsValue,
+    iele::IeleInstruction::CreateStore(NumElemsValue, ArrayAllocValue,
                                        CompilingBlock);
   }
 
@@ -3338,7 +3359,23 @@ void IeleCompiler::appendCopy(
         DoneValue, SizeVariableFrom, CompilingBlock);
       connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
  
-      appendCopy(ElementTo, toElementType, ElementFrom, elementType, ToLoc, FromLoc);
+      iele::IeleLocalVariable *LoadedValueFrom;
+      if (elementType.isDynamicallySized() && arrayType.location() == DataLocation::Memory) {
+        LoadedValueFrom = iele::IeleLocalVariable::Create(&Context, "from.array.dereferenced", CompilingFunction);
+        iele::IeleInstruction::CreateLoad(LoadedValueFrom, ElementFrom, CompilingBlock);
+      } else {
+        LoadedValueFrom = ElementFrom;
+      }
+ 
+      iele::IeleLocalVariable *LoadedValueTo;
+      if (elementType.isDynamicallySized() && arrayType.location() == DataLocation::Memory) {
+        LoadedValueTo = iele::IeleLocalVariable::Create(&Context, "to.array.dereferenced", CompilingFunction);
+        iele::IeleInstruction::CreateLoad(LoadedValueTo, ElementTo, CompilingBlock);
+      } else {
+        LoadedValueTo = ElementTo;
+      }
+
+      appendCopy(LoadedValueTo, toElementType, LoadedValueFrom, elementType, ToLoc, FromLoc);
   
       iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, ElementFrom, ElementFrom,
