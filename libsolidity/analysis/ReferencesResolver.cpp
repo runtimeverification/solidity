@@ -334,7 +334,7 @@ void ReferencesResolver::endVisit(VariableDeclaration const& _variable)
 						);
 				}
 				if (varLoc == Location::Default)
-					typeLoc = DataLocation::CallData;
+					typeLoc = DataLocation::Memory;
 				else
 					typeLoc = varLoc == Location::Memory ? DataLocation::Memory : DataLocation::Storage;
 			}

@@ -4835,7 +4835,6 @@ BOOST_AUTO_TEST_CASE(array_copy_storage_abi_signed)
 	));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_push, 1)
 BOOST_AUTO_TEST_CASE(array_push)
 {
 	char const* sourceCode = R"(
