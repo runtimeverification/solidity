@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(fixed_arrays)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_arrays, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_arrays, 2)
 BOOST_AUTO_TEST_CASE(dynamic_arrays)
 {
 	string sourceCode = R"(
@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(dynamic_arrays)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_nested_arrays, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_nested_arrays, 2)
 BOOST_AUTO_TEST_CASE(dynamic_nested_arrays)
 {
 	string sourceCode = R"(

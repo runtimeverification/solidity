@@ -1289,7 +1289,6 @@ BOOST_AUTO_TEST_CASE(deleteStruct)
 	ABI_CHECK(callContractFunction("getNestedMapping(uint256)", 1), encodeArgs(false));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(deleteLocal, 1)
 BOOST_AUTO_TEST_CASE(deleteLocal)
 {
 	char const* sourceCode = R"(
@@ -1305,7 +1304,6 @@ BOOST_AUTO_TEST_CASE(deleteLocal)
 	ABI_CHECK(callContractFunction("delLocal()"), encodeArgs(0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(deleteLocals, 1)
 BOOST_AUTO_TEST_CASE(deleteLocals)
 {
 	char const* sourceCode = R"(
@@ -4025,7 +4023,7 @@ BOOST_AUTO_TEST_CASE(struct_copy)
 	ABI_CHECK(callContractFunction("retrieve(uint256)", 8), encodeArgs(0, 0, 0, 0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_containing_bytes_copy_and_delete, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_containing_bytes_copy_and_delete, 4)
 BOOST_AUTO_TEST_CASE(struct_containing_bytes_copy_and_delete)
 {
 	char const* sourceCode = R"(
@@ -4352,7 +4350,6 @@ BOOST_AUTO_TEST_CASE(bytes_in_arguments)
 	);
 }
 */
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(fixed_arrays_in_storage, 1)
 BOOST_AUTO_TEST_CASE(fixed_arrays_in_storage)
 {
 	char const* sourceCode = R"(
@@ -4380,7 +4377,6 @@ BOOST_AUTO_TEST_CASE(fixed_arrays_in_storage)
 	ABI_CHECK(callContractFunction("getLengths()"), encodeArgs(u256(1) << 10, (u256(1) << 10) + 3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_arrays_in_storage, 1)
 BOOST_AUTO_TEST_CASE(dynamic_arrays_in_storage)
 {
 	char const* sourceCode = R"(
@@ -4411,7 +4407,6 @@ BOOST_AUTO_TEST_CASE(dynamic_arrays_in_storage)
 	ABI_CHECK(callContractFunction("getData(uint256)", 8), encodeArgs(10, 11));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(fixed_out_of_bounds_array_access, 1)
 BOOST_AUTO_TEST_CASE(fixed_out_of_bounds_array_access)
 {
 	char const* sourceCode = R"(
@@ -4433,7 +4428,6 @@ BOOST_AUTO_TEST_CASE(fixed_out_of_bounds_array_access)
 	ABI_CHECK(callContractFunction("length()"), encodeArgs(4));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_out_of_bounds_array_access, 1)
 BOOST_AUTO_TEST_CASE(dynamic_out_of_bounds_array_access)
 {
 	char const* sourceCode = R"(
@@ -4457,7 +4451,6 @@ BOOST_AUTO_TEST_CASE(dynamic_out_of_bounds_array_access)
 	ABI_CHECK(callContractFunction("length()"), encodeArgs(4));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(fixed_array_cleanup, 1)
 BOOST_AUTO_TEST_CASE(fixed_array_cleanup)
 {
 	char const* sourceCode = R"(
@@ -4479,7 +4472,6 @@ BOOST_AUTO_TEST_CASE(fixed_array_cleanup)
 	BOOST_CHECK(storageEmpty(m_contractAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_fixed_array_cleanup, 1)
 BOOST_AUTO_TEST_CASE(short_fixed_array_cleanup)
 {
 	char const* sourceCode = R"(
@@ -4501,7 +4493,6 @@ BOOST_AUTO_TEST_CASE(short_fixed_array_cleanup)
 	BOOST_CHECK(storageEmpty(m_contractAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_array_cleanup, 1)
 BOOST_AUTO_TEST_CASE(dynamic_array_cleanup)
 {
 	char const* sourceCode = R"(
@@ -4526,7 +4517,6 @@ BOOST_AUTO_TEST_CASE(dynamic_array_cleanup)
 	BOOST_CHECK(storageEmpty(m_contractAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_multi_array_cleanup, 1)
 BOOST_AUTO_TEST_CASE(dynamic_multi_array_cleanup)
 {
 	char const* sourceCode = R"(
@@ -4551,7 +4541,6 @@ BOOST_AUTO_TEST_CASE(dynamic_multi_array_cleanup)
 	BOOST_CHECK(storageEmpty(m_contractAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_storage_storage_dyn_dyn, 1)
 BOOST_AUTO_TEST_CASE(array_copy_storage_storage_dyn_dyn)
 {
 	char const* sourceCode = R"(
@@ -4598,7 +4587,6 @@ BOOST_AUTO_TEST_CASE(array_copy_storage_storage_static_static)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(8, 0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_storage_storage_static_dynamic, 1)
 BOOST_AUTO_TEST_CASE(array_copy_storage_storage_static_dynamic)
 {
 	char const* sourceCode = R"(
@@ -4617,7 +4605,6 @@ BOOST_AUTO_TEST_CASE(array_copy_storage_storage_static_dynamic)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(9, 4));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_different_packing, 1)
 BOOST_AUTO_TEST_CASE(array_copy_different_packing)
 {
 	char const* sourceCode = R"(
@@ -4639,15 +4626,14 @@ BOOST_AUTO_TEST_CASE(array_copy_different_packing)
 	)";
 	compileAndRun(sourceCode);
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(
-		asString(fromHex("0000000000000001")),
-		asString(fromHex("0000000000000002")),
-		asString(fromHex("0000000000000003")),
-		asString(fromHex("0000000000000004")),
-		asString(fromHex("0000000000000005"))
+		asString(fromHex("010000")),
+		asString(fromHex("020000")),
+		asString(fromHex("030000")),
+		asString(fromHex("040000")),
+		asString(fromHex("050000"))
 	));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_target_simple, 1)
 BOOST_AUTO_TEST_CASE(array_copy_target_simple)
 {
 	char const* sourceCode = R"(
@@ -4669,15 +4655,14 @@ BOOST_AUTO_TEST_CASE(array_copy_target_simple)
 	)";
 	compileAndRun(sourceCode);
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(
-		asString(fromHex("0000000000000001")),
-		asString(fromHex("0000000000000002")),
-		asString(fromHex("0000000000000003")),
-		asString(fromHex("0000000000000004")),
-		asString(fromHex("0000000000000000"))
+		asString(fromHex("01000000000000000000")),
+		asString(fromHex("02000000000000000000")),
+		asString(fromHex("03000000000000000000")),
+		asString(fromHex("04000000000000000000")),
+		asString(fromHex("00"))
 	));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_target_leftover, 1)
 BOOST_AUTO_TEST_CASE(array_copy_target_leftover)
 {
 	// test that leftover elements in the last slot of target are correctly cleared during assignment
@@ -4703,12 +4688,11 @@ BOOST_AUTO_TEST_CASE(array_copy_target_leftover)
 	compileAndRun(sourceCode);
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(
 		u256("0xffffffff"),
-		asString(fromHex("0000000000000000""000000000a000900""0800070006000500""0400030002000100")),
-		asString(fromHex("0000000000000000""0000000000000000""0000000000000000""0000000000000000"))
+		asString(fromHex("a000900""0800070006000500""0400030002000100")),
+		asString(fromHex("00"))
 	));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_target_leftover2, 1)
 BOOST_AUTO_TEST_CASE(array_copy_target_leftover2)
 {
 	// since the copy always copies whole slots, we have to make sure that the source size maxes
@@ -4733,13 +4717,12 @@ BOOST_AUTO_TEST_CASE(array_copy_target_leftover2)
 	)";
 	compileAndRun(sourceCode);
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(
-		asString(fromHex("0000000000000004")),
-		asString(fromHex("0000000000000000")),
-		asString(fromHex("0000000000000000"))
+		asString(fromHex("040000")),
+		asString(fromHex("00")),
+		asString(fromHex("00"))
 	));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_storage_storage_struct, 1)
 BOOST_AUTO_TEST_CASE(array_copy_storage_storage_struct)
 {
 	char const* sourceCode = R"(
@@ -5346,7 +5329,6 @@ BOOST_AUTO_TEST_CASE(packed_storage_structs_bytes)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_storage_structs_delete, 1)
 BOOST_AUTO_TEST_CASE(packed_storage_structs_delete)
 {
 	char const* sourceCode = R"(
@@ -5773,7 +5755,6 @@ BOOST_AUTO_TEST_CASE(struct_assign_reference_to_struct)
 	ABI_CHECK(callContractFunction("assign()"), encodeArgs(2, 2, 3, 3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_delete_member, 1)
 BOOST_AUTO_TEST_CASE(struct_delete_member)
 {
 	char const* sourceCode = R"(
@@ -7731,7 +7712,6 @@ BOOST_AUTO_TEST_CASE(create_memory_array_allocation_size)
 }
 
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_arrays_of_various_sizes, 1)
 BOOST_AUTO_TEST_CASE(memory_arrays_of_various_sizes)
 {
 	// Computes binomial coefficients the chinese way
@@ -7750,8 +7730,8 @@ BOOST_AUTO_TEST_CASE(memory_arrays_of_various_sizes)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f(uint256,uint256)", encodeArgs(u256(3), u256(1))), encodeArgs(u256(1)));
-	ABI_CHECK(callContractFunction("f(uint256,uint256)", encodeArgs(u256(9), u256(5))), encodeArgs(u256(70)));
+	ABI_CHECK(callContractFunction("f(uint256,uint256)", u256(3), u256(1)), encodeArgs(u256(1)));
+	ABI_CHECK(callContractFunction("f(uint256,uint256)", u256(9), u256(5)), encodeArgs(u256(70)));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_overwrite, 1)
@@ -8585,7 +8565,6 @@ BOOST_AUTO_TEST_CASE(index_access_with_type_conversion)
 	BOOST_CHECK(callContractFunction("f(uint256)", u256(0x101)).size() == 256 * 32);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(delete_on_array_of_structs, 1)
 BOOST_AUTO_TEST_CASE(delete_on_array_of_structs)
 {
 	// Test for a bug where we did not increment the counter properly while deleting a dynamic array.
@@ -10246,7 +10225,6 @@ BOOST_AUTO_TEST_CASE(inline_assembly_in_modifiers)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_storage_overflow, 1)
 BOOST_AUTO_TEST_CASE(packed_storage_overflow)
 {
 	char const* sourceCode = R"(

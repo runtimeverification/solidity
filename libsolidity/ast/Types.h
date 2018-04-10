@@ -645,6 +645,7 @@ public:
 	virtual bool isDynamicallyEncoded() const override;
 	virtual bigint getFixedBitwidth() const override;
 	virtual bigint storageSize() const override;
+	virtual bigint memorySize() const override;
 	virtual bool canLiveOutsideStorage() const override { return m_baseType->canLiveOutsideStorage(); }
 	virtual unsigned sizeOnStack() const override;
 	virtual std::string toString(bool _short) const override;

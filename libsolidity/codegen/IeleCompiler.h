@@ -105,8 +105,9 @@ private:
   llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
   bool CompilingLValue;
 
-  enum LValueKind { Reg, Memory, Storage };
+  enum LValueKind { Reg, Memory, Storage, ArrayLengthMemory, ArrayLengthStorage };
   LValueKind CompilingLValueKind;
+  bigint CompilingLValueArrayElementSize;
 
   iele::IeleValue *GasValue;
   iele::IeleValue *TransferValue;
@@ -149,6 +150,9 @@ private:
       const Expression &expression,
       llvm::SmallVectorImpl<iele::IeleValue *> &Result);
   iele::IeleValue *compileLValue(const Expression &expression);
+  void compileLValues(
+      const Expression &expression,
+      llvm::SmallVectorImpl<iele::IeleValue *> &Result);
 
   void connectWithUnconditionalJump(iele::IeleBlock *SourceBlock, 
                                     iele::IeleBlock *DestinationBlock);
@@ -182,14 +186,20 @@ private:
 
   // Helper functions for copying a reference type to a storage location.
   void appendCopyFromStorageToStorage(
-      iele::IeleValue *To, const Type &type, iele::IeleValue *From);
+      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
   void appendCopyFromMemoryToStorage(
-      iele::IeleValue *To, const Type &type, iele::IeleValue *From);
+      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
+
+  void appendCopyFromMemoryToMemory(
+      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
 
   // Helper function for copying a storage reference type into a local newly
   // allocated memory copy. Returns a pointer to the copy.
   iele::IeleValue *appendCopyFromStorageToMemory(
     const Type &type, iele::IeleValue *From);
+
+  void appendCopy(
+      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType, DataLocation ToLoc, DataLocation FromLoc);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
@@ -198,6 +208,8 @@ private:
 
   iele::IeleLocalVariable *appendLValueDereference(iele::IeleValue *LValue);
   void appendLValueAssign(iele::IeleValue *LValue, iele::IeleValue *RValue);
+  void appendLValueDelete(iele::IeleValue *LValue, TypePointer Type);
+  void appendArrayLengthResize(bool Storage, iele::IeleValue *LValue, iele::IeleValue *NewLength);
 
   iele::IeleLocalVariable *appendBinaryOperator(
       Token::Value Opcode, iele::IeleValue *LeftOperand,
@@ -250,14 +262,12 @@ private:
   // of the compiling contract.
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
       iele::IeleValue *NumSlots);
-  void appendIeleRuntimeCopyMemoryToMemory(
-      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
-  void appendIeleRuntimeCopyStorageToMemory(
-      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
-  void appendIeleRuntimeCopyStorageToStorage(
-      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
-  void appendIeleRuntimeCopyMemoryToStorage(
-      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots);
+  void appendIeleRuntimeFill(
+      iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value,
+      DataLocation Loc);
+  void appendIeleRuntimeCopy(
+      iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots,
+      DataLocation FromLoc, DataLocation ToLoc);
 };
 
 } // end namespace solidity

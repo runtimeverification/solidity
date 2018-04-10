@@ -1439,6 +1439,14 @@ bigint ArrayType::storageSize() const
 	return length() * baseType()->storageSize();
 }
 
+bigint ArrayType::memorySize() const
+{
+	if (isDynamicallySized())
+		return 1;
+
+	return storageSize();
+}
+
 unsigned ArrayType::sizeOnStack() const
 {
 	if (m_location == DataLocation::CallData)
