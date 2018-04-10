@@ -215,9 +215,8 @@ public:
     /// the bitwidth else returns zero.
     virtual bigint getFixedBitwidth() const { return bigint(0); }
 	/// @returns the number of storage slots required to hold this value in storage.
-	/// For dynamically "allocated" types, it returns the size of the statically allocated head,
 	virtual bigint storageSize() const { return 1; }
-	/// @returns the size of this data type in bytes when stored in memory.
+	/// @returns the number of memory slots required to hold this value in memory.
 	virtual bigint memorySize() const { return storageSize(); }
 	/// Multiple small types can be packed into a single storage slot. If such a packing is possible
 	/// this function @returns the size in bytes smaller than 32. Data is moved to the next slot if
@@ -702,7 +701,7 @@ public:
 	{
 		return encodingType()->calldataEncodedSize(_padded);
 	}
-	virtual bigint getFixedBitwidth() const override { return bigint(80); }
+	virtual bigint getFixedBitwidth() const override { return bigint(160); }
 	virtual unsigned storageBytes() const override { return 20; }
 	virtual bool canLiveOutsideStorage() const override { return true; }
 	virtual unsigned sizeOnStack() const override { return m_super ? 0 : 1; }
