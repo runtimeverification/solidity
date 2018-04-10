@@ -202,23 +202,28 @@ public:
 	/// in calldata.
 	/// @note: This should actually not be called on types, where isDynamicallyEncoded returns true.
 	/// If @a _padded then it is assumed that each element is padded to a multiple of 32 bytes.
+	/// DEPRECATED
 	virtual unsigned calldataEncodedSize(bool _padded) const { (void)_padded; return 0; }
-	/// @returns the size of this data type in bytes when stored in memory.
-	virtual bigint memorySize() const { return storageSize(); }
 	/// Convenience version of @see calldataEncodedSize(bool)
+	/// DEPRECATED
 	unsigned calldataEncodedSize() const { return calldataEncodedSize(true); }
 	/// @returns true if the type is a dynamic array
 	virtual bool isDynamicallySized() const { return false; }
-	/// @returns true if the type is dynamically encoded in the ABI
+	/// @returns true if the type doesn't fit in a fixed number of storage/memory locations.
 	virtual bool isDynamicallyEncoded() const { return false; }
+    /// If the values of the type can be represented as fixed-width integers, @returns
+    /// the bitwidth else returns zero.
+    virtual bigint getFixedBitwidth() const { return bigint(0); }
 	/// @returns the number of storage slots required to hold this value in storage.
-	/// For dynamically "allocated" types, it returns the size of the statically allocated head,
 	virtual bigint storageSize() const { return 1; }
+	/// @returns the number of memory slots required to hold this value in memory.
+	virtual bigint memorySize() const { return storageSize(); }
 	/// Multiple small types can be packed into a single storage slot. If such a packing is possible
 	/// this function @returns the size in bytes smaller than 32. Data is moved to the next slot if
 	/// it does not fit.
 	/// In order to avoid computation at runtime of whether such moving is necessary, structs and
 	/// array data (not each element) always start a new slot.
+	/// DEPRECATED
 	virtual unsigned storageBytes() const { return 32; }
 	/// Returns true if the type can be stored in storage.
 	virtual bool canBeStored() const { return true; }
@@ -324,6 +329,7 @@ public:
 	virtual bool operator==(Type const& _other) const override;
 
 	virtual unsigned calldataEncodedSize(bool _padded = true) const override { return _padded ? 32 : m_bits / 8; }
+	virtual bigint getFixedBitwidth() const override { return bigint(m_bits < 256 ? m_bits : 0); }
 	virtual unsigned storageBytes() const override { return m_bits / 8; }
 	virtual bool isValueType() const override { return true; }
 
@@ -371,6 +377,7 @@ public:
 	virtual bool operator==(Type const& _other) const override;
 
 	virtual unsigned calldataEncodedSize(bool _padded = true) const override { return _padded ? 32 : m_totalBits / 8; }
+	virtual bigint getFixedBitwidth() const override { return bigint(m_totalBits); }
 	virtual unsigned storageBytes() const override { return m_totalBits / 8; }
 	virtual bool isValueType() const override { return true; }
 
@@ -508,6 +515,7 @@ public:
 	virtual TypePointer binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const override;
 
 	virtual unsigned calldataEncodedSize(bool _padded) const override { return _padded && m_bytes > 0 ? 32 : m_bytes; }
+	virtual bigint getFixedBitwidth() const override { return bigint(m_bytes * 8); }
 	virtual unsigned storageBytes() const override { return m_bytes; }
 	virtual bool isValueType() const override { return true; }
 
@@ -535,6 +543,7 @@ public:
 	virtual TypePointer binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const override;
 
 	virtual unsigned calldataEncodedSize(bool _padded) const override{ return _padded ? 32 : 1; }
+	virtual bigint getFixedBitwidth() const override { return bigint(1); }
 	virtual unsigned storageBytes() const override { return 1; }
 	virtual bool isValueType() const override { return true; }
 
@@ -634,6 +643,7 @@ public:
 	virtual unsigned calldataEncodedSize(bool _padded) const override;
 	virtual bool isDynamicallySized() const override { return m_hasDynamicLength; }
 	virtual bool isDynamicallyEncoded() const override;
+	virtual bigint getFixedBitwidth() const override;
 	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return m_baseType->canLiveOutsideStorage(); }
 	virtual unsigned sizeOnStack() const override;
@@ -691,6 +701,7 @@ public:
 	{
 		return encodingType()->calldataEncodedSize(_padded);
 	}
+	virtual bigint getFixedBitwidth() const override { return bigint(160); }
 	virtual unsigned storageBytes() const override { return 20; }
 	virtual bool canLiveOutsideStorage() const override { return true; }
 	virtual unsigned sizeOnStack() const override { return m_super ? 0 : 1; }
@@ -747,6 +758,7 @@ public:
 	virtual bool operator==(Type const& _other) const override;
 	virtual unsigned calldataEncodedSize(bool _padded) const override;
 	virtual bool isDynamicallyEncoded() const override;
+	virtual bigint getFixedBitwidth() const override;
 	virtual bigint memorySize() const override;
 	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return true; }
@@ -804,6 +816,7 @@ public:
 	{
 		return encodingType()->calldataEncodedSize(_padded);
 	}
+	virtual bigint getFixedBitwidth() const override;
 	virtual unsigned storageBytes() const override;
 	virtual bool canLiveOutsideStorage() const override { return true; }
 	virtual std::string toString(bool _short) const override;
@@ -844,6 +857,7 @@ public:
 	virtual TypePointer binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
 	virtual std::string toString(bool) const override;
 	virtual bool canBeStored() const override { return false; }
+	virtual bigint getFixedBitwidth() const override;
 	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return false; }
 	virtual unsigned sizeOnStack() const override;
@@ -983,6 +997,7 @@ public:
 	virtual std::string toString(bool _short) const override;
 	virtual unsigned calldataEncodedSize(bool _padded) const override;
 	virtual bool canBeStored() const override { return m_kind == Kind::Internal || m_kind == Kind::External; }
+	virtual bigint getFixedBitwidth() const override;
 	virtual bigint storageSize() const override;
 	virtual unsigned storageBytes() const override;
 	virtual bool isValueType() const override { return true; }
@@ -1093,6 +1108,9 @@ public:
 		return _inLibrary ? shared_from_this() : TypePointer();
 	}
 	virtual bool dataStoredIn(DataLocation _location) const override { return _location == DataLocation::Storage; }
+	//virtual bool isDynamicallyEncoded() const override;
+	//virtual bigint getFixedBitwidth() const override;
+	//virtual bigint storageSize() const override;
 
 	TypePointer const& keyType() const { return m_keyType; }
 	TypePointer const& valueType() const { return m_valueType; }
@@ -1118,6 +1136,7 @@ public:
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
 	virtual bool canBeStored() const override { return false; }
+	virtual bigint getFixedBitwidth() const override;
 	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return false; }
 	virtual unsigned sizeOnStack() const override;
@@ -1140,6 +1159,7 @@ public:
 
 	virtual TypePointer binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
 	virtual bool canBeStored() const override { return false; }
+	virtual bigint getFixedBitwidth() const override;
 	virtual bigint storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return false; }
 	virtual unsigned sizeOnStack() const override { return 0; }
