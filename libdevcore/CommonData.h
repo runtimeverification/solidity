@@ -184,6 +184,15 @@ inline unsigned bytesRequired(T _i)
 	for (; _i != 0; ++i, _i >>= 8) {}
 	return i;
 }
+/// Determine bits required to encode the given integer value. @returns 0 if @a _i is zero.
+template <class T>
+inline unsigned bitsRequired(T _i)
+{
+	static_assert(std::is_same<bigint, T>::value || !std::numeric_limits<T>::is_signed, "only unsigned types or bigint supported"); //bigint does not carry sign bit on shift
+	unsigned i = 0;
+	for (; _i != 0; ++i, _i >>= 1) {}
+	return i;
+}
 /// Concatenate the contents of a container onto a vector
 template <class T, class U> std::vector<T>& operator+=(std::vector<T>& _a, U const& _b)
 {

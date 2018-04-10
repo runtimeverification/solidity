@@ -1420,6 +1420,15 @@ bool ArrayType::isDynamicallyEncoded() const
 	return isDynamicallySized() || baseType()->isDynamicallyEncoded();
 }
 
+bigint ArrayType::getFixedBitwidth() const {
+	if (isDynamicallySized())
+		return bigint(0);
+
+	if (length() > MAX_ARRAY_SIZE)
+		BOOST_THROW_EXCEPTION(Error(Error::Type::TypeError) << errinfo_comment("Array too large."));
+	return length() * baseType()->getFixedBitwidth();
+}
+
 bigint ArrayType::storageSize() const
 {
 	if (isDynamicallySized())
@@ -1770,6 +1779,17 @@ bool StructType::isDynamicallyEncoded() const
 	return false;
 }
 
+bigint StructType::getFixedBitwidth() const {
+	bigint bitwidth;
+	for (auto const& t: memoryMemberTypes()) {
+		if (bigint b = t->getFixedBitwidth())
+			bitwidth += b;
+		else
+			return bigint(0);
+	}
+	return bitwidth;
+}
+
 bigint StructType::memorySize() const
 {
 	bigint size;
@@ -1973,6 +1993,14 @@ bool EnumType::operator==(Type const& _other) const
 	return other.m_enum == m_enum;
 }
 
+bigint EnumType::getFixedBitwidth() const {
+	size_t elements = numberOfMembers();
+	if (elements <= 1)
+		return bigint(1);
+	else
+		return dev::bitsRequired(elements - 1);
+}
+
 unsigned EnumType::storageBytes() const
 {
 	size_t elements = numberOfMembers();
@@ -2068,6 +2096,11 @@ string TupleType::toString(bool _short) const
 		str += (t ? t->toString(_short) : "") + ",";
 	str.pop_back();
 	return str + ")";
+}
+
+bigint TupleType::getFixedBitwidth() const
+{
+	solAssert(false, "Bitwidth of non-storable tuple type requested.");
 }
 
 bigint TupleType::storageSize() const
@@ -2422,6 +2455,14 @@ unsigned FunctionType::calldataEncodedSize(bool _padded) const
 	if (_padded)
 		size = ((size + 31) / 32) * 32;
 	return size;
+}
+
+bigint FunctionType::getFixedBitwidth() const
+{
+	if (m_kind == Kind::External || m_kind == Kind::Internal)
+		solAssert(false, "not implemented yet");
+	else
+		solAssert(false, "Bitwidth of non-storable function type requested.");
 }
 
 bigint FunctionType::storageSize() const
@@ -2811,6 +2852,11 @@ bool TypeType::operator==(Type const& _other) const
 	return *actualType() == *other.actualType();
 }
 
+bigint TypeType::getFixedBitwidth() const
+{
+	solAssert(false, "Bitwidth of non-storable type type requested.");
+}
+
 bigint TypeType::storageSize() const
 {
 	solAssert(false, "Storage size of non-storable type type requested.");
@@ -2878,9 +2924,14 @@ ModifierType::ModifierType(const ModifierDefinition& _modifier)
 	swap(params, m_parameterTypes);
 }
 
+bigint ModifierType::getFixedBitwidth() const
+{
+	solAssert(false, "Bitwidth of non-storable modifier type requested.");
+}
+
 bigint ModifierType::storageSize() const
 {
-	solAssert(false, "Storage size of non-storable type type requested.");
+	solAssert(false, "Storage size of non-storable modifier type requested.");
 }
 
 string ModifierType::richIdentifier() const
