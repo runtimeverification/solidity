@@ -2452,7 +2452,7 @@ unsigned FunctionType::calldataEncodedSize(bool _padded) const
 bigint FunctionType::getFixedBitwidth() const
 {
 	if (m_kind == Kind::External || m_kind == Kind::Internal)
-		return bigint(160);
+		solAssert(false, "not implemented yet");
 	else
 		solAssert(false, "Bitwidth of non-storable function type requested.");
 }
