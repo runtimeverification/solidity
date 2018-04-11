@@ -14,6 +14,8 @@ namespace iele {
 
 class IeleValueSymbolTable;
 
+std::string escapeIeleName(std::string str);
+
 class IeleContract :
   public IeleValue {
 public:
