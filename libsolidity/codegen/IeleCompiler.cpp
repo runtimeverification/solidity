@@ -166,9 +166,8 @@ void IeleCompiler::compileContract(
                                 &Context, NextStorageAddress));
 
       if (stateVariable->isPublic()) {
-        iele::IeleFunction::Create(
-            &Context, true, getIeleNameForStateVariable(stateVariable) + "()",
-            CompilingContract);
+        iele::IeleFunction::Create(&Context, true, VariableName + "()",
+                                   CompilingContract);
       }
 
       NextStorageAddress += stateVariable->annotation().type->storageSize();
