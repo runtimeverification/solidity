@@ -1435,13 +1435,28 @@ void IeleCompiler::encoding(
               ArgTypeSize, CompilingBlock);
           }
           else { // Arbitrary precision
-            bigint argWidth    = bigint(5);  // TODO: dummy - use actual width!
             bigint argLenWidth = bigint(32); // Store length using 32 bytes 
             iele::IeleInstruction::CreateAssign(
               ArgValue, arguments[i], CompilingBlock);    
-            iele::IeleInstruction::CreateAssign(
-              ArgLen, iele::IeleIntConstant::Create(&Context, argWidth), 
-              CompilingBlock); 
+            // Calculate width in bytes of argument:
+            // width_bytes(n) = ((log2(n) + 1) + 7) / 8
+            //                = (log2(n) + 8) / 8
+            iele::IeleInstruction::CreateLog2(ArgLen, ArgValue, CompilingBlock); 
+            iele::IeleInstruction::CreateBinOp(
+              iele::IeleInstruction::Add, ArgLen, 
+              ArgLen,
+              iele::IeleIntConstant::getOne(&Context), 
+              CompilingBlock);
+            iele::IeleInstruction::CreateBinOp(
+              iele::IeleInstruction::Add, ArgLen, 
+              ArgLen,
+              iele::IeleIntConstant::Create(&Context, bigint(7)), 
+              CompilingBlock);
+            iele::IeleInstruction::CreateBinOp(
+              iele::IeleInstruction::Div, ArgLen, 
+              ArgLen,
+              iele::IeleIntConstant::Create(&Context, bigint(8)), 
+              CompilingBlock);
             iele::IeleInstruction::CreateAssign(
               ArgTypeSize, iele::IeleIntConstant::Create(&Context, argLenWidth), 
               CompilingBlock);    
