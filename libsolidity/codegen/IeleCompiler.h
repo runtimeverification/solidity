@@ -118,6 +118,7 @@ private:
   const ContractDefinition *CompilingContractASTNode;
   const FunctionDefinition *CompilingFunctionASTNode;
 
+  std::string getIeleNameForContract(const ContractDefinition *function);
   std::string getIeleNameForFunction(const FunctionDefinition &function);
   std::string getIeleNameForStateVariable(const VariableDeclaration *stateVariable);
 
