@@ -65,7 +65,6 @@ HANDLE_IELE_OTHER_INST     (11   , Div          , "div"         )
 HANDLE_IELE_OTHER_INST     (12   , Exp          , "exp"         )
 HANDLE_IELE_OTHER_INST     (13   , Mod          , "mod"         )
 HANDLE_IELE_OTHER_INST     (14   , Log2         , "log2"        )
-
 HANDLE_IELE_OTHER_INST     (15   , AddMod       , "addmod"      )
 HANDLE_IELE_OTHER_INST     (16   , MulMod       , "mulmod"      )
 HANDLE_IELE_OTHER_INST     (17   , ExpMod       , "expmod"      )
