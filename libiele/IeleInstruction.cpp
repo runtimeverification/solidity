@@ -581,6 +581,34 @@ IeleInstruction *IeleInstruction::CreateStore1(
   return StoreInst;
 }
 
+IeleInstruction *IeleInstruction::CreateLog2(
+    IeleLocalVariable *Result, IeleValue *OperandValue,
+    IeleInstruction *InsertBefore) {
+  solAssert(Result, "CreateBinOp: Invalid lvalues");
+  solAssert(OperandValue,
+         "CreateBinOp: Invalid operand");
+
+  IeleInstruction *Log2Inst = new IeleInstruction(Log2, InsertBefore);
+  Log2Inst->getIeleLValueList().push_back(Result);
+  Log2Inst->getIeleOperandList().push_back(OperandValue);
+
+  return Log2Inst; 
+}
+
+IeleInstruction *IeleInstruction::CreateLog2(
+    IeleLocalVariable *Result, IeleValue *OperandValue,
+    IeleBlock *InsertAtEnd) {
+  solAssert(Result, "CreateBinOp: Invalid lvalues");
+  solAssert(OperandValue,
+         "CreateBinOp: Invalid operand");
+
+  IeleInstruction *Log2Inst = new IeleInstruction(Log2, InsertAtEnd);
+  Log2Inst->getIeleLValueList().push_back(Result);
+  Log2Inst->getIeleOperandList().push_back(OperandValue);
+
+  return Log2Inst;
+}
+
 IeleInstruction *IeleInstruction::CreateNot(
     IeleLocalVariable *Result, IeleValue *OperandValue,
     IeleInstruction *InsertBefore) {
