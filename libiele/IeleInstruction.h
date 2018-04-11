@@ -284,6 +284,14 @@ public:
       IeleValue *DataValue, IeleValue *AddressValue,
       IeleValue *OffsetValue, IeleValue *WidthValue, IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateLog2(
+      IeleLocalVariable *Result, IeleValue *OperandValue,
+      IeleInstruction *InsertBefore = nullptr);
+  
+  static IeleInstruction *CreateLog2(
+      IeleLocalVariable *Result, IeleValue *OperandValue,
+      IeleBlock *InsertAtEnd);
+
   static IeleInstruction *CreateNot(
       IeleLocalVariable *Result, IeleValue *OperandValue,
       IeleInstruction *InsertBefore = nullptr);
