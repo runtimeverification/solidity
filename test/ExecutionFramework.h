@@ -166,8 +166,18 @@ public:
 	static bytes encode(char const* _value) { return encode(std::string(_value)); }
 	static bytes encode(byte _value) { return bytes{_value}; }
 	static bytes encode(u160 const& _value) { return encode(bigint(_value)); }
-	static bytes encode(u256 const& _value) { return encode(bigint(_value)); }
-        static bytes encode(bigint const& _value) { return toBigEndian(_value); }
+	static bytes encode(u256 const& _value) { 
+		// encode value as a sequence of bytes
+		bytes valueEncoded = encode(bigint(_value));
+		// get n. of used bytes
+		auto byteWidth = valueEncoded.size();
+		// encode it using 32 bytes
+		bytes byteWidthEncoded = bytes(32, byteWidth);
+		// concatenate
+		byteWidthEncoded.insert( byteWidthEncoded.end(), valueEncoded.begin(), valueEncoded.end() );
+		return byteWidthEncoded;
+	}
+    static bytes encode(bigint const& _value) { return toBigEndian(_value); }
 	/// @returns the fixed-point encoding of a rational number with a given
 	/// number of fractional bits.
 	static bytes encode(std::pair<rational, int> const& _valueAndPrecision)
