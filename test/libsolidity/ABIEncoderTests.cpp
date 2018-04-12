@@ -281,7 +281,7 @@ BOOST_AUTO_TEST_CASE(storage_array)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array_dyn, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array_dyn, 2)
 BOOST_AUTO_TEST_CASE(storage_array_dyn)
 {
 	string sourceCode = R"(
@@ -303,7 +303,7 @@ BOOST_AUTO_TEST_CASE(storage_array_dyn)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array_compact, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array_compact, 2)
 BOOST_AUTO_TEST_CASE(storage_array_compact)
 {
 	string sourceCode = R"(
