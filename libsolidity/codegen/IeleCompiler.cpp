@@ -71,8 +71,7 @@ bool IeleCompiler::isMostDerived(const FunctionDefinition *d) const {
       }
     }
   }
-  solAssert(false, "Function definition not found.");
-  return false; // not reached
+  return false;
 }
 
 bool IeleCompiler::isMostDerived(const VariableDeclaration *d) const {
@@ -84,26 +83,11 @@ bool IeleCompiler::isMostDerived(const VariableDeclaration *d) const {
       }
     }
   }
-  solAssert(false, "Function definition not found.");
-  return false; // not reached
+  return false;
 }
 
 const ContractDefinition *IeleCompiler::contractFor(const Declaration *d) const {
-  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
-  for (const ContractDefinition *contract : CompilingContractInheritanceHierarchy) {
-    for (const VariableDeclaration *decl : contract->stateVariables()) {
-      if (d == decl) {
-        return contract;
-      }
-    }
-    for (const FunctionDefinition *decl : contract->definedFunctions()) {
-      if (d == decl) {
-        return contract;
-      }
-    }
-  }
-  solAssert(false, "Declaration not found.");
-  return nullptr; //not reached
+  return dynamic_cast<const ContractDefinition *>(d->scope());
 }
 
 const FunctionDefinition *IeleCompiler::resolveVirtualFunction(const FunctionDefinition &function, std::vector<const ContractDefinition *>::iterator it) {
@@ -153,8 +137,6 @@ void IeleCompiler::compileContract(
   bool most_derived = true;
 
   for (const ContractDefinition *base : bases) {
-    CompilingContractASTNode = base;
-
     // Add global variables corresponding to the current contract in the
     // inheritance hierarchy.
     for (const VariableDeclaration *stateVariable : base->stateVariables()) {
@@ -200,6 +182,21 @@ void IeleCompiler::compileContract(
     most_derived = false;
   }
 
+  for (auto it = contracts.begin(); it != contracts.end(); it++) {
+    const ContractDefinition *contract = it->first;
+    if (contract->isLibrary()) {
+      for (const FunctionDefinition *function : contract->definedFunctions()) {
+        if (function->isConstructor() || function->isFallback() ||
+            !function->isImplemented())
+          continue;
+        std::string FunctionName = getIeleNameForFunction(*function);
+        iele::IeleFunction::Create(&Context, function->isPublic(),
+                                   FunctionName, CompilingContract);
+      }
+    }
+  }
+
+
   // Finally add the fallback function to the contract's symbol table.
   if (const FunctionDefinition *fallback = contract.fallbackFunction()) {
     // First add the fallback to the symbol table, since it is not added by the
@@ -239,6 +236,8 @@ void IeleCompiler::compileContract(
     }
   }
 
+  CompilingContractASTNode = &contract;
+
   // Similarly visit the contract's constructor.
   if (const FunctionDefinition *constructor = contract.constructor())
     constructor->accept(*this);
@@ -252,6 +251,17 @@ void IeleCompiler::compileContract(
     iele::IeleInstruction::CreateRetVoid(CompilingBlock);
     CompilingBlock = nullptr;
     CompilingFunction = nullptr;
+  }
+
+  for (auto it = contracts.begin(); it != contracts.end(); it++) {
+    const ContractDefinition *contract = it->first;
+    if (contract->isLibrary()) {
+      for (const FunctionDefinition *function : contract->definedFunctions()) {
+        if (function->isConstructor() || function->isFallback() || !function->isImplemented())
+          continue;
+        function->accept(*this);
+      }
+    }
   }
 
   // Visit functions.
@@ -373,8 +383,13 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   CompilingBlock =
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
 
-  if (!function.isPayable()) {
+  if (!function.isPayable()
+      && !contractFor(&function)->isLibrary()) {
     appendPayableCheck();
+  }
+  if (function.stateMutability() > StateMutability::View
+      && CompilingContractASTNode->isLibrary()) {
+    appendRevert();
   }
 
   if (function.isPublic()) {
@@ -1568,6 +1583,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     CompilingExpressionResult.push_back(ArrayValue);
     break;
   }
+  case FunctionType::Kind::DelegateCall:
   case FunctionType::Kind::Internal: {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
@@ -1575,9 +1591,16 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     compileFunctionArguments(&Arguments, &Returns, arguments, function);
 
     // Visit callee.
-    iele::IeleGlobalValue *CalleeValue =
-      llvm::dyn_cast<iele::IeleGlobalValue>(
-          compileExpression(functionCall.expression()));
+    llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
+    compileTuple(functionCall.expression(), CalleeValues);
+    iele::IeleGlobalValue *CalleeValue;
+    if (CalleeValues.size() == 1) {
+      CalleeValue = llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValues[0]);
+    } else {
+      solAssert(CalleeValues.size() == 2, "Invalid number of results from function call expression");
+      CalleeValue = llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValues[1]);
+      Arguments.insert(Arguments.begin(), CalleeValues[0]);
+    }
     solAssert(CalleeValue,
               "IeleCompiler: Failed to compile callee of internal function "
               "call");
@@ -1759,7 +1782,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     break;
   }
   case FunctionType::Kind::CallCode:
-  case FunctionType::Kind::DelegateCall:
   case FunctionType::Kind::BareCall:
   case FunctionType::Kind::BareCallCode:
   case FunctionType::Kind::BareDelegateCall:
@@ -1997,7 +2019,41 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         dynamic_cast<const FunctionType *>(
             memberAccess.annotation().type.get())) {
     if (funcType->bound()) {
-      solAssert(false, "not implemented yet");
+      iele::IeleValue *boundValue = compileExpression(memberAccess.expression());
+      boundValue = appendTypeConversion(boundValue, 
+        *memberAccess.expression().annotation().type,
+        *funcType->selfType());
+      CompilingExpressionResult.push_back(boundValue);
+      
+      const Declaration *declaration =
+        memberAccess.annotation().referencedDeclaration;
+      const FunctionDefinition *functionDef =
+            dynamic_cast<const FunctionDefinition *>(declaration);
+      solAssert(functionDef, "IeleCompiler: bound function does not have a definition");
+      std::string name = getIeleNameForFunction(*functionDef); 
+
+      // Lookup identifier in the function's symbol table.
+      iele::IeleValueSymbolTable *ST = CompilingFunction->getIeleValueSymbolTable();
+      solAssert(ST,
+                "IeleCompiler: failed to access compiling function's symbol "
+                "table.");
+      if (iele::IeleValue *Identifier =
+            ST->lookup(VarNameMap[ModifierDepth][name])) {
+        if (CompilingLValue)
+          CompilingLValueKind = LValueKind::Reg;
+        CompilingExpressionResult.push_back(Identifier);
+        return false;
+      }
+      ST = CompilingContract->getIeleValueSymbolTable();
+      solAssert(ST,
+               "IeleCompiler: failed to access compiling contract's symbol "
+               "table.");
+      if (iele::IeleValue *Identifier = ST->lookup(name)) {
+        appendVariable(Identifier, name, true);
+        return false;
+      }
+
+      solAssert(false, "Invalid bound function without declaration");
       return false;
     }
   }
@@ -2010,6 +2066,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
                 "IeleCompiler: failed to access compiling contract's symbol table.");
       if (auto funType = dynamic_cast<const FunctionType *>(memberAccess.annotation().type.get())) {
         switch(funType->kind()) {
+        case FunctionType::Kind::DelegateCall:
         case FunctionType::Kind::Internal:
 	  if (const auto * function = dynamic_cast<const FunctionDefinition *>(memberAccess.annotation().referencedDeclaration)) {
             std::string name = getIeleNameForFunction(*function);
@@ -2029,7 +2086,6 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         case FunctionType::Kind::BareCall:
         case FunctionType::Kind::BareCallCode:
         case FunctionType::Kind::BareDelegateCall:
-        case FunctionType::Kind::DelegateCall:
         case FunctionType::Kind::CallCode:
         default:
           solAssert(false, "not implemented yet");
@@ -2640,8 +2696,13 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
   const Declaration *declaration =
     identifier.annotation().referencedDeclaration;
   if (const FunctionDefinition *functionDef =
-        dynamic_cast<const FunctionDefinition *>(declaration))
-    name = getIeleNameForFunction(*resolveVirtualFunction(*functionDef)); 
+        dynamic_cast<const FunctionDefinition *>(declaration)) {
+    if (contractFor(functionDef)->isLibrary()) {
+      name = getIeleNameForFunction(*functionDef); 
+    } else {
+      name = getIeleNameForFunction(*resolveVirtualFunction(*functionDef)); 
+    }
+  }
 
   // Check if identifier is a reserved identifier.
   if (const MagicVariableDeclaration *magicVar =
