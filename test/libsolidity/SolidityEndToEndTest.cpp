@@ -984,7 +984,6 @@ BOOST_AUTO_TEST_CASE(compound_assign)
 	testContractAgainstCpp("f(uint256,uint256)", f, u256(7), u256(48));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(simple_mapping, 1)
 BOOST_AUTO_TEST_CASE(simple_mapping)
 {
 	char const* sourceCode = R"(
@@ -1017,7 +1016,6 @@ BOOST_AUTO_TEST_CASE(simple_mapping)
 	ABI_CHECK(callContractFunction("get(uint8)", byte(0xa7)), encodeArgs(byte(0x00)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(mapping_state, 1)
 BOOST_AUTO_TEST_CASE(mapping_state)
 {
 	char const* sourceCode = R"(
@@ -1199,7 +1197,6 @@ BOOST_AUTO_TEST_CASE(structs)
 	ABI_CHECK(callContractFunction("check()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_reference, 1)
 BOOST_AUTO_TEST_CASE(struct_reference)
 {
 	char const* sourceCode = R"(

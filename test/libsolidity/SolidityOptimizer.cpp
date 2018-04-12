@@ -339,7 +339,7 @@ BOOST_AUTO_TEST_CASE(store_tags_as_unions)
 //	BOOST_CHECK_EQUAL(2, numSHA3s);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(incorrect_storage_access_bug, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(incorrect_storage_access_bug, 3)
 BOOST_AUTO_TEST_CASE(incorrect_storage_access_bug)
 {
 	// This bug appeared because a Keccak-256 operation with too low sequence number was used,
