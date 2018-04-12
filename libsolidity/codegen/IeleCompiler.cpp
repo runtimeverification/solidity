@@ -840,7 +840,8 @@ bool IeleCompiler::visit(
 }
 
 bool IeleCompiler::visit(const ExpressionStatement &expressionStatement) {
-  compileExpression(expressionStatement.expression());
+  llvm::SmallVector<iele::IeleValue*, 4> Values;
+  compileTuple(expressionStatement.expression(), Values);
   return false;
 }
 
@@ -2071,8 +2072,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       CompilingExpressionResult.push_back(Result);
       return false;
     } else {
-      memberAccess.expression().accept(*this);
       if (const Declaration *declaration = memberAccess.annotation().referencedDeclaration) {
+        memberAccess.expression().accept(*this);
         std::string name;
         // don't call getIeleNameFor here because this is part of an external call and therefore is only able to
         // see the most-derived function
@@ -2775,8 +2776,9 @@ iele::IeleValue *IeleCompiler::compileExpression(const Expression &expression) {
   // field. This helper should only be used when a scalar value (or void) is
   // expected as the result of the corresponding expression computation.
   iele::IeleValue *Result = nullptr;
-  if (CompilingExpressionResult.size() > 0)
-    Result = CompilingExpressionResult[0];
+  solAssert(CompilingExpressionResult.size() == 1,
+            "IeleCompiler: Expression visitor did not set enough result values");
+  Result = CompilingExpressionResult[0];
 
   // Restore expression compilation status and return result.
   CompilingExpressionResult.clear();
@@ -2823,7 +2825,6 @@ void IeleCompiler::compileTuple(
   // compiled for the expression computation in the CompilingExpressionResult
   // field. This helper should only be used when tupple value is expected as
   // the result of the corresponding expression computation.
-  solAssert(CompilingExpressionResult.size() > 0, "expression visitor did not set a result value");
   Result.insert(Result.end(),
                 CompilingExpressionResult.begin(),
                 CompilingExpressionResult.end());
@@ -2846,7 +2847,7 @@ iele::IeleValue *IeleCompiler::compileLValue(const Expression &expression) {
   // field. This helper should only be used when a scalar lvalue is expected as
   // the result of the corresponding expression computation.
   iele::IeleValue *Result = nullptr;
-  solAssert(CompilingExpressionResult.size() > 0,
+  solAssert(CompilingExpressionResult.size() == 1,
             "IeleCompiler: Expression visitor did not set a result value");
   Result = CompilingExpressionResult[0];
   solAssert(llvm::isa<iele::IeleLocalVariable>(Result) ||
