@@ -1386,6 +1386,9 @@ void IeleCompiler::encoding(
   iele::IeleInstruction::CreateAssign(
     CrntPos, iele::IeleIntConstant::getZero(&Context), CompilingBlock);    
   for (unsigned i = 0; i < arguments.size(); i++) {
+    // Perform type conversion
+    arguments[i] = appendTypeConversion(arguments[i], 
+                                        *givenTypes[i], *targetTypes[i]);
     switch (types[i]->category()) {
       case Type::Category::Bool:
       case Type::Category::Integer: {
