@@ -1006,6 +1006,17 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
 }
 
 bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
+  // First check for constants.
+  TypePointer ResultType = unaryOperation.annotation().type;
+  if (ResultType->category() == Type::Category::RationalNumber) {
+    iele::IeleIntConstant *LiteralValue =
+      iele::IeleIntConstant::Create(
+          &Context, 
+          ResultType->literalValue(nullptr));
+    CompilingExpressionResult.push_back(LiteralValue);
+    return false;
+  }
+
   Token::Value UnOperator = unaryOperation.getOperator();
   switch (UnOperator) {
   case Token::Not: {// !
@@ -1035,12 +1046,9 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
       compileExpression(unaryOperation.subExpression());
     solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
     // Compile as a subtraction from zero.
+    iele::IeleIntConstant *Zero = iele::IeleIntConstant::getZero(&Context);
     iele::IeleLocalVariable *Result =
-      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-    iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Sub,
-                                       Result,
-                                       iele::IeleIntConstant::getZero(&Context),
-                                       SubExprValue, CompilingBlock);
+      appendBinaryOperator(Token::Sub, Zero, SubExprValue, ResultType);
     CompilingExpressionResult.push_back(Result);
     break;
   }
@@ -1058,7 +1066,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     // Generate code for the inc/dec operation.
     iele::IeleIntConstant *One = iele::IeleIntConstant::getOne(&Context);
     iele::IeleLocalVariable *After =
-      appendBinaryOperator(BinOperator, Before, One, unaryOperation.annotation().type);
+      appendBinaryOperator(BinOperator, Before, One, ResultType);
     iele::IeleLocalVariable *Result = nullptr;
     if (!unaryOperation.isPrefixOperation()) {
       // Save the initial subexpression value in case of a postfix oparation.
@@ -1089,7 +1097,6 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
 
     bool fixed = false, issigned = false;
     int nbytes;
-    TypePointer ResultType = unaryOperation.annotation().type;
     switch (ResultType->category()) {
     case Type::Category::Integer: {
       const IntegerType *type = dynamic_cast<const IntegerType *>(ResultType.get());
@@ -3675,7 +3682,19 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
 
   switch (Opcode) {
   case Token::Add:                BinOpcode = iele::IeleInstruction::Add; break;
-  case Token::Sub:                BinOpcode = iele::IeleInstruction::Sub; break;
+  case Token::Sub: {
+    // In case of unsigned unbounded subtraction, we check for negative result
+    // and throw if that is the case.
+    if (!fixed && !issigned) {
+      iele::IeleLocalVariable *NegativeResult =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::CmpLt, NegativeResult, LeftOperand,
+          RightOperand, CompilingBlock);
+      appendRevert(NegativeResult);
+    }
+    BinOpcode = iele::IeleInstruction::Sub; break;
+  }
   case Token::Mul: {
     if (fixed) {
       // Create the instruction.
