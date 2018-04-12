@@ -1006,6 +1006,17 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
 }
 
 bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
+  // First check for constants.
+  TypePointer ResultType = unaryOperation.annotation().type;
+  if (ResultType->category() == Type::Category::RationalNumber) {
+    iele::IeleIntConstant *LiteralValue =
+      iele::IeleIntConstant::Create(
+          &Context, 
+          ResultType->literalValue(nullptr));
+    CompilingExpressionResult.push_back(LiteralValue);
+    return false;
+  }
+
   Token::Value UnOperator = unaryOperation.getOperator();
   switch (UnOperator) {
   case Token::Not: {// !
@@ -1037,8 +1048,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     // Compile as a subtraction from zero.
     iele::IeleIntConstant *Zero = iele::IeleIntConstant::getZero(&Context);
     iele::IeleLocalVariable *Result =
-      appendBinaryOperator(Token::Sub, Zero, SubExprValue,
-                           unaryOperation.annotation().type);
+      appendBinaryOperator(Token::Sub, Zero, SubExprValue, ResultType);
     CompilingExpressionResult.push_back(Result);
     break;
   }
@@ -1056,7 +1066,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     // Generate code for the inc/dec operation.
     iele::IeleIntConstant *One = iele::IeleIntConstant::getOne(&Context);
     iele::IeleLocalVariable *After =
-      appendBinaryOperator(BinOperator, Before, One, unaryOperation.annotation().type);
+      appendBinaryOperator(BinOperator, Before, One, ResultType);
     iele::IeleLocalVariable *Result = nullptr;
     if (!unaryOperation.isPrefixOperation()) {
       // Save the initial subexpression value in case of a postfix oparation.
@@ -1087,7 +1097,6 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
 
     bool fixed = false, issigned = false;
     int nbytes;
-    TypePointer ResultType = unaryOperation.annotation().type;
     switch (ResultType->category()) {
     case Type::Category::Integer: {
       const IntegerType *type = dynamic_cast<const IntegerType *>(ResultType.get());
