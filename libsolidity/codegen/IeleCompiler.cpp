@@ -1895,9 +1895,58 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::RIPEMD160:
     solAssert(false, "not implemented yet: cryptographic functions");
   case FunctionType::Kind::ByteArrayPush:
-  case FunctionType::Kind::ArrayPush:
     solAssert(false, "not implemented yet");
+  case FunctionType::Kind::ArrayPush: {
+    iele::IeleValue *PushedValue = compileExpression(*arguments.front());
+    iele::IeleValue *ArrayValue = compileExpression(functionCall.expression());
+    iele::IeleLocalVariable *SizeValue =
+      iele::IeleLocalVariable::Create(&Context, "array.old.length", CompilingFunction);
+    if (CompilingLValueKind == LValueKind::Storage) {
+      iele::IeleInstruction::CreateSLoad(
+          llvm::cast<iele::IeleLocalVariable>(SizeValue), ArrayValue,
+          CompilingBlock);
+    } else {
+      solAssert(CompilingLValueKind == LValueKind::Memory, "Invalid lvalue kind for array push callee");
+      iele::IeleInstruction::CreateLoad(
+          llvm::cast<iele::IeleLocalVariable>(SizeValue), ArrayValue,
+          CompilingBlock);
+    }
+
+    // Generate code for the access.
+    bigint elementSize = CompilingLValueArrayElementSize;
+
+    iele::IeleValue *ElementSizeValue =
+      iele::IeleIntConstant::Create(&Context, elementSize);
+ 
+    iele::IeleLocalVariable *AddressValue =
+      iele::IeleLocalVariable::Create(&Context, "array.last.element", CompilingFunction);
+    // compute the data offset of the last element
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Mul, AddressValue, SizeValue, ElementSizeValue,
+      CompilingBlock);
+    // add one for the length slot
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, AddressValue, AddressValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+    // compute the address of the last element
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, AddressValue, AddressValue, ArrayValue,
+      CompilingBlock);
+
+    appendLValueAssign(AddressValue, PushedValue);
+
+    iele::IeleLocalVariable *NewSize =
+      iele::IeleLocalVariable::Create(&Context, "array.old.length", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, NewSize, SizeValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+
+    appendLValueAssign(ArrayValue, NewSize);
+    CompilingExpressionResult.push_back(NewSize);
     break;
+  }
   default:
       solAssert(false, "IeleCompiler: Invalid function type.");
   }
@@ -2249,36 +2298,37 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
   }
   case Type::Category::Array: {
     const ArrayType &type = dynamic_cast<const ArrayType &>(baseType);
-    if (member == "length") {
-      iele::IeleValue *ExprValue;
-      if (type.isDynamicallySized() && type.location() == DataLocation::Memory) {
-        ExprValue = compileExpression(memberAccess.expression());
-      } else {
-        ExprValue = compileLValue(memberAccess.expression());
-      }
-      solAssert(ExprValue,
-                "IeleCompiler: failed to compile base expression for member "
-                "access.");
+    iele::IeleValue *ExprValue;
+    if (type.isDynamicallySized() && type.location() == DataLocation::Memory) {
+      ExprValue = compileExpression(memberAccess.expression());
+    } else {
+      ExprValue = compileLValue(memberAccess.expression());
+    }
 
+    solAssert(ExprValue,
+              "IeleCompiler: failed to compile base expression for member "
+              "access.");
+
+    const Type &elementType = *type.baseType();
+    // Generate code for the access.
+    bigint elementSize;
+    switch (type.location()) {
+    case DataLocation::Storage: {
+      elementSize = elementType.storageSize();
+      break;
+    }
+    case DataLocation::Memory: {
+      elementSize = elementType.memorySize();
+      break;
+    }
+    case DataLocation::CallData:
+      solAssert(false, "not supported by IELE.");
+    }
+ 
+    if (member == "length") {
       if (type.isDynamicallySized()) {
         // If the array is dynamically sized the size is stored in the first slot.
         if (CompilingLValue) {
-          const Type &elementType = *type.baseType();
-          // Generate code for the access.
-          bigint elementSize;
-          switch (type.location()) {
-          case DataLocation::Storage: {
-            elementSize = elementType.storageSize();
-            break;
-          }
-          case DataLocation::Memory: {
-            elementSize = elementType.memorySize();
-            break;
-          }
-          case DataLocation::CallData:
-            solAssert(false, "not supported by IELE.");
-          }
-      
           CompilingExpressionResult.push_back(ExprValue);
           CompilingLValueKind =
             type.location() == DataLocation::Storage ?
@@ -2303,6 +2353,11 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         CompilingExpressionResult.push_back(
           iele::IeleIntConstant::Create(&Context, type.length()));
       }
+    } else if (member == "push") {
+      solAssert(type.isDynamicallySized(), "Invalid push on fixed length array");
+      CompilingExpressionResult.push_back(ExprValue);
+      CompilingLValueArrayElementSize = elementSize;
+      break;
     } else {
       solAssert(false, "not implemented yet");
     }
