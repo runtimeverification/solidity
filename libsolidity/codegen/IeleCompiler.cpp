@@ -1035,12 +1035,10 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
       compileExpression(unaryOperation.subExpression());
     solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
     // Compile as a subtraction from zero.
+    iele::IeleIntConstant *Zero = iele::IeleIntConstant::getZero(&Context);
     iele::IeleLocalVariable *Result =
-      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-    iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Sub,
-                                       Result,
-                                       iele::IeleIntConstant::getZero(&Context),
-                                       SubExprValue, CompilingBlock);
+      appendBinaryOperator(Token::Sub, Zero, SubExprValue,
+                           unaryOperation.annotation().type);
     CompilingExpressionResult.push_back(Result);
     break;
   }
@@ -3756,7 +3754,19 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
 
   switch (Opcode) {
   case Token::Add:                BinOpcode = iele::IeleInstruction::Add; break;
-  case Token::Sub:                BinOpcode = iele::IeleInstruction::Sub; break;
+  case Token::Sub: {
+    // In case of unsigned unbounded subtraction, we check for negative result
+    // and throw if that is the case.
+    if (!fixed && !issigned) {
+      iele::IeleLocalVariable *NegativeResult =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::CmpLt, NegativeResult, LeftOperand,
+          RightOperand, CompilingBlock);
+      appendRevert(NegativeResult);
+    }
+    BinOpcode = iele::IeleInstruction::Sub; break;
+  }
   case Token::Mul: {
     if (fixed) {
       // Create the instruction.
