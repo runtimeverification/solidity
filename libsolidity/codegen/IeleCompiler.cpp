@@ -182,10 +182,9 @@ void IeleCompiler::compileContract(
     most_derived = false;
   }
 
-  for (auto it = contracts.begin(); it != contracts.end(); it++) {
-    const ContractDefinition *contract = it->first;
-    if (contract->isLibrary()) {
-      for (const FunctionDefinition *function : contract->definedFunctions()) {
+  for (auto dep : contract.annotation().contractDependencies) {
+    if (dep->isLibrary()) {
+      for (const FunctionDefinition *function : dep->definedFunctions()) {
         if (function->isConstructor() || function->isFallback() ||
             !function->isImplemented())
           continue;
@@ -253,10 +252,9 @@ void IeleCompiler::compileContract(
     CompilingFunction = nullptr;
   }
 
-  for (auto it = contracts.begin(); it != contracts.end(); it++) {
-    const ContractDefinition *contract = it->first;
-    if (contract->isLibrary()) {
-      for (const FunctionDefinition *function : contract->definedFunctions()) {
+  for (auto dep : contract.annotation().contractDependencies) {
+    if (dep->isLibrary()) {
+      for (const FunctionDefinition *function : dep->definedFunctions()) {
         if (function->isConstructor() || function->isFallback() || !function->isImplemented())
           continue;
         function->accept(*this);
