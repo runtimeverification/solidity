@@ -1784,6 +1784,7 @@ bool StructType::isDynamicallyEncoded() const
 }
 
 bigint StructType::getFixedBitwidth() const {
+	solAssert(!recursive(), "");
 	bigint bitwidth;
 	for (auto const& t: memoryMemberTypes()) {
 		if (bigint b = t->getFixedBitwidth())
@@ -1796,6 +1797,7 @@ bigint StructType::getFixedBitwidth() const {
 
 bigint StructType::memorySize() const
 {
+	solAssert(!recursive(), "");
 	bigint size;
 	for (auto const& t: memoryMemberTypes())
 		size += t->memorySize();
@@ -1804,6 +1806,7 @@ bigint StructType::memorySize() const
 
 bigint StructType::storageSize() const
 {
+	solAssert(!recursive(), "");
 	return max<bigint>(1, members(nullptr).storageSize());
 }
 

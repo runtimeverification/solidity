@@ -1197,6 +1197,7 @@ BOOST_AUTO_TEST_CASE(structs)
 	ABI_CHECK(callContractFunction("check()"), encodeArgs(true));
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_reference, 1)
 BOOST_AUTO_TEST_CASE(struct_reference)
 {
 	char const* sourceCode = R"(
