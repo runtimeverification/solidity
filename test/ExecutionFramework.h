@@ -164,7 +164,7 @@ public:
 	static bytes encode(int _value) { return encode(bigint(_value)); }
 	static bytes encode(size_t _value) { return encode(bigint(_value)); }
 	static bytes encode(char const* _value) { return encode(std::string(_value)); }
-	static bytes encode(byte _value) { return bytes{_value}; }
+	static bytes encode(byte _value) { return toBigEndian(_value); }
 	static bytes encode(u160 const& _value) { return encode(bigint(_value)); }
 	static bytes encode(u256 const& _value) { return encode(bigint(_value)); }
         static bytes encode(bigint const& _value) { return toBigEndian(_value); }
