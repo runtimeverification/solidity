@@ -24,7 +24,7 @@ IeleFunction::~IeleFunction() { }
 
 void IeleFunction::printNameAsIeleText(llvm::raw_ostream &OS) const {
   if (!(isInit() || isDeposit()))
-    OS << "@\"" << getName() << "\"";
+    OS << "@\"" << IeleContract::escapeIeleName(getName()) << "\"";
   else
     OS << "@" << getName();
 }

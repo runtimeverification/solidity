@@ -59,20 +59,37 @@ void IeleContract::printRuntime(llvm::raw_ostream &OS, unsigned indent) const {
   }
 }
 
+std::string IeleContract::escapeIeleName(const std::string &str) {
+  std::string result;
+  for (char c : str) {
+    if (c == '"' || c == '\\' || !isprint(c)) {
+      result.push_back('\\');
+      char code[3];
+      snprintf(code, 3, "%02x", (unsigned char)c);
+      result.push_back(code[0]);
+      result.push_back(code[1]);
+    } else {
+      result.push_back(c);
+    }
+  }
+  return result;
+}
+
 void IeleContract::print(llvm::raw_ostream &OS, unsigned indent) const {
   std::string Indent(indent, ' ');
   for (const IeleContract *Contract : IeleContractList) {
     Contract->print(OS, indent);
     OS << "\n";
   }
-  OS << Indent << "contract " << getName() << " {\n";
+  OS << Indent << "contract \"" << escapeIeleName(getName()) << "\" {\n";
   bool isFirst = true;
   for (const IeleContract *Contract : IeleContractList) {
     OS << "\n";
     if (!isFirst)
       OS << "\n";
-    OS << "external contract ";
-    OS << Contract->getName();
+    OS << "external contract \"";
+    OS << escapeIeleName(Contract->getName());
+    OS << "\"";
     isFirst = false;
   }
   for (const IeleGlobalVariable &GV : globals()) {
