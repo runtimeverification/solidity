@@ -1320,7 +1320,6 @@ BOOST_AUTO_TEST_CASE(deleteLocals)
 	ABI_CHECK(callContractFunction("delLocal()"), encodeArgs(6, 7));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(constructor, 1)
 BOOST_AUTO_TEST_CASE(constructor)
 {
 	char const* sourceCode = R"(
@@ -1394,7 +1393,7 @@ BOOST_AUTO_TEST_CASE(array_accessor)
 	ABI_CHECK(callContractFunction("multiple_map(uint256,uint256,uint256)", 2, 1, 2), encodeArgs(3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(accessors_mapping_for_array, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(accessors_mapping_for_array, 2)
 BOOST_AUTO_TEST_CASE(accessors_mapping_for_array)
 {
 	char const* sourceCode = R"(
@@ -5776,7 +5775,6 @@ BOOST_AUTO_TEST_CASE(struct_delete_member)
 	ABI_CHECK(callContractFunction("deleteMember()"), encodeArgs(0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_delete_struct_in_mapping, 1)
 BOOST_AUTO_TEST_CASE(struct_delete_struct_in_mapping)
 {
 	char const* sourceCode = R"(
@@ -6443,7 +6441,7 @@ BOOST_AUTO_TEST_CASE(storage_array_ref)
 	ABI_CHECK(callContractFunction("find(uint256)", u256(400)), encodeArgs(u256(-1)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_types_initialisation, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_types_initialisation, 4)
 BOOST_AUTO_TEST_CASE(memory_types_initialisation)
 {
 	char const* sourceCode = R"(
