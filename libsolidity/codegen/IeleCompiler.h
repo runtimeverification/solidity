@@ -247,6 +247,8 @@ private:
     const Expression &Branch,
     TypePointer Type);
 
+  iele::IeleLocalVariable *appendMemorySpill();
+
   bool shouldCopyStorageToStorage(const iele::IeleValue *To, const Type &From) const;
   bool shouldCopyMemoryToStorage(const iele::IeleValue *To, const Type &From) const;
   bool shouldCopyStorageToMemory(const Type &To, const Type &From) const;

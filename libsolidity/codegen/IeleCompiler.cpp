@@ -909,8 +909,6 @@ void IeleCompiler::appendConditionalBranch(
   appendTypeConversions(Results, RHSValues, Expression.annotation().type, LHSTypes);
 }
 
-
-
 void IeleCompiler::appendConditional(
   iele::IeleValue *ConditionValue,
   llvm::SmallVectorImpl<iele::IeleLocalVariable *> &ResultValues,
@@ -2630,7 +2628,16 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
               "not implmented yet");
 
     // Hash index if needed.
-    solAssert(!type.hasHashedKeyspace(), "not implemented yet");
+    if (type.hasHashedKeyspace()) {
+      iele::IeleLocalVariable *MemorySpillAddress = appendMemorySpill();
+      iele::IeleInstruction::CreateStore(
+          IndexValue, MemorySpillAddress, CompilingBlock);
+      iele::IeleLocalVariable *HashedIndexValue =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateSha3(
+          HashedIndexValue, MemorySpillAddress, CompilingBlock);
+      IndexValue = HashedIndexValue;
+    }
 
     // Generate code for the access.
     // First compute the address of the accessed value.
@@ -4130,6 +4137,22 @@ void IeleCompiler::appendMask(iele::IeleLocalVariable *Result, iele::IeleValue *
       iele::IeleInstruction::SExt, Result, NBytesValue, Result,
       CompilingBlock);
   }
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendMemorySpill() {
+  // Find last used memory location by loading the memory address zero.
+  iele::IeleLocalVariable *LastUsed =
+      iele::IeleLocalVariable::Create(&Context, "last.used", CompilingFunction);
+  iele::IeleInstruction::CreateLoad(
+      LastUsed, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  // Get next free memory location by increasing last used by one.
+  iele::IeleLocalVariable *NextFree =
+      iele::IeleLocalVariable::Create(&Context, "next.free", CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, NextFree, LastUsed,
+      iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+
+  return NextFree;
 }
 
 bool IeleCompiler::shouldCopyStorageToStorage(const iele::IeleValue *To,
