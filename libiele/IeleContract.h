@@ -188,6 +188,8 @@ public:
   static bool classof(const IeleValue *V) {
     return V->getIeleValueID() == IeleValue::IeleContractVal;
   }
+
+  static std::string escapeIeleName(const std::string &str);
 };
 
 } // end namespace iele

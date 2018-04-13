@@ -33,18 +33,22 @@ std::string IeleCompiler::getIeleNameForFunction(
   if (isMostDerived(&function)) {
     return IeleFunctionName;
   } else {
-    return contractFor(&function)->name() + "." + IeleFunctionName;
+    return getIeleNameForContract(contractFor(&function)) + "." + IeleFunctionName;
   }
 }
 
 std::string IeleCompiler::getIeleNameForStateVariable(
     const VariableDeclaration *stateVariable) {
-  std::string IeleVariableName;
   if (isMostDerived(stateVariable)) {
     return stateVariable->name();
   } else {
-    return contractFor(stateVariable)->name() + "." + stateVariable->name();
+    return getIeleNameForContract(contractFor(stateVariable)) + "." + stateVariable->name();
   }
+}
+
+std::string IeleCompiler::getIeleNameForContract(
+    const ContractDefinition *contract) {
+  return contract->fullyQualifiedName();
 }
 
 // lookup a ModifierDefinition by name (borrowed from CompilerContext.cpp)
@@ -125,7 +129,7 @@ void IeleCompiler::compileContract(
   CompiledContracts = contracts;
 
   // Create IeleContract.
-  CompilingContract = iele::IeleContract::Create(&Context, contract.name());
+  CompilingContract = iele::IeleContract::Create(&Context, getIeleNameForContract(&contract));
 
   // Add IELE global variables and functions to contract's symbol table by
   // iterating over state variables and functions of this contract and its base
@@ -164,7 +168,7 @@ void IeleCompiler::compileContract(
       } else {
         // Generate a proxy function for the base contract's constructor and add
         // it to the symbol table.
-        iele::IeleFunction::Create(&Context, false, base->name() + ".init",
+        iele::IeleFunction::Create(&Context, false, getIeleNameForContract(base) + ".init",
                                    CompilingContract);
       }
     }
@@ -224,7 +228,7 @@ void IeleCompiler::compileContract(
       constructor->accept(*this);
     } else {
       CompilingFunction =
-        iele::IeleFunction::Create(&Context, false, base->name() + ".init", CompilingContract);
+        iele::IeleFunction::Create(&Context, false, getIeleNameForContract(base) + ".init", CompilingContract);
       CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
       CompilingBlock =
         iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
@@ -310,7 +314,7 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
 
   iele::IeleGlobalVariable *GV = llvm::dyn_cast<iele::IeleGlobalVariable>(ST->lookup(name));
   iele::IeleLocalVariable *LoadedValue =
-    iele::IeleLocalVariable::Create(&Context, name + ".val",
+    iele::IeleLocalVariable::Create(&Context, stateVariable->name() + ".val",
                                     CompilingFunction);
   iele::IeleInstruction::CreateSLoad(LoadedValue, GV, CompilingBlock);
 
@@ -2047,7 +2051,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
                "IeleCompiler: failed to access compiling contract's symbol "
                "table.");
       if (iele::IeleValue *Identifier = ST->lookup(name)) {
-        appendVariable(Identifier, name, true);
+        appendVariable(Identifier, functionDef->name(), true);
         return false;
       }
 
@@ -2096,7 +2100,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleValue *Result = ST->lookup(name);
         solAssert(Result, "IeleCompiler: failed to find state variable in "
                           "contract's symbol table");
-        appendVariable(Result, name, variable->annotation().type->isValueType());
+        appendVariable(Result, variable->name(), variable->annotation().type->isValueType());
         return false;
       } else {
         solAssert(false, "not implemented yet");
@@ -2755,7 +2759,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
             "IeleCompiler: failed to access compiling contract's symbol "
             "table.");
   if (iele::IeleValue *Identifier = ST->lookup(name)) {
-    appendVariable(Identifier, name, isValueType);
+    appendVariable(Identifier, identifier.name(), isValueType);
     return;
   }
 
@@ -3058,8 +3062,8 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
       solAssert(ST,
                 "IeleCompiler: failed to access compiling function's symbol "
                 "table.");
-      iele::IeleValue *ConstructorValue = ST->lookup(def->name() + ".init");
-      solAssert(ConstructorValue, "IeleCompiler: failed to find constructor for contract " + def->name());
+      iele::IeleValue *ConstructorValue = ST->lookup(getIeleNameForContract(def) + ".init");
+      solAssert(ConstructorValue, "IeleCompiler: failed to find constructor for contract " + getIeleNameForContract(def));
       iele::IeleGlobalValue *CalleeValue =
         llvm::dyn_cast<iele::IeleGlobalValue>(ConstructorValue);
       iele::IeleInstruction::CreateInternalCall(Returns, CalleeValue, Arguments, CompilingBlock);

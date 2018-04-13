@@ -1,20 +1,20 @@
-contract SimpleAuction {
+contract "iele-example-tests/auction/auction.sol:SimpleAuction" {
 
-@beneficiary = 0
+@"beneficiary" = 0
 
-@auctionEnd = 1
+@"auctionEnd" = 1
 
-@highestBidder = 2
+@"highestBidder" = 2
 
-@highestBid = 3
+@"highestBid" = 3
 
-@ended = 4
+@"ended" = 4
 
 define public @"beneficiary()"() {
 entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
-  %beneficiary.val = sload @beneficiary
+  %beneficiary.val = sload @"beneficiary"
   ret %beneficiary.val
 
 throw:
@@ -25,7 +25,7 @@ define public @"auctionEnd()"() {
 entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
-  %auctionEnd.val = sload @auctionEnd
+  %auctionEnd.val = sload @"auctionEnd"
   ret %auctionEnd.val
 
 throw:
@@ -36,7 +36,7 @@ define public @"highestBidder()"() {
 entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
-  %highestBidder.val = sload @highestBidder
+  %highestBidder.val = sload @"highestBidder"
   ret %highestBidder.val
 
 throw:
@@ -47,7 +47,7 @@ define public @"highestBid()"() {
 entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
-  %highestBid.val = sload @highestBid
+  %highestBid.val = sload @"highestBid"
   ret %highestBid.val
 
 throw:
@@ -64,10 +64,10 @@ entry:
   br %out.of.range, throw
   %out.of.range1 = cmp lt %_biddingTime_1, 0
   br %out.of.range1, throw
-  sstore %_beneficiary_0, @beneficiary
+  sstore %_beneficiary_0, @"beneficiary"
   %timestamp = call @iele.timestamp()
   %tmp = add %timestamp, %_biddingTime_1
-  sstore %tmp, @auctionEnd
+  sstore %tmp, @"auctionEnd"
   ret void
 
 throw:
@@ -77,30 +77,30 @@ throw:
 define public @"bid()"() {
 entry:
   %timestamp = call @iele.timestamp()
-  %auctionEnd.val = sload @auctionEnd
+  %auctionEnd.val = sload @"auctionEnd"
   %tmp = cmp le %timestamp, %auctionEnd.val
   %tmp1 = iszero %tmp
   br %tmp1, throw
   %callvalue = call @iele.callvalue()
-  %highestBid.val = sload @highestBid
+  %highestBid.val = sload @"highestBid"
   %tmp2 = cmp gt %callvalue, %highestBid.val
   %tmp3 = iszero %tmp2
   br %tmp3, throw
-  %highestBidder.val = sload @highestBidder
+  %highestBidder.val = sload @"highestBidder"
   %tmp4 = cmp ne %highestBidder.val, 0
   %tmp5 = iszero %tmp4
   br %tmp5, if.end
-  %highestBidder.val6 = sload @highestBidder
-  %highestBid.val7 = sload @highestBid
+  %highestBidder.val6 = sload @"highestBidder"
+  %highestBid.val7 = sload @"highestBid"
   %gas = call @iele.gaslimit()
-  %status = call @deposit at %highestBidder.val6 () send %highestBid.val7, gaslimit %gas
+  %status = call @"deposit" at %highestBidder.val6 () send %highestBid.val7, gaslimit %gas
   br %status, throw.status
 
 if.end:
   %caller = call @iele.caller()
-  sstore %caller, @highestBidder
+  sstore %caller, @"highestBidder"
   %callvalue8 = call @iele.callvalue()
-  sstore %callvalue8, @highestBid
+  sstore %callvalue8, @"highestBid"
   ret void
 
 throw:
@@ -115,21 +115,21 @@ entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
   %timestamp = call @iele.timestamp()
-  %auctionEnd.val = sload @auctionEnd
+  %auctionEnd.val = sload @"auctionEnd"
   %tmp = cmp ge %timestamp, %auctionEnd.val
   %tmp1 = iszero %tmp
   br %tmp1, throw
-  %ended.val = sload @ended
+  %ended.val = sload @"ended"
   %tmp2 = iszero %ended.val
   %tmp3 = iszero %tmp2
   br %tmp3, throw
-  sstore 1, @ended
-  %beneficiary.val = sload @beneficiary
-  %highestBid.val = sload @highestBid
+  sstore 1, @"ended"
+  %beneficiary.val = sload @"beneficiary"
+  %highestBid.val = sload @"highestBid"
   %gas = call @iele.gaslimit()
-  %status = call @deposit at %beneficiary.val () send %highestBid.val, gaslimit %gas
+  %status = call @"deposit" at %beneficiary.val () send %highestBid.val, gaslimit %gas
   br %status, throw.status
-  %highestBidder.val = sload @highestBidder
+  %highestBidder.val = sload @"highestBidder"
   ret %highestBidder.val
 
 throw:

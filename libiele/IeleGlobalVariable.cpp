@@ -20,5 +20,5 @@ IeleGlobalVariable::~IeleGlobalVariable() { }
 
 void IeleGlobalVariable::print(llvm::raw_ostream &OS, unsigned indent) const {
   std::string Indent(indent, ' ');
-  OS << Indent << "@" << getName();
+  OS << Indent << "@\"" << IeleContract::escapeIeleName(getName()) << "\"";
 }
