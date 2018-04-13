@@ -147,6 +147,8 @@ void IeleValue::printAsValue(llvm::raw_ostream &OS) const {
     print(OS);
     break;
   case IeleContractVal:
+    OS << "\"" << IeleContract::escapeIeleName(getName()) << "\"";
+    break;
   case IeleBlockVal:
     OS << getName();
   }
