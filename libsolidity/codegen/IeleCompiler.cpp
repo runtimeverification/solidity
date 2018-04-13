@@ -1964,7 +1964,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     appendLValueAssign(AddressValue, PushedValue);
 
     iele::IeleLocalVariable *NewSize =
-      iele::IeleLocalVariable::Create(&Context, "array.old.length", CompilingFunction);
+      iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Add, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
@@ -3213,8 +3213,8 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
   return SizeValue;
 }
 
-iele::IeleValue *IeleCompiler::appendArrayAllocation(
-    const ArrayType &type, iele::IeleValue *NumElemsValue) {
+iele::IeleLocalVariable *IeleCompiler::appendArrayAllocation(
+    const ArrayType &type, iele::IeleValue *NumElemsValue, bool StoreLength) {
   // Get allocation size in memory slots.
   iele::IeleValue *SizeValue = nullptr;
   if (NumElemsValue) {
@@ -3254,10 +3254,10 @@ iele::IeleValue *IeleCompiler::appendArrayAllocation(
   }
 
   // Call runtime for memory allocation.
-  iele::IeleValue *ArrayAllocValue = appendIeleRuntimeAllocateMemory(SizeValue);
+  iele::IeleLocalVariable *ArrayAllocValue = appendIeleRuntimeAllocateMemory(SizeValue);
 
   // Save length for dynamically sized arrays.
-  if (type.isDynamicallySized()) {
+  if (type.isDynamicallySized() && StoreLength) {
     iele::IeleInstruction::CreateStore(NumElemsValue, ArrayAllocValue,
                                        CompilingBlock);
   }
@@ -3265,13 +3265,13 @@ iele::IeleValue *IeleCompiler::appendArrayAllocation(
   return ArrayAllocValue;
 }
 
-iele::IeleValue *IeleCompiler::appendStructAllocation(const StructType &type) {
+iele::IeleLocalVariable *IeleCompiler::appendStructAllocation(const StructType &type) {
   // Get allocation size in memory slots.
   iele::IeleIntConstant *SizeValue =
     iele::IeleIntConstant::Create(&Context, type.memorySize());
 
   // Call runtime for memory allocation.
-  iele::IeleValue *StructAllocValue = appendIeleRuntimeAllocateMemory(SizeValue);
+  iele::IeleLocalVariable *StructAllocValue = appendIeleRuntimeAllocateMemory(SizeValue);
 
   return StructAllocValue;
 }
@@ -3493,9 +3493,21 @@ void IeleCompiler::appendCopy(
       }
  
       iele::IeleLocalVariable *LoadedValueTo;
-      if (elementType.isDynamicallySized() && arrayType.location() == DataLocation::Memory) {
-        LoadedValueTo = iele::IeleLocalVariable::Create(&Context, "to.array.dereferenced", CompilingFunction);
-        iele::IeleInstruction::CreateLoad(LoadedValueTo, ElementTo, CompilingBlock);
+      if (toElementType.isDynamicallySized() && toArrayType.location() == DataLocation::Memory) {
+        const ArrayType &arrayElementType = dynamic_cast<const ArrayType &>(toElementType);
+        iele::IeleLocalVariable *FromElementSize =
+          iele::IeleLocalVariable::Create(&Context, "from.array.element.size", CompilingFunction);
+        FromLoc == DataLocation::Storage ?
+          iele::IeleInstruction::CreateSLoad(
+            FromElementSize, LoadedValueFrom,
+            CompilingBlock) :
+          iele::IeleInstruction::CreateLoad(
+            FromElementSize, LoadedValueFrom,
+            CompilingBlock) ;
+
+        LoadedValueTo = appendArrayAllocation(arrayElementType, FromElementSize, false);
+
+        iele::IeleInstruction::CreateStore(LoadedValueTo, ElementTo, CompilingBlock);
       } else {
         LoadedValueTo = ElementTo;
       }
@@ -3567,10 +3579,32 @@ void IeleCompiler::appendCopyFromMemoryToMemory(
 }
 
 iele::IeleValue *IeleCompiler::appendCopyFromStorageToMemory(
-    const Type &type, iele::IeleValue *From) {
-  iele::IeleValue *SizeValue = getReferenceTypeSize(type, From);
-  iele::IeleValue *To = appendIeleRuntimeAllocateMemory(SizeValue);
-  appendIeleRuntimeCopy(From, To, SizeValue, DataLocation::Storage, DataLocation::Memory);
+    const Type &ToType, iele::IeleValue *From, const Type &FromType) {
+  iele::IeleValue *To;
+  if (FromType.isDynamicallySized()) {
+    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(FromType);
+    const ArrayType &toArrayType = dynamic_cast<const ArrayType &>(ToType);
+
+    iele::IeleLocalVariable *SizeVariable =
+      iele::IeleLocalVariable::Create(&Context, "array.size", CompilingFunction);
+    arrayType.location() == DataLocation::Storage ?
+      iele::IeleInstruction::CreateSLoad(
+        SizeVariable, From,
+        CompilingBlock) :
+      iele::IeleInstruction::CreateLoad(
+        SizeVariable, From,
+        CompilingBlock) ;
+
+    To = appendArrayAllocation(toArrayType, SizeVariable);
+  } else if (FromType.category() == Type::Category::Array) {
+    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(ToType);
+    To = appendArrayAllocation(arrayType);
+  } else {
+    solAssert(FromType.category() == Type::Category::Struct, "not implemented");
+    const StructType &structType = dynamic_cast<const StructType &>(ToType);
+    To = appendStructAllocation(structType);
+  }
+  appendCopy(To, ToType, From, FromType, DataLocation::Memory, DataLocation::Storage);
   return To;
 }
 
@@ -3942,7 +3976,7 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
   case Type::Category::Struct:
   case Type::Category::Array:
     if (shouldCopyStorageToMemory(TargetType, SourceType))
-      return appendCopyFromStorageToMemory(TargetType, Value);
+      return appendCopyFromStorageToMemory(TargetType, Value, SourceType);
     return Value;
   case Type::Category::Integer:
   case Type::Category::RationalNumber:

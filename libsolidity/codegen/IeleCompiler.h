@@ -179,11 +179,11 @@ private:
   // Helper function for memory array allocation. The optional NumElemsValue
   // argument can be used to allocate dynamically-sized arrays, where the initial
   // size is not known at compile time.
-  iele::IeleValue *appendArrayAllocation(
-      const ArrayType &type, iele::IeleValue *NumElemsValue = nullptr);
+  iele::IeleLocalVariable *appendArrayAllocation(
+      const ArrayType &type, iele::IeleValue *NumElemsValue = nullptr, bool StoreLength = true);
 
   // Helper function for memory struct allocation.
-  iele::IeleValue *appendStructAllocation(const StructType &type);
+  iele::IeleLocalVariable *appendStructAllocation(const StructType &type);
 
   // Helper functions for copying a reference type to a storage location.
   void appendCopyFromStorageToStorage(
@@ -197,7 +197,7 @@ private:
   // Helper function for copying a storage reference type into a local newly
   // allocated memory copy. Returns a pointer to the copy.
   iele::IeleValue *appendCopyFromStorageToMemory(
-    const Type &type, iele::IeleValue *From);
+    const Type &ToType, iele::IeleValue *From, const Type &FromType);
 
   void appendCopy(
       iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType, DataLocation ToLoc, DataLocation FromLoc);
