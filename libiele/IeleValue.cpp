@@ -136,7 +136,7 @@ void IeleValue::printAsValue(llvm::raw_ostream &OS) const {
     OS << "%" << getName();
     break;
   case IeleGlobalVariableVal:
-    OS << "@\"" << escapeIeleName(getName()) << "\"";
+    OS << "@\"" << IeleContract::escapeIeleName(getName()) << "\"";
     break;
   case IeleFunctionVal: {
     const IeleFunction *F = llvm::cast<IeleFunction>(this);

@@ -14,8 +14,6 @@ namespace iele {
 
 class IeleValueSymbolTable;
 
-std::string escapeIeleName(std::string str);
-
 class IeleContract :
   public IeleValue {
 public:
@@ -190,6 +188,8 @@ public:
   static bool classof(const IeleValue *V) {
     return V->getIeleValueID() == IeleValue::IeleContractVal;
   }
+
+  static std::string escapeIeleName(const std::string &str);
 };
 
 } // end namespace iele

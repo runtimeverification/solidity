@@ -59,7 +59,7 @@ void IeleContract::printRuntime(llvm::raw_ostream &OS, unsigned indent) const {
   }
 }
 
-std::string escapeIeleName(std::string str) {
+std::string IeleContract::escapeIeleName(const std::string &str) {
   std::string result;
   for (char c : str) {
     if (c == '"' || c == '\\' || !isprint(c)) {
