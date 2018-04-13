@@ -552,7 +552,6 @@ BOOST_AUTO_TEST_CASE(cleanup_int_inside_arrays)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_ptr, 1)
 BOOST_AUTO_TEST_CASE(storage_ptr)
 {
 	string sourceCode = R"(
