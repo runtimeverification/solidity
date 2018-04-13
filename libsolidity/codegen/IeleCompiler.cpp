@@ -1964,7 +1964,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     appendLValueAssign(AddressValue, PushedValue);
 
     iele::IeleLocalVariable *NewSize =
-      iele::IeleLocalVariable::Create(&Context, "array.old.length", CompilingFunction);
+      iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Add, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
