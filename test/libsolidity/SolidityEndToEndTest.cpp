@@ -1127,7 +1127,6 @@ BOOST_AUTO_TEST_CASE(mapping_state_inc_dec)
 	testContractAgainstCppOnRange("f(uint256)", f, 0, 5);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(multi_level_mapping, 1)
 BOOST_AUTO_TEST_CASE(multi_level_mapping)
 {
 	char const* sourceCode = R"(
@@ -1358,7 +1357,7 @@ BOOST_AUTO_TEST_CASE(simple_accessor)
 	ABI_CHECK(callContractFunction("data()"), encodeArgs(8));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_accessor, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_accessor, 5)
 BOOST_AUTO_TEST_CASE(array_accessor)
 {
 	char const* sourceCode = R"(
@@ -1441,7 +1440,7 @@ BOOST_AUTO_TEST_CASE(multiple_elementary_accessors)
 	ABI_CHECK(callContractFunction("super_secret_data()"), vector<bytes>());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(complex_accessors, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(complex_accessors, 4)
 BOOST_AUTO_TEST_CASE(complex_accessors)
 {
 	char const* sourceCode = R"(
