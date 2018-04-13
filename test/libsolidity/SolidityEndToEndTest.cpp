@@ -3734,7 +3734,6 @@ BOOST_AUTO_TEST_CASE(generic_delegatecall)
 	BOOST_CHECK_EQUAL(balanceAt(c_senderAddress), 50 + 11);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_call_in_homestead, 1)
 BOOST_AUTO_TEST_CASE(library_call_in_homestead)
 {
 	char const* sourceCode = R"(
@@ -3752,7 +3751,6 @@ BOOST_AUTO_TEST_CASE(library_call_in_homestead)
 	ABI_CHECK(callContractFunction("sender()"), encodeArgs(u160(m_sender)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_call_protection, 1)
 BOOST_AUTO_TEST_CASE(library_call_protection)
 {
 	// This tests code that reverts a call if it is a direct call to a library
@@ -6948,7 +6946,6 @@ BOOST_AUTO_TEST_CASE(inherited_function) {
 	ABI_CHECK(callContractFunction("g()"), encodeArgs(u256(1)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inherited_function_from_a_library, 1)
 BOOST_AUTO_TEST_CASE(inherited_function_from_a_library) {
 	char const* sourceCode = R"(
 		library A { function f() internal returns (uint) { return 1; } }
@@ -7066,7 +7063,6 @@ BOOST_AUTO_TEST_CASE(storage_string_as_mapping_key_without_variable)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(2)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_call, 1)
 BOOST_AUTO_TEST_CASE(library_call)
 {
 	char const* sourceCode = R"(
@@ -7082,7 +7078,6 @@ BOOST_AUTO_TEST_CASE(library_call)
 	ABI_CHECK(callContractFunction("f(uint256)", u256(33)), encodeArgs(u256(33) * 9));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_stray_values, 1)
 BOOST_AUTO_TEST_CASE(library_stray_values)
 {
 	char const* sourceCode = R"(
@@ -7847,7 +7842,6 @@ BOOST_AUTO_TEST_CASE(string_allocation_bug)
 	));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(using_for_function_on_int, 1)
 BOOST_AUTO_TEST_CASE(using_for_function_on_int)
 {
 	char const* sourceCode = R"(
@@ -7864,7 +7858,6 @@ BOOST_AUTO_TEST_CASE(using_for_function_on_int)
 	ABI_CHECK(callContractFunction("f(uint256)", u256(9)), encodeArgs(u256(2 * 9)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(using_for_function_on_struct, 1)
 BOOST_AUTO_TEST_CASE(using_for_function_on_struct)
 {
 	char const* sourceCode = R"(
@@ -7884,7 +7877,6 @@ BOOST_AUTO_TEST_CASE(using_for_function_on_struct)
 	ABI_CHECK(callContractFunction("x()"), encodeArgs(u256(3 * 7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(using_for_overload, 1)
 BOOST_AUTO_TEST_CASE(using_for_overload)
 {
 	char const* sourceCode = R"(
@@ -8587,7 +8579,6 @@ BOOST_AUTO_TEST_CASE(delete_on_array_of_structs)
 
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(internal_library_function, 1)
 BOOST_AUTO_TEST_CASE(internal_library_function)
 {
 	// tests that internal library functions can be called from outside
@@ -8612,7 +8603,6 @@ BOOST_AUTO_TEST_CASE(internal_library_function)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(2)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(internal_library_function_calling_private, 1)
 BOOST_AUTO_TEST_CASE(internal_library_function_calling_private)
 {
 	// tests that internal library functions that are called from outside and that
@@ -9078,7 +9068,6 @@ BOOST_AUTO_TEST_CASE(payable_function)
 	BOOST_CHECK_EQUAL(balanceAt(m_contractAddress), 27 + 27);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(payable_function_calls_library, 1)
 BOOST_AUTO_TEST_CASE(payable_function_calls_library)
 {
 	char const* sourceCode = R"(
