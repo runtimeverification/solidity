@@ -1770,29 +1770,25 @@ unsigned StructType::calldataEncodedSize(bool _padded) const
 	return size;
 }
 
-bool StructType::isDynamicallyEncoded() const
-{
-	solAssert(!recursive(), "");
-	for (auto t: memoryMemberTypes())
-	{
-		solAssert(t, "Parameter should have external type.");
-		t = t->interfaceType(false);
-		if (t->isDynamicallyEncoded())
-			return true;
-	}
-	return false;
+bool StructType::isDynamicallyEncoded() const {
+  solAssert(!recursive(), "");
+  for (auto const &m : members(nullptr)) {
+    if (m.type->isDynamicallyEncoded())
+      return true;
+  }
+  return false;
 }
 
 bigint StructType::getFixedBitwidth() const {
-	solAssert(!recursive(), "");
-	bigint bitwidth;
-	for (auto const& t: memoryMemberTypes()) {
-		if (bigint b = t->getFixedBitwidth())
-			bitwidth += b;
-		else
-			return bigint(0);
-	}
-	return bitwidth;
+  solAssert(!recursive(), "");
+  bigint bitwidth;
+  for (auto const &m : members(nullptr)) {
+    if (bigint b = m.type->getFixedBitwidth())
+      bitwidth += b;
+    else
+      return bigint(0);
+  }
+  return bitwidth;
 }
 
 bigint StructType::memorySize() const
@@ -1801,7 +1797,7 @@ bigint StructType::memorySize() const
 	bigint size;
 	for (auto const& t: memoryMemberTypes())
 		size += t->memorySize();
-	return size;
+	return max<bigint>(1, size);
 }
 
 bigint StructType::storageSize() const
