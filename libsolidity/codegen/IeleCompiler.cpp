@@ -314,7 +314,7 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
 
   iele::IeleGlobalVariable *GV = llvm::dyn_cast<iele::IeleGlobalVariable>(ST->lookup(name));
   iele::IeleLocalVariable *LoadedValue =
-    iele::IeleLocalVariable::Create(&Context, name + ".val",
+    iele::IeleLocalVariable::Create(&Context, stateVariable->name() + ".val",
                                     CompilingFunction);
   iele::IeleInstruction::CreateSLoad(LoadedValue, GV, CompilingBlock);
 
@@ -2051,7 +2051,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
                "IeleCompiler: failed to access compiling contract's symbol "
                "table.");
       if (iele::IeleValue *Identifier = ST->lookup(name)) {
-        appendVariable(Identifier, name, true);
+        appendVariable(Identifier, functionDef->name(), true);
         return false;
       }
 
@@ -2100,7 +2100,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleValue *Result = ST->lookup(name);
         solAssert(Result, "IeleCompiler: failed to find state variable in "
                           "contract's symbol table");
-        appendVariable(Result, name, variable->annotation().type->isValueType());
+        appendVariable(Result, variable->name(), variable->annotation().type->isValueType());
         return false;
       } else {
         solAssert(false, "not implemented yet");
@@ -2759,7 +2759,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
             "IeleCompiler: failed to access compiling contract's symbol "
             "table.");
   if (iele::IeleValue *Identifier = ST->lookup(name)) {
-    appendVariable(Identifier, name, isValueType);
+    appendVariable(Identifier, identifier.name(), isValueType);
     return;
   }
 
