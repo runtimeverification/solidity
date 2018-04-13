@@ -4745,7 +4745,7 @@ BOOST_AUTO_TEST_CASE(array_copy_storage_storage_struct)
 	BOOST_CHECK(storageEmpty(m_contractAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_storage_abi, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_storage_abi, 4)
 BOOST_AUTO_TEST_CASE(array_copy_storage_abi)
 {
 	// NOTE: This does not really test copying from storage to ABI directly,
