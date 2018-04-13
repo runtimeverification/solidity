@@ -1303,6 +1303,9 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
     CompilingBlock = LoopExitBlock;
     break;
   }
+  case Type::Category::Mapping:
+    // Delete on whole mappings is a noop in Solidity.
+    break;
   default:
     solAssert(false, "not implemented yet");
   }

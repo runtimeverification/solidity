@@ -1227,7 +1227,6 @@ BOOST_AUTO_TEST_CASE(struct_reference)
 	ABI_CHECK(callContractFunction("check()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(deleteStruct, 1)
 BOOST_AUTO_TEST_CASE(deleteStruct)
 {
 	char const* sourceCode = R"(
@@ -5017,7 +5016,6 @@ BOOST_AUTO_TEST_CASE(array_copy_nested_array)
 	)), encodeArgs(10));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_including_mapping, 1)
 BOOST_AUTO_TEST_CASE(array_copy_including_mapping)
 {
 	char const* sourceCode = R"(
