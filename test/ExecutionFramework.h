@@ -203,7 +203,9 @@ public:
 	template <class FirstArg, class... Args>
 	static bytes encodeLogs(FirstArg const& _firstArg, Args const&... _followingArgs)
 	{
-		return encode(_firstArg) + encodeLogs(_followingArgs...);
+		bytes encoded = encode(_firstArg);
+		std::reverse(encoded.begin(), encoded.end());
+		return encoded + encodeLogs(_followingArgs...);
 	}
 	static bytes encodeLogs()
 	{
