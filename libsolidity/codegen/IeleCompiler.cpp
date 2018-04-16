@@ -359,11 +359,13 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   // We store the return params names, which we'll use when generating a default
   // `ret`.
   llvm::SmallVector<std::string, 4> ReturnParameterNames;
+  llvm::SmallVector<TypePointer, 4> ReturnParameterTypes;
 
   // Visit formal return parameters.
   for (const ASTPointer<const VariableDeclaration> &ret : function.returnParameters()) {
     std::string genName = ret->name() + getNextVarSuffix();
     ReturnParameterNames.push_back(genName);
+    ReturnParameterTypes.push_back(ret->type());
     iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
     // No need to keep track of the mapping for omitted return params, since
     // they will never be referenced.
@@ -398,9 +400,13 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     for (unsigned i = 0; i < function.parameters().size(); i++) {
       const auto &arg = *function.parameters()[i];
       iele::IeleArgument *ieleArg = parameters[i];
-      const auto &argType = *arg.type();
-      if (argType.isValueType()) {
-        appendRangeCheck(ieleArg, argType);
+      const auto &argType = arg.type();
+      if (argType->isValueType()) {
+        appendRangeCheck(ieleArg, *argType);
+      } else {
+        iele::IeleInstruction::CreateAssign(
+          ieleArg, decoding(ieleArg, argType),
+          CompilingBlock);
       }
     }
   }
@@ -452,10 +458,16 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
                   "table.");
 
         // Prepare arguments for the `ret` instruction by fetching the param names
-        for (const std::string paramName : ReturnParameterNames) {
+        for (unsigned i = 0; i < ReturnParameterNames.size(); i++) {
+          const std::string paramName = ReturnParameterNames[i];
+          TypePointer paramType = ReturnParameterTypes[i];
           iele::IeleValue *param = ST->lookup(paramName);
           solAssert(param, "IeleCompiler: couldn't find parameter name in symbol table.");
-          Returns.push_back(param);
+          if (function.isPublic()) {
+            Returns.push_back(encoding(param, paramType));
+          } else {
+            Returns.push_back(param);
+          }
         }
 
         // Create `ret` instruction
@@ -557,9 +569,22 @@ bool IeleCompiler::visit(const Return &returnStatement) {
   compileTuple(*returnExpr, Values);
 
   llvm::SmallVector<iele::IeleValue *, 4> ReturnValues;
+
+  TypePointers returnTypes = FunctionType(*CompilingFunctionASTNode).returnParameterTypes();
   
-  appendTypeConversions(ReturnValues, Values, returnExpr->annotation().type, FunctionType(*CompilingFunctionASTNode).returnParameterTypes());
-  iele::IeleInstruction::CreateRet(ReturnValues, CompilingBlock);
+  appendTypeConversions(ReturnValues, Values, returnExpr->annotation().type, returnTypes);
+
+  llvm::SmallVector<iele::IeleValue *, 4> EncodedReturnValues;
+  for (unsigned i = 0; i < ReturnValues.size(); i++) {
+    iele::IeleValue *Value = ReturnValues[i];
+    TypePointer type = returnTypes[i];
+    if (CompilingFunctionASTNode->isPublic()) {
+      EncodedReturnValues.push_back(encoding(Value, type));
+    } else {
+      EncodedReturnValues.push_back(Value);
+    }
+  }
+  iele::IeleInstruction::CreateRet(EncodedReturnValues, CompilingBlock);
 
   return false;
 }
