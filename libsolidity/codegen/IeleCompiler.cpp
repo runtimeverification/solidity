@@ -2155,8 +2155,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::Event: {
     llvm::SmallVector<iele::IeleValue *, 4> IndexedArguments;
     llvm::SmallVector<iele::IeleValue *, 4> NonIndexedArguments;
-    TypePointers nonIndexedArgTypes;
-    TypePointers nonIndexedParamTypes;
+    TypePointers nonIndexedTypes;
     unsigned numIndexed = 0;
     
     // Get the event definition
@@ -2200,9 +2199,11 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
         solAssert(ArgValue,
                   "IeleCompiler: Failed to compile non-indexed event argument");
         // Store indexed argument
+        auto ArgType = arguments[arg]->annotation().type;
+        auto ParamType = function.parameterTypes()[arg];
+        ArgValue = appendTypeConversion(ArgValue, *ArgType, *ParamType);
         NonIndexedArguments.push_back(ArgValue);
-        nonIndexedArgTypes.push_back(arguments[arg]->annotation().type);
-        nonIndexedParamTypes.push_back(function.parameterTypes()[arg]);
+        nonIndexedTypes.push_back(ParamType);
       }
     }
     // Find out next free location (will store encoding of non-indexed args)     
@@ -2230,8 +2231,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     // Store non-indexed args in memory
     if (NonIndexedArguments.size() > 0) {
       encoding(
-        NonIndexedArguments, nonIndexedArgTypes, 
-        nonIndexedParamTypes, NextFree);
+        NonIndexedArguments, nonIndexedTypes, 
+        NextFree);
     }
 
     // build Log instruction
