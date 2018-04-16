@@ -2648,12 +2648,8 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
       iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
     if (type.hasInfiniteKeyspace()) {
       // In this case AddressValue = ExprValue + IndexValue < nbits(StorageSize)
-      iele::IeleIntConstant *StorageOffset =
-        iele::IeleIntConstant::Create(
-            &Context, bigint(dev::bitsRequired(NextStorageAddress)));
-      iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Shift, AddressValue, IndexValue, StorageOffset,
-          CompilingBlock);
+      appendShiftBy(AddressValue, IndexValue,
+                    dev::bitsRequired(NextStorageAddress));
       iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
           CompilingBlock);
