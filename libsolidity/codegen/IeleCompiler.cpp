@@ -1175,17 +1175,17 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
   switch (type->category()) {
   case Type::Category::Struct: {
     const StructType &structType = dynamic_cast<const StructType &>(*type);
-    for (auto decl : structType.structDefinition().members()) {
+    for (const auto &member : structType.members(nullptr)) {
       // First compute the offset from the start of the struct.
       bigint offset;
       switch (structType.location()) {
       case DataLocation::Storage: {
-        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
+        const auto& offsets = structType.storageOffsetsOfMember(member.name);
         offset = offsets.first;
         break;
       }
       case DataLocation::Memory: {
-        offset = structType.memoryOffsetOfMember(decl->name());
+        offset = structType.memoryOffsetOfMember(member.name);
         break;
       case DataLocation::CallData: 
         solAssert(false, "Call data not supported in IELE");
@@ -1200,7 +1200,7 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
         iele::IeleInstruction::Add, Member, LValue, OffsetValue,
         CompilingBlock);
 
-      appendLValueDelete(Member, decl->type());
+      appendLValueDelete(Member, member.type);
     }
     break;
   }
@@ -1391,12 +1391,12 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     FunctionTypePointer functionType = structType.constructorType();
 
     solAssert(arguments.size() == functionType->parameterTypes().size(),
-           "IeleCompiler: struct constructor called with wrong number "
-           "of arguments");
+              "IeleCompiler: struct constructor called with wrong number "
+              "of arguments");
     solAssert(arguments.size() > 0, "IeleCompiler: empty struct found");
     solAssert(functionType->parameterTypes().size() ==
-              structType.structDefinition().members().size(),
-              "not implemented yet");
+              structType.memoryMemberTypes().size(),
+              "IeleCompiler: struct constructor with missing arguments");
 
     // Allocate memory for the struct.
     iele::IeleValue *StructValue = appendStructAllocation(structType);
@@ -1411,14 +1411,16 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       InitValue = appendTypeConversion(InitValue, argType, memberType);
 
       // Address in the new struct in which we should copy the argument value.
-      iele::IeleValue *AddressValue =
-        iele::IeleIntConstant::Create(&Context, offset);
+      iele::IeleLocalVariable *AddressValue =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, AddressValue, StructValue,
+          iele::IeleIntConstant::Create(&Context, offset), CompilingBlock);
 
       // Size of copy.
       bigint memberSize = memberType.memorySize();
       iele::IeleValue *SizeValue =
         iele::IeleIntConstant::Create(&Context, memberSize);
-
 
       // Do the copy.
       solAssert(!memberType.dataStoredIn(DataLocation::Storage),
@@ -3290,7 +3292,7 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
     break;
   }
   case (Type::Category::Mapping) :
-    solAssert(false, "not implemented yet");
+    solAssert(false, "IeleCompiler: requested size of mapping");
   default:
     solAssert(false, "IeleCompiler: invalid reference type");
   }
@@ -3300,12 +3302,15 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
 
 iele::IeleLocalVariable *IeleCompiler::appendArrayAllocation(
     const ArrayType &type, iele::IeleValue *NumElemsValue, bool StoreLength) {
+  const Type &elementType = *type.baseType();
+  solAssert(elementType.category() != Type::Category::Mapping,
+            "IeleCompiler: requested memory allocation of array of mappigns.");
+
   // Get allocation size in memory slots.
   iele::IeleValue *SizeValue = nullptr;
   if (NumElemsValue) {
     solAssert(type.isDynamicallySized(),
               "IeleCompiler: custom size requestd for fix-sized array");
-    const Type &elementType = *type.baseType();
     bigint elementSize;
     switch (type.location()) {
     case DataLocation::Storage: {
@@ -3394,44 +3399,83 @@ void IeleCompiler::appendCopy(
   case Type::Category::Struct: {
     const StructType &structType = dynamic_cast<const StructType &>(FromType);
     const StructType &toStructType = dynamic_cast<const StructType &>(ToType);
-    for (auto decl : structType.structDefinition().members()) {
-      // First compute the offset from the start of the struct.
-      bigint offset;
+    // We loop over the members of the source struct type.
+    for (auto const &member : structType.members(nullptr)) {
+      // First find the types of the corresponding member in the source and
+      // destination struct types.
+      TypePointer memberFromType = member.type;
+      TypePointer memberToType;
+      for (auto const &toMember : toStructType.members(nullptr)) {
+        if (member.name == toMember.name) {
+          memberToType = toMember.type;
+          break;
+        }
+      }
+
+      // Ensure we are skipping mapping members when copying to memory.
+      solAssert(!memberToType ||
+                memberToType->category() != Type::Category::Mapping ||
+                ToLoc == DataLocation::Storage,
+                "IeleCompiler: found memory struct with mapping field");
+      solAssert(memberFromType->category() != Type::Category::Mapping ||
+                FromLoc == DataLocation::Storage,
+                "IeleCompiler: found memory struct with mapping field");
+      if (memberFromType->category() == Type::Category::Mapping &&
+          ToLoc == DataLocation::Memory) {
+        continue;
+      }
+
+      // Then compute the offset from the start of the struct for the current
+      // member. The offset may differ in the source and destination, due to
+      // skipping of mappings in memory copies of structs.
+      bigint fromOffset, toOffset;
       switch (FromLoc) {
       case DataLocation::Storage: {
-        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
-        offset = offsets.first;
+        const auto& offsets = structType.storageOffsetsOfMember(member.name);
+        fromOffset = offsets.first;
         break;
       }
       case DataLocation::Memory: {
-        offset = structType.memoryOffsetOfMember(decl->name());
+        fromOffset = structType.memoryOffsetOfMember(member.name);
+        break;
+      case DataLocation::CallData:
+        solAssert(false, "Call data not supported in IELE");
+      }
+      }
+      switch (ToLoc) {
+      case DataLocation::Storage: {
+        const auto& offsets = toStructType.storageOffsetsOfMember(member.name);
+        toOffset = offsets.first;
+        break;
+      }
+      case DataLocation::Memory: {
+        toOffset = toStructType.memoryOffsetOfMember(member.name);
         break;
       case DataLocation::CallData: 
         solAssert(false, "Call data not supported in IELE");
       }
       }
 
+      // Then compute the current member address in the source and destination
+      // struct objects.
       iele::IeleLocalVariable *MemberFrom =
         iele::IeleLocalVariable::Create(&Context, "copy.from.address", CompilingFunction);
-      iele::IeleValue *OffsetValue =
-        iele::IeleIntConstant::Create(&Context, offset);
+      iele::IeleValue *FromOffsetValue =
+        iele::IeleIntConstant::Create(&Context, fromOffset);
       iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, MemberFrom, From, OffsetValue,
+        iele::IeleInstruction::Add, MemberFrom, From, FromOffsetValue,
         CompilingBlock);
 
       iele::IeleLocalVariable *MemberTo =
         iele::IeleLocalVariable::Create(&Context, "copy.to.address", CompilingFunction);
+      iele::IeleValue *ToOffsetValue =
+        iele::IeleIntConstant::Create(&Context, toOffset);
       iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, MemberTo, To, OffsetValue,
+        iele::IeleInstruction::Add, MemberTo, To, ToOffsetValue,
         CompilingBlock);
 
-      for (auto toDecl : toStructType.structDefinition().members()) {
-        if (decl->name() == toDecl->name()) {
-          appendCopy(MemberTo, *toDecl->type(), MemberFrom, *decl->type(), ToLoc, FromLoc);
-          break;
-        }
-      }
-
+      // Finally do the copy of the member value from source to destination.
+      appendCopy(MemberTo, *memberToType, MemberFrom, *memberFromType, ToLoc, FromLoc);
     }
     break;
   }
@@ -3645,8 +3689,13 @@ void IeleCompiler::appendCopy(
 
     break;
   }
-  case Type::Category::Mapping:
+  case Type::Category::Mapping: {
+    solAssert(FromLoc == DataLocation::Storage,
+              "IeleCompiler: mapping copy requested from memory");
+    solAssert(ToLoc == DataLocation::Storage,
+              "IeleCompiler: mapping copy requested to memory");
     solAssert(false, "not implemented yet");
+  }
   default:
     solAssert(false, "Invalid type in appendCopy");
   }
@@ -3686,10 +3735,15 @@ iele::IeleValue *IeleCompiler::appendCopyFromStorageToMemory(
   } else if (FromType.category() == Type::Category::Array) {
     const ArrayType &arrayType = dynamic_cast<const ArrayType &>(ToType);
     To = appendArrayAllocation(arrayType);
-  } else {
-    solAssert(FromType.category() == Type::Category::Struct, "not implemented");
+  } else if (FromType.category() == Type::Category::Struct) {
     const StructType &structType = dynamic_cast<const StructType &>(ToType);
     To = appendStructAllocation(structType);
+  } else {
+    solAssert(FromType.category() == Type::Category::Mapping,
+              "IeleCompiler: requested storage to memory copy of unknown "
+              "reference type");
+    solAssert(false, "IeleCompiler: requested storage to memory copy of "
+                     "mapping");
   }
   appendCopy(To, ToType, From, FromType, DataLocation::Memory, DataLocation::Storage);
   return To;

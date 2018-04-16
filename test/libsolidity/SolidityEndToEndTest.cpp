@@ -6785,7 +6785,6 @@ BOOST_AUTO_TEST_CASE(initialise_string_constant)
 	ABI_CHECK(callContractFunction("short()"), encodeDyn(shortStr));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_structs_with_mappings, 1)
 BOOST_AUTO_TEST_CASE(memory_structs_with_mappings)
 {
 	char const* sourceCode = R"(

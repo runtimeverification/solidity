@@ -2863,7 +2863,10 @@ string MappingType::canonicalName() const
 }
 
 bool MappingType::isDynamicallyEncoded() const {
-  return hasInfiniteKeyspace() || valueType()->isDynamicallyEncoded();
+  // We return true for now to avoid bitwise copying of any mapping, as it would
+  // be too costly.
+  return true;
+  //return hasInfiniteKeyspace() || valueType()->isDynamicallyEncoded();
 }
 
 bigint MappingType::getFixedBitwidth() const {
