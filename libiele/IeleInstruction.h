@@ -271,6 +271,15 @@ public:
       IeleLocalVariable *Result, IeleValue *AddressValue,
       IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateLoad1(
+      IeleLocalVariable *Result, IeleValue *AddressValue,
+      IeleValue *OffsetValue, IeleValue *WidthValue,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateLoad1(
+      IeleLocalVariable *Result, IeleValue *AddressValue,
+      IeleValue *OffsetValue, IeleValue *WidthValue,
+      IeleBlock *InsertAtEnd);
+
   static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue,
       IeleInstruction *InsertBefore = nullptr);
