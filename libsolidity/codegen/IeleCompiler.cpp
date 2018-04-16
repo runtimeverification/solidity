@@ -1359,9 +1359,12 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
 
 /// Perform encoding of the given values, and returns a register containing it
 iele::IeleValue *IeleCompiler::encoding(
-    llvm::SmallVector<iele::IeleValue *, 4> arguments, 
-    TypePointers argTypes,
-	  TypePointers paramTypes) {
+    iele::IeleValue *argument,
+    TypePointer type) {
+  if (type->isValueType() || type->category() == Type::Category::Mapping) {
+    return argument;
+  }
+
   // Allocate cell 
   iele::IeleLocalVariable *LastUsed =
       iele::IeleLocalVariable::Create(&Context, "last.used", CompilingFunction);
@@ -1373,8 +1376,18 @@ iele::IeleValue *IeleCompiler::encoding(
     iele::IeleInstruction::Add, NextFree, LastUsed, 
     iele::IeleIntConstant::getOne(&Context), CompilingBlock);
 
+  // update cell 0 
+  iele::IeleInstruction::CreateStore(
+    NextFree, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+
+  llvm::SmallVector<iele::IeleValue *, 1> arguments;
+  arguments.push_back(argument);
+
+  TypePointers types;
+  types.push_back(type);
+
   // Call version of `encoding` that writes destination loc (NextFree)
-  encoding(arguments, argTypes, paramTypes, NextFree);
+  encoding(arguments, types, NextFree);
 
   // Init register to be returned
   iele::IeleLocalVariable *EncodedVal = 
@@ -1387,21 +1400,52 @@ iele::IeleValue *IeleCompiler::encoding(
   return EncodedVal;
 }
 
+void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value) {
+   // Calculate width in bytes of argument:
+   // width_bytes(n) = ((log2(n) + 1) + 7) / 8
+   //                = (log2(n) + 8) / 8
+   //                = log2(n) / 8 + 1
+   //                = log2(n) >> 3 + 1
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results;
+   appendConditional(Value, Results,
+    [&Value, this](llvm::SmallVectorImpl<iele::IeleValue *> &Results){
+      iele::IeleLocalVariable *Result =
+        iele::IeleLocalVariable::Create(&Context, "logarithm.base.2", CompilingFunction);
+      iele::IeleInstruction::CreateLog2(Result, Value, CompilingBlock); 
+      Results.push_back(Result);
+    },
+    [this](llvm::SmallVectorImpl<iele::IeleValue *> &Results){
+      Results.push_back(iele::IeleIntConstant::getZero(&Context));
+    });
+   solAssert(Results.size() == 1, "Invalid number of conditional results in appendByteWidth");
+   iele::IeleInstruction::CreateBinOp(
+     iele::IeleInstruction::Shift, Result, 
+     Results[0],
+     iele::IeleIntConstant::Create(&Context, bigint(-3)), 
+     CompilingBlock);
+   iele::IeleInstruction::CreateBinOp(
+     iele::IeleInstruction::Add, Result, 
+     Result,
+     iele::IeleIntConstant::getOne(&Context), 
+     CompilingBlock);
+}
+
 /// Perform encoding of the given values, and writes in provided the destination
 void IeleCompiler::encoding(
-    llvm::SmallVector<iele::IeleValue *, 4> arguments, 
-    TypePointers givenTypes,
-	  TypePointers targetTypes, 
+    llvm::SmallVectorImpl<iele::IeleValue *> &arguments, 
+    TypePointers types,
     iele::IeleLocalVariable *NextFree) {
-  TypePointers types = targetTypes.empty() ? givenTypes : targetTypes;
-	solAssert(types.size() == givenTypes.size(), 
-                            "IeleCompiler: wrong types in encoding");
+  solAssert(arguments.size() == types.size(), "invalid number of arguments to encoding");
+  if (types.size() == 1 && types[0]->isValueType()) {
+    iele::IeleInstruction::CreateStore(
+        arguments[0], NextFree,
+        CompilingBlock);
+    return;
+  }
 
   // Create local vars needed for encoding
   iele::IeleLocalVariable *CrntPos = 
     iele::IeleLocalVariable::Create(&Context, "crnt.pos", CompilingFunction);
-  iele::IeleLocalVariable *ArgValue = 
-    iele::IeleLocalVariable::Create(&Context, "arg.value", CompilingFunction);
   iele::IeleLocalVariable *ArgTypeSize = 
     iele::IeleLocalVariable::Create(&Context, "arg.type.size", 
                                     CompilingFunction);
@@ -1411,91 +1455,428 @@ void IeleCompiler::encoding(
   iele::IeleInstruction::CreateAssign(
     CrntPos, iele::IeleIntConstant::getZero(&Context), CompilingBlock);    
   for (unsigned i = 0; i < arguments.size(); i++) {
-    // Perform type conversion
-    arguments[i] = appendTypeConversion(arguments[i], 
-                                        *givenTypes[i], *targetTypes[i]);
-    switch (types[i]->category()) {
-      case Type::Category::Bool:
-      case Type::Category::Integer: {
-        // width of given type, in bits, or 0 arbitrary precision
-        bigint bitwidth = types[i] -> getFixedBitwidth();
-        if (bitwidth != 0) { // Fixed-precision 
-          // width of given type, in bytes
-          bigint size = (bitwidth + 7) / 8;
-          // codegen
-          iele::IeleInstruction::CreateAssign(
-            ArgValue, arguments[i], CompilingBlock);    
-          iele::IeleInstruction::CreateAssign(
-            ArgTypeSize, 
-            iele::IeleIntConstant::Create(&Context, size), 
-            CompilingBlock);    
-          iele::IeleInstruction::CreateStore1(
-            ArgValue, NextFree, CrntPos, 
-            ArgTypeSize, CompilingBlock);
-          iele::IeleInstruction::CreateBinOp(
-            iele::IeleInstruction::Add, CrntPos, CrntPos, 
-            ArgTypeSize, CompilingBlock);
-        }
-        else { // Arbitrary precision
-          bigint argLenWidth = bigint(32); // Store length using 32 bytes 
-          iele::IeleInstruction::CreateAssign(
-            ArgValue, arguments[i], CompilingBlock);    
-          // Calculate width in bytes of argument:
-          // width_bytes(n) = ((log2(n) + 1) + 7) / 8
-          //                = (log2(n) + 8) / 8
-          iele::IeleInstruction::CreateLog2(ArgLen, ArgValue, CompilingBlock); 
-          iele::IeleInstruction::CreateBinOp(
-            iele::IeleInstruction::Add, ArgLen, 
-            ArgLen,
-            iele::IeleIntConstant::getOne(&Context), 
-            CompilingBlock);
-          iele::IeleInstruction::CreateBinOp(
-            iele::IeleInstruction::Add, ArgLen, 
-            ArgLen,
-            iele::IeleIntConstant::Create(&Context, bigint(7)), 
-            CompilingBlock);
-          iele::IeleInstruction::CreateBinOp(
-            iele::IeleInstruction::Div, ArgLen, 
-            ArgLen,
-            iele::IeleIntConstant::Create(&Context, bigint(8)), 
-            CompilingBlock);
-          iele::IeleInstruction::CreateAssign(
-            ArgTypeSize, iele::IeleIntConstant::Create(&Context, argLenWidth), 
-            CompilingBlock);    
-          iele::IeleInstruction::CreateStore1(
-            ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
-          iele::IeleInstruction::CreateBinOp(
-            iele::IeleInstruction::Add, CrntPos, CrntPos, 
-            ArgTypeSize, CompilingBlock);
-          iele::IeleInstruction::CreateStore1(
-            ArgValue, NextFree, CrntPos, ArgLen, CompilingBlock);
-          iele::IeleInstruction::CreateBinOp(
-            iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
-        }
-        break;
-      }
-      case Type::Category::Array:
-      case Type::Category::Struct:
-      case Type::Category::InaccessibleDynamic:
-      case Type::Category::RationalNumber:
-      case Type::Category::StringLiteral:
-      case Type::Category::FixedPoint:
-      case Type::Category::FixedBytes:
-      case Type::Category::Contract:
-      case Type::Category::Function:
-      case Type::Category::Enum:
-      case Type::Category::Tuple:
-      case Type::Category::Mapping:
-      case Type::Category::TypeType:
-      case Type::Category::Modifier:
-      case Type::Category::Magic:
-      case Type::Category::Module: {
-          solAssert(false, 
-                    "IeleCompiler: encoding of given type not implemented yet");
-      }
-    }
+    doEncode(NextFree, CrntPos, arguments[i], ArgTypeSize, ArgLen, types[i]);
   }
 }
+
+void IeleCompiler::doEncode(
+    iele::IeleValue *NextFree,
+    iele::IeleLocalVariable *CrntPos, iele::IeleValue *ArgValue, 
+    iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
+    TypePointer type) {
+  switch (type->category()) {
+  case Type::Category::Contract:
+  case Type::Category::FixedBytes:
+  case Type::Category::Enum:
+  case Type::Category::Bool:
+  case Type::Category::Integer: {
+    // width of given type, in bits, or 0 arbitrary precision
+    bigint bitwidth = type->getFixedBitwidth();
+    if (bitwidth != 0) { // Fixed-precision 
+      // width of given type, in bytes
+      bigint size = (bitwidth + 7) / 8;
+      // codegen
+      iele::IeleInstruction::CreateAssign(
+        ArgTypeSize, 
+        iele::IeleIntConstant::Create(&Context, size), 
+        CompilingBlock);    
+      iele::IeleInstruction::CreateStore1(
+        ArgValue, NextFree, CrntPos, 
+        ArgTypeSize, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, CrntPos, CrntPos, 
+        ArgTypeSize, CompilingBlock);
+    }
+    else { // Arbitrary precision
+      bigint argLenWidth = bigint(8); // Store length using 8 bytes 
+      // Calculate width in bytes of argument:
+      // width_bytes(n) = ((log2(n) + 1) + 7) / 8
+      //                = (log2(n) + 8) / 8
+      appendByteWidth(ArgLen, ArgValue);
+      iele::IeleInstruction::CreateAssign(
+        ArgTypeSize, iele::IeleIntConstant::Create(&Context, argLenWidth), 
+        CompilingBlock);    
+      iele::IeleInstruction::CreateStore1(
+        ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, CrntPos, CrntPos, 
+        ArgTypeSize, CompilingBlock);
+      iele::IeleInstruction::CreateStore1(
+        ArgValue, NextFree, CrntPos, ArgLen, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
+    }
+    break;
+  }
+  case Type::Category::Mapping:
+    // we do not actually encode mappings
+    break;
+  case Type::Category::Array: {
+    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(*type);
+    TypePointer elementType = arrayType.baseType();
+    if (arrayType.isByteArray()) {
+      solAssert(false, "not implemented yet: bytes and string");
+    } else {
+      iele::IeleLocalVariable *ArrayLen =
+        iele::IeleLocalVariable::Create(&Context, "array.length", CompilingFunction);
+      iele::IeleLocalVariable *Element =
+        iele::IeleLocalVariable::Create(&Context, "array.element", CompilingFunction);
+      if (arrayType.isDynamicallySized()) {
+        arrayType.location() == DataLocation::Storage ?
+          iele::IeleInstruction::CreateSLoad(
+            ArrayLen, ArgValue,
+            CompilingBlock) :
+          iele::IeleInstruction::CreateLoad(
+            ArrayLen, ArgValue,
+            CompilingBlock) ;
+        appendByteWidth(ArgLen, ArrayLen);
+        iele::IeleInstruction::CreateAssign(
+          ArgTypeSize, iele::IeleIntConstant::getOne(&Context), 
+          CompilingBlock);    
+        iele::IeleInstruction::CreateStore1(
+          ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, CrntPos, CrntPos, 
+          ArgTypeSize, CompilingBlock);
+        iele::IeleInstruction::CreateStore1(
+          ArrayLen, NextFree, CrntPos, ArgLen, CompilingBlock);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add,
+          Element, ArgValue, 
+          iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+      } else {
+        iele::IeleInstruction::CreateAssign(
+          ArrayLen,
+          iele::IeleIntConstant::Create(&Context, arrayType.length()),
+          CompilingBlock);
+        iele::IeleInstruction::CreateAssign(
+          Element, ArgValue, CompilingBlock);
+      }
+
+      iele::IeleBlock *LoopBodyBlock =
+        iele::IeleBlock::Create(&Context, "encode.loop", CompilingFunction);
+      CompilingBlock = LoopBodyBlock;
+  
+      iele::IeleBlock *LoopExitBlock =
+        iele::IeleBlock::Create(&Context, "encode.loop.end");
+  
+      iele::IeleLocalVariable *DoneValue =
+        iele::IeleLocalVariable::Create(&Context, "done", CompilingFunction);
+      iele::IeleInstruction::CreateIsZero(
+        DoneValue, ArrayLen, CompilingBlock);
+      connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
+  
+      bigint elementSize;
+      switch (arrayType.location()) {
+      case DataLocation::Storage: {
+        elementSize = elementType->storageSize();
+        break;
+      }
+      case DataLocation::Memory: {
+        elementSize = elementType->memorySize();
+        break;
+      }
+      case DataLocation::CallData:
+        solAssert(false, "not supported by IELE.");
+      }
+  
+      iele::IeleLocalVariable *LoadedValue;
+      if ((elementType->isDynamicallySized() && arrayType.location() == DataLocation::Memory)
+          || elementType->isValueType()) {
+        LoadedValue = iele::IeleLocalVariable::Create(&Context, "array.dereferenced", CompilingFunction);
+        iele::IeleInstruction::CreateLoad(LoadedValue, Element, CompilingBlock);
+      } else {
+        LoadedValue = Element;
+      }
+
+      doEncode(NextFree, CrntPos, LoadedValue, ArgTypeSize, ArgLen, elementType);
+  
+      iele::IeleValue *ElementSizeValue =
+          iele::IeleIntConstant::Create(&Context, elementSize);
+  
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, Element, Element,
+          ElementSizeValue,
+          CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Sub, ArrayLen, ArrayLen,
+          iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+  
+      connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
+      LoopExitBlock->insertInto(CompilingFunction);
+      CompilingBlock = LoopExitBlock;
+    }
+    break;
+  }
+  case Type::Category::Struct: {
+    const StructType &structType = dynamic_cast<const StructType &>(*type);
+    for (auto decl : structType.structDefinition().members()) {
+      // First compute the offset from the start of the struct.
+      bigint offset;
+      switch (structType.location()) {
+      case DataLocation::Storage: {
+        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
+        offset = offsets.first;
+        break;
+      }
+      case DataLocation::Memory: {
+        offset = structType.memoryOffsetOfMember(decl->name());
+        break;
+      case DataLocation::CallData: 
+        solAssert(false, "Call data not supported in IELE");
+      }
+      }
+
+      iele::IeleLocalVariable *Member =
+        iele::IeleLocalVariable::Create(&Context, "encode.address", CompilingFunction);
+      iele::IeleValue *OffsetValue =
+        iele::IeleIntConstant::Create(&Context, offset);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, Member, ArgValue, OffsetValue,
+        CompilingBlock);
+
+      doEncode(NextFree, CrntPos, Member, ArgTypeSize, ArgLen, decl->type());
+    }
+    break;
+  }
+  case Type::Category::Function:
+      solAssert(false, 
+                "IeleCompiler: encoding of given type not implemented yet");
+  default:
+      solAssert(false, "IeleCompiler: invalid type for encoding");
+  }
+}
+
+iele::IeleValue *IeleCompiler::decoding(iele::IeleValue *encoded, TypePointer type) {
+  if (type->isValueType() || type->category() == Type::Category::Mapping) {
+    return encoded;
+  }
+
+  // Allocate cell 
+  iele::IeleLocalVariable *LastUsed =
+      iele::IeleLocalVariable::Create(&Context, "last.used", CompilingFunction);
+  iele::IeleLocalVariable *NextFree =
+      iele::IeleLocalVariable::Create(&Context, "next.free", CompilingFunction);
+  iele::IeleInstruction::CreateLoad(
+    LastUsed, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  iele::IeleInstruction::CreateBinOp(
+    iele::IeleInstruction::Add, NextFree, LastUsed, 
+    iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+
+  // update cell 0 
+  iele::IeleInstruction::CreateStore(
+    NextFree, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+
+  iele::IeleInstruction::CreateStore(
+    encoded, NextFree, CompilingBlock);
+
+  iele::IeleLocalVariable *CrntPos = 
+    iele::IeleLocalVariable::Create(&Context, "crnt.pos", CompilingFunction);
+  iele::IeleLocalVariable *ArgTypeSize = 
+    iele::IeleLocalVariable::Create(&Context, "arg.type.size", 
+                                    CompilingFunction);
+  iele::IeleLocalVariable *ArgLen = 
+    iele::IeleLocalVariable::Create(&Context, "arg.len", CompilingFunction);
+  iele::IeleInstruction::CreateAssign(
+    CrntPos, iele::IeleIntConstant::getZero(&Context), CompilingBlock);    
+  return doDecode(NextFree, CrntPos, nullptr, ArgTypeSize, ArgLen, type, true);
+}
+
+iele::IeleValue *IeleCompiler::doDecode(
+    iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
+    iele::IeleValue *StoreAt,
+    iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
+    TypePointer type, bool Allocate) {
+  iele::IeleValue *AllocedValue;
+  switch(type->category()) {
+  case Type::Category::Contract:
+  case Type::Category::FixedBytes:
+  case Type::Category::Enum:
+  case Type::Category::Bool:
+  case Type::Category::Integer: {
+    AllocedValue = iele::IeleLocalVariable::Create(&Context, "loaded.value", CompilingFunction);
+    // width of given type, in bits, or 0 arbitrary precision
+    bigint bitwidth = type->getFixedBitwidth();
+    if (bitwidth != 0) { // Fixed-precision 
+      // width of given type, in bytes
+      bigint size = (bitwidth + 7) / 8;
+      // codegen
+      iele::IeleInstruction::CreateAssign(
+        ArgTypeSize, 
+        iele::IeleIntConstant::Create(&Context, size), 
+        CompilingBlock);
+      iele::IeleInstruction::CreateLoad1(
+        llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), NextFree, CrntPos, 
+        ArgTypeSize, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, CrntPos, CrntPos, 
+        ArgTypeSize, CompilingBlock);
+     
+    }
+    else { // Arbitrary precision
+      bigint argLenWidth = bigint(8); // Store length using 8 bytes 
+      iele::IeleInstruction::CreateAssign(
+        ArgTypeSize, iele::IeleIntConstant::Create(&Context, argLenWidth), 
+        CompilingBlock);    
+      iele::IeleInstruction::CreateLoad1(
+        ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, CrntPos, CrntPos, 
+        ArgTypeSize, CompilingBlock);
+      iele::IeleInstruction::CreateLoad1(
+        llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), NextFree, CrntPos, ArgLen, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
+    }
+    break;
+  }
+  case Type::Category::Mapping:
+    // we do not actually encode mappings
+    break;
+  case Type::Category::Array: {
+    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(*type);
+    TypePointer elementType = arrayType.baseType();
+    if (arrayType.isByteArray()) {
+      solAssert(false, "not implemented yet: bytes and string");
+    } else {
+      iele::IeleLocalVariable *ArrayLen =
+        iele::IeleLocalVariable::Create(&Context, "array.length", CompilingFunction);
+      iele::IeleLocalVariable *Element =
+        iele::IeleLocalVariable::Create(&Context, "array.element", CompilingFunction);
+      if (arrayType.isDynamicallySized()) {
+        iele::IeleInstruction::CreateAssign(
+          ArgTypeSize, iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+        iele::IeleInstruction::CreateLoad1(
+          ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, CrntPos, CrntPos, ArgTypeSize,
+          CompilingBlock);
+        iele::IeleInstruction::CreateLoad1(
+          ArrayLen, NextFree, CrntPos, ArgLen, CompilingBlock);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
+  
+        AllocedValue = appendArrayAllocation(arrayType, ArrayLen);
+  
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add,
+          Element, AllocedValue, 
+          iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+      } else {
+        if (Allocate) {
+          AllocedValue = appendArrayAllocation(arrayType);
+        } else {
+          AllocedValue = StoreAt;
+        }
+        iele::IeleInstruction::CreateAssign(
+          ArrayLen,
+          iele::IeleIntConstant::Create(&Context, arrayType.length()),
+          CompilingBlock);
+        iele::IeleInstruction::CreateAssign(
+          Element, AllocedValue, CompilingBlock);
+      }
+
+      iele::IeleBlock *LoopBodyBlock =
+        iele::IeleBlock::Create(&Context, "decode.loop", CompilingFunction);
+      CompilingBlock = LoopBodyBlock;
+  
+      iele::IeleBlock *LoopExitBlock =
+        iele::IeleBlock::Create(&Context, "decode.loop.end");
+  
+      iele::IeleLocalVariable *DoneValue =
+        iele::IeleLocalVariable::Create(&Context, "done", CompilingFunction);
+      iele::IeleInstruction::CreateIsZero(
+        DoneValue, ArrayLen, CompilingBlock);
+      connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
+  
+      bigint elementSize;
+      switch (arrayType.location()) {
+      case DataLocation::Storage: {
+        elementSize = elementType->storageSize();
+        break;
+      }
+      case DataLocation::Memory: {
+        elementSize = elementType->memorySize();
+        break;
+      }
+      case DataLocation::CallData:
+        solAssert(false, "not supported by IELE.");
+      }
+  
+      doDecode(NextFree, CrntPos, Element, ArgTypeSize, ArgLen, elementType, false);
+  
+      iele::IeleValue *ElementSizeValue =
+          iele::IeleIntConstant::Create(&Context, elementSize);
+  
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, Element, Element,
+          ElementSizeValue,
+          CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Sub, ArrayLen, ArrayLen,
+          iele::IeleIntConstant::getOne(&Context),
+          CompilingBlock);
+  
+      connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
+      LoopExitBlock->insertInto(CompilingFunction);
+      CompilingBlock = LoopExitBlock;
+    }
+    break;
+  }
+  case Type::Category::Struct: {
+    const StructType &structType = dynamic_cast<const StructType &>(*type);
+    if (Allocate) {
+      AllocedValue = appendStructAllocation(structType);
+    } else {
+      AllocedValue = StoreAt;
+    }
+
+    for (auto decl : structType.structDefinition().members()) {
+      // First compute the offset from the start of the struct.
+      bigint offset;
+      switch (structType.location()) {
+      case DataLocation::Storage: {
+        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
+        offset = offsets.first;
+        break;
+      }
+      case DataLocation::Memory: {
+        offset = structType.memoryOffsetOfMember(decl->name());
+        break;
+      case DataLocation::CallData: 
+        solAssert(false, "Call data not supported in IELE");
+      }
+      }
+
+      iele::IeleLocalVariable *Member =
+        iele::IeleLocalVariable::Create(&Context, "encode.address", CompilingFunction);
+      iele::IeleValue *OffsetValue =
+        iele::IeleIntConstant::Create(&Context, offset);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, Member, AllocedValue, OffsetValue,
+        CompilingBlock);
+
+      doDecode(NextFree, CrntPos, Member, ArgTypeSize, ArgLen, decl->type(), false);
+    }
+    break;
+  }
+  default: 
+    solAssert(false, "invalid reference type");
+    break;
+  }
+  if (StoreAt != nullptr && (type->isValueType() || (type->isDynamicallySized() && type->dataStoredIn(DataLocation::Memory)))) {
+    iele::IeleInstruction::CreateStore(
+      AllocedValue, StoreAt, CompilingBlock);
+  }
+  return AllocedValue;
+}
+ 
 
 bool IeleCompiler::visit(const FunctionCall &functionCall) {
   // Not supported yet cases.

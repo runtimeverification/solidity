@@ -274,14 +274,29 @@ private:
   
   // Encoding functionality
   iele::IeleValue *encoding(
-    llvm::SmallVector<iele::IeleValue *, 4> arguments, 
-    TypePointers argTypes,
-	  TypePointers paramTypes);
+    iele::IeleValue *argument, 
+    TypePointer type);
   void encoding(
-    llvm::SmallVector<iele::IeleValue *, 4> arguments, 
-    TypePointers argTypes,
-    TypePointers paramTypes,
+    llvm::SmallVectorImpl<iele::IeleValue *> &arguments, 
+    TypePointers types,
     iele::IeleLocalVariable *NextFree);
+
+  iele::IeleValue *decoding(
+    iele::IeleValue *encoded,
+    TypePointer type);
+
+  void doEncode(
+    iele::IeleValue *NextFree,
+    iele::IeleLocalVariable *CrntPos, iele::IeleValue *ArgValue,
+    iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
+    TypePointer type);
+  iele::IeleValue *doDecode(
+    iele::IeleValue *NextFree,
+    iele::IeleLocalVariable *CrntPos, iele::IeleValue *StoreAt,
+    iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
+    TypePointer type, bool Allocate);
+
+  void appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value);
 };
 
 } // end namespace solidity
