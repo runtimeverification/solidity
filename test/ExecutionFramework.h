@@ -41,6 +41,8 @@ namespace test
 	/// @NOTE This is not endian-specific; it's just a bunch of bytes.
 	using Address = h160;
 
+        using s72 = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<72, 72, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void>>;
+	using u72 = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<72, 72, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>>;
 	// The various denominations; here for ease of use where needed within code.
 	static const u256 wei = 1;
 	static const u256 shannon = u256("1000000000");
@@ -158,6 +160,15 @@ public:
 		}
 	}
 
+	static inline u72 s2u(s72 _u)
+	{
+		static const bigint c_end = bigint(1) << 72;
+	    if (_u >= 0)
+			return u72(_u);
+	    else
+			return u72(c_end + _u);
+	}
+
 	static std::pair<bool, std::string> compareAndCreateMessage(std::vector<bytes> const& _result, std::vector<bytes> const& _expectation);
 
 	static bytes encode(bool _value) { return encode(byte(_value)); }
@@ -170,6 +181,7 @@ public:
 	static bytes encode(byte _value) { return toBigEndian(_value); }
 	static bytes encode(u160 const& _value) { return encode(bigint(_value)); }
 	static bytes encodeLog(u160 const& _value) { return encode(dev::toBigEndian(_value)); }
+	static bytes encodeLog(s72 const& _value) { bytes encoded(9); dev::toBigEndian(s2u(_value), encoded); return encoded; }
 	static bytes encode(u256 const& _value) { return encode(bigint(_value)); }
 	static bytes encodeLog(u256 const& _value) { return encode(dev::toBigEndian(_value)); }
         static bytes encode(bigint const& _value) { return toBigEndian(_value); }
