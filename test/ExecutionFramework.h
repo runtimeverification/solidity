@@ -121,7 +121,7 @@ public:
 		for (bytes const& val : cppResult) {
 			message += toHex(val) + " ";
 		}
-		message += "]\nActual: [ ";
+		message += "]\nActual:   [ ";
 		for (bytes const& val : contractResult) {
 			message += toHex(val) + " ";
 		}
@@ -144,7 +144,7 @@ public:
 			for (bytes const& val : cppResult) {
 				message += toHex(val) + " ";
 			}
-			message += "]\nActual: [ ";
+			message += "]\nActual:   [ ";
 			for (bytes const& val : contractResult) {
 				message += toHex(val) + " ";
 			}
