@@ -4012,7 +4012,7 @@ BOOST_AUTO_TEST_CASE(struct_copy)
 	ABI_CHECK(callContractFunction("retrieve(uint256)", 8), encodeArgs(0, 0, 0, 0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_containing_bytes_copy_and_delete, 4)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_containing_bytes_copy_and_delete, 1)
 BOOST_AUTO_TEST_CASE(struct_containing_bytes_copy_and_delete)
 {
 	char const* sourceCode = R"(
@@ -5957,7 +5957,7 @@ BOOST_AUTO_TEST_CASE(reusing_memory)
 	BOOST_REQUIRE(callContractFunction("f(uint256)", 0x34) == encodeArgs(dev::keccak256(dev::toBigEndian(u256(0x34)))));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_string, 3)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_string, 1)
 BOOST_AUTO_TEST_CASE(return_string)
 {
 	char const* sourceCode = R"(

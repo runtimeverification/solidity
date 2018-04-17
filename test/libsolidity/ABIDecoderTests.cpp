@@ -489,7 +489,7 @@ BOOST_AUTO_TEST_CASE(short_dynamic_input_array)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_bytes, 4)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_bytes, 1)
 BOOST_AUTO_TEST_CASE(short_input_bytes)
 {
 	string sourceCode = R"(
