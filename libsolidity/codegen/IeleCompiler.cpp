@@ -3863,9 +3863,13 @@ void IeleCompiler::appendLocalVariableInitialization(
   TypePointer type = localVariable->annotation().type;
   if (type->category() == Type::Category::Array) {
     const ArrayType &arrayType = dynamic_cast<const ArrayType &>(*type);
-    if (arrayType.dataStoredIn(DataLocation::Memory) &&
-        !arrayType.isDynamicallySized())
-      InitValue = appendArrayAllocation(arrayType);
+    if (arrayType.dataStoredIn(DataLocation::Memory)) {
+      if (arrayType.isDynamicallySized()) {
+        InitValue = appendArrayAllocation(arrayType, iele::IeleIntConstant::getZero(&Context));
+      } else {
+        InitValue = appendArrayAllocation(arrayType);
+      }
+    }
   } else if (type->category() == Type::Category::Struct) {
     const StructType &structType = dynamic_cast<const StructType &>(*type);
     if (structType.dataStoredIn(DataLocation::Memory))
