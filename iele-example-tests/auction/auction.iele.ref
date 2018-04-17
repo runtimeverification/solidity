@@ -136,10 +136,10 @@ entry:
   %highestBidder.val = sload @"highestBidder"
   %_2 = %highestBidder.val
   br return
- 
+
 return:
   ret %_2
-  
+
 throw:
   revert -1
 
