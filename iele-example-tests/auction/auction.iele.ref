@@ -68,6 +68,8 @@ entry:
   %timestamp = call @iele.timestamp()
   %tmp = add %timestamp, %_biddingTime_1
   sstore %tmp, @"auctionEnd"
+
+return:
   ret void
 
 throw:
@@ -101,6 +103,8 @@ if.end:
   sstore %caller, @"highestBidder"
   %callvalue8 = call @iele.callvalue()
   sstore %callvalue8, @"highestBid"
+
+return:
   ret void
 
 throw:
@@ -135,6 +139,7 @@ entry:
  
  return:
   ret %_2
+  
 throw:
   revert -1
 
