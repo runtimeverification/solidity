@@ -130,8 +130,11 @@ entry:
   %status = call @"deposit" at %beneficiary.val () send %highestBid.val, gaslimit %gas
   br %status, throw.status
   %highestBidder.val = sload @"highestBidder"
-  ret %highestBidder.val
-
+  %_2 = %highestBidder.val
+  br return
+ 
+ return:
+  ret %_2
 throw:
   revert -1
 
