@@ -984,7 +984,6 @@ BOOST_AUTO_TEST_CASE(compound_assign)
 	testContractAgainstCpp("f(uint256,uint256)", f, u256(7), u256(48));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(simple_mapping, 1)
 BOOST_AUTO_TEST_CASE(simple_mapping)
 {
 	char const* sourceCode = R"(
@@ -1017,7 +1016,6 @@ BOOST_AUTO_TEST_CASE(simple_mapping)
 	ABI_CHECK(callContractFunction("get(uint8)", byte(0xa7)), encodeArgs(byte(0x00)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(mapping_state, 1)
 BOOST_AUTO_TEST_CASE(mapping_state)
 {
 	char const* sourceCode = R"(
@@ -1129,7 +1127,6 @@ BOOST_AUTO_TEST_CASE(mapping_state_inc_dec)
 	testContractAgainstCppOnRange("f(uint256)", f, 0, 5);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(multi_level_mapping, 1)
 BOOST_AUTO_TEST_CASE(multi_level_mapping)
 {
 	char const* sourceCode = R"(
@@ -1230,7 +1227,6 @@ BOOST_AUTO_TEST_CASE(struct_reference)
 	ABI_CHECK(callContractFunction("check()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(deleteStruct, 1)
 BOOST_AUTO_TEST_CASE(deleteStruct)
 {
 	char const* sourceCode = R"(
@@ -1322,7 +1318,6 @@ BOOST_AUTO_TEST_CASE(deleteLocals)
 	ABI_CHECK(callContractFunction("delLocal()"), encodeArgs(6, 7));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(constructor, 1)
 BOOST_AUTO_TEST_CASE(constructor)
 {
 	char const* sourceCode = R"(
@@ -1361,7 +1356,7 @@ BOOST_AUTO_TEST_CASE(simple_accessor)
 	ABI_CHECK(callContractFunction("data()"), encodeArgs(8));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_accessor, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_accessor, 5)
 BOOST_AUTO_TEST_CASE(array_accessor)
 {
 	char const* sourceCode = R"(
@@ -1396,7 +1391,7 @@ BOOST_AUTO_TEST_CASE(array_accessor)
 	ABI_CHECK(callContractFunction("multiple_map(uint256,uint256,uint256)", 2, 1, 2), encodeArgs(3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(accessors_mapping_for_array, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(accessors_mapping_for_array, 2)
 BOOST_AUTO_TEST_CASE(accessors_mapping_for_array)
 {
 	char const* sourceCode = R"(
@@ -1444,7 +1439,7 @@ BOOST_AUTO_TEST_CASE(multiple_elementary_accessors)
 	ABI_CHECK(callContractFunction("super_secret_data()"), vector<bytes>());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(complex_accessors, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(complex_accessors, 4)
 BOOST_AUTO_TEST_CASE(complex_accessors)
 {
 	char const* sourceCode = R"(
@@ -5021,7 +5016,6 @@ BOOST_AUTO_TEST_CASE(array_copy_nested_array)
 	)), encodeArgs(10));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(array_copy_including_mapping, 1)
 BOOST_AUTO_TEST_CASE(array_copy_including_mapping)
 {
 	char const* sourceCode = R"(
@@ -5778,7 +5772,6 @@ BOOST_AUTO_TEST_CASE(struct_delete_member)
 	ABI_CHECK(callContractFunction("deleteMember()"), encodeArgs(0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_delete_struct_in_mapping, 1)
 BOOST_AUTO_TEST_CASE(struct_delete_struct_in_mapping)
 {
 	char const* sourceCode = R"(
@@ -6445,7 +6438,7 @@ BOOST_AUTO_TEST_CASE(storage_array_ref)
 	ABI_CHECK(callContractFunction("find(uint256)", u256(400)), encodeArgs(u256(-1)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_types_initialisation, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_types_initialisation, 4)
 BOOST_AUTO_TEST_CASE(memory_types_initialisation)
 {
 	char const* sourceCode = R"(
@@ -6792,7 +6785,6 @@ BOOST_AUTO_TEST_CASE(initialise_string_constant)
 	ABI_CHECK(callContractFunction("short()"), encodeDyn(shortStr));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_structs_with_mappings, 1)
 BOOST_AUTO_TEST_CASE(memory_structs_with_mappings)
 {
 	char const* sourceCode = R"(
