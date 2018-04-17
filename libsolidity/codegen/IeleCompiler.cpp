@@ -517,11 +517,11 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     appendLocalVariableInitialization(
       llvm::cast<iele::IeleLocalVariable>(Local), local);
   }
-  for (const ASTPointer<const VariableDeclaration> &ret : function.returnParameters()) {
-    if (ret->name() == "")
-      continue;
+  for (unsigned i = 0; i < function.returnParameters().size(); i++) {
+    const ASTPointer<const VariableDeclaration> &ret = function.returnParameters()[i];
+    std::string name = ReturnParameterNames[i];
     iele::IeleValue *RetParam =
-      FunST->lookup(VarNameMap[NumOfModifiers][ret->name()]);
+      FunST->lookup(name);
     solAssert(RetParam, "IeleCompiler: missing return parameter");
     appendLocalVariableInitialization(
       llvm::cast<iele::IeleLocalVariable>(RetParam), &*ret);
