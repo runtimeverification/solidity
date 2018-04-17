@@ -271,6 +271,17 @@ private:
   void appendIeleRuntimeCopy(
       iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots,
       DataLocation FromLoc, DataLocation ToLoc);
+  
+  // Encoding functionality
+  iele::IeleValue *encoding(
+    llvm::SmallVector<iele::IeleValue *, 4> arguments, 
+    TypePointers argTypes,
+	  TypePointers paramTypes);
+  void encoding(
+    llvm::SmallVector<iele::IeleValue *, 4> arguments, 
+    TypePointers argTypes,
+    TypePointers paramTypes,
+    iele::IeleLocalVariable *NextFree);
 };
 
 } // end namespace solidity
