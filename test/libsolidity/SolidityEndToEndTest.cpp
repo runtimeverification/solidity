@@ -8808,7 +8808,6 @@ BOOST_AUTO_TEST_CASE(create_dynamic_array_with_zero_length)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_does_not_skip_modifier, 1)
 BOOST_AUTO_TEST_CASE(return_does_not_skip_modifier)
 {
 	char const* sourceCode = R"(
