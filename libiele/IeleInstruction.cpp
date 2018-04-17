@@ -104,7 +104,9 @@ IeleInstruction *IeleInstruction::CreateLog(
 IeleInstruction *IeleInstruction::CreateRet(
     llvm::SmallVectorImpl<IeleValue *> &ReturnValues,
     IeleInstruction *InsertBefore) {
-  solAssert(ReturnValues.size() > 0, "CreateRet: Invalid operands");
+  if (ReturnValues.size() == 0) {
+    return CreateRetVoid(InsertBefore);
+  }
 
   IeleInstruction *RetInst = new IeleInstruction(Ret, InsertBefore);
   RetInst->getIeleOperandList().insert(RetInst->end(), ReturnValues.begin(), 
@@ -115,7 +117,9 @@ IeleInstruction *IeleInstruction::CreateRet(
 
 IeleInstruction *IeleInstruction::CreateRet(
     llvm::SmallVectorImpl<IeleValue *> &ReturnValues, IeleBlock *InsertAtEnd) {
-  solAssert(ReturnValues.size() > 0, "CreateRet: Invalid operands");
+  if (ReturnValues.size() == 0) {
+    return CreateRetVoid(InsertAtEnd);
+  }
 
   IeleInstruction *RetInst = new IeleInstruction(Ret, InsertAtEnd);
   RetInst->getIeleOperandList().insert(RetInst->end(), ReturnValues.begin(),
