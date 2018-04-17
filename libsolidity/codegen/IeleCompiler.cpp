@@ -122,6 +122,37 @@ const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &
   return resolveVirtualFunction(function, it);
 }
 
+bool hasTwoFunctions(const FunctionType &function, bool isConstructor, bool isLibrary) {
+  if (isConstructor || isLibrary) {
+    return false;
+  }
+  if (function.declaration().visibility() != Declaration::Visibility::Public) {
+    return false;
+  }
+  for (TypePointer type : function.parameterTypes()) {
+    if (!type->isValueType()) {
+      return true;
+    }
+  }
+  for (TypePointer type : function.returnParameterTypes()) {
+    if (!type->isValueType()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+iele::IeleGlobalValue *IeleCompiler::convertFunctionToInternal(iele::IeleGlobalValue *Callee) {
+  if (iele::IeleFunction *function = llvm::dyn_cast<iele::IeleFunction>(Callee)) {
+    iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
+    solAssert(ST,
+              "IeleCompiler: failed to access compiling contract's symbol table.");
+    std::string name = function->getName();
+    return llvm::dyn_cast<iele::IeleGlobalValue>(ST->lookup(name + ".internal"));
+  }
+  solAssert(false, "not implemented yet: function pointers");
+}
+
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
     const std::map<const ContractDefinition *, iele::IeleContract *> &contracts) {
@@ -182,6 +213,10 @@ void IeleCompiler::compileContract(
       std::string FunctionName = getIeleNameForFunction(*function);
       iele::IeleFunction::Create(&Context, function->isPublic(),
                                  FunctionName, CompilingContract);
+      // here we don't call isPublic because we want to exclude external functions
+      if (hasTwoFunctions(FunctionType(*function), false, false)) {
+        iele::IeleFunction::Create(&Context, false, FunctionName + ".internal", CompilingContract);
+      }
     }
     most_derived = false;
   }
@@ -335,11 +370,65 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
   solAssert(ST,
             "IeleCompiler: failed to access compiling contract's symbol table.");
+  CompilingFunctionASTNode = &function;
+
+  if (hasTwoFunctions(FunctionType(function), function.isConstructor(), contractFor(&function)->isLibrary())) {
+    CompilingFunction = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(name));
+    solAssert(CompilingFunction,
+              "IeleCompiler: failed to find function in compiling contract's"
+              " symbol table");
+    name = name + ".internal";
+    llvm::SmallVector<iele::IeleArgument *, 4> parameters;
+    llvm::SmallVector<iele::IeleValue *, 4> paramValues;
+    // Visit formal arguments.
+    for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
+      std::string genName = arg->name() + getNextVarSuffix();
+      auto param = iele::IeleArgument::Create(&Context, genName, CompilingFunction);
+      parameters.push_back(param);
+      paramValues.push_back(param);
+    }
+    llvm::SmallVector<iele::IeleLocalVariable *, 4> ReturnParameters;
+    llvm::SmallVector<iele::IeleValue *, 4> ReturnParameterValues;
+ 
+    // Visit formal return parameters.
+    for (const ASTPointer<const VariableDeclaration> &ret : function.returnParameters()) {
+      std::string genName = ret->name() + getNextVarSuffix();
+      auto param = iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
+      ReturnParameters.push_back(param);
+    }
+  
+    // Create the entry block.
+    CompilingBlock =
+      iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
+ 
+    for (unsigned i = 0; i < function.parameters().size(); i++) {
+      const auto &arg = *function.parameters()[i];
+      iele::IeleArgument *ieleArg = parameters[i];
+      const auto &argType = arg.type();
+      if (argType->isValueType()) {
+        appendRangeCheck(ieleArg, *argType);
+      } else {
+        iele::IeleInstruction::CreateAssign(
+          ieleArg, decoding(ieleArg, argType),
+          CompilingBlock);
+      }
+    }
+    iele::IeleFunction *Callee = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(name));
+    iele::IeleInstruction::CreateInternalCall(
+      ReturnParameters, Callee, paramValues, CompilingBlock);
+
+    for (unsigned i = 0; i < function.returnParameters().size(); i++) {
+      ReturnParameterValues.push_back(encoding(ReturnParameters[i], function.returnParameters()[i]->type()));
+    }
+
+    iele::IeleInstruction::CreateRet(ReturnParameterValues, CompilingBlock);
+    appendRevertBlocks();
+  }
+
   CompilingFunction = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(name));
   solAssert(CompilingFunction,
             "IeleCompiler: failed to find function in compiling contract's"
             " symbol table");
-  CompilingFunctionASTNode = &function;
   unsigned NumOfModifiers = CompilingFunctionASTNode->modifiers().size();
 
   // We store the formal argument names, which we'll use when generating in-range
@@ -396,7 +485,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     appendRevert();
   }
 
-  if (function.isPublic()) {
+  if (function.isPublic() && !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) && !contractFor(&function)->isLibrary()) {
     for (unsigned i = 0; i < function.parameters().size(); i++) {
       const auto &arg = *function.parameters()[i];
       iele::IeleArgument *ieleArg = parameters[i];
@@ -463,7 +552,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
           TypePointer paramType = ReturnParameterTypes[i];
           iele::IeleValue *param = ST->lookup(paramName);
           solAssert(param, "IeleCompiler: couldn't find parameter name in symbol table.");
-          if (function.isPublic()) {
+          if (function.isPublic() && !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) && !contractFor(&function)->isLibrary()) {
             Returns.push_back(encoding(param, paramType));
           } else {
             Returns.push_back(param);
@@ -578,7 +667,7 @@ bool IeleCompiler::visit(const Return &returnStatement) {
   for (unsigned i = 0; i < ReturnValues.size(); i++) {
     iele::IeleValue *Value = ReturnValues[i];
     TypePointer type = returnTypes[i];
-    if (CompilingFunctionASTNode->isPublic()) {
+    if (CompilingFunctionASTNode->isPublic() && !hasTwoFunctions(FunctionType(*CompilingFunctionASTNode), CompilingFunctionASTNode->isConstructor(), false) && !contractFor(CompilingFunctionASTNode)->isLibrary()) {
       EncodedReturnValues.push_back(encoding(Value, type));
     } else {
       EncodedReturnValues.push_back(Value);
@@ -2136,6 +2225,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   }
   case FunctionType::Kind::DelegateCall:
   case FunctionType::Kind::Internal: {
+    bool isDelegateCall = function.kind() == FunctionType::Kind::DelegateCall;
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
     llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
@@ -2151,6 +2241,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       solAssert(CalleeValues.size() == 2, "Invalid number of results from function call expression");
       CalleeValue = llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValues[1]);
       Arguments.insert(Arguments.begin(), CalleeValues[0]);
+    }
+    if (hasTwoFunctions(function, false, isDelegateCall)) {
+      CalleeValue = convertFunctionToInternal(CalleeValue);
     }
     solAssert(CalleeValue,
               "IeleCompiler: Failed to compile callee of internal function "
