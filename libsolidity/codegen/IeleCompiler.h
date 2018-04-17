@@ -131,7 +131,7 @@ private:
   unsigned ModifierDepth;
 
   template <class ArgClass, class ReturnClass, class ExpressionClass>
-  void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function);
+  void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function, bool encode);
 
   // Infrastructure for unique variable names generation and mapping
   int NextUniqueIntToken = 0;

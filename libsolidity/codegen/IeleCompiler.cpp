@@ -2229,7 +2229,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
     llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
-    compileFunctionArguments(&Arguments, &Returns, arguments, function);
+    compileFunctionArguments(&Arguments, &Returns, arguments, function, false);
 
     // Visit callee.
     llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
@@ -2383,7 +2383,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
     llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
-    compileFunctionArguments(&Arguments, &Returns, arguments, function);
+    compileFunctionArguments(&Arguments, &Returns, arguments, function, true);
 
     llvm::SmallVector<iele::IeleValue*, 2> CalleeValues;
     compileExpressions(functionCall.expression(), CalleeValues, 2);
@@ -2421,8 +2421,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     appendRevert(StatusValue, StatusValue);
 
+    llvm::SmallVector<iele::IeleValue *, 4> DecodedReturns;
+    for (unsigned i = 0; i < Returns.size(); i++) {
+      iele::IeleLocalVariable *Return = Returns[i];
+      TypePointer type = function.returnParameterTypes()[i];
+      DecodedReturns.push_back(decoding(Return, type));
+    }
+
     CompilingExpressionResult.insert(
-        CompilingExpressionResult.end(), Returns.begin(), Returns.end());
+        CompilingExpressionResult.end(), DecodedReturns.begin(), DecodedReturns.end());
     TransferValue = nullptr;
     GasValue = nullptr;
     break;
@@ -2436,7 +2443,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     solAssert(!function.gasSet(), "Gas limit set for contract creation.");
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
     llvm::SmallVector<iele::IeleLocalVariable *, 1> Returns;
-    compileFunctionArguments(&Arguments, &Returns, arguments, function);
+    compileFunctionArguments(&Arguments, &Returns, arguments, function, true);
     solAssert(Returns.size() == 1, "New expression returns a single result.");
 
     iele::IeleValue *Callee = compileExpression(functionCall.expression());
@@ -2521,7 +2528,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
     llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
-    compileFunctionArguments(&Arguments, &Returns, arguments, function);
+    compileFunctionArguments(&Arguments, &Returns, arguments, function, true);
 
     iele::IeleGlobalVariable *FunctionCalleeValue =
       iele::IeleGlobalVariable::Create(&Context, "iele.ecrec");
@@ -2626,7 +2633,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 }
 
 template <class ArgClass, class ReturnClass, class ExpressionClass>
-void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function) {
+void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function, bool encode) {
     for (unsigned i = 0; i < arguments.size(); ++i) {
       iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
       solAssert(ArgValue,
@@ -2636,6 +2643,9 @@ void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Re
       TypePointer ArgType = arguments[i]->annotation().type;
       TypePointer ParamType = function.parameterTypes()[i];
       ArgValue = appendTypeConversion(ArgValue, *ArgType, *ParamType);
+      if (encode) {
+        ArgValue = encoding(ArgValue, ParamType);
+      }
       Arguments->push_back(ArgValue);
     }
 
@@ -3776,7 +3786,7 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
 
         const FunctionType &function = FunctionType(*decl);
 
-        compileFunctionArguments(&Arguments, &Returns, arguments, function);
+        compileFunctionArguments(&Arguments, &Returns, arguments, function, false);
 
         solAssert(Returns.size() == 0, "Constructor doesn't return anything");
       }
