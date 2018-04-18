@@ -132,7 +132,7 @@ private:
   void appendModifierOrFunctionCode();
   unsigned ModifierDepth;
   // Maps each level of modifiers with a return target
-  std::map<unsigned, iele::IeleBlock *> ReturnBlocks;  
+  std::stack<iele::IeleBlock *> ReturnBlocks;  
   // Return parameters of the current function 
   // TODO: do we really want to have this here?
   std::vector<iele::IeleLocalVariable *> CompilingFunctionReturnParameters;
