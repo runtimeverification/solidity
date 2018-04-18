@@ -345,8 +345,8 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   // We store the formal argument names, which we'll use when generating in-range
   // checks in case of a public function.
   std::vector<iele::IeleArgument *> parameters;
-  returnParameters.clear(); // otherwise, stuff keep getting added, regardless
-                            // of which function we are in (i.e. it breaks)
+  // returnParameters.clear(); // otherwise, stuff keep getting added, regardless
+  //                           // of which function we are in (i.e. it breaks)
 
   // Visit formal arguments.
   for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
@@ -366,7 +366,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   for (const ASTPointer<const VariableDeclaration> &ret : function.returnParameters()) {
     std::string genName = ret->name() + getNextVarSuffix();
     ReturnParameterNames.push_back(genName);
-    returnParameters.push_back(iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction));
+    CompilingFunctionReturnParameters.push_back(iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction));
     // No need to keep track of the mapping for omitted return params, since
     // they will never be referenced.
     if (!(ret->name() == ""))
@@ -454,6 +454,8 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
 
   CompilingBlock = nullptr;
   CompilingFunction = nullptr;
+  CompilingFunctionReturnParameters.clear(); // otherwise, stuff keep getting added, regardless
+                            // of which function we are in (i.e. it breaks)
   return false;
 }
 
@@ -582,7 +584,7 @@ bool IeleCompiler::visit(const Return &returnStatement) {
   appendTypeConversions(ReturnValues, Values, returnExpr->annotation().type, FunctionType(*CompilingFunctionASTNode).returnParameterTypes());
   for (unsigned i = 0; i < ReturnValues.size(); ++i) {
     iele::IeleInstruction::CreateAssign(
-      returnParameters[i], ReturnValues[i], CompilingBlock);        
+      CompilingFunctionReturnParameters[i], ReturnValues[i], CompilingBlock);        
   }
   
   connectWithUnconditionalJump(CompilingBlock, ReturnBlocks[ModifierDepth]);    

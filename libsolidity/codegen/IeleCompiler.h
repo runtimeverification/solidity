@@ -135,7 +135,7 @@ private:
   std::map<unsigned, iele::IeleBlock *> ReturnBlocks;  
   // Return parameters of the current function 
   // TODO: do we really want to have this here?
-  std::vector<iele::IeleLocalVariable *> returnParameters;
+  std::vector<iele::IeleLocalVariable *> CompilingFunctionReturnParameters;
   
   template <class ArgClass, class ReturnClass, class ExpressionClass>
   void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function);
