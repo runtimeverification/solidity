@@ -2197,15 +2197,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   }
   case FunctionType::Kind::AddMod: {
     iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
-    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, SInt);
+    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, UInt);
     solAssert(Op1,
            "IeleCompiler: Failed to compile operand 1 of addmod.");
     iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
-    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, SInt);
+    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, UInt);
     solAssert(Op2,
            "IeleCompiler: Failed to compile operand 2 of addmod.");
     iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
-    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, SInt);
+    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, UInt);
     solAssert(Modulus,
            "IeleCompiler: Failed to compile modulus of addmod.");
 
@@ -2219,15 +2219,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   }
   case FunctionType::Kind::MulMod: {
     iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
-    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, SInt);
+    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, UInt);
     solAssert(Op1,
            "IeleCompiler: Failed to compile operand 1 of addmod.");
     iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
-    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, SInt);
+    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, UInt);
     solAssert(Op2,
            "IeleCompiler: Failed to compile operand 2 of addmod.");
     iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
-    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, SInt);
+    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, UInt);
     solAssert(Modulus,
            "IeleCompiler: Failed to compile modulus of addmod.");
 
