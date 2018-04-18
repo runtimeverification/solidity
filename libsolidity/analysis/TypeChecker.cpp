@@ -1774,7 +1774,7 @@ void TypeChecker::endVisit(NewExpression const& _newExpression)
 			);
 		type = ReferenceType::copyForLocationIfReference(DataLocation::Memory, type);
 		_newExpression.annotation().type = make_shared<FunctionType>(
-			TypePointers{make_shared<IntegerType>(256)},
+			TypePointers{make_shared<IntegerType>()},
 			TypePointers{type},
 			strings(),
 			strings(),
@@ -1932,7 +1932,7 @@ bool TypeChecker::visit(IndexAccess const& _access)
 		}
 		else
 		{
-			expectType(*index, IntegerType(256));
+			expectType(*index, IntegerType());
 			if (auto numberType = dynamic_cast<RationalNumberType const*>(type(*index).get()))
 			{
 				if (!numberType->isFractional()) // error is reported above
@@ -1962,12 +1962,12 @@ bool TypeChecker::visit(IndexAccess const& _access)
 			resultType = make_shared<TypeType>(make_shared<ArrayType>(DataLocation::Memory, typeType.actualType()));
 		else
 		{
-			expectType(*index, IntegerType(256));
+			expectType(*index, IntegerType());
 			if (auto length = dynamic_cast<RationalNumberType const*>(type(*index).get()))
 				resultType = make_shared<TypeType>(make_shared<ArrayType>(
 					DataLocation::Memory,
 					typeType.actualType(),
-					u256(length->literalValue(nullptr))
+					length->literalValue(nullptr)
 				));
 			else
 				m_errorReporter.fatalTypeError(index->location(), "Integer constant expected.");
@@ -1981,7 +1981,7 @@ bool TypeChecker::visit(IndexAccess const& _access)
 			m_errorReporter.typeError(_access.location(), "Index expression cannot be omitted.");
 		else
 		{
-			expectType(*index, IntegerType(256));
+			expectType(*index, IntegerType());
 			if (auto integerType = dynamic_cast<RationalNumberType const*>(type(*index).get()))
 				if (bytesType.numBytes() <= integerType->literalValue(nullptr))
 					m_errorReporter.typeError(_access.location(), "Out of bounds array access.");
