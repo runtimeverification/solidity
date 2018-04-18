@@ -214,8 +214,6 @@ void ReferencesResolver::endVisit(ArrayTypeName const& _typeName)
 		solAssert(!m_errorReporter.errors().empty(), "");
 		return;
 	}
-	if (baseType->storageBytes() == 0)
-		fatalTypeError(_typeName.baseType().location(), "Illegal base type of storage size zero for array.");
 	if (Expression const* length = _typeName.length())
 	{
 		TypePointer lengthTypeGeneric = length->annotation().type;
