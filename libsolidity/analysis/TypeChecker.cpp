@@ -1122,19 +1122,29 @@ bool TypeChecker::visit(VariableDeclarationStatement const& _statement)
 				string extension;
 				if (auto type = dynamic_cast<IntegerType const*>(var.annotation().type.get()))
 				{
-					int numBits = type->numBits();
-					bool isSigned = type->isSigned();
-					string minValue;
-					string maxValue;
-					if (isSigned)
+					if (type->isUnbound())
 					{
-						numBits--;
-						minValue = "-" + bigint(bigint(1) << numBits).str();
+						if (type->isSigned())
+							extension = ", which can hold any integer value";
+						else
+							extension = ", which can hold any non-negative integer value";
 					}
 					else
-						minValue = "0";
-					maxValue = bigint((bigint(1) << numBits) - 1).str();
-					extension = ", which can hold values between " + minValue + " and " + maxValue;
+					{
+						int numBits = type->numBits();
+						bool isSigned = type->isSigned();
+						string minValue;
+						string maxValue;
+						if (isSigned)
+						{
+							numBits--;
+							minValue = "-" + bigint(bigint(1) << numBits).str();
+						}
+						else
+							minValue = "0";
+						maxValue = bigint((bigint(1) << numBits) - 1).str();
+						extension = ", which can hold values between " + minValue + " and " + maxValue;
+					}
 				}
 				else
 					solAssert(dynamic_cast<FixedPointType const*>(var.annotation().type.get()), "Unknown type.");

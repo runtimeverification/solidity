@@ -187,9 +187,9 @@ TypePointer Type::fromElementaryTypeName(ElementaryTypeNameToken const& _type)
 	case Token::UFixedMxN:
 		return make_shared<FixedPointType>(m, n, FixedPointType::Modifier::Unsigned);
 	case Token::Int:
-		return make_shared<IntegerType>(256, IntegerType::Modifier::Signed);
+		return make_shared<IntegerType>(IntegerType::Modifier::Signed);
 	case Token::UInt:
-		return make_shared<IntegerType>(256, IntegerType::Modifier::Unsigned);
+		return make_shared<IntegerType>(IntegerType::Modifier::Unsigned);
 	case Token::Fixed:
 		return make_shared<FixedPointType>(128, 19, FixedPointType::Modifier::Signed);
 	case Token::UFixed:
@@ -318,7 +318,7 @@ bool isValidShiftAndAmountType(Token::Value _operator, Type const& _shiftAmountT
 }
 
 IntegerType::IntegerType(int _bits, IntegerType::Modifier _modifier):
-	m_bits(_bits), m_modifier(_modifier)
+	m_bits(_bits), m_unbound(false), m_modifier(_modifier)
 {
 	if (isAddress())
 		solAssert(m_bits == 160, "");
@@ -328,12 +328,18 @@ IntegerType::IntegerType(int _bits, IntegerType::Modifier _modifier):
 	);
 }
 
+IntegerType::IntegerType(IntegerType::Modifier _modifier):
+	m_bits(0), m_unbound(true), m_modifier(_modifier)
+{
+	solAssert(!isAddress(), "Unbound width is invalid for address type");
+}
+
 string IntegerType::richIdentifier() const
 {
 	if (isAddress())
 		return "t_address";
 	else
-		return "t_" + string(isSigned() ? "" : "u") + "int" + std::to_string(numBits());
+		return "t_" + string(isSigned() ? "" : "u") + "int" + (isUnbound() ? "" : std::to_string(numBits()));
 }
 
 bool IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
@@ -341,20 +347,21 @@ bool IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 	if (_convertTo.category() == category())
 	{
 		IntegerType const& convertTo = dynamic_cast<IntegerType const&>(_convertTo);
-		if (convertTo.m_bits < m_bits)
+		if (!convertTo.isUnbound() && (isUnbound() || convertTo.m_bits < m_bits))
 			return false;
 		if (isAddress())
 			return convertTo.isAddress();
 		else if (isSigned())
 			return convertTo.isSigned();
 		else
-			return !convertTo.isSigned() || convertTo.m_bits > m_bits;
+			return !convertTo.isSigned() ||
+			       convertTo.isUnbound() || convertTo.m_bits > m_bits;
 	}
 	else if (_convertTo.category() == Category::FixedPoint)
 	{
 		FixedPointType const& convertTo = dynamic_cast<FixedPointType const&>(_convertTo);
 
-		if (isAddress())
+		if (isAddress() || isUnbound())
 			return false;
 		else
 			return maxValue() <= convertTo.maxIntegerValue() && minValue() >= convertTo.minIntegerValue();
@@ -380,6 +387,9 @@ TypePointer IntegerType::unaryOperatorResult(Token::Value _operator) const
 	// no further unary operators for addresses
 	else if (isAddress())
 		return TypePointer();
+	// bitwise negation is not allowed for uint
+	else if (_operator == Token::BitNot && isUnbound() && !isSigned())
+		return TypePointer();
 	// for non-address integers, we allow +, -, ++ and --
 	else if (_operator == Token::Add || _operator == Token::Sub ||
 			_operator == Token::Inc || _operator == Token::Dec ||
@@ -394,7 +404,7 @@ bool IntegerType::operator==(Type const& _other) const
 	if (_other.category() != category())
 		return false;
 	IntegerType const& other = dynamic_cast<IntegerType const&>(_other);
-	return other.m_bits == m_bits && other.m_modifier == m_modifier;
+	return other.m_bits == m_bits && other.m_unbound == m_unbound && other.m_modifier == m_modifier;
 }
 
 string IntegerType::toString(bool) const
@@ -402,7 +412,7 @@ string IntegerType::toString(bool) const
 	if (isAddress())
 		return "address";
 	string prefix = isSigned() ? "int" : "uint";
-	return prefix + dev::toString(m_bits);
+	return prefix + (isUnbound() ? "" : dev::toString(m_bits));
 }
 
 bigint IntegerType::literalValue(Literal const* _literal) const
@@ -413,20 +423,24 @@ bigint IntegerType::literalValue(Literal const* _literal) const
 	return bigint(_literal->value());
 }
 
-bigint IntegerType::minValue() const
-{
-	if (isSigned())
-		return -(bigint(1) << (m_bits - 1));
-	else
-		return bigint(0);
+bigint IntegerType::minValue() const {
+  if (isSigned()) {
+    solAssert(!isUnbound(),
+              "IeleCompiler: requested minimum value of signed unbound "
+              "integer");
+    return -(bigint(1) << (m_bits - 1));
+  } else {
+    return bigint(0);
+  }
 }
 
-bigint IntegerType::maxValue() const
-{
-	if (isSigned())
-		return (bigint(1) << (m_bits - 1)) - 1;
-	else
-		return (bigint(1) << m_bits) - 1;
+bigint IntegerType::maxValue() const {
+    solAssert(!isUnbound(),
+              "IeleCompiler: requested maximum value of unbound integer");
+  if (isSigned())
+    return (bigint(1) << (m_bits - 1)) - 1;
+  else
+    return (bigint(1) << m_bits) - 1;
 }
 
 TypePointer IntegerType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
@@ -480,8 +494,8 @@ MemberList::MemberMap IntegerType::nativeMembers(ContractDefinition const*) cons
 			{"call", make_shared<FunctionType>(strings(), strings{"bool"}, FunctionType::Kind::BareCall, true, StateMutability::Payable)},
 			{"callcode", make_shared<FunctionType>(strings(), strings{"bool"}, FunctionType::Kind::BareCallCode, true, StateMutability::Payable)},
 			{"delegatecall", make_shared<FunctionType>(strings(), strings{"bool"}, FunctionType::Kind::BareDelegateCall, true)},
-			{"send", make_shared<FunctionType>(strings{"uint"}, strings{"bool"}, FunctionType::Kind::Send)},
-			{"transfer", make_shared<FunctionType>(strings{"uint"}, strings(), FunctionType::Kind::Transfer)}
+			{"send", make_shared<FunctionType>(strings{"uint256"}, strings{"bool"}, FunctionType::Kind::Send)},
+			{"transfer", make_shared<FunctionType>(strings{"uint256"}, strings(), FunctionType::Kind::Transfer)}
 		};
 	else
 		return MemberList::MemberMap();
@@ -747,10 +761,10 @@ bool RationalNumberType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 		int forSignBit = (targetType.isSigned() ? 1 : 0);
 		if (m_value > rational(0))
 		{
-			if (m_value.numerator() <= (u256(-1) >> (256 - targetType.numBits() + forSignBit)))
+			if (targetType.isUnbound() || m_value.numerator() <= (u256(-1) >> (256 - targetType.numBits() + forSignBit)))
 				return true;
 		}
-		else if (targetType.isSigned() && -m_value.numerator() <= (u256(1) << (targetType.numBits() - forSignBit)))
+		else if (targetType.isSigned() && (targetType.isUnbound() || -m_value.numerator() <= (u256(1) << (targetType.numBits() - forSignBit))))
 			return true;
 		return false;
 	}
@@ -1001,7 +1015,9 @@ shared_ptr<IntegerType const> RationalNumberType::integerType() const
 	if (negative) // convert to positive number of same bit requirements
 		value = ((0 - value) - 1) << 1;
 	if (value > u256(-1))
-		return shared_ptr<IntegerType const>();
+		return make_shared<IntegerType>(
+			negative ? IntegerType::Modifier::Signed : IntegerType::Modifier::Unsigned
+		);
 	else
 		return make_shared<IntegerType>(
 			max(bytesRequired(value), 1u) * 8,
@@ -1520,11 +1536,11 @@ MemberList::MemberMap ArrayType::nativeMembers(ContractDefinition const*) const
 	MemberList::MemberMap members;
 	if (!isString())
 	{
-		members.push_back({"length", make_shared<IntegerType>(256)});
+		members.push_back({"length", make_shared<IntegerType>()});
 		if (isDynamicallySized() && location() == DataLocation::Storage)
 			members.push_back({"push", make_shared<FunctionType>(
 				TypePointers{baseType()},
-				TypePointers{make_shared<IntegerType>(256)},
+				TypePointers{make_shared<IntegerType>()},
 				strings{string()},
 				strings{string()},
 				isByteArray() ? FunctionType::Kind::ByteArrayPush : FunctionType::Kind::ArrayPush
@@ -2220,7 +2236,7 @@ FunctionType::FunctionType(VariableDeclaration const& _varDecl):
 				break;
 			returnType = arrayType->baseType();
 			m_parameterNames.push_back("");
-			m_parameterTypes.push_back(make_shared<IntegerType>(256));
+			m_parameterTypes.push_back(make_shared<IntegerType>());
 		}
 		else
 			break;
@@ -2608,7 +2624,7 @@ MemberList::MemberMap FunctionType::nativeMembers(ContractDefinition const*) con
 				members.push_back(MemberList::Member(
 					"value",
 					make_shared<FunctionType>(
-						parseElementaryTypeVector({"uint"}),
+						parseElementaryTypeVector({"uint256"}),
 						TypePointers{copyAndSetGasOrValue(false, true)},
 						strings(),
 						strings(),
@@ -2625,7 +2641,7 @@ MemberList::MemberMap FunctionType::nativeMembers(ContractDefinition const*) con
 			members.push_back(MemberList::Member(
 				"gas",
 				make_shared<FunctionType>(
-					parseElementaryTypeVector({"uint"}),
+					parseElementaryTypeVector({"uint256"}),
 					TypePointers{copyAndSetGasOrValue(true, false)},
 					strings(),
 					strings(),
@@ -3105,7 +3121,7 @@ MemberList::MemberMap MagicType::nativeMembers(ContractDefinition const*) const
 		return MemberList::MemberMap({
 			{"coinbase", make_shared<IntegerType>(160, IntegerType::Modifier::Address)},
 			{"timestamp", make_shared<IntegerType>(256)},
-			{"blockhash", make_shared<FunctionType>(strings{"uint"}, strings{"bytes32"}, FunctionType::Kind::BlockHash, false, StateMutability::View)},
+			{"blockhash", make_shared<FunctionType>(strings{"uint256"}, strings{"bytes32"}, FunctionType::Kind::BlockHash, false, StateMutability::View)},
 			{"difficulty", make_shared<IntegerType>(256)},
 			{"number", make_shared<IntegerType>(256)},
 			{"gaslimit", make_shared<IntegerType>(256)}
