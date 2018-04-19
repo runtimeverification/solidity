@@ -1480,19 +1480,7 @@ iele::IeleValue *IeleCompiler::encoding(
   }
 
   // Allocate cell 
-  iele::IeleLocalVariable *LastUsed =
-      iele::IeleLocalVariable::Create(&Context, "last.used", CompilingFunction);
-  iele::IeleLocalVariable *NextFree =
-      iele::IeleLocalVariable::Create(&Context, "next.free", CompilingFunction);
-  iele::IeleInstruction::CreateLoad(
-    LastUsed, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
-  iele::IeleInstruction::CreateBinOp(
-    iele::IeleInstruction::Add, NextFree, LastUsed, 
-    iele::IeleIntConstant::getOne(&Context), CompilingBlock);
-
-  // update cell 0 
-  iele::IeleInstruction::CreateStore(
-    NextFree, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  iele::IeleLocalVariable *NextFree = appendMemorySpill();
 
   llvm::SmallVector<iele::IeleValue *, 1> arguments;
   arguments.push_back(argument);
@@ -1771,19 +1759,7 @@ iele::IeleValue *IeleCompiler::decoding(iele::IeleValue *encoded, TypePointer ty
   }
 
   // Allocate cell 
-  iele::IeleLocalVariable *LastUsed =
-      iele::IeleLocalVariable::Create(&Context, "last.used", CompilingFunction);
-  iele::IeleLocalVariable *NextFree =
-      iele::IeleLocalVariable::Create(&Context, "next.free", CompilingFunction);
-  iele::IeleInstruction::CreateLoad(
-    LastUsed, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
-  iele::IeleInstruction::CreateBinOp(
-    iele::IeleInstruction::Add, NextFree, LastUsed, 
-    iele::IeleIntConstant::getOne(&Context), CompilingBlock);
-
-  // update cell 0 
-  iele::IeleInstruction::CreateStore(
-    NextFree, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  iele::IeleLocalVariable *NextFree = appendMemorySpill();
 
   iele::IeleInstruction::CreateStore(
     encoded, NextFree, CompilingBlock);
@@ -2325,26 +2301,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       }
     }
     // Find out next free location (will store encoding of non-indexed args)     
-    iele::IeleLocalVariable *LastUsed =
-        iele::IeleLocalVariable::Create(&Context, "last.used", 
-                                        CompilingFunction);
-    iele::IeleLocalVariable *NextFree =
-        iele::IeleLocalVariable::Create(&Context, "next.free", 
-                                        CompilingFunction);
-    // i.e. %last.used = load 0    
-    iele::IeleInstruction::CreateLoad(
-      LastUsed, 
-      iele::IeleIntConstant::getZero(&Context), 
-      CompilingBlock);
-    // i.e. %next.free = add %last.used, 1
-    iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Add,
-                                       NextFree,
-                                       LastUsed, 
-                                       iele::IeleIntConstant::getOne(&Context),
-                                       CompilingBlock);
-    // update cell 0 
-    iele::IeleInstruction::CreateStore(
-      NextFree, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+    iele::IeleLocalVariable *NextFree = appendMemorySpill();
 
     // Store non-indexed args in memory
     if (NonIndexedArguments.size() > 0) {
@@ -2492,23 +2449,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     // Find out next free location (will store encoding of non-indexed args)     
     // TODO: this is the same as in the events code. Refactor after encodings are done?
-    iele::IeleLocalVariable *LastUsed =
-        iele::IeleLocalVariable::Create(&Context, "last.used", 
-                                        CompilingFunction);
-    iele::IeleLocalVariable *NextFree =
-        iele::IeleLocalVariable::Create(&Context, "next.free", 
-                                        CompilingFunction);
-    // i.e. %last.used = load 0    
-    iele::IeleInstruction::CreateLoad(
-      LastUsed, 
-      iele::IeleIntConstant::getZero(&Context), 
-      CompilingBlock);
-    // i.e. %next.free = add %last.used, 1
-    iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Add,
-                                       NextFree,
-                                       LastUsed, 
-                                       iele::IeleIntConstant::getOne(&Context),
-                                       CompilingBlock);
+    iele::IeleLocalVariable *NextFree = appendMemorySpill();
 
     // Store the data argument in memory
     iele::IeleInstruction::CreateStore1(DataArg,
@@ -3864,9 +3805,7 @@ void IeleCompiler::appendLocalVariableInitialization(
   if (type->category() == Type::Category::Array) {
     const ArrayType &arrayType = dynamic_cast<const ArrayType &>(*type);
     if (arrayType.dataStoredIn(DataLocation::Memory)) {
-      if (arrayType.isDynamicallySized()) {
-        InitValue = appendArrayAllocation(arrayType, iele::IeleIntConstant::getZero(&Context));
-      } else {
+      if (!arrayType.isDynamicallySized()) {
         InitValue = appendArrayAllocation(arrayType);
       }
     }
@@ -4886,12 +4825,17 @@ iele::IeleLocalVariable *IeleCompiler::appendMemorySpill() {
   iele::IeleLocalVariable *LastUsed =
       iele::IeleLocalVariable::Create(&Context, "last.used", CompilingFunction);
   iele::IeleInstruction::CreateLoad(
-      LastUsed, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+      LastUsed, iele::IeleIntConstant::getOne(&Context), CompilingBlock);
   // Get next free memory location by increasing last used by one.
   iele::IeleLocalVariable *NextFree =
       iele::IeleLocalVariable::Create(&Context, "next.free", CompilingFunction);
   iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Add, NextFree, LastUsed,
+      iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+  iele::IeleInstruction::CreateStore(
+      NextFree, iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, NextFree, NextFree,
       iele::IeleIntConstant::getOne(&Context), CompilingBlock);
 
   return NextFree;
