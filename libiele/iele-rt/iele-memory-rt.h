@@ -2,16 +2,16 @@ R"(
 define @ielert.memory.allocate(%size) {
 entry:
   // get next free address
-  // note that the address 0 of memory is reserved for a pointer to
-  // the last allocated memory location
-  %last.allocd = load 0
-  %ptr = add %last.allocd, 1
+  // note that the address 1 of memory is reserved for a pointer to
+  // one less than last allocated memory location
+  %last.allocd = load 1
+  %ptr = add %last.allocd, 2
 
   // compute new last allocd address
   %last.allocd = add %last.allocd, %size
 
   // allocate
-  store %last.allocd, 0
+  store %last.allocd, 1
 
   // return the address of the header
   ret %ptr

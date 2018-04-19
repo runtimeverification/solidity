@@ -71,7 +71,7 @@ std::pair<bool, string> ExecutionFramework::compareAndCreateMessage(
 	for (bytes const& val : _expectation) {
 		message += toHex(val) + " ";
 	}
-	message += "]\nActual: [ ";
+	message += "]\nActual:   [ ";
 	for (bytes const& val : _result) {
 		message += toHex(val) + " ";
 	}

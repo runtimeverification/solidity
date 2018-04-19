@@ -41,6 +41,8 @@ namespace test
 	/// @NOTE This is not endian-specific; it's just a bunch of bytes.
 	using Address = h160;
 
+        using s72 = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<72, 72, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void>>;
+	using u72 = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<72, 72, boost::multiprecision::unsigned_magnitude, boost::multiprecision::unchecked, void>>;
 	// The various denominations; here for ease of use where needed within code.
 	static const u256 wei = 1;
 	static const u256 shannon = u256("1000000000");
@@ -121,7 +123,7 @@ public:
 		for (bytes const& val : cppResult) {
 			message += toHex(val) + " ";
 		}
-		message += "]\nActual: [ ";
+		message += "]\nActual:   [ ";
 		for (bytes const& val : contractResult) {
 			message += toHex(val) + " ";
 		}
@@ -144,7 +146,7 @@ public:
 			for (bytes const& val : cppResult) {
 				message += toHex(val) + " ";
 			}
-			message += "]\nActual: [ ";
+			message += "]\nActual:   [ ";
 			for (bytes const& val : contractResult) {
 				message += toHex(val) + " ";
 			}
@@ -158,16 +160,32 @@ public:
 		}
 	}
 
+	static inline u72 s2u(s72 _u)
+	{
+		static const bigint c_end = bigint(1) << 72;
+	    if (_u >= 0)
+			return u72(_u);
+	    else
+			return u72(c_end + _u);
+	}
+
 	static std::pair<bool, std::string> compareAndCreateMessage(std::vector<bytes> const& _result, std::vector<bytes> const& _expectation);
 
 	static bytes encode(bool _value) { return encode(byte(_value)); }
 	static bytes encode(int _value) { return encode(bigint(_value)); }
+	static bytes encodeLog(int _value) { return encode(bigint(_value)); }
+	static bytes encodeLog(int16_t _value) { return encode(dev::toBigEndian(_value)); }
+	static bytes encodeLog(uint64_t _value) { return encode(dev::toBigEndian(_value)); }
 	static bytes encode(size_t _value) { return encode(bigint(_value)); }
 	static bytes encode(char const* _value) { return encode(std::string(_value)); }
 	static bytes encode(byte _value) { return toBigEndian(_value); }
 	static bytes encode(u160 const& _value) { return encode(bigint(_value)); }
+	static bytes encodeLog(u160 const& _value) { return encode(dev::toBigEndian(_value)); }
+	static bytes encodeLog(s72 const& _value) { bytes encoded(9); dev::toBigEndian(s2u(_value), encoded); return encoded; }
 	static bytes encode(u256 const& _value) { return encode(bigint(_value)); }
+	static bytes encodeLog(u256 const& _value) { return encode(dev::toBigEndian(_value)); }
         static bytes encode(bigint const& _value) { return toBigEndian(_value); }
+        static bytes encodeLog(bigint const& _value) { bytes encoded = toBigEndian(_value); return encoded + encodeLog(uint64_t(encoded.size())); }
 	/// @returns the fixed-point encoding of a rational number with a given
 	/// number of fractional bits.
 	static bytes encode(std::pair<rational, int> const& _valueAndPrecision)
@@ -181,7 +199,12 @@ public:
 	{
 		return _padLeft ? _value : _value;
 	}
+	static bytes encodeLog(bytes const& _value)
+	{
+		return _value;
+	}
 	static bytes encode(std::string const& _value) { return encode(asBytes(_value), false); }
+        static bytes encodeLog(std::string const& _value) { return encode(_value); }
 	template <class _T>
 	static bytes encode(std::vector<_T> const& _value)
 	{
@@ -203,7 +226,7 @@ public:
 	template <class FirstArg, class... Args>
 	static bytes encodeLogs(FirstArg const& _firstArg, Args const&... _followingArgs)
 	{
-		bytes encoded = encode(_firstArg);
+		bytes encoded = encodeLog(_firstArg);
 		std::reverse(encoded.begin(), encoded.end());
 		return encoded + encodeLogs(_followingArgs...);
 	}
@@ -211,6 +234,39 @@ public:
 	{
 		return bytes();
 	}
+	template <class FirstArg, class... Args>
+	static bytes encodeRefArgs(FirstArg const& _firstArg, Args const&... _followingArgs)
+	{
+		bytes encoded = encodeLog(_firstArg);
+		return encodeRefArgs(_followingArgs...) + encoded;
+	}
+	static bytes encodeRefArgs()
+	{
+		return bytes();
+	}
+
+	static bytes encodeRefArray(std::vector<u256> args, size_t len, size_t size) {
+		return encodeRefArray(args, size) + encodeRefArgs(1, int(len));
+	}
+
+	static bytes encodeRefArray(std::vector<u256> args, size_t size) {
+		bytes encoded;
+                std::reverse(args.begin(), args.end());
+		for (u256 arg : args) {
+			if (size > 0) {
+				bytes encodedArg(size);
+				dev::toBigEndian(arg, encodedArg);
+				encoded += encodedArg;
+			} else {
+				encoded += encodeLog(bigint(arg));
+			}
+		}
+		while (encoded.size() >= 2 && encoded[0] == 0 && encoded[1] <= 0x7f) {
+			encoded.erase(encoded.begin());
+		}
+		return encoded;
+	}
+
 
 	//@todo might be extended in the future
 	template <class Arg>

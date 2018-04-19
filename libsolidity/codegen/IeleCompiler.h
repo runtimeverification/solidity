@@ -105,7 +105,7 @@ private:
   llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
   bool CompilingLValue;
 
-  enum LValueKind { Reg, Memory, Storage, ArrayLengthMemory, ArrayLengthStorage };
+  enum LValueKind { Default, Reg, Memory, Storage, ArrayLengthMemory, ArrayLengthStorage };
   LValueKind CompilingLValueKind;
   bigint CompilingLValueArrayElementSize;
 
@@ -131,7 +131,7 @@ private:
   unsigned ModifierDepth;
 
   template <class ArgClass, class ReturnClass, class ExpressionClass>
-  void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function);
+  void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function, bool encode);
 
   // Infrastructure for unique variable names generation and mapping
   int NextUniqueIntToken = 0;
@@ -160,6 +160,8 @@ private:
   void connectWithConditionalJump(iele::IeleValue *Condition,
                                   iele::IeleBlock *SouceBlock, 
                                   iele::IeleBlock *DestinationBlock);
+
+  iele::IeleGlobalValue *convertFunctionToInternal(iele::IeleGlobalValue *Callee);
 
   void appendPayableCheck(void);
   void appendRevert(iele::IeleValue *Condition = nullptr, iele::IeleValue *Status = nullptr);
@@ -200,16 +202,19 @@ private:
     const Type &ToType, iele::IeleValue *From, const Type &FromType);
 
   void appendCopy(
-      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType, DataLocation ToLoc, DataLocation FromLoc);
+      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType, DataLocation ToLoc, DataLocation FromLoc, LValueKind ToKind, LValueKind FromKind);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
   void appendVariable(iele::IeleValue *Identifier, std::string name,
                       bool isValueType = true);
 
-  iele::IeleLocalVariable *appendLValueDereference(iele::IeleValue *LValue);
-  void appendLValueAssign(iele::IeleValue *LValue, iele::IeleValue *RValue);
-  void appendLValueDelete(iele::IeleValue *LValue, TypePointer Type);
+  LValueKind loadKind(TypePointer type, DataLocation loc);
+  LValueKind storeKind(DataLocation loc);
+
+  iele::IeleValue *appendLValueDereference(iele::IeleValue *LValue, LValueKind Kind = LValueKind::Default);
+  void appendLValueAssign(iele::IeleValue *LValue, iele::IeleValue *RValue, LValueKind Kind = LValueKind::Default);
+  void appendLValueDelete(iele::IeleValue *LValue, TypePointer Type, LValueKind Kind);
   void appendArrayLengthResize(bool Storage, iele::IeleValue *LValue, iele::IeleValue *NewLength);
 
   iele::IeleLocalVariable *appendBinaryOperator(
@@ -271,6 +276,32 @@ private:
   void appendIeleRuntimeCopy(
       iele::IeleValue *From, iele::IeleValue *To, iele::IeleValue *NumSlots,
       DataLocation FromLoc, DataLocation ToLoc);
+  
+  // Encoding functionality
+  iele::IeleValue *encoding(
+    iele::IeleValue *argument, 
+    TypePointer type);
+  void encoding(
+    llvm::SmallVectorImpl<iele::IeleValue *> &arguments, 
+    TypePointers types,
+    iele::IeleLocalVariable *NextFree);
+
+  iele::IeleValue *decoding(
+    iele::IeleValue *encoded,
+    TypePointer type);
+
+  void doEncode(
+    iele::IeleValue *NextFree,
+    iele::IeleLocalVariable *CrntPos, iele::IeleValue *ArgValue,
+    iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
+    TypePointer type, LValueKind Kind);
+  void doDecode(
+    iele::IeleValue *NextFree,
+    iele::IeleLocalVariable *CrntPos, iele::IeleValue *StoreAt,
+    iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
+    TypePointer type, LValueKind Kind);
+
+  void appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value);
 };
 
 } // end namespace solidity

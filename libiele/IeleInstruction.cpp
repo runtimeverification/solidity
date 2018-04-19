@@ -104,7 +104,9 @@ IeleInstruction *IeleInstruction::CreateLog(
 IeleInstruction *IeleInstruction::CreateRet(
     llvm::SmallVectorImpl<IeleValue *> &ReturnValues,
     IeleInstruction *InsertBefore) {
-  solAssert(ReturnValues.size() > 0, "CreateRet: Invalid operands");
+  if (ReturnValues.size() == 0) {
+    return CreateRetVoid(InsertBefore);
+  }
 
   IeleInstruction *RetInst = new IeleInstruction(Ret, InsertBefore);
   RetInst->getIeleOperandList().insert(RetInst->end(), ReturnValues.begin(), 
@@ -115,7 +117,9 @@ IeleInstruction *IeleInstruction::CreateRet(
 
 IeleInstruction *IeleInstruction::CreateRet(
     llvm::SmallVectorImpl<IeleValue *> &ReturnValues, IeleBlock *InsertAtEnd) {
-  solAssert(ReturnValues.size() > 0, "CreateRet: Invalid operands");
+  if (ReturnValues.size() == 0) {
+    return CreateRetVoid(InsertAtEnd);
+  }
 
   IeleInstruction *RetInst = new IeleInstruction(Ret, InsertAtEnd);
   RetInst->getIeleOperandList().insert(RetInst->end(), ReturnValues.begin(),
@@ -526,6 +530,39 @@ IeleInstruction *IeleInstruction::CreateLoad(
 
   return LoadInst;
 }
+
+IeleInstruction *IeleInstruction::CreateLoad1(
+    IeleLocalVariable *Result, IeleValue *AddressValue,
+    IeleValue *OffsetValue, IeleValue *WidthValue,
+    IeleInstruction *InsertBefore) {
+  solAssert(Result, "CreateLoad: Invalid lvalues");
+  solAssert(AddressValue && OffsetValue && WidthValue, "CreateLoad: Invalid operands");
+
+  IeleInstruction *LoadInst = new IeleInstruction(Load, InsertBefore);
+  LoadInst->getIeleLValueList().push_back(Result);
+  LoadInst->getIeleOperandList().push_back(AddressValue);
+  LoadInst->getIeleOperandList().push_back(OffsetValue);
+  LoadInst->getIeleOperandList().push_back(WidthValue);
+
+  return LoadInst;
+}
+
+IeleInstruction *IeleInstruction::CreateLoad1(
+    IeleLocalVariable *Result, IeleValue *AddressValue,
+    IeleValue *OffsetValue, IeleValue *WidthValue,
+    IeleBlock *InsertAtEnd) {
+  solAssert(Result, "CreateLoad: Invalid lvalues");
+  solAssert(AddressValue && OffsetValue && WidthValue, "CreateLoad: Invalid operands");
+
+  IeleInstruction *LoadInst = new IeleInstruction(Load, InsertAtEnd);
+  LoadInst->getIeleLValueList().push_back(Result);
+  LoadInst->getIeleOperandList().push_back(AddressValue);
+  LoadInst->getIeleOperandList().push_back(OffsetValue);
+  LoadInst->getIeleOperandList().push_back(WidthValue);
+
+  return LoadInst;
+}
+
 
 IeleInstruction *IeleInstruction::CreateStore(
     IeleValue *DataValue, IeleValue *AddressValue,

@@ -126,7 +126,6 @@ BOOST_AUTO_TEST_CASE(cleanup)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(fixed_arrays, 2)
 BOOST_AUTO_TEST_CASE(fixed_arrays)
 {
 	string sourceCode = R"(
@@ -139,21 +138,19 @@ BOOST_AUTO_TEST_CASE(fixed_arrays)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		std::vector<bytes> args = encodeArgs(
-			1, 2, 3,
-			11, 12,
-			21, 22,
-			31, 32,
-			1, 2, 1
-		);
 		ABI_CHECK(
-			callContractFunction("f(uint16[3],uint16[2][3],uint256,uint256,uint256)", args),
+			callContractFunction("f(uint16[3],uint16[2][3],uint256,uint256,uint256)", 
+			encodeRefArgs(int16_t(1), int16_t(2), byte(3)),
+			encodeRefArgs(int16_t(11), int16_t(12),
+			int16_t(21), int16_t(22),
+			int16_t(31), byte(32)),
+			1, 2, 1
+			),
 			encodeArgs(u256(2), u256(32))
 		);
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_arrays, 2)
 BOOST_AUTO_TEST_CASE(dynamic_arrays)
 {
 	string sourceCode = R"(
@@ -166,19 +163,17 @@ BOOST_AUTO_TEST_CASE(dynamic_arrays)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		std::vector<bytes> args = encodeArgs(
-			6, 0x60, 9,
-			7,
-			11, 12, 13, 14, 15, 16, 17
-		);
 		ABI_CHECK(
-			callContractFunction("f(uint256,uint16[],uint256)", args),
+			callContractFunction("f(uint256,uint16[],uint256)",
+			6, encodeRefArgs(1, 7,
+			int16_t(11), int16_t(12), int16_t(13), int16_t(14), int16_t(15), int16_t(16), byte(17)),
+			9
+			),
 			encodeArgs(u256(7), u256(17), u256(9))
 		);
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(dynamic_nested_arrays, 2)
 BOOST_AUTO_TEST_CASE(dynamic_nested_arrays)
 {
 	string sourceCode = R"(
@@ -211,22 +206,22 @@ BOOST_AUTO_TEST_CASE(dynamic_nested_arrays)
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
 		std::vector<bytes> args = encodeArgs(
-			0x12, 4 * 0x20, 17 * 0x20, 0x13,
-			// b
-			3, 3 * 0x20, 6 * 0x20, 11 * 0x20,
-			2, 85, 86,
-			4, 101, 102, 103, 104,
-			0,
-			// c
-			3 * 0x20, 6 * 0x20, 17 * 0x20,
-			1, 0, 117,
-			5, 0, 0, 0, 133, 0, 0, 0, 0, 0, 0,
-			0
 		);
 
 		std::vector<bytes> expectation = encodeArgs(0x12, 3, 4, 0x66, 5, 0x85, 0x13);
 		ABI_CHECK(callContractFunction("test()"), expectation);
-		ABI_CHECK(callContractFunction("f(uint256,uint16[][],uint256[2][][3],uint256)", args), expectation);
+		ABI_CHECK(callContractFunction("f(uint256,uint16[][],uint256[2][][3],uint256)",
+			0x12, encodeRefArgs(
+			// b
+			1, 3, 
+			1, 2, int16_t(85), int16_t(86),
+			1, 4, int16_t(101), int16_t(102), int16_t(103), int16_t(104),
+			1, 0), encodeRefArgs(
+			// c
+			1, 1, bigint(0), bigint(117),
+			1, 5, bigint(0), bigint(0), bigint(0), bigint(133), bigint(0), bigint(0), bigint(0), bigint(0), bigint(0), bigint(0),
+			1, 0), 0x13
+		), expectation);
 	)
 }
 
@@ -263,7 +258,6 @@ BOOST_AUTO_TEST_CASE(byte_arrays)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(calldata_arrays_too_large, 1)
 BOOST_AUTO_TEST_CASE(calldata_arrays_too_large)
 {
 	string sourceCode = R"(
@@ -273,18 +267,14 @@ BOOST_AUTO_TEST_CASE(calldata_arrays_too_large)
 			}
 		}
 	)";
-	bool newEncoder = false;
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		std::vector<bytes> args = encodeArgs(
-			6, 0x60, 9,
-			(u256(1) << 255) + 2, 1, 2
-		);
 		ABI_CHECK(
-			callContractFunction("f(uint256,uint256[],uint256)", args),
-			newEncoder ? encodeArgs() : encodeArgs(7)
+			callContractFunction("f(uint256,uint256[],uint256)",
+				6, encodeRefArgs(32,
+				(u256(1) << 255) + 2, bigint(1), bigint(2)), 9),
+			encodeArgs()
 		);
-		newEncoder = true;
 	)
 }
 
@@ -453,7 +443,6 @@ BOOST_AUTO_TEST_CASE(decode_from_memory_complex)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_value_type, 1)
 BOOST_AUTO_TEST_CASE(short_input_value_type)
 {
 	string sourceCode = R"(
@@ -461,17 +450,14 @@ BOOST_AUTO_TEST_CASE(short_input_value_type)
 			function f(uint a, uint b) public pure returns (uint) { return a; }
 		}
 	)";
-	bool newDecoder = false;
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		ABI_CHECK(callContractFunction("f(uint256,uint256)", 1, 2), encodeArgs(1));
 		ABI_CHECK(callContractFunctionNoEncoding("f(uint256,uint256)", std::vector<bytes>(2, bytes(32, 0))), encodeArgs(0));
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256,uint256)", std::vector<bytes>(1, bytes(63, 0))), newDecoder ? encodeArgs() : encodeArgs(0));
-		newDecoder = true;
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256,uint256)", std::vector<bytes>{bytes(32, 0), bytes(31, 0)}), encodeArgs(0));
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_array, 8)
 BOOST_AUTO_TEST_CASE(short_input_array)
 {
 	string sourceCode = R"(
@@ -479,15 +465,13 @@ BOOST_AUTO_TEST_CASE(short_input_array)
 			function f(uint[] a) public pure returns (uint) { return 7; }
 		}
 	)";
-	bool newDecoder = false;
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 0)), encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 1)), newDecoder ? encodeArgs() : encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 1) + std::vector<bytes>(1, bytes(31, 0))), newDecoder ? encodeArgs() : encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 1) + std::vector<bytes>(1, bytes(32, 0))), encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(0x20, 2, 5, 6)), encodeArgs(7));
-		newDecoder = true;
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(encodeRefArgs(1, 0))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(encodeRefArgs(1, 1))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(encodeRefArgs(1, 1, uint64_t(1)))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(encodeRefArgs(1, 1, bigint(0)))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(uint256[])", encodeArgs(encodeRefArgs(1, 2, bigint(5), bigint(6)))), encodeArgs(7));
 	)
 }
 
@@ -505,7 +489,7 @@ BOOST_AUTO_TEST_CASE(short_dynamic_input_array)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_bytes, 4)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_bytes, 1)
 BOOST_AUTO_TEST_CASE(short_input_bytes)
 {
 	string sourceCode = R"(
@@ -586,7 +570,6 @@ BOOST_AUTO_TEST_CASE(storage_ptr)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_simple, 1)
 BOOST_AUTO_TEST_CASE(struct_simple)
 {
 	string sourceCode = R"(
@@ -602,7 +585,7 @@ BOOST_AUTO_TEST_CASE(struct_simple)
 	)";
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
-		ABI_CHECK(callContractFunction("f((uint256,uint8,uint8,bytes2))", 1, 2, 3, "ab"), encodeArgs(1, 2, 3, 'a' * 0x100 + 'b'));
+		ABI_CHECK(callContractFunction("f((uint256,uint8,uint8,bytes2))", encodeRefArgs(bigint(1), 2, 3, "ab")), encodeArgs(1, 2, 3, 'a' * 0x100 + 'b'));
 	)
 }
 
@@ -630,7 +613,6 @@ BOOST_AUTO_TEST_CASE(struct_cleanup)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_short, 2)
 BOOST_AUTO_TEST_CASE(struct_short)
 {
 	string sourceCode = R"(
@@ -644,16 +626,16 @@ BOOST_AUTO_TEST_CASE(struct_short)
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
 		ABI_CHECK(
-			callContractFunction("f((int256,uint256,bytes16))", 0xff010, 0xff0002, "abcd"),
-			encodeArgs(0xff010, 0xff0002, "abcd")
+			callContractFunction("f((int256,uint256,bytes16))", vector<bytes>(1, encodeRefArgs(bigint(0xff010), bigint(0xff0002), "abcd" + string(12, 0)))),
+			encodeArgs(encodeRefArgs(bigint(0xff010), bigint(0xff0002), "abcd" + string(12, 0)))
 		);
 		ABI_CHECK(
-			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", encodeArgs(0xff010, 0xff0002) + std::vector<bytes>(1, bytes(32, 0))),
-			encodeArgs(0xff010, 0xff0002, 0)
+			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", vector<bytes>(1, encodeRefArgs(bigint(0xff010), bigint(0xff0002), bytes(16, 0)))),
+			encodeArgs(encodeRefArgs(bigint(0xff010), bigint(0xff0002)))
 		);
 		ABI_CHECK(
-			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", encodeArgs(0xff010, 0xff0002) + std::vector<bytes>(1, bytes(31, 0))),
-			encodeArgs()
+			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", vector<bytes>(1, encodeRefArgs(bigint(0xff010), bigint(0xff0002), bytes(15, 0)))),
+			encodeArgs(encodeRefArgs(bigint(0xff010), bigint(0xff0002)))
 		);
 	)
 }
@@ -700,7 +682,6 @@ BOOST_AUTO_TEST_CASE(empty_struct)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(mediocre_struct, 1)
 BOOST_AUTO_TEST_CASE(mediocre_struct)
 {
 	string sourceCode = R"(
@@ -717,12 +698,11 @@ BOOST_AUTO_TEST_CASE(mediocre_struct)
 		compileAndRun(sourceCode, 0, "C");
 		string sig = "f(uint256,(address)[2],uint256)";
 		ABI_CHECK(callContractFunction(sig,
-			7, u256(u160(m_contractAddress)), 0, 8
-		), encodeArgs(7, u256(u160(m_contractAddress)), 8));
+			7, encodeRefArgs(u160(m_contractAddress), u160(0)), 8
+		), encodeArgs(7, u160(m_contractAddress), 8));
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(mediocre2_struct, 1)
 BOOST_AUTO_TEST_CASE(mediocre2_struct)
 {
 	string sourceCode = R"(
@@ -739,17 +719,16 @@ BOOST_AUTO_TEST_CASE(mediocre2_struct)
 		compileAndRun(sourceCode, 0, "C");
 		string sig = "f(uint256,(address,uint256[])[2],uint256)";
 		ABI_CHECK(callContractFunction(sig,
-			7, 0x60, 8,
-			0x40, 7 * 0x20,
-			u256(u160(m_contractAddress)), 0x40,
-			2, 0x11, 0x12,
-			0x99, 0x40,
-			4, 0x31, 0x32, 0x34, 0x35
-		), encodeArgs(7, u256(u160(m_contractAddress)), 8));
+			7, encodeRefArgs(
+			u160(m_contractAddress), 
+			1, 2, bigint(0x11), bigint(0x12),
+			u160(0x99), 
+			1, 4, bigint(0x31), bigint(0x32), bigint(0x34), bigint(0x35)),
+                        8
+		), encodeArgs(7, u160(m_contractAddress), 8));
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(complex_struct, 1)
 BOOST_AUTO_TEST_CASE(complex_struct)
 {
 	string sourceCode = R"(
@@ -774,38 +753,34 @@ BOOST_AUTO_TEST_CASE(complex_struct)
 		compileAndRun(sourceCode, 0, "C");
 		string sig = "f(uint256,(address,(uint256,uint8,uint8)[])[2],(address,(uint256,uint8,uint8)[])[],uint256)";
 		std::vector<bytes> args = encodeArgs(
-			7, 0x80, 0x1e0, 8,
+			7, encodeRefArgs(
 			// S[2] s1
-			0x40,
-			0x100,
 			// S s1[0]
-			u256(u160(m_contractAddress)),
-			0x40,
+			u160(m_contractAddress),
 			// T s1[0].t
-			1, // length
+			1, 1, // length
 			// s1[0].t[0]
-			0x11, 1, 0x12,
+			bigint(0x11), 1, 0x12,
 			// S s1[1]
-			0, 0x40,
+			u160(0),
 			// T s1[1].t
-			0,
+			1, 0), encodeRefArgs(
 			// S[] s2 (0x1e0)
-			2, // length
-			0x40, 0xa0,
+			1, 2, // length
 			// S s2[0]
-			0, 0x40, 0,
+			u160(0), 1, 0,
 			// S s2[1]
-			0x1234, 0x40,
+			u160(0x1234),
 			// s2[1].t
-			3, // length
-			0, 0, 0,
-			0x21, 2, 0x22,
-			0, 0, 0
+			1, 3, // length
+			bigint(0), 0, 0,
+			bigint(0x21), 2, 0x22,
+			bigint(0), 0, 0), 8
 		);
-		ABI_CHECK(callContractFunction(sig, args), encodeArgs(7, u256(u160(m_contractAddress)), 8, 2, 0x1234, 3, 2, 0x22));
+		ABI_CHECK(callContractFunctionNoEncoding(sig, args), encodeArgs(7, u256(u160(m_contractAddress)), 8, 2, 0x1234, 3, 2, 0x22));
 		// invalid enum value
-		args[28][0] = 3;
-		ABI_CHECK(callContractFunction(sig, args), encodeArgs());
+		args[2][12] = 3;
+		ABI_CHECK(callContractFunctionNoEncoding(sig, args), encodeArgs());
 	)
 }
 

@@ -213,7 +213,7 @@ public:
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
       IeleGlobalValue *Callee, IeleValue *AddressValue,
       IeleValue *TransferValue, IeleValue *GasValue,
-      llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateAccountCall(
       bool StaticCall,
@@ -221,27 +221,27 @@ public:
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
       IeleGlobalValue *Callee, IeleValue *AddressValue,
       IeleValue *TransferValue, IeleValue *GasValue,
-      llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateIntrinsicCall(
       IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
-      llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateIntrinsicCall(
       IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
-      llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateInternalCall(
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
       IeleGlobalValue *Callee,
-      llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateInternalCall(
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
       IeleGlobalValue *Callee,
-      llvm::SmallVectorImpl<IeleValue *> &ArgumnentValues,
+      llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateAssign(
@@ -269,6 +269,15 @@ public:
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateLoad(
       IeleLocalVariable *Result, IeleValue *AddressValue,
+      IeleBlock *InsertAtEnd);
+
+  static IeleInstruction *CreateLoad1(
+      IeleLocalVariable *Result, IeleValue *AddressValue,
+      IeleValue *OffsetValue, IeleValue *WidthValue,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateLoad1(
+      IeleLocalVariable *Result, IeleValue *AddressValue,
+      IeleValue *OffsetValue, IeleValue *WidthValue,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateStore(

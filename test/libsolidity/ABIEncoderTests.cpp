@@ -179,7 +179,6 @@ BOOST_AUTO_TEST_CASE(memory_array_one_dim)
 	REQUIRE_LOG_DATA(encodeLogs(10, 0x60, 11, 3, u256(-2), u256(-1), u256(0)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_array_two_dim, 1)
 BOOST_AUTO_TEST_CASE(memory_array_two_dim)
 {
 	string sourceCode = R"(
@@ -201,7 +200,7 @@ BOOST_AUTO_TEST_CASE(memory_array_two_dim)
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeLogs(10, 0x60, 11, 0x40, 0xc0, 3, 7, 0x0506, u256(-1), 2, 4, 5));
+		REQUIRE_LOG_DATA(encodeLogs(bigint(10), 1, 3, int16_t(7), 0x0506, int16_t(-1), 1, 2, int16_t(4), int16_t(5), bigint(11)));
 	)
 }
 
@@ -281,7 +280,6 @@ BOOST_AUTO_TEST_CASE(storage_array)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array_dyn, 2)
 BOOST_AUTO_TEST_CASE(storage_array_dyn)
 {
 	string sourceCode = R"(
@@ -299,11 +297,10 @@ BOOST_AUTO_TEST_CASE(storage_array_dyn)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeLogs(0x20, 3, u160(1), u160(2), u160(3)));
+		REQUIRE_LOG_DATA(encodeLogs(1, 3, u160(1), u160(2), u160(3)));
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array_compact, 2)
 BOOST_AUTO_TEST_CASE(storage_array_compact)
 {
 	string sourceCode = R"(
@@ -327,7 +324,7 @@ BOOST_AUTO_TEST_CASE(storage_array_compact)
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
 		REQUIRE_LOG_DATA(encodeLogs(
-			0x20, 8, u256(-1), 2, u256(-3), 4, u256(-5), 6, u256(-7), 8
+			1, 8, s72(-1), s72(2), s72(-3), s72(4), s72(-5), s72(6), s72(-7), s72(8)
 		));
 	)
 }
@@ -427,7 +424,6 @@ BOOST_AUTO_TEST_CASE(function_name_collision)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(structs, 1)
 BOOST_AUTO_TEST_CASE(structs)
 {
 	string sourceCode = R"(
@@ -454,23 +450,15 @@ BOOST_AUTO_TEST_CASE(structs)
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
 		std::vector<bytes> encoded = encodeArgs(
-			u256(7), 0x40,
-			8, 9, 0x80, 10,
-			3,
-			11, 0,
-			12, 0,
-			0, 13
-		);
-                bytes flattened;
-                for (bytes arg : encoded) {
-			flattened += arg;
-		}
-		BOOST_CHECK(callContractFunction("f()") == encoded);
+			u256(7), encodeRefArgs(
+			int16_t(8), int16_t(9), 1, 3, uint64_t(11), uint64_t(0), uint64_t(12), uint64_t(0), uint64_t(0), uint64_t(13), byte(10)
+		));
+		bytes flattened = encodeLogs(int16_t(7), int16_t(8), int16_t(9), 1, 3, uint64_t(11), uint64_t(0), uint64_t(12), uint64_t(0), uint64_t(0), uint64_t(13), int16_t(10));
+		ABI_CHECK(callContractFunction("f()"), encoded);
 		REQUIRE_LOG_DATA(flattened);
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(empty_struct, 1)
 BOOST_AUTO_TEST_CASE(empty_struct)
 {
 	string sourceCode = R"(
@@ -487,17 +475,13 @@ BOOST_AUTO_TEST_CASE(empty_struct)
 
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
-		std::vector<bytes> encoded = encodeArgs(7, 8);
-                bytes flattened;
-                for (bytes arg : encoded) {
-			flattened += arg;
-		}
+		std::vector<bytes> encoded = encodeArgs(7, 0, 8);
+                bytes flattened = encodeLogs(int16_t(7), int16_t(8));
 		BOOST_CHECK(callContractFunction("f()") == encoded);
 		REQUIRE_LOG_DATA(flattened);
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(structs2, 1)
 BOOST_AUTO_TEST_CASE(structs2)
 {
 	string sourceCode = R"(
@@ -526,33 +510,30 @@ BOOST_AUTO_TEST_CASE(structs2)
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
 		ABI_CHECK(callContractFunction("f()"), encodeArgs(
-			7, 0x80, 0x1e0, 8,
+			7, encodeRefArgs(
 			// S[2] s1
-			0x40,
-			0x100,
 			// S s1[0]
-			u256(u160(m_contractAddress)),
-			0x40,
+			u160(m_contractAddress),
 			// T s1[0].t
-			1, // length
+			1, 1, // length
 			// s1[0].t[0]
-			0x11, 1, 0x12,
+			bigint(0x11), 1, 0x12,
 			// S s1[1]
-			0, 0x40,
+			u160(0),
 			// T s1[1].t
-			0,
+			1), encodeRefArgs(
 			// S[] s2 (0x1e0)
-			2, // length
-			0x40, 0xa0,
+			1, 2, // length
 			// S s2[0]
-			0, 0x40, 0,
+			u160(0), 1, 0,
 			// S s2[1]
-			0x1234, 0x40,
+			u160(0x1234),
 			// s2[1].t
-			3, // length
-			0, 0, 0,
-			0x21, 2, 0x22,
-			0, 0, 0
+			1, 3, // length
+			bigint(0), 0, 0,
+			bigint(0x21), 2, 0x22,
+			1),
+                        8
 		));
 	)
 }

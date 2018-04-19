@@ -117,6 +117,8 @@ inline T fromBigEndian(_In const& _bytes)
 		ret = (T)((ret << 8) | (byte)(typename std::make_unsigned<typename _In::value_type>::type)i);
 	return ret;
 }
+inline bytes toBigEndian(uint64_t _val) { bytes ret(8); toBigEndian(_val, ret); return ret; }
+inline bytes toBigEndian(int16_t _val) { bytes ret(2); toBigEndian((uint16_t)_val, ret); return ret; }
 inline bytes toBigEndian(u256 _val) { bytes ret(32); toBigEndian(_val, ret); return ret; }
 inline bytes toBigEndian(u160 _val) { bytes ret(20); toBigEndian(_val, ret); return ret; }
 
