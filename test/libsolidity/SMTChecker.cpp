@@ -67,10 +67,16 @@ BOOST_AUTO_TEST_CASE(simple_overflow)
 {
 	string text = R"(
 		contract C {
-			function f(uint a, uint b) public pure returns (uint) { return a + b; }
+			function f(uint256 a, uint256 b) public pure returns (uint256) { return a + b; }
 		}
 	)";
 	CHECK_WARNING(text, "Overflow (resulting value larger than");
+	text = R"(
+		contract C {
+			function f(uint a, uint b) public pure returns (uint) { return a + b; }
+		}
+	)";
+	CHECK_SUCCESS_NO_WARNINGS(text);
 }
 
 BOOST_AUTO_TEST_CASE(warn_on_typecast)
@@ -510,7 +516,7 @@ BOOST_AUTO_TEST_CASE(division)
 	CHECK_SUCCESS_NO_WARNINGS(text);
 	text = R"(
 		contract C {
-			function f(int x, int y) public pure returns (int) {
+			function f(int256 x, int256 y) public pure returns (int256) {
 				require(y != 0);
 				return x / y;
 			}
@@ -519,9 +525,18 @@ BOOST_AUTO_TEST_CASE(division)
 	CHECK_WARNING(text, "Overflow");
 	text = R"(
 		contract C {
-			function f(int x, int y) public pure returns (int) {
+			function f(int256 x, int256 y) public pure returns (int256) {
 				require(y != 0);
 				require(y != -1);
+				return x / y;
+			}
+		}
+	)";
+	CHECK_SUCCESS_NO_WARNINGS(text);
+	text = R"(
+		contract C {
+			function f(int x, int y) public pure returns (int) {
+				require(y != 0);
 				return x / y;
 			}
 		}

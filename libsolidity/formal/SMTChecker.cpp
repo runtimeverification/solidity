@@ -244,20 +244,26 @@ void SMTChecker::endVisit(TupleExpression const& _tuple)
 
 void SMTChecker::checkUnderOverflow(smt::Expression _value, IntegerType const& _type, SourceLocation const& _location)
 {
-	checkCondition(
-		_value < SymbolicIntVariable::minValue(_type),
-		_location,
-		"Underflow (resulting value less than " + formatNumber(_type.minValue()) + ")",
-		"value",
-		&_value
-	);
-	checkCondition(
-		_value > SymbolicIntVariable::maxValue(_type),
-		_location,
-		"Overflow (resulting value larger than " + formatNumber(_type.maxValue()) + ")",
-		"value",
-		&_value
-	);
+	if (!_type.isUnbound() || !_type.isSigned())
+	{
+		checkCondition(
+			_value < SymbolicIntVariable::minValue(_type),
+			_location,
+			"Underflow (resulting value less than " + formatNumber(_type.minValue()) + ")",
+			"value",
+			&_value
+		);
+	}
+	if (!_type.isUnbound())
+	{
+		checkCondition(
+			_value > SymbolicIntVariable::maxValue(_type),
+			_location,
+			"Overflow (resulting value larger than " + formatNumber(_type.maxValue()) + ")",
+			"value",
+			&_value
+		);
+	}
 }
 
 void SMTChecker::endVisit(UnaryOperation const& _op)

@@ -435,8 +435,8 @@ bigint IntegerType::minValue() const {
 }
 
 bigint IntegerType::maxValue() const {
-    solAssert(!isUnbound(),
-              "IeleCompiler: requested maximum value of unbound integer");
+  solAssert(!isUnbound(),
+            "IeleCompiler: requested maximum value of unbound integer");
   if (isSigned())
     return (bigint(1) << (m_bits - 1)) - 1;
   else
