@@ -66,6 +66,8 @@ entry:
   br %out.of.range1, throw
   sstore %_beneficiary_0, @"beneficiary"
   %timestamp = call @iele.timestamp()
+  %out.of.range2 = cmp lt %timestamp, 0
+  br %out.of.range2, throw
   %tmp = add %timestamp, %_biddingTime_1
   sstore %tmp, @"auctionEnd"
   ret void
@@ -78,29 +80,35 @@ define public @"bid()"() {
 entry:
   %timestamp = call @iele.timestamp()
   %auctionEnd.val = sload @"auctionEnd"
+  %out.of.range = cmp lt %timestamp, 0
+  br %out.of.range, throw
   %tmp = cmp le %timestamp, %auctionEnd.val
   %tmp1 = iszero %tmp
   br %tmp1, throw
   %callvalue = call @iele.callvalue()
   %highestBid.val = sload @"highestBid"
-  %tmp2 = cmp gt %callvalue, %highestBid.val
-  %tmp3 = iszero %tmp2
-  br %tmp3, throw
-  %highestBidder.val = sload @"highestBidder"
-  %tmp4 = cmp ne %highestBidder.val, 0
+  %out.of.range3 = cmp lt %callvalue, 0
+  br %out.of.range3, throw
+  %tmp4 = cmp gt %callvalue, %highestBid.val
   %tmp5 = iszero %tmp4
-  br %tmp5, if.end
-  %highestBidder.val6 = sload @"highestBidder"
-  %highestBid.val7 = sload @"highestBid"
+  br %tmp5, throw
+  %highestBidder.val = sload @"highestBidder"
+  %tmp7 = cmp ne %highestBidder.val, 0
+  %tmp8 = iszero %tmp7
+  br %tmp8, if.end
+  %highestBidder.val9 = sload @"highestBidder"
+  %highestBid.val10 = sload @"highestBid"
   %gas = call @iele.gaslimit()
-  %status = call @"deposit" at %highestBidder.val6 () send %highestBid.val7, gaslimit %gas
+  %status = call @"deposit" at %highestBidder.val9 () send %highestBid.val10, gaslimit %gas
   br %status, throw.status
 
 if.end:
   %caller = call @iele.caller()
   sstore %caller, @"highestBidder"
-  %callvalue8 = call @iele.callvalue()
-  sstore %callvalue8, @"highestBid"
+  %callvalue11 = call @iele.callvalue()
+  %out.of.range13 = cmp lt %callvalue11, 0
+  br %out.of.range13, throw
+  sstore %callvalue11, @"highestBid"
   ret void
 
 throw:
@@ -116,6 +124,8 @@ entry:
   br %callvalue, throw
   %timestamp = call @iele.timestamp()
   %auctionEnd.val = sload @"auctionEnd"
+  %out.of.range = cmp lt %timestamp, 0
+  br %out.of.range, throw
   %tmp = cmp ge %timestamp, %auctionEnd.val
   %tmp1 = iszero %tmp
   br %tmp1, throw
