@@ -1256,7 +1256,8 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     compileLValues(unaryOperation.subExpression(), LValues);
 
     solAssert(LValues.size() == 1, "not implemented yet");
-    appendLValueDelete(LValues[0], unaryOperation.subExpression().annotation().type);
+    TypePointer type = unaryOperation.subExpression().annotation().type;
+    appendLValueDelete(LValues[0], type, type->isValueType() ? CompilingLValueKind : LValueKind::Reg);
     break;
   }
   default:
@@ -1267,9 +1268,26 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
   return false;
 }
 
-void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type) {
+IeleCompiler::LValueKind IeleCompiler::loadKind(TypePointer type, DataLocation loc) {
+  if (type->isDynamicallySized() && type->dataStoredIn(DataLocation::Memory)) {
+    return LValueKind::Memory;
+  }
   if (type->isValueType()) {
-    appendLValueAssign(LValue, iele::IeleIntConstant::getZero(&Context));
+    return storeKind(loc);
+  }
+  return LValueKind::Reg;
+}
+IeleCompiler::LValueKind IeleCompiler::storeKind(DataLocation loc) {
+  if (loc == DataLocation::Memory) {
+    return LValueKind::Memory;
+  }
+  solAssert(loc == DataLocation::Storage, "not supported in IELE");
+  return LValueKind::Storage;
+}
+
+void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type, LValueKind Kind) {
+  if (type->isValueType()) {
+    appendLValueAssign(LValue, iele::IeleIntConstant::getZero(&Context), Kind);
     return;
   }
   if (!type->isDynamicallyEncoded()) {
@@ -1286,6 +1304,7 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
     }
     return;
   }
+  LValue = appendLValueDereference(LValue, Kind);
   switch (type->category()) {
   case Type::Category::Struct: {
     const StructType &structType = dynamic_cast<const StructType &>(*type);
@@ -1314,7 +1333,7 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
         iele::IeleInstruction::Add, Member, LValue, OffsetValue,
         CompilingBlock);
 
-      appendLValueDelete(Member, member.type);
+      appendLValueDelete(Member, member.type, loadKind(member.type, structType.location()));
     }
     break;
   }
@@ -1390,15 +1409,7 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type)
       solAssert(false, "not supported by IELE.");
     }
 
-    iele::IeleLocalVariable *LoadedValue;
-    if (elementType.isDynamicallySized() && arrayType.location() == DataLocation::Memory) {
-      LoadedValue = iele::IeleLocalVariable::Create(&Context, "array.dereferenced", CompilingFunction);
-      iele::IeleInstruction::CreateLoad(LoadedValue, Element, CompilingBlock);
-    } else {
-      LoadedValue = Element;
-    }
-
-    appendLValueDelete(LoadedValue, arrayType.baseType());
+    appendLValueDelete(Element, arrayType.baseType(), loadKind(arrayType.baseType(), arrayType.location()));
 
     iele::IeleValue *ElementSizeValue =
         iele::IeleIntConstant::Create(&Context, elementSize);
@@ -1557,7 +1568,7 @@ void IeleCompiler::encoding(
   iele::IeleInstruction::CreateAssign(
     CrntPos, iele::IeleIntConstant::getZero(&Context), CompilingBlock);    
   for (unsigned i = 0; i < arguments.size(); i++) {
-    doEncode(NextFree, CrntPos, arguments[i], ArgTypeSize, ArgLen, types[i]);
+    doEncode(NextFree, CrntPos, arguments[i], ArgTypeSize, ArgLen, types[i], LValueKind::Reg);
   }
 }
 
@@ -1565,7 +1576,8 @@ void IeleCompiler::doEncode(
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, iele::IeleValue *ArgValue, 
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type) {
+    TypePointer type, LValueKind Kind) {
+  ArgValue = appendLValueDereference(ArgValue, Kind);
   switch (type->category()) {
   case Type::Category::Contract:
   case Type::Category::FixedBytes:
@@ -1685,16 +1697,8 @@ void IeleCompiler::doEncode(
         solAssert(false, "not supported by IELE.");
       }
   
-      iele::IeleLocalVariable *LoadedValue;
-      if ((elementType->isDynamicallySized() && arrayType.location() == DataLocation::Memory)
-          || elementType->isValueType()) {
-        LoadedValue = iele::IeleLocalVariable::Create(&Context, "array.dereferenced", CompilingFunction);
-        iele::IeleInstruction::CreateLoad(LoadedValue, Element, CompilingBlock);
-      } else {
-        LoadedValue = Element;
-      }
-
-      doEncode(NextFree, CrntPos, LoadedValue, ArgTypeSize, ArgLen, elementType);
+      elementType = ReferenceType::copyForLocationIfReference(arrayType.location(), elementType);
+      doEncode(NextFree, CrntPos, Element, ArgTypeSize, ArgLen, elementType, loadKind(elementType, arrayType.location()));
   
       iele::IeleValue *ElementSizeValue =
           iele::IeleIntConstant::Create(&Context, elementSize);
@@ -1741,7 +1745,8 @@ void IeleCompiler::doEncode(
         iele::IeleInstruction::Add, Member, ArgValue, OffsetValue,
         CompilingBlock);
 
-      doEncode(NextFree, CrntPos, Member, ArgTypeSize, ArgLen, decl->type());
+      TypePointer memberType = ReferenceType::copyForLocationIfReference(structType.location(), decl->type());
+      doEncode(NextFree, CrntPos, Member, ArgTypeSize, ArgLen, memberType, loadKind(memberType, structType.location()));
     }
     break;
   }
@@ -1773,14 +1778,17 @@ iele::IeleValue *IeleCompiler::decoding(iele::IeleValue *encoded, TypePointer ty
     iele::IeleLocalVariable::Create(&Context, "arg.len", CompilingFunction);
   iele::IeleInstruction::CreateAssign(
     CrntPos, iele::IeleIntConstant::getZero(&Context), CompilingBlock);    
-  return doDecode(NextFree, CrntPos, nullptr, ArgTypeSize, ArgLen, type, true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "arg.value", CompilingFunction);
+  doDecode(NextFree, CrntPos, Result, ArgTypeSize, ArgLen, type, LValueKind::Reg);
+  return Result;
 }
 
-iele::IeleValue *IeleCompiler::doDecode(
+void IeleCompiler::doDecode(
     iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
     iele::IeleValue *StoreAt,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, bool Allocate) {
+    TypePointer type, LValueKind Kind) {
   iele::IeleValue *AllocedValue;
   switch(type->category()) {
   case Type::Category::Contract:
@@ -1822,6 +1830,7 @@ iele::IeleValue *IeleCompiler::doDecode(
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
     }
+    appendLValueAssign(StoreAt, AllocedValue, Kind);
     break;
   }
   case Type::Category::Mapping:
@@ -1852,6 +1861,7 @@ iele::IeleValue *IeleCompiler::doDecode(
           iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
   
         AllocedValue = appendArrayAllocation(arrayType, ArrayLen);
+        appendLValueAssign(StoreAt, AllocedValue, Kind);
   
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add,
@@ -1859,8 +1869,9 @@ iele::IeleValue *IeleCompiler::doDecode(
           iele::IeleIntConstant::getOne(&Context),
           CompilingBlock);
       } else {
-        if (Allocate) {
+        if (Kind == LValueKind::Reg) {
           AllocedValue = appendArrayAllocation(arrayType);
+          appendLValueAssign(StoreAt, AllocedValue, Kind);
         } else {
           AllocedValue = StoreAt;
         }
@@ -1899,7 +1910,7 @@ iele::IeleValue *IeleCompiler::doDecode(
         solAssert(false, "not supported by IELE.");
       }
   
-      doDecode(NextFree, CrntPos, Element, ArgTypeSize, ArgLen, elementType, false);
+      doDecode(NextFree, CrntPos, Element, ArgTypeSize, ArgLen, elementType, LValueKind::Memory);
   
       iele::IeleValue *ElementSizeValue =
           iele::IeleIntConstant::Create(&Context, elementSize);
@@ -1921,8 +1932,9 @@ iele::IeleValue *IeleCompiler::doDecode(
   }
   case Type::Category::Struct: {
     const StructType &structType = dynamic_cast<const StructType &>(*type);
-    if (Allocate) {
+    if (Kind == LValueKind::Reg) {
       AllocedValue = appendStructAllocation(structType);
+      appendLValueAssign(StoreAt, AllocedValue, Kind);
     } else {
       AllocedValue = StoreAt;
     }
@@ -1952,7 +1964,7 @@ iele::IeleValue *IeleCompiler::doDecode(
         iele::IeleInstruction::Add, Member, AllocedValue, OffsetValue,
         CompilingBlock);
 
-      doDecode(NextFree, CrntPos, Member, ArgTypeSize, ArgLen, decl->type(), false);
+      doDecode(NextFree, CrntPos, Member, ArgTypeSize, ArgLen, decl->type(), LValueKind::Memory);
     }
     break;
   }
@@ -1960,11 +1972,6 @@ iele::IeleValue *IeleCompiler::doDecode(
     solAssert(false, "invalid reference type");
     break;
   }
-  if (StoreAt != nullptr && (type->isValueType() || (type->isDynamicallySized() && type->dataStoredIn(DataLocation::Memory)))) {
-    iele::IeleInstruction::CreateStore(
-      AllocedValue, StoreAt, CompilingBlock);
-  }
-  return AllocedValue;
 }
  
 
@@ -3963,36 +3970,40 @@ iele::IeleLocalVariable *IeleCompiler::appendStructAllocation(const StructType &
 void IeleCompiler::appendCopy(
     iele::IeleValue *To, const Type &ToType,
     iele::IeleValue *From, const Type &FromType,
-    DataLocation ToLoc, DataLocation FromLoc) {
+    DataLocation ToLoc, DataLocation FromLoc,
+    LValueKind ToKind, LValueKind FromKind) {
+  From = appendLValueDereference(From, FromKind);
+  iele::IeleValue *AllocedValue;
   if (FromType.isValueType()) {
     solAssert(ToType.isValueType(), "invalid conversion");
-    iele::IeleLocalVariable *LoadedValue =
-      iele::IeleLocalVariable::Create(&Context, "copy.from.val", CompilingFunction);
-    if (FromLoc == DataLocation::Storage) {
-      iele::IeleInstruction::CreateSLoad(LoadedValue, From, CompilingBlock);
-    } else {
-      solAssert(FromLoc == DataLocation::Memory, "not supported in IELE");
-      iele::IeleInstruction::CreateLoad(LoadedValue, From, CompilingBlock);
-    }
-    iele::IeleValue *ConvertedValue = appendTypeConversion(LoadedValue, FromType, ToType);
-    if (ToLoc == DataLocation::Storage) {
-      iele::IeleInstruction::CreateSStore(ConvertedValue, To, CompilingBlock);
-    } else {
-      solAssert(ToLoc == DataLocation::Memory, "not supported in IELE");
-      iele::IeleInstruction::CreateStore(ConvertedValue, To, CompilingBlock);
-    }
+    AllocedValue = From;
+    AllocedValue = appendTypeConversion(AllocedValue, FromType, ToType);
+    appendLValueAssign(To, AllocedValue, ToKind);
     return;
   }
 
   if (!FromType.isDynamicallyEncoded() && FromType == ToType) {
     iele::IeleValue *SizeValue = getReferenceTypeSize(FromType, From);
-    appendIeleRuntimeCopy(From, To, SizeValue, FromLoc, ToLoc);
+    if (ToKind == LValueKind::Reg) {
+      AllocedValue = appendIeleRuntimeAllocateMemory(SizeValue);
+      appendLValueAssign(To, AllocedValue, ToKind);
+    } else {
+      AllocedValue = To;
+    }
+    appendIeleRuntimeCopy(From, AllocedValue, SizeValue, FromLoc, ToLoc);
     return;
   }
   switch (FromType.category()) {
   case Type::Category::Struct: {
     const StructType &structType = dynamic_cast<const StructType &>(FromType);
     const StructType &toStructType = dynamic_cast<const StructType &>(ToType);
+
+    if (ToKind == LValueKind::Reg) {
+      AllocedValue = appendStructAllocation(toStructType);
+      appendLValueAssign(To, AllocedValue, ToKind);
+    } else {
+      AllocedValue = To;
+    }
     // We loop over the members of the source struct type.
     for (auto const &member : structType.members(nullptr)) {
       // First find the types of the corresponding member in the source and
@@ -4065,19 +4076,19 @@ void IeleCompiler::appendCopy(
       iele::IeleValue *ToOffsetValue =
         iele::IeleIntConstant::Create(&Context, toOffset);
       iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, MemberTo, To, ToOffsetValue,
+        iele::IeleInstruction::Add, MemberTo, AllocedValue, ToOffsetValue,
         CompilingBlock);
 
       // Finally do the copy of the member value from source to destination.
-      appendCopy(MemberTo, *memberToType, MemberFrom, *memberFromType, ToLoc, FromLoc);
+      appendCopy(MemberTo, *memberToType, MemberFrom, *memberFromType, ToLoc, FromLoc, storeKind(ToLoc), loadKind(memberFromType, structType.location()));
     }
     break;
   }
   case Type::Category::Array: {
     const ArrayType &arrayType = dynamic_cast<const ArrayType &>(FromType);
     const ArrayType &toArrayType = dynamic_cast<const ArrayType &>(ToType);
-    const Type &elementType = *arrayType.baseType();
-    const Type &toElementType = *toArrayType.baseType();
+    TypePointer elementType = arrayType.baseType();
+    TypePointer toElementType = toArrayType.baseType();
 
     iele::IeleLocalVariable *SizeVariableFrom =
       iele::IeleLocalVariable::Create(&Context, "from.length", CompilingFunction);
@@ -4112,42 +4123,48 @@ void IeleCompiler::appendCopy(
 
     // copy the size field
     if (ToType.isDynamicallySized()) {
-      ToLoc == DataLocation::Storage ?
+      if (ToLoc == DataLocation::Storage) {
         iele::IeleInstruction::CreateSLoad(
           SizeVariableTo, To,
-          CompilingBlock) :
-        iele::IeleInstruction::CreateLoad(
-          SizeVariableTo, To,
-          CompilingBlock) ;
-
-      ToLoc == DataLocation::Storage ?
+          CompilingBlock);
         iele::IeleInstruction::CreateSStore(
           SizeVariableFrom, To,
-          CompilingBlock) :
-        iele::IeleInstruction::CreateStore(
-          SizeVariableFrom, To,
-          CompilingBlock) ;
+          CompilingBlock);
+        AllocedValue = To;
+      } else {
+        iele::IeleInstruction::CreateAssign(
+          SizeVariableTo, SizeVariableFrom,
+          CompilingBlock);
+        AllocedValue = appendArrayAllocation(toArrayType, SizeVariableTo);
+        appendLValueAssign(To, AllocedValue, ToKind);
+      }
 
       iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Add, ElementTo, To,
+          iele::IeleInstruction::Add, ElementTo, AllocedValue,
           iele::IeleIntConstant::getOne(&Context),
           CompilingBlock);
     } else {
+      if (ToKind == LValueKind::Reg) {
+        AllocedValue = appendArrayAllocation(toArrayType);
+        appendLValueAssign(To, AllocedValue, ToKind);
+      } else {
+        AllocedValue = To;
+      }
       iele::IeleInstruction::CreateAssign(
         SizeVariableTo, iele::IeleIntConstant::Create(&Context, bigint(toArrayType.length())),
         CompilingBlock);
       iele::IeleInstruction::CreateAssign(
-        ElementTo, To, CompilingBlock);
+        ElementTo, AllocedValue, CompilingBlock);
     }
  
     bigint elementSize, toElementSize;
     switch (FromLoc) {
     case DataLocation::Storage: {
-      elementSize = elementType.storageSize();
+      elementSize = elementType->storageSize();
       break;
     }
     case DataLocation::Memory: {
-      elementSize = elementType.memorySize();
+      elementSize = elementType->memorySize();
       break;
     }
     case DataLocation::CallData:
@@ -4156,11 +4173,11 @@ void IeleCompiler::appendCopy(
 
     switch (ToLoc) {
     case DataLocation::Storage: {
-      toElementSize = toElementType.storageSize();
+      toElementSize = toElementType->storageSize();
       break;
     }
     case DataLocation::Memory: {
-      toElementSize = toElementType.memorySize();
+      toElementSize = toElementType->memorySize();
       break;
     }
     case DataLocation::CallData:
@@ -4173,7 +4190,7 @@ void IeleCompiler::appendCopy(
         iele::IeleIntConstant::Create(&Context, toElementSize);
 
     iele::IeleLocalVariable *FillLoc, *FillSize;
-    if (!elementType.isDynamicallyEncoded() && elementType == toElementType) {
+    if (!elementType->isDynamicallyEncoded() && *elementType == *toElementType) {
       iele::IeleLocalVariable *CopySize =
         iele::IeleLocalVariable::Create(&Context, "copy.size", CompilingFunction);
       iele::IeleInstruction::CreateBinOp(
@@ -4207,35 +4224,7 @@ void IeleCompiler::appendCopy(
         DoneValue, SizeVariableFrom, CompilingBlock);
       connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
  
-      iele::IeleLocalVariable *LoadedValueFrom;
-      if (elementType.isDynamicallySized() && arrayType.location() == DataLocation::Memory) {
-        LoadedValueFrom = iele::IeleLocalVariable::Create(&Context, "from.array.dereferenced", CompilingFunction);
-        iele::IeleInstruction::CreateLoad(LoadedValueFrom, ElementFrom, CompilingBlock);
-      } else {
-        LoadedValueFrom = ElementFrom;
-      }
- 
-      iele::IeleLocalVariable *LoadedValueTo;
-      if (toElementType.isDynamicallySized() && toArrayType.location() == DataLocation::Memory) {
-        const ArrayType &arrayElementType = dynamic_cast<const ArrayType &>(toElementType);
-        iele::IeleLocalVariable *FromElementSize =
-          iele::IeleLocalVariable::Create(&Context, "from.array.element.size", CompilingFunction);
-        FromLoc == DataLocation::Storage ?
-          iele::IeleInstruction::CreateSLoad(
-            FromElementSize, LoadedValueFrom,
-            CompilingBlock) :
-          iele::IeleInstruction::CreateLoad(
-            FromElementSize, LoadedValueFrom,
-            CompilingBlock) ;
-
-        LoadedValueTo = appendArrayAllocation(arrayElementType, FromElementSize, false);
-
-        iele::IeleInstruction::CreateStore(LoadedValueTo, ElementTo, CompilingBlock);
-      } else {
-        LoadedValueTo = ElementTo;
-      }
-
-      appendCopy(LoadedValueTo, toElementType, LoadedValueFrom, elementType, ToLoc, FromLoc);
+      appendCopy(ElementTo, *toElementType, ElementFrom, *elementType, ToLoc, FromLoc, storeKind(ToLoc), loadKind(elementType, arrayType.location()));
   
       iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, ElementFrom, ElementFrom,
@@ -4297,59 +4286,35 @@ void IeleCompiler::appendCopy(
 
 void IeleCompiler::appendCopyFromStorageToStorage(
     iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType) {
-  appendCopy(To, ToType, From, FromType, DataLocation::Storage, DataLocation::Storage);
+  appendCopy(To, ToType, From, FromType, DataLocation::Storage, DataLocation::Storage, LValueKind::Storage, LValueKind::Reg);
 }
 void IeleCompiler::appendCopyFromMemoryToStorage(
     iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType) {
-  appendCopy(To, ToType, From, FromType, DataLocation::Storage, DataLocation::Memory);
+  appendCopy(To, ToType, From, FromType, DataLocation::Storage, DataLocation::Memory, LValueKind::Storage, LValueKind::Reg);
 }
 void IeleCompiler::appendCopyFromMemoryToMemory(
     iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType) {
-  appendCopy(To, ToType, From, FromType, DataLocation::Memory, DataLocation::Memory);
+  appendCopy(To, ToType, From, FromType, DataLocation::Memory, DataLocation::Memory, LValueKind::Memory, LValueKind::Reg);
 }
 
 iele::IeleValue *IeleCompiler::appendCopyFromStorageToMemory(
     const Type &ToType, iele::IeleValue *From, const Type &FromType) {
-  iele::IeleValue *To;
-  if (FromType.isDynamicallySized()) {
-    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(FromType);
-    const ArrayType &toArrayType = dynamic_cast<const ArrayType &>(ToType);
-
-    iele::IeleLocalVariable *SizeVariable =
-      iele::IeleLocalVariable::Create(&Context, "array.size", CompilingFunction);
-    arrayType.location() == DataLocation::Storage ?
-      iele::IeleInstruction::CreateSLoad(
-        SizeVariable, From,
-        CompilingBlock) :
-      iele::IeleInstruction::CreateLoad(
-        SizeVariable, From,
-        CompilingBlock) ;
-
-    To = appendArrayAllocation(toArrayType, SizeVariable);
-  } else if (FromType.category() == Type::Category::Array) {
-    const ArrayType &arrayType = dynamic_cast<const ArrayType &>(ToType);
-    To = appendArrayAllocation(arrayType);
-  } else if (FromType.category() == Type::Category::Struct) {
-    const StructType &structType = dynamic_cast<const StructType &>(ToType);
-    To = appendStructAllocation(structType);
-  } else {
-    solAssert(FromType.category() == Type::Category::Mapping,
-              "IeleCompiler: requested storage to memory copy of unknown "
-              "reference type");
-    solAssert(false, "IeleCompiler: requested storage to memory copy of "
-                     "mapping");
-  }
-  appendCopy(To, ToType, From, FromType, DataLocation::Memory, DataLocation::Storage);
+  iele::IeleValue *To =
+    iele::IeleLocalVariable::Create(&Context, "copy.to", CompilingFunction);
+  appendCopy(To, ToType, From, FromType, DataLocation::Memory, DataLocation::Storage, LValueKind::Reg, LValueKind::Reg);
   return To;
 }
 
-iele::IeleLocalVariable *IeleCompiler::appendLValueDereference(
-    iele::IeleValue *LValue) {
+iele::IeleValue *IeleCompiler::appendLValueDereference(
+    iele::IeleValue *LValue, LValueKind Kind) {
   // If the LValue is a pointer to storage (e.g. state variable) we need to
   // perform an sload, if it is a pointer to memory then a load, else
   // dereference is a noop.
+  if (Kind == LValueKind::Default) {
+    Kind = CompilingLValueKind;
+  }
   iele::IeleLocalVariable *LoadedValue = nullptr;
-  switch (CompilingLValueKind) {
+  switch (Kind) {
   case LValueKind::Storage:
   case LValueKind::ArrayLengthStorage: {
     LoadedValue = iele::IeleLocalVariable::Create(
@@ -4365,20 +4330,25 @@ iele::IeleLocalVariable *IeleCompiler::appendLValueDereference(
     break;
   }
   case LValueKind::Reg: {
-    LoadedValue = llvm::cast<iele::IeleLocalVariable>(LValue);
-    break;
+    return LValue;
   }
+  case LValueKind::Default:
+    solAssert(false, "Invalid LValue Kind");
   }
 
   return LoadedValue;
 }
 
 void IeleCompiler::appendLValueAssign(iele::IeleValue *LValue,
-                                      iele::IeleValue *RValue) {
+                                      iele::IeleValue *RValue,
+                                      LValueKind Kind) {
+  if (Kind == LValueKind::Default) {
+    Kind = CompilingLValueKind;
+  }
   // If the LValue is a pointer to storage (e.g. state variable) we need to
   // perform an sstore, if it is a pointer to memory then a store, else a simple
   // assignment.
-  switch (CompilingLValueKind) {
+  switch (Kind) {
   case LValueKind::ArrayLengthStorage:
     appendArrayLengthResize(true, LValue, RValue);
   case LValueKind::Storage:
@@ -4393,6 +4363,8 @@ void IeleCompiler::appendLValueAssign(iele::IeleValue *LValue,
     iele::IeleInstruction::CreateAssign(
         llvm::cast<iele::IeleLocalVariable>(LValue), RValue, CompilingBlock);
     break;
+  case LValueKind::Default:
+    solAssert(false, "Invalid LValue Kind");
   }
 }
 
