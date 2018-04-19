@@ -439,8 +439,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     &Context, "return");
   
   // Add it to stack of return locations
-  // ReturnBlocks[0] = retBlock; // this is done once per function hence level 0
-  ReturnBlocks.push(retBlock); // this is done once per function hence level 0
+  ReturnBlocks.push(retBlock);
 
   // Visit function body (inc modifiers). 
   CompilingFunctionASTNode = &function;
@@ -463,10 +462,8 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
 void IeleCompiler::appendReturn(const FunctionDefinition &function, 
     llvm::SmallVector<std::string, 4> ReturnParameterNames) {
 
-  // solAssert(ReturnBlocks[0], "IeleCompiler: appendReturn error");
   solAssert(!ReturnBlocks.empty(), "IeleCompiler: appendReturn error");
 
-  // auto retBlock = ReturnBlocks[0];
   auto retBlock = ReturnBlocks.top();
 
   // Append block
@@ -572,7 +569,6 @@ bool IeleCompiler::visit(const IfStatement &ifStatement) {
 bool IeleCompiler::visit(const Return &returnStatement) {
   const Expression *returnExpr = returnStatement.expression();
 
-  // solAssert(ReturnBlocks[ModifierDepth], "IeleCompiler: return jmp destination not set");
   solAssert(!ReturnBlocks.empty(), "IeleCompiler: return jmp destination not set");
   
   if (!returnExpr) {
@@ -688,7 +684,6 @@ void IeleCompiler::appendModifierOrFunctionCode() {
     if (ModifierDepth != 0) {
       JumpTarget = iele::IeleBlock::Create(
         &Context, "ret_jmp_dest");
-      // ReturnBlocks[ModifierDepth] = JumpTarget;
       ReturnBlocks.push(JumpTarget);
     }
     
