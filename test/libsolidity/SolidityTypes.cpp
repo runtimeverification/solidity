@@ -66,15 +66,15 @@ BOOST_AUTO_TEST_CASE(storage_layout_mapping)
 			Type::fromElementaryTypeName("uint8")
 		)},
 	}));
-	BOOST_REQUIRE_EQUAL(u256(4), members.storageSize());
+	BOOST_REQUIRE_EQUAL(bigint(514), members.storageSize());
 	BOOST_REQUIRE(members.memberStorageOffset("first") != nullptr);
 	BOOST_REQUIRE(members.memberStorageOffset("second") != nullptr);
 	BOOST_REQUIRE(members.memberStorageOffset("third") != nullptr);
 	BOOST_REQUIRE(members.memberStorageOffset("final") != nullptr);
 	BOOST_CHECK(*members.memberStorageOffset("first") == make_pair(bigint(0), unsigned(0)));
 	BOOST_CHECK(*members.memberStorageOffset("second") == make_pair(bigint(1), unsigned(0)));
-	BOOST_CHECK(*members.memberStorageOffset("third") == make_pair(bigint(2), unsigned(0)));
-	BOOST_CHECK(*members.memberStorageOffset("final") == make_pair(bigint(3), unsigned(0)));
+	BOOST_CHECK(*members.memberStorageOffset("third") == make_pair(bigint(257), unsigned(0)));
+	BOOST_CHECK(*members.memberStorageOffset("final") == make_pair(bigint(258), unsigned(0)));
 }
 
 BOOST_AUTO_TEST_CASE(storage_layout_arrays)

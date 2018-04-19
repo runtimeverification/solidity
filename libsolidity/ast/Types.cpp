@@ -1447,6 +1447,10 @@ bigint ArrayType::memorySize() const
 	return storageSize();
 }
 
+bool ArrayType::containsInfiniteMapping() const {
+  return baseType()->containsInfiniteMapping();
+}
+
 unsigned ArrayType::sizeOnStack() const
 {
 	if (m_location == DataLocation::CallData)
@@ -1766,41 +1770,49 @@ unsigned StructType::calldataEncodedSize(bool _padded) const
 	return size;
 }
 
-bool StructType::isDynamicallyEncoded() const
-{
-	solAssert(!recursive(), "");
-	for (auto t: memoryMemberTypes())
-	{
-		solAssert(t, "Parameter should have external type.");
-		t = t->interfaceType(false);
-		if (t->isDynamicallyEncoded())
-			return true;
-	}
-	return false;
+bool StructType::isDynamicallyEncoded() const {
+  solAssert(!recursive(), "");
+  for (auto const &m : members(nullptr)) {
+    if (m.type->isDynamicallyEncoded())
+      return true;
+  }
+  return false;
 }
 
 bigint StructType::getFixedBitwidth() const {
-	bigint bitwidth;
-	for (auto const& t: memoryMemberTypes()) {
-		if (bigint b = t->getFixedBitwidth())
-			bitwidth += b;
-		else
-			return bigint(0);
-	}
-	return bitwidth;
+  solAssert(!recursive(), "");
+  bigint bitwidth;
+  for (auto const &m : members(nullptr)) {
+    if (bigint b = m.type->getFixedBitwidth())
+      bitwidth += b;
+    else
+      return bigint(0);
+  }
+  return bitwidth;
 }
 
 bigint StructType::memorySize() const
 {
+	solAssert(!recursive(), "");
 	bigint size;
 	for (auto const& t: memoryMemberTypes())
 		size += t->memorySize();
-	return size;
+	return max<bigint>(1, size);
 }
 
 bigint StructType::storageSize() const
 {
+	solAssert(!recursive(), "");
 	return max<bigint>(1, members(nullptr).storageSize());
+}
+
+bool StructType::containsInfiniteMapping() const {
+  solAssert(!recursive(), "");
+  for (auto const &m : members(nullptr))
+    if (m.type->containsInfiniteMapping())
+      return true;
+
+  return false;
 }
 
 string StructType::toString(bool _short) const
@@ -1962,8 +1974,14 @@ bool StructType::recursive() const
 			for (ASTPointer<VariableDeclaration> const& variable: str->members())
 			{
 				Type const* memberType = variable->annotation().type.get();
-				while (dynamic_cast<ArrayType const*>(memberType))
-					memberType = dynamic_cast<ArrayType const*>(memberType)->baseType().get();
+				while (true) {
+					if (dynamic_cast<ArrayType const*>(memberType))
+						memberType = dynamic_cast<ArrayType const*>(memberType)->baseType().get();
+					else if (dynamic_cast<MappingType const*>(memberType))
+						memberType = dynamic_cast<MappingType const*>(memberType)->valueType().get();
+					else
+						break;
+				}
 				if (StructType const* innerStruct = dynamic_cast<StructType const*>(memberType))
 					if (check(innerStruct))
 						return true;
@@ -2106,6 +2124,11 @@ bigint TupleType::getFixedBitwidth() const
 bigint TupleType::storageSize() const
 {
 	solAssert(false, "Storage size of non-storable tuple type requested.");
+}
+
+bool TupleType::containsInfiniteMapping() const
+{
+	solAssert(false, "Check for infinite mapping in non-storable tuple type requested.");
 }
 
 unsigned TupleType::sizeOnStack() const
@@ -2839,6 +2862,55 @@ string MappingType::canonicalName() const
 	return "mapping(" + keyType()->canonicalName() + " => " + valueType()->canonicalName() + ")";
 }
 
+bool MappingType::isDynamicallyEncoded() const {
+  // We return true for now to avoid bitwise copying of any mapping, as it would
+  // be too costly.
+  return true;
+  //return hasInfiniteKeyspace() || valueType()->isDynamicallyEncoded();
+}
+
+bigint MappingType::getFixedBitwidth() const {
+  if (hasInfiniteKeyspace()) {
+    return bigint(0);
+  } else if (hasHashedKeyspace()) {
+    return (bigint(1) << 256) * valueType()->getFixedBitwidth();
+  } else {
+    bigint keyBitwidth = keyType()->getFixedBitwidth();
+    solAssert(keyBitwidth, "IeleCompiler: found mapping with finite, non-hashed"
+                           " keyspace and statically unknown key bitwidth");
+    solAssert(keyBitwidth < bigint(UINT64_MAX),
+              "IeleCompiler: found mapping with too large key bitwidth");
+    return (bigint(1) << uint64_t(keyBitwidth)) * valueType()->getFixedBitwidth();
+  }
+}
+
+bigint MappingType::storageSize() const {
+  if (hasInfiniteKeyspace()) {
+    return valueType()->storageSize();
+  } else if (hasHashedKeyspace()) {
+    return (bigint(1) << 256) * valueType()->storageSize();
+  } else {
+    bigint keyBitwidth = keyType()->getFixedBitwidth();
+    solAssert(keyBitwidth, "IeleCompiler: found mapping with finite, non-hashed"
+                           " keyspace and statically unknown key bitwidth");
+    solAssert(keyBitwidth < bigint(UINT64_MAX),
+              "IeleCompiler: found mapping with too large key bitwidth");
+    return (bigint(1) << uint64_t(keyBitwidth)) * valueType()->storageSize();
+  }
+}
+
+bool MappingType::containsInfiniteMapping() const {
+  return hasInfiniteKeyspace();
+}
+
+bool MappingType::hasInfiniteKeyspace() const {
+  return !keyType()->getFixedBitwidth() && !valueType()->containsInfiniteMapping();
+}
+
+bool MappingType::hasHashedKeyspace() const {
+  return !keyType()->getFixedBitwidth() && !hasInfiniteKeyspace();
+}
+
 string TypeType::richIdentifier() const
 {
 	return "t_type" + identifierList(actualType());
@@ -2860,6 +2932,11 @@ bigint TypeType::getFixedBitwidth() const
 bigint TypeType::storageSize() const
 {
 	solAssert(false, "Storage size of non-storable type type requested.");
+}
+
+bool TypeType::containsInfiniteMapping() const
+{
+	solAssert(false, "Check for infinite mapping in non-storable type type requested.");
 }
 
 unsigned TypeType::sizeOnStack() const
@@ -2932,6 +3009,11 @@ bigint ModifierType::getFixedBitwidth() const
 bigint ModifierType::storageSize() const
 {
 	solAssert(false, "Storage size of non-storable modifier type requested.");
+}
+
+bool ModifierType::containsInfiniteMapping() const
+{
+	solAssert(false, "Check for infinite mapping in non-storable modifier type requested.");
 }
 
 string ModifierType::richIdentifier() const
