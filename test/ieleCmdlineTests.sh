@@ -53,6 +53,9 @@ examples_excluded=0
 cd "$REPO_ROOT"
 for f in std/*.sol
 do
+    grep -q $f test/should-skip-tests
+    skipped=$?
+    [ $skipped -eq 0 ] && continue
     compileFull "$f"
     failed=$?
     grep -q $f test/failing-tests
@@ -70,6 +73,9 @@ contracts_success=0
 contracts_excluded=0
 for dir in test/compilationTests/*
 do
+    grep -q $dir test/should-skip-tests
+    skipped=$?
+    [ $skipped -eq 0 ] && continue
     if [ "$dir" != "test/compilationTests/README.md" ]
     then
         compileFull "$dir"/*.sol "$dir"/*/*.sol
@@ -93,6 +99,9 @@ cd "$TMPDIR"
 "$REPO_ROOT"/scripts/isolate_tests.py "$REPO_ROOT"/test/
 for f in *.sol
 do
+    grep -q $f "$REPO_ROOT"/test/should-skip-tests
+    skipped=$?
+    [ $skipped -eq 0 ] && continue
     compileFull "$f"
     failed=$?
     grep -q $f "$REPO_ROOT"/test/failing-tests
@@ -115,6 +124,9 @@ cd "$TMPDIR"
 "$REPO_ROOT"/scripts/isolate_tests.py "$REPO_ROOT"/docs/ docs
 for f in *.sol
 do
+    grep -q $f "$REPO_ROOT"/test/should-skip-tests
+    skipped=$?
+    [ $skipped -eq 0 ] && continue
     compileFull "$f"
     failed=$?
     grep -q $f "$REPO_ROOT"/test/failing-tests
