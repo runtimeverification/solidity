@@ -3026,7 +3026,7 @@ BOOST_AUTO_TEST_CASE(event)
 			event Deposit(address indexed _from, bytes32 indexed _id, uint _value);
 			function deposit(bytes32 _id, bool _manually) payable {
 				if (_manually) {
-					bytes32 s = 0x19dacbf83c5de6658e14cbf7bcae5c15eca2eedecf1c66fbca928e4d351bea0f;
+					bytes32 s = 0xba4147ba0b861a26291c6fc19ebe604a0d4bf7d01d477cc5d9e10691704b7983;
 					log3(bytes32(msg.value), s, bytes32(msg.sender), _id);
 				} else {
 					Deposit(msg.sender, _id, msg.value);
@@ -10691,8 +10691,8 @@ BOOST_AUTO_TEST_CASE(snark)
 		}
 		// Encoding of field elements is: X[0] * z + X[1]
 		struct G2Point {
-			uint[2] X;
-			uint[2] Y;
+			uint256[2] X;
+			uint256[2] Y;
 		}
 
 		/// @return the generator of G1
