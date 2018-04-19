@@ -1829,6 +1829,8 @@ void IeleCompiler::doDecode(
           llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), ArgTypeSize, AllocedValue,
           CompilingBlock);
         break;
+      case Type::Category::Bool:
+       break;
       default:
         solAssert(false, "invalid type");
       }
