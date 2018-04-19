@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(user_multiline_comment)
 		contract test {
 			/// @notice Multiplies `a` by 7
 			/// and then adds `b`
-			function mul_and_add(uint a, uint256 b) returns(uint256 d) {
+			function mul_and_add(uint256 a, uint256 b) returns(uint256 d) {
 				return (a * 7) + b;
 			}
 		}
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(user_multiple_functions)
 	char const* sourceCode = R"(
 		contract test {
 			/// @notice Multiplies `a` by 7 and then adds `b`
-			function mul_and_add(uint a, uint256 b) returns(uint256 d) {
+			function mul_and_add(uint256 a, uint256 b) returns(uint256 d) {
 				return (a * 7) + b;
 			}
 

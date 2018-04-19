@@ -1626,7 +1626,7 @@ BOOST_AUTO_TEST_CASE(convert_fixed_bytes_to_uint_same_size)
 	char const* sourceCode = R"(
 		contract Test {
 			function bytesToUint(bytes32 s) returns (uint256 h) {
-				return uint(s);
+				return uint256(s);
 			}
 		}
 	)";
