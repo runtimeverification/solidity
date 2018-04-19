@@ -637,6 +637,32 @@ IeleInstruction *IeleInstruction::CreateNot(
   return NotInst;
 }
 
+IeleInstruction *IeleInstruction::CreateSha3(
+    IeleLocalVariable *Result, IeleValue *OperandValue,
+    IeleInstruction *InsertBefore) {
+  solAssert(Result, "CreateSha3: Invalid lvalues");
+  solAssert(OperandValue, "CreateSha3: Invalid operand");
+
+  IeleInstruction *Sha3Inst = new IeleInstruction(Sha3, InsertBefore);
+  Sha3Inst->getIeleLValueList().push_back(Result);
+  Sha3Inst->getIeleOperandList().push_back(OperandValue);
+
+  return Sha3Inst;
+}
+
+IeleInstruction *IeleInstruction::CreateSha3(
+    IeleLocalVariable *Result, IeleValue *OperandValue,
+    IeleBlock *InsertAtEnd) {
+  solAssert(Result, "CreateSha3: Invalid lvalues");
+  solAssert(OperandValue, "CreateSha3: Invalid operand");
+
+  IeleInstruction *Sha3Inst = new IeleInstruction(Sha3, InsertAtEnd);
+  Sha3Inst->getIeleLValueList().push_back(Result);
+  Sha3Inst->getIeleOperandList().push_back(OperandValue);
+
+  return Sha3Inst;
+}
+
 IeleInstruction *IeleInstruction::CreateBinOp(
     IeleOps BinOpcode, IeleLocalVariable *Result, IeleValue *LeftOperandValue,
     IeleValue *RightOperandValue, IeleInstruction *InsertBefore) {

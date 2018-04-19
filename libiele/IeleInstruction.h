@@ -287,7 +287,6 @@ public:
   static IeleInstruction *CreateLog2(
       IeleLocalVariable *Result, IeleValue *OperandValue,
       IeleInstruction *InsertBefore = nullptr);
-  
   static IeleInstruction *CreateLog2(
       IeleLocalVariable *Result, IeleValue *OperandValue,
       IeleBlock *InsertAtEnd);
@@ -295,8 +294,14 @@ public:
   static IeleInstruction *CreateNot(
       IeleLocalVariable *Result, IeleValue *OperandValue,
       IeleInstruction *InsertBefore = nullptr);
-
   static IeleInstruction *CreateNot(
+      IeleLocalVariable *Result, IeleValue *OperandValue,
+      IeleBlock *InsertAtEnd);
+
+  static IeleInstruction *CreateSha3(
+      IeleLocalVariable *Result, IeleValue *OperandValue,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateSha3(
       IeleLocalVariable *Result, IeleValue *OperandValue,
       IeleBlock *InsertAtEnd);
 
