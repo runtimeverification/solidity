@@ -1849,6 +1849,7 @@ void IeleCompiler::doDecode(
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
     }
+    appendRangeCheck(AllocedValue, *type);
     appendLValueAssign(StoreAt, AllocedValue, Kind);
     break;
   }
