@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(modifier_invocation)
 	Json::Value modifier = astJson["children"][0]["children"][1]["children"][2];
 	BOOST_CHECK_EQUAL(modifier["name"], "ModifierInvocation");
 	BOOST_CHECK_EQUAL(modifier["src"], "52:4:1");
-	BOOST_CHECK_EQUAL(modifier["children"][0]["attributes"]["type"], "modifier (uint256)");
+	BOOST_CHECK_EQUAL(modifier["children"][0]["attributes"]["type"], "modifier (uint)");
 	BOOST_CHECK_EQUAL(modifier["children"][0]["attributes"]["value"], "M");
 	BOOST_CHECK_EQUAL(modifier["children"][1]["attributes"]["value"], "1");
 }
@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE(function_type)
 	Json::Value argument = fun["children"][0]["children"][0];
 	BOOST_CHECK_EQUAL(argument["name"], "VariableDeclaration");
 	BOOST_CHECK_EQUAL(argument["attributes"]["name"], "x");
-	BOOST_CHECK_EQUAL(argument["attributes"]["type"], "function () payable external returns (uint256)");
+	BOOST_CHECK_EQUAL(argument["attributes"]["type"], "function () payable external returns (uint)");
 	Json::Value funType = argument["children"][0];
 	BOOST_CHECK_EQUAL(funType["attributes"]["constant"], false);
 	BOOST_CHECK_EQUAL(funType["attributes"]["payable"], true);
@@ -237,7 +237,7 @@ BOOST_AUTO_TEST_CASE(function_type)
 	Json::Value retval = fun["children"][1]["children"][0];
 	BOOST_CHECK_EQUAL(retval["name"], "VariableDeclaration");
 	BOOST_CHECK_EQUAL(retval["attributes"]["name"], "");
-	BOOST_CHECK_EQUAL(retval["attributes"]["type"], "function () view external returns (uint256)");
+	BOOST_CHECK_EQUAL(retval["attributes"]["type"], "function () view external returns (uint)");
 	funType = retval["children"][0];
 	BOOST_CHECK_EQUAL(funType["attributes"]["constant"], true);
 	BOOST_CHECK_EQUAL(funType["attributes"]["payable"], false);
