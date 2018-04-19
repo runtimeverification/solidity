@@ -627,15 +627,15 @@ BOOST_AUTO_TEST_CASE(struct_short)
 		compileAndRun(sourceCode, 0, "C");
 		ABI_CHECK(
 			callContractFunction("f((int256,uint256,bytes16))", vector<bytes>(1, encodeRefArgs(bigint(0xff010), bigint(0xff0002), "abcd" + string(12, 0)))),
-			encodeArgs(encodeRefArgs(bigint(0xff010), bigint(0xff0002), "abcd"))
+			encodeArgs(encodeRefArgs(bigint(0xff010), bigint(0xff0002), "abcd" + string(12, 0)))
 		);
 		ABI_CHECK(
 			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", vector<bytes>(1, encodeRefArgs(bigint(0xff010), bigint(0xff0002), bytes(16, 0)))),
-			encodeArgs(encodeRefArgs(bigint(0xff010), bigint(0xff0002), bytes(16, 0)))
+			encodeArgs(encodeRefArgs(bigint(0xff010), bigint(0xff0002)))
 		);
 		ABI_CHECK(
 			callContractFunctionNoEncoding("f((int256,uint256,bytes16))", vector<bytes>(1, encodeRefArgs(bigint(0xff010), bigint(0xff0002), bytes(15, 0)))),
-			encodeArgs(encodeRefArgs(bigint(0xff010), bigint(0xff0002), bytes(16, 0)))
+			encodeArgs(encodeRefArgs(bigint(0xff010), bigint(0xff0002)))
 		);
 	)
 }
