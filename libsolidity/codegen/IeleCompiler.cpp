@@ -1515,10 +1515,9 @@ iele::IeleValue *IeleCompiler::encoding(
 
 void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value) {
    // Calculate width in bytes of argument:
-   // width_bytes(n) = ((log2(n) + 1) + 7) / 8
-   //                = (log2(n) + 8) / 8
-   //                = log2(n) / 8 + 1
-   //                = log2(n) >> 3 + 1
+   // width_bytes(n) = ((log2(n) + 2) + 7) / 8
+   //                = (log2(n) + 9) / 8
+   //                = (log2(n) + 9) >> 3
   llvm::SmallVector<iele::IeleLocalVariable *, 1> Results;
    appendConditional(Value, Results,
     [&Value, this](llvm::SmallVectorImpl<iele::IeleValue *> &Results){
@@ -1532,14 +1531,14 @@ void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleVa
     });
    solAssert(Results.size() == 1, "Invalid number of conditional results in appendByteWidth");
    iele::IeleInstruction::CreateBinOp(
-     iele::IeleInstruction::Shift, Result, 
+     iele::IeleInstruction::Add, Result, 
      Results[0],
-     iele::IeleIntConstant::Create(&Context, bigint(-3)), 
+     iele::IeleIntConstant::Create(&Context, 9), 
      CompilingBlock);
    iele::IeleInstruction::CreateBinOp(
-     iele::IeleInstruction::Add, Result, 
+     iele::IeleInstruction::Shift, Result, 
      Result,
-     iele::IeleIntConstant::getOne(&Context), 
+     iele::IeleIntConstant::Create(&Context, bigint(-3)), 
      CompilingBlock);
 }
 
@@ -1813,6 +1812,26 @@ void IeleCompiler::doDecode(
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, 
         ArgTypeSize, CompilingBlock);
+      switch(type->category()) {
+      case Type::Category::Integer: {
+        IntegerType const& intType = dynamic_cast<const IntegerType &>(*type);
+        if (intType.isSigned()) {
+          break;
+        } else {
+          // fall through
+	}
+      }
+      case Type::Category::Contract:
+      case Type::Category::FixedBytes:
+      case Type::Category::Enum:
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Twos,
+          llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), ArgTypeSize, AllocedValue,
+          CompilingBlock);
+        break;
+      default:
+        solAssert(false, "invalid type");
+      }
      
     }
     else { // Arbitrary precision
