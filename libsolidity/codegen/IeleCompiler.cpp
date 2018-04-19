@@ -269,6 +269,7 @@ void IeleCompiler::compileContract(
         iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
       appendDefaultConstructor(base);
       iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+      appendRevertBlocks();
       CompilingBlock = nullptr;
       CompilingFunction = nullptr;
     }
@@ -287,6 +288,7 @@ void IeleCompiler::compileContract(
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
     appendDefaultConstructor(&contract);
     iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+    appendRevertBlocks();
     CompilingBlock = nullptr;
     CompilingFunction = nullptr;
   }
