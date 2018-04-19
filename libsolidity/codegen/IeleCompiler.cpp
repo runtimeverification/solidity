@@ -2920,7 +2920,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, AddressValue, ExprValue, OffsetValue,
         CompilingBlock);
-    if (CompilingLValue || !memberType.isValueType()) {
+    if (CompilingLValue || (!memberType.isValueType() &&
+        (!memberType.isDynamicallySized() || type.location() == DataLocation::Storage))) {
       // Return the address in case of an lvalue evaluation or for reference
       // types.
       CompilingExpressionResult.push_back(AddressValue);
