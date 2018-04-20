@@ -2521,7 +2521,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::ECRecover: {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
-    llvm::SmallVector<iele::IeleLocalVariable *, 4> Returns;
+    llvm::SmallVector<iele::IeleLocalVariable *, 1> Returns;
     compileFunctionArguments(&Arguments, &Returns, arguments, function, true);
 
     iele::IeleGlobalVariable *FunctionCalleeValue =
