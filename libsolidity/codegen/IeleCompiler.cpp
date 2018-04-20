@@ -1500,7 +1500,7 @@ iele::IeleValue *IeleCompiler::encoding(
   types.push_back(type);
 
   // Call version of `encoding` that writes destination loc (NextFree)
-  encoding(arguments, types, NextFree);
+  encoding(arguments, types, NextFree, true);
 
   // Init register to be returned
   iele::IeleLocalVariable *EncodedVal = 
@@ -1543,16 +1543,15 @@ void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleVa
 }
 
 /// Perform encoding of the given values, and writes in provided the destination
-void IeleCompiler::encoding(
+iele::IeleValue *IeleCompiler::encoding(
     llvm::SmallVectorImpl<iele::IeleValue *> &arguments, 
     TypePointers types,
-    iele::IeleLocalVariable *NextFree) {
+    iele::IeleLocalVariable *NextFree,
+    bool appendWidths) {
+  bool bigEndian = !appendWidths;
   solAssert(arguments.size() == types.size(), "invalid number of arguments to encoding");
   if (types.size() == 1 && types[0]->isValueType()) {
-    iele::IeleInstruction::CreateStore(
-        arguments[0], NextFree,
-        CompilingBlock);
-    return;
+    appendWidths = false;
   }
 
   // Create local vars needed for encoding
@@ -1567,15 +1566,16 @@ void IeleCompiler::encoding(
   iele::IeleInstruction::CreateAssign(
     CrntPos, iele::IeleIntConstant::getZero(&Context), CompilingBlock);    
   for (unsigned i = 0; i < arguments.size(); i++) {
-    doEncode(NextFree, CrntPos, arguments[i], ArgTypeSize, ArgLen, types[i], LValueKind::Reg);
+    doEncode(NextFree, CrntPos, arguments[i], ArgTypeSize, ArgLen, types[i], LValueKind::Reg, appendWidths, bigEndian);
   }
+  return CrntPos;
 }
 
 void IeleCompiler::doEncode(
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, iele::IeleValue *ArgValue, 
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, LValueKind Kind) {
+    TypePointer type, LValueKind Kind, bool appendWidths, bool bigEndian) {
   ArgValue = appendLValueDereference(ArgValue, Kind);
   switch (type->category()) {
   case Type::Category::Contract:
@@ -1593,8 +1593,18 @@ void IeleCompiler::doEncode(
         ArgTypeSize, 
         iele::IeleIntConstant::Create(&Context, size), 
         CompilingBlock);    
+      iele::IeleValue *Bswapped;
+      if (bigEndian) {
+        Bswapped = iele::IeleLocalVariable::Create(&Context, "byte.swapped", CompilingFunction);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::BSwap, 
+          llvm::dyn_cast<iele::IeleLocalVariable>(Bswapped), ArgTypeSize, ArgValue,
+          CompilingBlock);
+      } else {
+        Bswapped = ArgValue;
+      }
       iele::IeleInstruction::CreateStore(
-        ArgValue, NextFree, CrntPos, 
+        Bswapped, NextFree, CrntPos, 
         ArgTypeSize, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, 
@@ -1606,16 +1616,28 @@ void IeleCompiler::doEncode(
       // width_bytes(n) = ((log2(n) + 1) + 7) / 8
       //                = (log2(n) + 8) / 8
       appendByteWidth(ArgLen, ArgValue);
-      iele::IeleInstruction::CreateAssign(
-        ArgTypeSize, iele::IeleIntConstant::Create(&Context, argLenWidth), 
-        CompilingBlock);    
+      if (appendWidths) {
+        iele::IeleInstruction::CreateAssign(
+          ArgTypeSize, iele::IeleIntConstant::Create(&Context, argLenWidth), 
+          CompilingBlock);
+        iele::IeleInstruction::CreateStore(
+          ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, CrntPos, CrntPos, 
+          ArgTypeSize, CompilingBlock);
+      }
+      iele::IeleValue *Bswapped;
+      if (bigEndian) {
+        Bswapped = iele::IeleLocalVariable::Create(&Context, "byte.swapped", CompilingFunction);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::BSwap, 
+          llvm::dyn_cast<iele::IeleLocalVariable>(Bswapped), ArgLen, ArgValue,
+          CompilingBlock);
+      } else {
+        Bswapped = ArgValue;
+      }
       iele::IeleInstruction::CreateStore(
-        ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, CrntPos, CrntPos, 
-        ArgTypeSize, CompilingBlock);
-      iele::IeleInstruction::CreateStore(
-        ArgValue, NextFree, CrntPos, ArgLen, CompilingBlock);
+        Bswapped, NextFree, CrntPos, ArgLen, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
     }
@@ -1643,18 +1665,20 @@ void IeleCompiler::doEncode(
             ArrayLen, ArgValue,
             CompilingBlock) ;
         appendByteWidth(ArgLen, ArrayLen);
-        iele::IeleInstruction::CreateAssign(
-          ArgTypeSize, iele::IeleIntConstant::getOne(&Context), 
-          CompilingBlock);    
-        iele::IeleInstruction::CreateStore(
-          ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
-        iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Add, CrntPos, CrntPos, 
-          ArgTypeSize, CompilingBlock);
-        iele::IeleInstruction::CreateStore(
-          ArrayLen, NextFree, CrntPos, ArgLen, CompilingBlock);
-        iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
+        if (appendWidths) {
+          iele::IeleInstruction::CreateAssign(
+            ArgTypeSize, iele::IeleIntConstant::getOne(&Context), 
+            CompilingBlock);    
+          iele::IeleInstruction::CreateStore(
+            ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
+          iele::IeleInstruction::CreateBinOp(
+            iele::IeleInstruction::Add, CrntPos, CrntPos, 
+            ArgTypeSize, CompilingBlock);
+          iele::IeleInstruction::CreateStore(
+            ArrayLen, NextFree, CrntPos, ArgLen, CompilingBlock);
+          iele::IeleInstruction::CreateBinOp(
+            iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
+        }
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add,
           Element, ArgValue, 
@@ -1697,7 +1721,7 @@ void IeleCompiler::doEncode(
       }
   
       elementType = ReferenceType::copyForLocationIfReference(arrayType.location(), elementType);
-      doEncode(NextFree, CrntPos, Element, ArgTypeSize, ArgLen, elementType, loadKind(elementType, arrayType.location()));
+      doEncode(NextFree, CrntPos, Element, ArgTypeSize, ArgLen, elementType, loadKind(elementType, arrayType.location()), appendWidths, bigEndian);
   
       iele::IeleValue *ElementSizeValue =
           iele::IeleIntConstant::Create(&Context, elementSize);
@@ -1745,7 +1769,7 @@ void IeleCompiler::doEncode(
         CompilingBlock);
 
       TypePointer memberType = ReferenceType::copyForLocationIfReference(structType.location(), decl->type());
-      doEncode(NextFree, CrntPos, Member, ArgTypeSize, ArgLen, memberType, loadKind(memberType, structType.location()));
+      doEncode(NextFree, CrntPos, Member, ArgTypeSize, ArgLen, memberType, loadKind(memberType, structType.location()), appendWidths, bigEndian);
     }
     break;
   }
@@ -2336,7 +2360,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     if (NonIndexedArguments.size() > 0) {
       encoding(
         NonIndexedArguments, nonIndexedTypes, 
-        NextFree);
+        NextFree, true);
     }
 
     // build Log instruction
