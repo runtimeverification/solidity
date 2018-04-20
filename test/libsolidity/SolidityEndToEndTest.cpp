@@ -1412,7 +1412,6 @@ BOOST_AUTO_TEST_CASE(accessors_mapping_for_array)
 	ABI_CHECK(callContractFunction("dynamicData(uint256,uint256)", 2, 8), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(multiple_elementary_accessors, 1)
 BOOST_AUTO_TEST_CASE(multiple_elementary_accessors)
 {
 	char const* sourceCode = R"(
@@ -1950,7 +1949,6 @@ BOOST_AUTO_TEST_CASE(selfdestruct)
 	BOOST_CHECK_EQUAL(balanceAt(address), amount);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(keccak256, 1)
 BOOST_AUTO_TEST_CASE(keccak256)
 {
 	char const* sourceCode = R"(
@@ -1963,14 +1961,13 @@ BOOST_AUTO_TEST_CASE(keccak256)
 	compileAndRun(sourceCode);
 	auto f = [&](u256 const& _x) -> u256
 	{
-		return dev::keccak256(toBigEndian(_x));
+		return dev::keccak256(dev::toBigEndian(_x));
 	};
 	testContractAgainstCpp("a(bytes32)", f, u256(4));
 	testContractAgainstCpp("a(bytes32)", f, u256(5));
 	testContractAgainstCpp("a(bytes32)", f, u256(-1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(sha3, 1)
 BOOST_AUTO_TEST_CASE(sha3)
 {
 	char const* sourceCode = R"(
@@ -1988,7 +1985,6 @@ BOOST_AUTO_TEST_CASE(sha3)
 	BOOST_REQUIRE(callContractFunction("a(bytes32)", u256(42)) == encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(sha256, 1)
 BOOST_AUTO_TEST_CASE(sha256)
 {
 	char const* sourceCode = R"(
@@ -2002,11 +1998,11 @@ BOOST_AUTO_TEST_CASE(sha256)
 	auto f = [&](u256 const& _x) -> bytes
 	{
 		if (_x == u256(4))
-			return fromHex("e38990d0c7fc009880a9c07c23842e886c6bbdc964ce6bdd5817ad357335ee6f");
+			return fromHex("00e38990d0c7fc009880a9c07c23842e886c6bbdc964ce6bdd5817ad357335ee6f");
 		if (_x == u256(5))
-			return fromHex("96de8fc8c256fa1e1556d41af431cace7dca68707c78dd88c3acab8b17164c47");
+			return fromHex("0096de8fc8c256fa1e1556d41af431cace7dca68707c78dd88c3acab8b17164c47");
 		if (_x == u256(-1))
-			return fromHex("af9613760f72635fbdb44a5a0a63c39f12af30f950a6ee5c971be188e89c4051");
+			return fromHex("00af9613760f72635fbdb44a5a0a63c39f12af30f950a6ee5c971be188e89c4051");
 		return fromHex("");
 	};
 	testContractAgainstCpp("a(bytes32)", f, u256(4));
@@ -2014,7 +2010,6 @@ BOOST_AUTO_TEST_CASE(sha256)
 	testContractAgainstCpp("a(bytes32)", f, u256(-1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(ripemd, 1)
 BOOST_AUTO_TEST_CASE(ripemd)
 {
 	char const* sourceCode = R"(
@@ -2030,7 +2025,7 @@ BOOST_AUTO_TEST_CASE(ripemd)
 		if (_x == u256(4))
 			return fromHex("1b0f3c404d12075c68c938f9f60ebea4f74941a0000000000000000000000000");
 		if (_x == u256(5))
-			return fromHex("ee54aa84fc32d8fed5a5fe160442ae84626829d9000000000000000000000000");
+			return fromHex("00ee54aa84fc32d8fed5a5fe160442ae84626829d9000000000000000000000000");
 		if (_x == u256(-1))
 			return fromHex("1cf4e77f5966e13e109703cd8a0df7ceda7f3dc3000000000000000000000000");
 		return fromHex("");
@@ -2040,7 +2035,6 @@ BOOST_AUTO_TEST_CASE(ripemd)
 	testContractAgainstCpp("a(bytes32)", f, u256(-1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_keccak256, 1)
 BOOST_AUTO_TEST_CASE(packed_keccak256)
 {
 	char const* sourceCode = R"(
@@ -2057,9 +2051,9 @@ BOOST_AUTO_TEST_CASE(packed_keccak256)
 	{
 		return dev::keccak256(
 			toCompactBigEndian(unsigned(8)) +
-			toBigEndian(_x) +
+			dev::toBigEndian(_x) +
 			toCompactBigEndian(unsigned(65536)) +
-			toBigEndian(_x) +
+			dev::toBigEndian(_x) +
 			toBigEndian(u256(256))
 		);
 	};
@@ -2068,7 +2062,7 @@ BOOST_AUTO_TEST_CASE(packed_keccak256)
 	testContractAgainstCpp("a(bytes32)", f, u256(-1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_sha256, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_sha256, 3)
 BOOST_AUTO_TEST_CASE(packed_sha256)
 {
 	char const* sourceCode = R"(
@@ -2096,7 +2090,7 @@ BOOST_AUTO_TEST_CASE(packed_sha256)
 	testContractAgainstCpp("a(bytes32)", f, u256(-1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_ripemd160, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_ripemd160, 3)
 BOOST_AUTO_TEST_CASE(packed_ripemd160)
 {
 	char const* sourceCode = R"(
@@ -3177,7 +3171,7 @@ BOOST_AUTO_TEST_CASE(events_with_same_name)
 	ABI_CHECK(callContractFunction("deposit(address)", c_loggedAddress), encodeArgs(u256(1)));
 	BOOST_REQUIRE_EQUAL(m_logs.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].address, m_contractAddress);
-	BOOST_CHECK(m_logs[0].data == encode(c_loggedAddress));
+	BOOST_CHECK(m_logs[0].data == encodeLog(c_loggedAddress));
 	BOOST_REQUIRE_EQUAL(m_logs[0].topics.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].topics[0], dev::keccak256(string("Deposit(address)")));
 
@@ -3229,7 +3223,7 @@ BOOST_AUTO_TEST_CASE(events_with_same_name_inherited)
 	ABI_CHECK(callContractFunction("deposit(address)", c_loggedAddress), encodeArgs(u256(1)));
 	BOOST_REQUIRE_EQUAL(m_logs.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].address, m_contractAddress);
-	BOOST_CHECK(m_logs[0].data == encode(c_loggedAddress));
+	BOOST_CHECK(m_logs[0].data == encodeLog(c_loggedAddress));
 	BOOST_REQUIRE_EQUAL(m_logs[0].topics.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].topics[0], dev::keccak256(string("Deposit(address)")));
 
@@ -3281,7 +3275,7 @@ BOOST_AUTO_TEST_CASE(events_with_same_name_inherited_emit)
 	ABI_CHECK(callContractFunction("deposit(address)", c_loggedAddress), encodeArgs(u256(1)));
 	BOOST_REQUIRE_EQUAL(m_logs.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].address, m_contractAddress);
-	BOOST_CHECK(m_logs[0].data == encode(c_loggedAddress));
+	BOOST_CHECK(m_logs[0].data == encodeLog(c_loggedAddress));
 	BOOST_REQUIRE_EQUAL(m_logs[0].topics.size(), 1);
 	BOOST_CHECK_EQUAL(m_logs[0].topics[0], dev::keccak256(string("Deposit(address)")));
 
@@ -3489,7 +3483,6 @@ BOOST_AUTO_TEST_CASE(empty_name_return_parameter)
 	ABI_CHECK(callContractFunction("f(uint256)", 9), encodeArgs(9));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(keccak256_multiple_arguments, 1)
 BOOST_AUTO_TEST_CASE(keccak256_multiple_arguments)
 {
 	char const* sourceCode = R"(
@@ -3511,7 +3504,6 @@ BOOST_AUTO_TEST_CASE(keccak256_multiple_arguments)
 	));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(keccak256_multiple_arguments_with_numeric_literals, 1)
 BOOST_AUTO_TEST_CASE(keccak256_multiple_arguments_with_numeric_literals)
 {
 	char const* sourceCode = R"(
@@ -3604,7 +3596,6 @@ BOOST_AUTO_TEST_CASE(iterated_keccak256_with_bytes)
 	));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(sha3_multiple_arguments, 1)
 BOOST_AUTO_TEST_CASE(sha3_multiple_arguments)
 {
 	char const* sourceCode = R"(
@@ -5930,7 +5921,6 @@ BOOST_AUTO_TEST_CASE(send_zero_ether)
 	BOOST_REQUIRE(callContractFunction("s()") == encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(reusing_memory, 1)
 BOOST_AUTO_TEST_CASE(reusing_memory)
 {
 	// Invoke some features that use memory and test that they do not interfere with each other.
@@ -5954,7 +5944,7 @@ BOOST_AUTO_TEST_CASE(reusing_memory)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "Main");
-	BOOST_REQUIRE(callContractFunction("f(uint256)", 0x34) == encodeArgs(dev::keccak256(dev::toBigEndian(u256(0x34)))));
+	BOOST_REQUIRE(callContractFunction("f(uint256)", 0x34) == encodeArgs(dev::keccak256(toBigEndian(u256(0x34)))));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_string, 1)
