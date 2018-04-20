@@ -1593,7 +1593,7 @@ void IeleCompiler::doEncode(
         ArgTypeSize, 
         iele::IeleIntConstant::Create(&Context, size), 
         CompilingBlock);    
-      iele::IeleInstruction::CreateStore1(
+      iele::IeleInstruction::CreateStore(
         ArgValue, NextFree, CrntPos, 
         ArgTypeSize, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
@@ -1609,12 +1609,12 @@ void IeleCompiler::doEncode(
       iele::IeleInstruction::CreateAssign(
         ArgTypeSize, iele::IeleIntConstant::Create(&Context, argLenWidth), 
         CompilingBlock);    
-      iele::IeleInstruction::CreateStore1(
+      iele::IeleInstruction::CreateStore(
         ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, 
         ArgTypeSize, CompilingBlock);
-      iele::IeleInstruction::CreateStore1(
+      iele::IeleInstruction::CreateStore(
         ArgValue, NextFree, CrntPos, ArgLen, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
@@ -1646,12 +1646,12 @@ void IeleCompiler::doEncode(
         iele::IeleInstruction::CreateAssign(
           ArgTypeSize, iele::IeleIntConstant::getOne(&Context), 
           CompilingBlock);    
-        iele::IeleInstruction::CreateStore1(
+        iele::IeleInstruction::CreateStore(
           ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, CrntPos, CrntPos, 
           ArgTypeSize, CompilingBlock);
-        iele::IeleInstruction::CreateStore1(
+        iele::IeleInstruction::CreateStore(
           ArrayLen, NextFree, CrntPos, ArgLen, CompilingBlock);
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
@@ -1806,7 +1806,7 @@ void IeleCompiler::doDecode(
         ArgTypeSize, 
         iele::IeleIntConstant::Create(&Context, size), 
         CompilingBlock);
-      iele::IeleInstruction::CreateLoad1(
+      iele::IeleInstruction::CreateLoad(
         llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), NextFree, CrntPos, 
         ArgTypeSize, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
@@ -1841,12 +1841,12 @@ void IeleCompiler::doDecode(
       iele::IeleInstruction::CreateAssign(
         ArgTypeSize, iele::IeleIntConstant::Create(&Context, argLenWidth), 
         CompilingBlock);    
-      iele::IeleInstruction::CreateLoad1(
+      iele::IeleInstruction::CreateLoad(
         ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, 
         ArgTypeSize, CompilingBlock);
-      iele::IeleInstruction::CreateLoad1(
+      iele::IeleInstruction::CreateLoad(
         llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), NextFree, CrntPos, ArgLen, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
@@ -1872,12 +1872,12 @@ void IeleCompiler::doDecode(
         iele::IeleInstruction::CreateAssign(
           ArgTypeSize, iele::IeleIntConstant::getOne(&Context),
           CompilingBlock);
-        iele::IeleInstruction::CreateLoad1(
+        iele::IeleInstruction::CreateLoad(
           ArgLen, NextFree, CrntPos, ArgTypeSize, CompilingBlock);
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, CrntPos, CrntPos, ArgTypeSize,
           CompilingBlock);
-        iele::IeleInstruction::CreateLoad1(
+        iele::IeleInstruction::CreateLoad(
           ArrayLen, NextFree, CrntPos, ArgLen, CompilingBlock);
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
@@ -2481,7 +2481,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleLocalVariable *NextFree = appendMemorySpill();
 
     // Store the data argument in memory
-    iele::IeleInstruction::CreateStore1(DataArg,
+    iele::IeleInstruction::CreateStore(DataArg,
                                         NextFree, 
                                         iele::IeleIntConstant::getZero(&Context),
                                         iele::IeleIntConstant::Create(&Context, bigint(32)),

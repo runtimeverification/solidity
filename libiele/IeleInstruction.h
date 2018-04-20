@@ -271,11 +271,11 @@ public:
       IeleLocalVariable *Result, IeleValue *AddressValue,
       IeleBlock *InsertAtEnd);
 
-  static IeleInstruction *CreateLoad1(
+  static IeleInstruction *CreateLoad(
       IeleLocalVariable *Result, IeleValue *AddressValue,
       IeleValue *OffsetValue, IeleValue *WidthValue,
       IeleInstruction *InsertBefore = nullptr);
-  static IeleInstruction *CreateLoad1(
+  static IeleInstruction *CreateLoad(
       IeleLocalVariable *Result, IeleValue *AddressValue,
       IeleValue *OffsetValue, IeleValue *WidthValue,
       IeleBlock *InsertAtEnd);
@@ -286,10 +286,10 @@ public:
   static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
   
-  static IeleInstruction *CreateStore1(
+  static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue,
       IeleValue *OffsetValue, IeleValue *WidthValue, IeleInstruction *InsertBefore = nullptr);
-  static IeleInstruction *CreateStore1(
+  static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue,
       IeleValue *OffsetValue, IeleValue *WidthValue, IeleBlock *InsertAtEnd);
 
