@@ -531,7 +531,7 @@ IeleInstruction *IeleInstruction::CreateLoad(
   return LoadInst;
 }
 
-IeleInstruction *IeleInstruction::CreateLoad1(
+IeleInstruction *IeleInstruction::CreateLoad(
     IeleLocalVariable *Result, IeleValue *AddressValue,
     IeleValue *OffsetValue, IeleValue *WidthValue,
     IeleInstruction *InsertBefore) {
@@ -547,7 +547,7 @@ IeleInstruction *IeleInstruction::CreateLoad1(
   return LoadInst;
 }
 
-IeleInstruction *IeleInstruction::CreateLoad1(
+IeleInstruction *IeleInstruction::CreateLoad(
     IeleLocalVariable *Result, IeleValue *AddressValue,
     IeleValue *OffsetValue, IeleValue *WidthValue,
     IeleBlock *InsertAtEnd) {
@@ -590,7 +590,7 @@ IeleInstruction *IeleInstruction::CreateStore(
 // Same as CreateStore, but also accept OffsetValue and WidthValue as args. 
 // Alternatively, we could also extend CreateStore by passing those as 
 // optional args...
-IeleInstruction *IeleInstruction::CreateStore1(
+IeleInstruction *IeleInstruction::CreateStore(
     IeleValue *DataValue, IeleValue *AddressValue,
     IeleValue *OffsetValue, IeleValue *WidthValue, IeleInstruction *InsertBefore) {
   solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
@@ -604,7 +604,7 @@ IeleInstruction *IeleInstruction::CreateStore1(
   return StoreInst;
 }
 
-IeleInstruction *IeleInstruction::CreateStore1(
+IeleInstruction *IeleInstruction::CreateStore(
     IeleValue *DataValue, IeleValue *AddressValue,
     IeleValue *OffsetValue, IeleValue *WidthValue, IeleBlock *InsertAtEnd) {
   solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");

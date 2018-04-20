@@ -281,10 +281,11 @@ private:
   iele::IeleValue *encoding(
     iele::IeleValue *argument, 
     TypePointer type);
-  void encoding(
+  iele::IeleValue *encoding(
     llvm::SmallVectorImpl<iele::IeleValue *> &arguments, 
     TypePointers types,
-    iele::IeleLocalVariable *NextFree);
+    iele::IeleLocalVariable *NextFree,
+    bool appendWidths);
 
   iele::IeleValue *decoding(
     iele::IeleValue *encoded,
@@ -294,7 +295,7 @@ private:
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, iele::IeleValue *ArgValue,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, LValueKind Kind);
+    TypePointer type, LValueKind Kind, bool appendWidths, bool BigEndian);
   void doDecode(
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, iele::IeleValue *StoreAt,

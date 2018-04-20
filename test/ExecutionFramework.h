@@ -194,7 +194,12 @@ public:
 		int fractionalBits = _valueAndPrecision.second;
 		return encode(u256((value.numerator() << fractionalBits) / value.denominator()));
 	}
-	static bytes encode(h256 const& _value) { return _value.asBytes(); }
+	static bytes encode(h256 const& _value) {
+		if (_value[0] > 0x7f)
+			return bytes(1, 0) + _value.asBytes();
+		else
+			return _value.asBytes();
+	}
 	static bytes encode(bytes const& _value, bool _padLeft = true)
 	{
 		return _padLeft ? _value : _value;
