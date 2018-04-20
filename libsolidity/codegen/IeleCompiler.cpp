@@ -2561,11 +2561,97 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     GasValue = nullptr;
     break;
   }
+  case FunctionType::Kind::BlockHash: {
+    iele::IeleValue *BlockNum = compileExpression(*arguments.front());
+    BlockNum = appendTypeConversion(BlockNum, *arguments.front()->annotation().type, *function.parameterTypes()[0]);
+    llvm::SmallVector<iele::IeleValue *, 0> Arguments(1, BlockNum);
+    iele::IeleLocalVariable *BlockHashValue =
+      iele::IeleLocalVariable::Create(&Context, "blockhash", CompilingFunction);
+    iele::IeleInstruction::CreateIntrinsicCall(
+      iele::IeleInstruction::Blockhash, BlockHashValue, Arguments,
+      CompilingBlock);
+    CompilingExpressionResult.push_back(BlockHashValue);
+    break;
+  }
   case FunctionType::Kind::SHA3:
-  case FunctionType::Kind::BlockHash:
   case FunctionType::Kind::SHA256:
-  case FunctionType::Kind::RIPEMD160:
-    solAssert(false, "not implemented yet: cryptographic functions");
+  case FunctionType::Kind::RIPEMD160: {
+    // Visit arguments
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    TypePointers Types;
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call "
+                "argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type->mobileType();
+      Arguments.push_back(ArgValue);
+      Types.push_back(ArgType);
+    }
+
+    llvm::SmallVector<iele::IeleLocalVariable *, 1> Returns;
+    iele::IeleLocalVariable *Return =
+      iele::IeleLocalVariable::Create(&Context, "computed.hash", CompilingFunction);
+    Returns.push_back(Return);
+
+    // Allocate cell 
+    iele::IeleLocalVariable *NextFree = appendMemorySpill();
+    iele::IeleValue *ByteWidth = encoding(Arguments, Types, NextFree, false);
+    if (function.kind() == FunctionType::Kind::SHA3) {
+      iele::IeleInstruction::CreateSha3(
+        Return, NextFree, CompilingBlock);
+    } else {
+      iele::IeleLocalVariable *ArgValue =
+        iele::IeleLocalVariable::Create(&Context, "encoded.val", CompilingFunction);
+      iele::IeleInstruction::CreateLoad(
+        ArgValue, NextFree, iele::IeleIntConstant::getZero(&Context), ByteWidth, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Twos,
+        ArgValue, ByteWidth, ArgValue,
+        CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::BSwap,
+        ArgValue, ByteWidth, ArgValue,
+        CompilingBlock);
+      Arguments.clear();
+      Arguments.push_back(ByteWidth);
+      Arguments.push_back(ArgValue);
+
+      iele::IeleGlobalVariable *FunctionCalleeValue;
+      if (function.kind() == FunctionType::Kind::SHA256) {
+        FunctionCalleeValue = iele::IeleGlobalVariable::Create(&Context, "iele.sha256");
+      } else {
+        FunctionCalleeValue = iele::IeleGlobalVariable::Create(&Context, "iele.rip160");
+      }
+
+      iele::IeleValue *AddressValue =
+        iele::IeleIntConstant::getOne(&Context);
+
+      iele::IeleLocalVariable *StatusValue =
+        CompilingFunctionStatus;
+ 
+      if (!function.gasSet()) {
+        llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+        iele::IeleLocalVariable *GasValue =
+          iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+        iele::IeleInstruction::CreateIntrinsicCall(
+          iele::IeleInstruction::Gas, GasValue, EmptyArguments,
+          CompilingBlock);
+        this->GasValue = GasValue;
+      }
+
+      iele::IeleInstruction::CreateAccountCall(
+        true, StatusValue, Returns, FunctionCalleeValue, AddressValue,
+        nullptr, GasValue, Arguments, CompilingBlock);
+
+      appendRevert(StatusValue, StatusValue);
+      TransferValue = nullptr;
+      GasValue = nullptr;
+    }
+    CompilingExpressionResult.push_back(Return);
+    break;
+  }
   case FunctionType::Kind::ByteArrayPush:
     solAssert(false, "not implemented yet");
   case FunctionType::Kind::ArrayPush: {
