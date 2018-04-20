@@ -2506,10 +2506,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     // Store the data argument in memory
     iele::IeleInstruction::CreateStore(DataArg,
-                                        NextFree, 
-                                        iele::IeleIntConstant::getZero(&Context),
-                                        iele::IeleIntConstant::Create(&Context, bigint(32)),
-                                        CompilingBlock);
+                                       NextFree, 
+                                       iele::IeleIntConstant::getZero(&Context),
+                                       iele::IeleIntConstant::Create(&Context, bigint(32)),
+                                       CompilingBlock);
 
     // make log instruction 
     iele::IeleInstruction::CreateLog(CompiledArguments,
