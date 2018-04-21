@@ -1093,14 +1093,13 @@ BOOST_AUTO_TEST_CASE(mapping_state)
 	testContractAgainstCpp("getVoteCount(address)", getVoteCount, u160(2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(mapping_state_inc_dec, 1)
 BOOST_AUTO_TEST_CASE(mapping_state_inc_dec)
 {
 	char const* sourceCode = R"(
 		contract test {
-			uint value;
-			mapping(uint => uint) table;
-			function f(uint x) returns (uint y) {
+			uint256 value;
+			mapping(uint256 => uint256) table;
+			function f(uint256 x) returns (uint256 y) {
 				value = x;
 				if (x > 0) table[++value] = 8;
 				if (x > 1) value--;
@@ -1124,7 +1123,7 @@ BOOST_AUTO_TEST_CASE(mapping_state_inc_dec)
 			table[value]++;
 		return --table[value++];
 	};
-	testContractAgainstCppOnRange("f(uint)", f, 0, 5);
+	testContractAgainstCppOnRange("f(uint256)", f, 0, 5);
 }
 
 BOOST_AUTO_TEST_CASE(multi_level_mapping)
