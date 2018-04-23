@@ -350,7 +350,7 @@ public:
 	virtual TypePointer encodingType() const override { return shared_from_this(); }
 	virtual TypePointer interfaceType(bool) const override { return shared_from_this(); }
 
-	int numBits() const { return m_bits; }
+	int numBits() const { solAssert(!isUnbound(), ""); return m_bits; }
 	bool isAddress() const { return m_modifier == Modifier::Address; }
 	bool isSigned() const { return m_modifier == Modifier::Signed; }
 	bool isUnbound() const { return m_unbound; }

@@ -1228,7 +1228,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     case Type::Category::Integer: {
       const IntegerType *type = dynamic_cast<const IntegerType *>(ResultType.get());
       fixed = !type->isUnbound();
-      nbytes = type->numBits() / 8;
+      nbytes = fixed ? type->numBits() / 8 : 0;
       issigned = type->isSigned();
       break;
     }
@@ -4613,7 +4613,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   case Type::Category::Integer: {
     const IntegerType *type = dynamic_cast<const IntegerType *>(ResultType.get());
     fixed = !type->isUnbound();
-    nbytes = type->numBits() / 8;
+    nbytes = fixed ? type->numBits() / 8 : 0;
     issigned = type->isSigned();
     break;
   }

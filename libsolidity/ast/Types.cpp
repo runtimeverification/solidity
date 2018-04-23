@@ -347,7 +347,7 @@ bool IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 	if (_convertTo.category() == category())
 	{
 		IntegerType const& convertTo = dynamic_cast<IntegerType const&>(_convertTo);
-		if (!convertTo.isUnbound() && (isUnbound() || convertTo.m_bits < m_bits))
+		if (!convertTo.isUnbound() && (isUnbound() || convertTo.numBits() < numBits()))
 			return false;
 		if (isAddress())
 			return convertTo.isAddress();
@@ -355,7 +355,7 @@ bool IntegerType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 			return convertTo.isSigned();
 		else
 			return !convertTo.isSigned() ||
-			       convertTo.isUnbound() || convertTo.m_bits > m_bits;
+			       convertTo.isUnbound() || convertTo.numBits() > numBits();
 	}
 	else if (_convertTo.category() == Category::FixedPoint)
 	{
@@ -412,7 +412,7 @@ string IntegerType::toString(bool) const
 	if (isAddress())
 		return "address";
 	string prefix = isSigned() ? "int" : "uint";
-	return prefix + (isUnbound() ? "" : dev::toString(m_bits));
+	return prefix + (isUnbound() ? "" : dev::toString(numBits()));
 }
 
 bigint IntegerType::literalValue(Literal const* _literal) const
@@ -780,8 +780,9 @@ bool RationalNumberType::isImplicitlyConvertibleTo(Type const& _convertTo) const
 		FixedBytesType const& fixedBytes = dynamic_cast<FixedBytesType const&>(_convertTo);
 		if (!isFractional())
 		{
-			if (integerType())
-				return fixedBytes.numBytes() * 8 >= integerType()->numBits();
+			auto intType = integerType();
+			if (intType)
+				return !intType->isUnbound() && fixedBytes.numBytes() * 8 >= intType->numBits();
 			return false;
 		}
 		else
