@@ -1536,7 +1536,8 @@ MemberList::MemberMap ArrayType::nativeMembers(ContractDefinition const*) const
 	MemberList::MemberMap members;
 	if (!isString())
 	{
-		members.push_back({"length", make_shared<IntegerType>()});
+		members.push_back({"length",
+			isDynamicallySized() ? make_shared<IntegerType>() : make_shared<IntegerType>(256)});
 		if (isDynamicallySized() && location() == DataLocation::Storage)
 			members.push_back({"push", make_shared<FunctionType>(
 				TypePointers{baseType()},
