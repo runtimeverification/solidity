@@ -10,7 +10,7 @@ contract CentralizedOracle is Oracle {
      *  Events
      */
     event OwnerReplacement(address indexed newOwner);
-    event OutcomeAssignment(int outcome);
+    event OutcomeAssignment(int256 outcome);
 
     /*
      *  Storage
@@ -18,7 +18,7 @@ contract CentralizedOracle is Oracle {
     address public owner;
     bytes public ipfsHash;
     bool public isSet;
-    int public outcome;
+    int256 public outcome;
 
     /*
      *  Modifiers
@@ -57,7 +57,7 @@ contract CentralizedOracle is Oracle {
 
     /// @dev Sets event outcome
     /// @param _outcome Event outcome
-    function setOutcome(int _outcome)
+    function setOutcome(int256 _outcome)
         public
         isOwner
     {
@@ -83,7 +83,7 @@ contract CentralizedOracle is Oracle {
     function getOutcome()
         public
         constant
-        returns (int)
+        returns (int256)
     {
         return outcome;
     }

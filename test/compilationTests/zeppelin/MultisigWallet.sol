@@ -112,7 +112,7 @@ contract MultisigWallet is Multisig, Shareable, DayLimit {
    * @dev Clears the list of transactions pending approval.
    */
   function clearPending() internal {
-    uint256 length = pendingsIndex.length;
+    uint256 length = uint256(pendingsIndex.length);
     for (uint256 i = 0; i < length; ++i) {
       delete txs[pendingsIndex[i]];
     }

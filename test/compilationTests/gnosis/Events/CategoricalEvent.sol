@@ -28,14 +28,14 @@ contract CategoricalEvent is Event {
     /// @return Sender's winnings
     function redeemWinnings()
         public
-        returns (uint winnings)
+        returns (uint256 winnings)
     {
         // Winning outcome has to be set
         require(isOutcomeSet);
         // Calculate winnings
-        winnings = outcomeTokens[uint(outcome)].balanceOf(msg.sender);
+        winnings = outcomeTokens[uint256(outcome)].balanceOf(msg.sender);
         // Revoke tokens from winning outcome
-        outcomeTokens[uint(outcome)].revoke(msg.sender, winnings);
+        outcomeTokens[uint256(outcome)].revoke(msg.sender, winnings);
         // Payout winnings
         require(collateralToken.transfer(msg.sender, winnings));
         WinningsRedemption(msg.sender, winnings);

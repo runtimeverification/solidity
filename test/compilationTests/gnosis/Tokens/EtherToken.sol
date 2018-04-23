@@ -10,8 +10,8 @@ contract EtherToken is StandardToken {
     /*
      *  Events
      */
-    event Deposit(address indexed sender, uint value);
-    event Withdrawal(address indexed receiver, uint value);
+    event Deposit(address indexed sender, uint256 value);
+    event Withdrawal(address indexed receiver, uint256 value);
 
     /*
      *  Constants
@@ -35,7 +35,7 @@ contract EtherToken is StandardToken {
 
     /// @dev Sells tokens in exchange for Ether, exchanging them 1:1
     /// @param value Number of tokens to sell
-    function withdraw(uint value)
+    function withdraw(uint256 value)
         public
     {
         // Balance covers value

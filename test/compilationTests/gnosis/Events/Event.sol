@@ -12,10 +12,10 @@ contract Event {
      *  Events
      */
     event OutcomeTokenCreation(OutcomeToken outcomeToken, uint8 index);
-    event OutcomeTokenSetIssuance(address indexed buyer, uint collateralTokenCount);
-    event OutcomeTokenSetRevocation(address indexed seller, uint outcomeTokenCount);
-    event OutcomeAssignment(int outcome);
-    event WinningsRedemption(address indexed receiver, uint winnings);
+    event OutcomeTokenSetIssuance(address indexed buyer, uint256 collateralTokenCount);
+    event OutcomeTokenSetRevocation(address indexed seller, uint256 outcomeTokenCount);
+    event OutcomeAssignment(int256 outcome);
+    event WinningsRedemption(address indexed receiver, uint256 winnings);
 
     /*
      *  Storage
@@ -23,7 +23,7 @@ contract Event {
     Token public collateralToken;
     Oracle public oracle;
     bool public isOutcomeSet;
-    int public outcome;
+    int256 public outcome;
     OutcomeToken[] public outcomeTokens;
 
     /*
@@ -50,7 +50,7 @@ contract Event {
 
     /// @dev Buys equal number of tokens of all outcomes, exchanging collateral tokens and sets of outcome tokens 1:1
     /// @param collateralTokenCount Number of collateral tokens
-    function buyAllOutcomes(uint collateralTokenCount)
+    function buyAllOutcomes(uint256 collateralTokenCount)
         public
     {
         // Transfer collateral tokens to events contract
@@ -63,7 +63,7 @@ contract Event {
 
     /// @dev Sells equal number of tokens of all outcomes, exchanging collateral tokens and sets of outcome tokens 1:1
     /// @param outcomeTokenCount Number of outcome tokens
-    function sellAllOutcomes(uint outcomeTokenCount)
+    function sellAllOutcomes(uint256 outcomeTokenCount)
         public
     {
         // Revoke sender's outcome tokens of all outcomes
@@ -111,9 +111,9 @@ contract Event {
     function getOutcomeTokenDistribution(address owner)
         public
         constant
-        returns (uint[] outcomeTokenDistribution)
+        returns (uint256[] outcomeTokenDistribution)
     {
-        outcomeTokenDistribution = new uint[](outcomeTokens.length);
+        outcomeTokenDistribution = new uint256[](outcomeTokens.length);
         for (uint8 i = 0; i < outcomeTokenDistribution.length; i++)
             outcomeTokenDistribution[i] = outcomeTokens[i].balanceOf(owner);
     }
@@ -124,5 +124,5 @@ contract Event {
 
     /// @dev Exchanges sender's winning outcome tokens for collateral tokens
     /// @return Sender's winnings
-    function redeemWinnings() public returns (uint);
+    function redeemWinnings() public returns (uint256);
 }

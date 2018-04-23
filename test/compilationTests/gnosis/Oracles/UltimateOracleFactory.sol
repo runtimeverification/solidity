@@ -15,9 +15,9 @@ contract UltimateOracleFactory {
         Oracle oracle,
         Token collateralToken,
         uint8 spreadMultiplier,
-        uint challengePeriod,
-        uint challengeAmount,
-        uint frontRunnerPeriod
+        uint256 challengePeriod,
+        uint256 challengeAmount,
+        uint256 frontRunnerPeriod
     );
 
     /*
@@ -35,9 +35,9 @@ contract UltimateOracleFactory {
         Oracle oracle,
         Token collateralToken,
         uint8 spreadMultiplier,
-        uint challengePeriod,
-        uint challengeAmount,
-        uint frontRunnerPeriod
+        uint256 challengePeriod,
+        uint256 challengeAmount,
+        uint256 frontRunnerPeriod
     )
         public
         returns (UltimateOracle ultimateOracle)

@@ -5,5 +5,5 @@ pragma solidity ^0.4.11;
 contract Oracle {
 
     function isOutcomeSet() public constant returns (bool);
-    function getOutcome() public constant returns (int);
+    function getOutcome() public constant returns (int256);
 }

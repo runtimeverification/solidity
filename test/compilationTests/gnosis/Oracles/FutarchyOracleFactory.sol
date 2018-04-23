@@ -15,12 +15,12 @@ contract FutarchyOracleFactory {
         Token collateralToken,
         Oracle oracle,
         uint8 outcomeCount,
-        int lowerBound,
-        int upperBound,
+        int256 lowerBound,
+        int256 upperBound,
         MarketFactory marketFactory,
         MarketMaker marketMaker,
         uint24 fee,
-        uint deadline
+        uint256 deadline
     );
 
     /*
@@ -55,12 +55,12 @@ contract FutarchyOracleFactory {
         Token collateralToken,
         Oracle oracle,
         uint8 outcomeCount,
-        int lowerBound,
-        int upperBound,
+        int256 lowerBound,
+        int256 upperBound,
         MarketFactory marketFactory,
         MarketMaker marketMaker,
         uint24 fee,
-        uint deadline
+        uint256 deadline
     )
         public
         returns (FutarchyOracle futarchyOracle)
