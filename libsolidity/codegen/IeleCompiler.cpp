@@ -14,8 +14,8 @@
 using namespace dev;
 using namespace dev::solidity;
 
-const IntegerType &UInt = IntegerType(256);
-const IntegerType &SInt = IntegerType(256, IntegerType::Modifier::Signed);
+const IntegerType &UInt = IntegerType();
+const IntegerType &SInt = IntegerType(IntegerType::Modifier::Signed);
 const IntegerType &Address = IntegerType(160, IntegerType::Modifier::Address);
 
 std::string IeleCompiler::getIeleNameForFunction(
@@ -269,6 +269,7 @@ void IeleCompiler::compileContract(
         iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
       appendDefaultConstructor(base);
       iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+      appendRevertBlocks();
       CompilingBlock = nullptr;
       CompilingFunction = nullptr;
     }
@@ -287,6 +288,7 @@ void IeleCompiler::compileContract(
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
     appendDefaultConstructor(&contract);
     iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+    appendRevertBlocks();
     CompilingBlock = nullptr;
     CompilingFunction = nullptr;
   }
@@ -1220,18 +1222,13 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
       compileExpression(unaryOperation.subExpression());
     solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
 
-    // Compile as a bitwise negation.
-    iele::IeleLocalVariable *Result =
-      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-    iele::IeleInstruction::CreateNot(Result, SubExprValue, CompilingBlock);
-
     bool fixed = false, issigned = false;
     int nbytes;
     switch (ResultType->category()) {
     case Type::Category::Integer: {
       const IntegerType *type = dynamic_cast<const IntegerType *>(ResultType.get());
-      fixed = type->numBits() != 256;
-      nbytes = type->numBits() / 8;
+      fixed = !type->isUnbound();
+      nbytes = fixed ? type->numBits() / 8 : 0;
       issigned = type->isSigned();
       break;
     }
@@ -1244,6 +1241,16 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     default: break;
     }
 
+    solAssert(fixed || issigned,
+              "IeleCompiler: found bitwise negation on unbound unsigned "
+              "integer");
+
+    // Compile as a bitwise negation.
+    iele::IeleLocalVariable *Result =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateNot(Result, SubExprValue, CompilingBlock);
+
+    // Mask in case of fixed-size operation.
     if (fixed && !issigned) {
       appendMask(Result, Result, nbytes, false);
     }
@@ -1437,6 +1444,7 @@ void IeleCompiler::appendLValueDelete(iele::IeleValue *LValue, TypePointer type,
 }
 
 bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
+  // Short-circuiting cases.
   if (binaryOperation.getOperator() == Token::Or || binaryOperation.getOperator() == Token::And) {
     iele::IeleValue *Result =
       appendBooleanOperator(binaryOperation.getOperator(),
@@ -1445,8 +1453,10 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
     CompilingExpressionResult.push_back(Result);
     return false;
   }
+
   const TypePointer &commonType = binaryOperation.annotation().commonType;
 
+  // Check for compile-time constants.
   if (commonType->category() == Type::Category::RationalNumber) {
     iele::IeleIntConstant *LiteralValue =
       iele::IeleIntConstant::Create(
@@ -2189,15 +2199,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   }
   case FunctionType::Kind::AddMod: {
     iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
-    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, SInt);
+    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, UInt);
     solAssert(Op1,
            "IeleCompiler: Failed to compile operand 1 of addmod.");
     iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
-    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, SInt);
+    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, UInt);
     solAssert(Op2,
            "IeleCompiler: Failed to compile operand 2 of addmod.");
     iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
-    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, SInt);
+    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, UInt);
     solAssert(Modulus,
            "IeleCompiler: Failed to compile modulus of addmod.");
 
@@ -2211,15 +2221,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   }
   case FunctionType::Kind::MulMod: {
     iele::IeleValue *Op1 = compileExpression(*arguments[0].get());
-    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, SInt);
+    Op1 = appendTypeConversion(Op1, *arguments[0]->annotation().type, UInt);
     solAssert(Op1,
            "IeleCompiler: Failed to compile operand 1 of addmod.");
     iele::IeleValue *Op2 = compileExpression(*arguments[1].get());
-    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, SInt);
+    Op2 = appendTypeConversion(Op2, *arguments[1]->annotation().type, UInt);
     solAssert(Op2,
            "IeleCompiler: Failed to compile operand 2 of addmod.");
     iele::IeleValue *Modulus = compileExpression(*arguments[2].get());
-    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, SInt);
+    Modulus = appendTypeConversion(Modulus, *arguments[2]->annotation().type, UInt);
     solAssert(Modulus,
            "IeleCompiler: Failed to compile modulus of addmod.");
 
@@ -3455,9 +3465,9 @@ void IeleCompiler::appendRangeCheck(iele::IeleValue *Value, const Type &Type) {
   switch(Type.category()) {
   case Type::Category::Integer: {
     const IntegerType &type = dynamic_cast<const IntegerType &>(Type);
-    if (type.numBits() == 256 && type.isSigned()) {
+    if (type.isUnbound() && type.isSigned()) {
       return;
-    } else if (type.numBits() == 256) {
+    } else if (type.isUnbound()) {
       bigint min = 0;
       if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value)) {
         if (constant->getValue() < 0) {
@@ -4602,8 +4612,8 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   switch (ResultType->category()) {
   case Type::Category::Integer: {
     const IntegerType *type = dynamic_cast<const IntegerType *>(ResultType.get());
-    fixed = type->numBits() != 256;
-    nbytes = type->numBits() / 8;
+    fixed = !type->isUnbound();
+    nbytes = fixed ? type->numBits() / 8 : 0;
     issigned = type->isSigned();
     break;
   }
@@ -4635,7 +4645,8 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   }
   case Token::Mul: {
     if (fixed) {
-      // Create the instruction.
+      // In case of fixed-width multiplication, create the instruction as a
+      // mulmod.
       iele::IeleValue *ModulusValue =
         iele::IeleIntConstant::Create(&Context, bigint(1) << (nbytes * 8));
       iele::IeleLocalVariable *Result =
@@ -4644,23 +4655,25 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
         iele::IeleInstruction::MulMod, Result, LeftOperand, RightOperand,
         ModulusValue, CompilingBlock);
 
-
-      iele::IeleValue *NBytesValue =
-        iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
+      // Sign extend if necessary.
       if (issigned) {
+        iele::IeleValue *NBytesValue =
+          iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
         iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::SExt, Result,NBytesValue, Result,
+          iele::IeleInstruction::SExt, Result, NBytesValue, Result,
           CompilingBlock);
       }
       return Result;
     }
+    // Else, create normal multiplication.
     BinOpcode = iele::IeleInstruction::Mul; break;
   }
   case Token::Div:                BinOpcode = iele::IeleInstruction::Div; break;
   case Token::Mod:                BinOpcode = iele::IeleInstruction::Mod; break;
   case Token::Exp: {
     if (fixed) {
-      // Create the instruction.
+      // In case of fixed-width exponentiation, create the instruction as an
+      // expmod.
       iele::IeleValue *ModulusValue =
         iele::IeleIntConstant::Create(&Context, bigint(1) << (nbytes * 8));
       iele::IeleLocalVariable *Result =
@@ -4669,15 +4682,17 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
         iele::IeleInstruction::ExpMod, Result, LeftOperand, RightOperand,
         ModulusValue, CompilingBlock);
 
-      iele::IeleValue *NBytesValue =
-        iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
+      // Sign extend if necessary.
       if (issigned) {
+        iele::IeleValue *NBytesValue =
+          iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::SExt, Result, NBytesValue, Result,
           CompilingBlock);
       }
       return Result;
     }
+    // Else, create normal exponentiation.
     BinOpcode = iele::IeleInstruction::Exp; break;
   }
   case Token::Equal:              BinOpcode = iele::IeleInstruction::CmpEq; break;
@@ -4793,7 +4808,7 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
     const FixedBytesType &srcType = dynamic_cast<const FixedBytesType &>(SourceType);
     if (TargetType.category() == Type::Category::Integer) {
       IntegerType const& targetType = dynamic_cast<const IntegerType &>(TargetType);
-      if (targetType.numBits() < srcType.numBytes() * 8) {
+      if (!targetType.isUnbound() && targetType.numBits() < srcType.numBytes() * 8) {
         appendMask(convertedValue, Value, targetType.numBits() / 8, targetType.isSigned());
         return convertedValue;
       }
@@ -4827,7 +4842,7 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
         "Invalid conversion to FixedBytesType requested.");
       if (auto srcType = dynamic_cast<const IntegerType *>(&SourceType)) {
         const FixedBytesType &targetType = dynamic_cast<const FixedBytesType &>(TargetType);
-        if (targetType.numBytes() * 8 < srcType->numBits()) {
+        if (srcType->isUnbound() || targetType.numBytes() * 8 < srcType->numBits()) {
           appendMask(convertedValue, Value, targetType.numBytes(), false);
           return convertedValue;
         }
@@ -4851,15 +4866,17 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
       if (SourceType.category() == Type::Category::RationalNumber) {
         solAssert(!dynamic_cast<const RationalNumberType &>(SourceType).isFractional(), "not implemented yet");
       }
-      if (targetType.numBits() == 256) {
+      if (targetType.isUnbound()) {
         if (!targetType.isSigned()) {
           if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value)) {
             if (constant->getValue() < 0) {
               appendRevert();
             }
-          } else {
-            bigint min = 0;
-            appendRangeCheck(Value, &min, nullptr);
+          } else if (auto srcType = dynamic_cast<const IntegerType *>(&SourceType)) {
+            if (srcType->isSigned()) {
+              bigint min = 0;
+              appendRangeCheck(Value, &min, nullptr);
+            }
           }
         }
         return Value;

@@ -234,6 +234,7 @@ public:
 	/// Returns true if the type can be stored as a value (as opposed to a reference) on the stack,
 	/// i.e. it behaves differently in lvalue context and in value context.
 	virtual bool isValueType() const { return false; }
+	/// DEPRECATED
 	virtual unsigned sizeOnStack() const { return 1; }
 	/// @returns the mobile (in contrast to static) type corresponding to the given type.
 	/// This returns the corresponding IntegerType or FixedPointType for RationalNumberType
@@ -279,8 +280,10 @@ public:
 	/// @returns a (simpler) type that is encoded in the same way for external function calls.
 	/// This for example returns address for contract types.
 	/// If there is no such type, returns an empty shared pointer.
+	/// DEPRECATED
 	virtual TypePointer encodingType() const { return TypePointer(); }
 	/// @returns a (simpler) type that is used when decoding this type in calldata.
+	/// DEPRECATED
 	virtual TypePointer decodingType() const { return encodingType(); }
 	/// @returns a type that will be used outside of Solidity for e.g. function signatures.
 	/// This for example returns address for contract types.
@@ -320,7 +323,10 @@ public:
 	};
 	virtual Category category() const override { return Category::Integer; }
 
+	// Constructor for fixed-width integer types.
 	explicit IntegerType(int _bits, Modifier _modifier = Modifier::Unsigned);
+	// Constructor for unbounded integer types.
+	explicit IntegerType(Modifier _modifier = Modifier::Unsigned);
 
 	virtual std::string richIdentifier() const override;
 	virtual bool isImplicitlyConvertibleTo(Type const& _convertTo) const override;
@@ -331,7 +337,7 @@ public:
 	virtual bool operator==(Type const& _other) const override;
 
 	virtual unsigned calldataEncodedSize(bool _padded = true) const override { return _padded ? 32 : m_bits / 8; }
-	virtual bigint getFixedBitwidth() const override { return bigint(m_bits < 256 ? m_bits : 0); }
+	virtual bigint getFixedBitwidth() const override { return bigint(m_bits); }
 	virtual unsigned storageBytes() const override { return m_bits / 8; }
 	virtual bool isValueType() const override { return true; }
 
@@ -344,15 +350,17 @@ public:
 	virtual TypePointer encodingType() const override { return shared_from_this(); }
 	virtual TypePointer interfaceType(bool) const override { return shared_from_this(); }
 
-	int numBits() const { return m_bits; }
+	int numBits() const { solAssert(!isUnbound(), ""); return m_bits; }
 	bool isAddress() const { return m_modifier == Modifier::Address; }
 	bool isSigned() const { return m_modifier == Modifier::Signed; }
+	bool isUnbound() const { return m_unbound; }
 
 	bigint minValue() const;
 	bigint maxValue() const;
 
 private:
 	int m_bits;
+	bool m_unbound;
 	Modifier m_modifier;
 };
 

@@ -82,13 +82,13 @@ BOOST_AUTO_TEST_CASE(basic_test)
 		"inputs": [
 		{
 			"name": "a",
-			"type": "uint256"
+			"type": "uint"
 		}
 		],
 		"outputs": [
 		{
 			"name": "d",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	}
@@ -126,13 +126,13 @@ BOOST_AUTO_TEST_CASE(multiple_methods)
 		"inputs": [
 		{
 			"name": "a",
-			"type": "uint256"
+			"type": "uint"
 		}
 		],
 		"outputs": [
 		{
 			"name": "d",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	},
@@ -145,13 +145,13 @@ BOOST_AUTO_TEST_CASE(multiple_methods)
 		"inputs": [
 		{
 			"name": "b",
-			"type": "uint256"
+			"type": "uint"
 		}
 		],
 		"outputs": [
 		{
 			"name": "e",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	}
@@ -178,17 +178,17 @@ BOOST_AUTO_TEST_CASE(multiple_params)
 		"inputs": [
 		{
 			"name": "a",
-			"type": "uint256"
+			"type": "uint"
 		},
 		{
 			"name": "b",
-			"type": "uint256"
+			"type": "uint"
 		}
 		],
 		"outputs": [
 		{
 			"name": "d",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	}
@@ -217,13 +217,13 @@ BOOST_AUTO_TEST_CASE(multiple_methods_order)
 		"inputs": [
 		{
 			"name": "b",
-			"type": "uint256"
+			"type": "uint"
 		}
 		],
 		"outputs": [
 		{
 			"name": "e",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	},
@@ -236,13 +236,13 @@ BOOST_AUTO_TEST_CASE(multiple_methods_order)
 		"inputs": [
 		{
 			"name": "a",
-			"type": "uint256"
+			"type": "uint"
 		}
 		],
 		"outputs": [
 		{
 			"name": "d",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	}
@@ -262,29 +262,6 @@ BOOST_AUTO_TEST_CASE(view_function)
 
 	char const* interface = R"([
 	{
-		"name": "foo",
-		"constant": false,
-		"payable" : false,
-		"stateMutability": "nonpayable",
-		"type": "function",
-		"inputs": [
-		{
-			"name": "a",
-			"type": "uint256"
-		},
-		{
-			"name": "b",
-			"type": "uint256"
-		}
-		],
-		"outputs": [
-		{
-			"name": "d",
-			"type": "uint256"
-		}
-		]
-	},
-	{
 		"name": "boo",
 		"constant": true,
 		"payable" : false,
@@ -297,7 +274,30 @@ BOOST_AUTO_TEST_CASE(view_function)
 		"outputs": [
 		{
 			"name": "b",
-			"type": "uint256"
+			"type": "uint"
+		}
+		]
+	},
+	{
+		"name": "foo",
+		"constant": false,
+		"payable" : false,
+		"stateMutability": "nonpayable",
+		"type": "function",
+		"inputs": [
+		{
+			"name": "a",
+			"type": "uint"
+		},
+		{
+			"name": "b",
+			"type": "uint"
+		}
+		],
+		"outputs": [
+		{
+			"name": "d",
+			"type": "uint"
 		}
 		]
 	}
@@ -318,29 +318,6 @@ BOOST_AUTO_TEST_CASE(constant_function)
 
 	char const* interface = R"([
 	{
-		"name": "foo",
-		"constant": false,
-		"payable" : false,
-		"stateMutability": "nonpayable",
-		"type": "function",
-		"inputs": [
-		{
-			"name": "a",
-			"type": "uint256"
-		},
-		{
-			"name": "b",
-			"type": "uint256"
-		}
-		],
-		"outputs": [
-		{
-			"name": "d",
-			"type": "uint256"
-		}
-		]
-	},
-	{
 		"name": "boo",
 		"constant": true,
 		"payable" : false,
@@ -353,7 +330,30 @@ BOOST_AUTO_TEST_CASE(constant_function)
 		"outputs": [
 		{
 			"name": "b",
-			"type": "uint256"
+			"type": "uint"
+		}
+		]
+	},
+	{
+		"name": "foo",
+		"constant": false,
+		"payable" : false,
+		"stateMutability": "nonpayable",
+		"type": "function",
+		"inputs": [
+		{
+			"name": "a",
+			"type": "uint"
+		},
+		{
+			"name": "b",
+			"type": "uint"
+		}
+		],
+		"outputs": [
+		{
+			"name": "d",
+			"type": "uint"
 		}
 		]
 	}
@@ -373,29 +373,6 @@ BOOST_AUTO_TEST_CASE(pure_function)
 
 	char const* interface = R"([
 	{
-		"name": "foo",
-		"constant": false,
-		"payable" : false,
-		"stateMutability": "nonpayable",
-		"type": "function",
-		"inputs": [
-		{
-			"name": "a",
-			"type": "uint256"
-		},
-		{
-			"name": "b",
-			"type": "uint256"
-		}
-		],
-		"outputs": [
-		{
-			"name": "d",
-			"type": "uint256"
-		}
-		]
-	},
-	{
 		"name": "boo",
 		"constant": true,
 		"payable" : false,
@@ -408,7 +385,30 @@ BOOST_AUTO_TEST_CASE(pure_function)
 		"outputs": [
 		{
 			"name": "b",
-			"type": "uint256"
+			"type": "uint"
+		}
+		]
+	},
+	{
+		"name": "foo",
+		"constant": false,
+		"payable" : false,
+		"stateMutability": "nonpayable",
+		"type": "function",
+		"inputs": [
+		{
+			"name": "a",
+			"type": "uint"
+		},
+		{
+			"name": "b",
+			"type": "uint"
+		}
+		],
+		"outputs": [
+		{
+			"name": "d",
+			"type": "uint"
 		}
 		]
 	}
@@ -438,13 +438,13 @@ BOOST_AUTO_TEST_CASE(events)
 		"inputs": [
 		{
 			"name": "a",
-			"type": "uint256"
+			"type": "uint"
 		}
 		],
 		"outputs": [
 		{
 			"name": "d",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	},
@@ -456,7 +456,7 @@ BOOST_AUTO_TEST_CASE(events)
 		{
 			"indexed": false,
 			"name": "b",
-			"type": "uint256"
+			"type": "uint"
 		},
 		{
 			"indexed": true,
@@ -479,7 +479,7 @@ BOOST_AUTO_TEST_CASE(events)
 		{
 			"indexed": false,
 			"name": "a",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	},
@@ -530,23 +530,6 @@ BOOST_AUTO_TEST_CASE(inherited)
 
 	char const* interface = R"([
 	{
-		"name": "baseFunction",
-		"constant": false,
-		"payable" : false,
-		"stateMutability": "nonpayable",
-		"type": "function",
-		"inputs":
-		[{
-			"name": "p",
-			"type": "uint256"
-		}],
-		"outputs":
-		[{
-			"name": "i",
-			"type": "uint256"
-		}]
-	},
-	{
 		"name": "derivedFunction",
 		"constant": false,
 		"payable" : false,
@@ -564,6 +547,23 @@ BOOST_AUTO_TEST_CASE(inherited)
 		}]
 	},
 	{
+		"name": "baseFunction",
+		"constant": false,
+		"payable" : false,
+		"stateMutability": "nonpayable",
+		"type": "function",
+		"inputs":
+		[{
+			"name": "p",
+			"type": "uint"
+		}],
+		"outputs":
+		[{
+			"name": "i",
+			"type": "uint"
+		}]
+	},
+	{
 		"name": "derivedEvent",
 		"type": "event",
 		"anonymous": false,
@@ -571,7 +571,7 @@ BOOST_AUTO_TEST_CASE(inherited)
 		[{
 			"indexed": true,
 			"name": "evtArgDerived",
-			"type": "uint256"
+			"type": "uint"
 		}]
 	},
 	{
@@ -611,21 +611,21 @@ BOOST_AUTO_TEST_CASE(empty_name_input_parameter_with_named_one)
 		"inputs": [
 		{
 			"name": "",
-			"type": "uint256"
+			"type": "uint"
 		},
 		{
 			"name": "k",
-			"type": "uint256"
+			"type": "uint"
 		}
 		],
 		"outputs": [
 		{
 			"name": "ret_k",
-			"type": "uint256"
+			"type": "uint"
 		},
 		{
 			"name": "ret_g",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	}
@@ -654,13 +654,13 @@ BOOST_AUTO_TEST_CASE(empty_name_return_parameter)
 		"inputs": [
 		{
 			"name": "k",
-			"type": "uint256"
+			"type": "uint"
 		}
 		],
 		"outputs": [
 		{
 			"name": "",
-			"type": "uint256"
+			"type": "uint"
 		}
 		]
 	}
@@ -681,7 +681,7 @@ BOOST_AUTO_TEST_CASE(constructor_abi)
 		"inputs": [
 			{
 				"name": "param1",
-				"type": "uint256"
+				"type": "uint"
 			},
 			{
 				"name": "param2",
@@ -713,7 +713,7 @@ BOOST_AUTO_TEST_CASE(payable_constructor_abi)
 		"inputs": [
 			{
 				"name": "param1",
-				"type": "uint256"
+				"type": "uint"
 			},
 			{
 				"name": "param2",
@@ -797,7 +797,7 @@ BOOST_AUTO_TEST_CASE(strings_and_arrays)
 			"inputs": [
 				{ "name": "a", "type": "string" },
 				{ "name": "b", "type": "bytes" },
-				{ "name": "c", "type": "uint256[]" }
+				{ "name": "c", "type": "uint[]" }
 			],
 			"outputs": [],
 			"type" : "function"
@@ -825,11 +825,11 @@ BOOST_AUTO_TEST_CASE(library_function)
 			"name": "f",
 			"inputs": [
 				{ "name": "b", "type": "test.StructType storage" },
-				{ "name": "c", "type": "uint256[] storage" },
+				{ "name": "c", "type": "uint[] storage" },
 				{ "name": "d", "type": "test" }
 			],
 			"outputs": [
-				{ "name": "e", "type": "uint256[]" },
+				{ "name": "e", "type": "uint[]" },
 				{ "name": "f", "type": "test.StructType storage" }
 			],
 			"type" : "function"
@@ -959,19 +959,19 @@ BOOST_AUTO_TEST_CASE(return_structs)
 		"outputs" : [
 			{
 			"name" : "x",
-			"type" : "uint256"
+			"type" : "uint"
 			},
 			{
 			"components" : [
 				{
 					"name" : "a",
-					"type" : "uint256"
+					"type" : "uint"
 				},
 				{
 					"components" : [
 						{
 						"name" : "x",
-						"type" : "uint256[2]"
+						"type" : "uint[2]"
 						}
 					],
 					"name" : "sub",
@@ -1050,7 +1050,7 @@ BOOST_AUTO_TEST_CASE(event_structs)
 				"components": [
 					{
 						"name": "x",
-						"type": "uint256[2]"
+						"type": "uint[2]"
 					}
 				],
 				"indexed": false,
@@ -1061,13 +1061,13 @@ BOOST_AUTO_TEST_CASE(event_structs)
 				"components": [
 					{
 						"name": "a",
-						"type": "uint256"
+						"type": "uint"
 					},
 					{
 						"components": [
 							{
 								"name": "x",
-								"type": "uint256[2]"
+								"type": "uint[2]"
 							}
 						],
 						"name": "sub",
@@ -1109,13 +1109,13 @@ BOOST_AUTO_TEST_CASE(structs_in_libraries)
 				"components": [
 					{
 						"name": "a",
-						"type": "uint256"
+						"type": "uint"
 					},
 					{
 						"components": [
 							{
 								"name": "x",
-								"type": "uint256[2]"
+								"type": "uint[2]"
 							}
 						],
 						"name": "sub",

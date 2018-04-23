@@ -83,24 +83,24 @@ entry:
   br %tmp1, throw
   %callvalue = call @iele.callvalue()
   %highestBid.val = sload @"highestBid"
-  %tmp2 = cmp gt %callvalue, %highestBid.val
-  %tmp3 = iszero %tmp2
-  br %tmp3, throw
+  %tmp3 = cmp gt %callvalue, %highestBid.val
+  %tmp4 = iszero %tmp3
+  br %tmp4, throw
   %highestBidder.val = sload @"highestBidder"
-  %tmp4 = cmp ne %highestBidder.val, 0
-  %tmp5 = iszero %tmp4
-  br %tmp5, if.end
-  %highestBidder.val6 = sload @"highestBidder"
-  %highestBid.val7 = sload @"highestBid"
+  %tmp6 = cmp ne %highestBidder.val, 0
+  %tmp7 = iszero %tmp6
+  br %tmp7, if.end
+  %highestBidder.val8 = sload @"highestBidder"
+  %highestBid.val9 = sload @"highestBid"
   %gas = call @iele.gaslimit()
-  %status = call @"deposit" at %highestBidder.val6 () send %highestBid.val7, gaslimit %gas
+  %status = call @"deposit" at %highestBidder.val8 () send %highestBid.val9, gaslimit %gas
   br %status, throw.status
 
 if.end:
   %caller = call @iele.caller()
   sstore %caller, @"highestBidder"
-  %callvalue8 = call @iele.callvalue()
-  sstore %callvalue8, @"highestBid"
+  %callvalue10 = call @iele.callvalue()
+  sstore %callvalue10, @"highestBid"
   ret void
 
 throw:

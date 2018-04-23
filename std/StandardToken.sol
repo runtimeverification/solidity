@@ -13,11 +13,11 @@ contract StandardToken is Token {
 		balance[_initialOwner] = _supply;
 	}
 
-	function balanceOf(address _account) constant public returns (uint) {
+	function balanceOf(address _account) constant public returns (uint256) {
 		return balance[_account];
 	}
 
-	function totalSupply() constant public returns (uint) {
+	function totalSupply() constant public returns (uint256) {
 		return supply;
 	}
 
@@ -36,7 +36,7 @@ contract StandardToken is Token {
 		}
 	}
 
-	function doTransfer(address _from, address _to, uint _value) internal returns (bool success) {
+	function doTransfer(address _from, address _to, uint256 _value) internal returns (bool success) {
 		if (balance[_from] >= _value && balance[_to] + _value >= balance[_to]) {
 			balance[_from] -= _value;
 			balance[_to] += _value;

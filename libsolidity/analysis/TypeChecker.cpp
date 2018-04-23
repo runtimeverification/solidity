@@ -1122,19 +1122,29 @@ bool TypeChecker::visit(VariableDeclarationStatement const& _statement)
 				string extension;
 				if (auto type = dynamic_cast<IntegerType const*>(var.annotation().type.get()))
 				{
-					int numBits = type->numBits();
-					bool isSigned = type->isSigned();
-					string minValue;
-					string maxValue;
-					if (isSigned)
+					if (type->isUnbound())
 					{
-						numBits--;
-						minValue = "-" + bigint(bigint(1) << numBits).str();
+						if (type->isSigned())
+							extension = ", which can hold any integer value";
+						else
+							extension = ", which can hold any non-negative integer value";
 					}
 					else
-						minValue = "0";
-					maxValue = bigint((bigint(1) << numBits) - 1).str();
-					extension = ", which can hold values between " + minValue + " and " + maxValue;
+					{
+						int numBits = type->numBits();
+						bool isSigned = type->isSigned();
+						string minValue;
+						string maxValue;
+						if (isSigned)
+						{
+							numBits--;
+							minValue = "-" + bigint(bigint(1) << numBits).str();
+						}
+						else
+							minValue = "0";
+						maxValue = bigint((bigint(1) << numBits) - 1).str();
+						extension = ", which can hold values between " + minValue + " and " + maxValue;
+					}
 				}
 				else
 					solAssert(dynamic_cast<FixedPointType const*>(var.annotation().type.get()), "Unknown type.");
@@ -1449,7 +1459,7 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 		)
 			if ((
 				commonType->category() == Type::Category::Integer &&
-				dynamic_cast<IntegerType const&>(*commonType).numBits() != 256
+				 !dynamic_cast<IntegerType const&>(*commonType).isUnbound()
 			) || (
 				commonType->category() == Type::Category::FixedPoint &&
 				dynamic_cast<FixedPointType const&>(*commonType).numBits() != 256
@@ -1764,7 +1774,7 @@ void TypeChecker::endVisit(NewExpression const& _newExpression)
 			);
 		type = ReferenceType::copyForLocationIfReference(DataLocation::Memory, type);
 		_newExpression.annotation().type = make_shared<FunctionType>(
-			TypePointers{make_shared<IntegerType>(256)},
+			TypePointers{make_shared<IntegerType>()},
 			TypePointers{type},
 			strings(),
 			strings(),
@@ -1922,7 +1932,7 @@ bool TypeChecker::visit(IndexAccess const& _access)
 		}
 		else
 		{
-			expectType(*index, IntegerType(256));
+			expectType(*index, IntegerType());
 			if (auto numberType = dynamic_cast<RationalNumberType const*>(type(*index).get()))
 			{
 				if (!numberType->isFractional()) // error is reported above
@@ -1952,12 +1962,12 @@ bool TypeChecker::visit(IndexAccess const& _access)
 			resultType = make_shared<TypeType>(make_shared<ArrayType>(DataLocation::Memory, typeType.actualType()));
 		else
 		{
-			expectType(*index, IntegerType(256));
+			expectType(*index, IntegerType());
 			if (auto length = dynamic_cast<RationalNumberType const*>(type(*index).get()))
 				resultType = make_shared<TypeType>(make_shared<ArrayType>(
 					DataLocation::Memory,
 					typeType.actualType(),
-					u256(length->literalValue(nullptr))
+					length->literalValue(nullptr)
 				));
 			else
 				m_errorReporter.fatalTypeError(index->location(), "Integer constant expected.");
@@ -1971,7 +1981,7 @@ bool TypeChecker::visit(IndexAccess const& _access)
 			m_errorReporter.typeError(_access.location(), "Index expression cannot be omitted.");
 		else
 		{
-			expectType(*index, IntegerType(256));
+			expectType(*index, IntegerType());
 			if (auto integerType = dynamic_cast<RationalNumberType const*>(type(*index).get()))
 				if (bytesType.numBytes() <= integerType->literalValue(nullptr))
 					m_errorReporter.typeError(_access.location(), "Out of bounds array access.");
