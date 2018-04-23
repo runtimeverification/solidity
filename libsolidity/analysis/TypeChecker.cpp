@@ -1458,10 +1458,9 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 			rightType->category() != Type::Category::RationalNumber
 		)
 			if ((
-				commonType->category() == Type::Category::Integer && (
-				 dynamic_cast<IntegerType const&>(*commonType).isUnbound() ||
-				 dynamic_cast<IntegerType const&>(*commonType).numBits() != 256
-			)) || (
+				commonType->category() == Type::Category::Integer &&
+				 !dynamic_cast<IntegerType const&>(*commonType).isUnbound()
+			) || (
 				commonType->category() == Type::Category::FixedPoint &&
 				dynamic_cast<FixedPointType const&>(*commonType).numBits() != 256
 			))
