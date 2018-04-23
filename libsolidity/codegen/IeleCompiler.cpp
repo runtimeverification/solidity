@@ -4872,9 +4872,11 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, cons
             if (constant->getValue() < 0) {
               appendRevert();
             }
-          } else {
-            bigint min = 0;
-            appendRangeCheck(Value, &min, nullptr);
+          } else if (auto srcType = dynamic_cast<const IntegerType *>(&SourceType)) {
+            if (srcType->isSigned()) {
+              bigint min = 0;
+              appendRangeCheck(Value, &min, nullptr);
+            }
           }
         }
         return Value;
