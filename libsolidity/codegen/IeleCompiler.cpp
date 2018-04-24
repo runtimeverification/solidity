@@ -2900,7 +2900,10 @@ bool IeleCompiler::visit(const NewExpression &newExpression) {
   solAssert(contractType, "not implemented yet");
   const ContractDefinition &ContractDefinition = contractType->contractDefinition();
   iele::IeleContract *Contract = CompiledContracts[&ContractDefinition];
-  CompilingContract->getIeleContractList().push_back(Contract);
+  std::vector<iele::IeleContract *> &contracts = CompilingContract->getIeleContractList();
+  if (std::find(contracts.begin(), contracts.end(), Contract) == contracts.end()) {
+    CompilingContract->getIeleContractList().push_back(Contract);
+  }
   solAssert(Contract, "Could not find compiled contract for new expression");
   CompilingExpressionResult.push_back(Contract);
   return false;
