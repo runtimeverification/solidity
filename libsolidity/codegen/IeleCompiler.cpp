@@ -1498,7 +1498,8 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
 /// Perform encoding of the given values, and returns a register containing it
 iele::IeleValue *IeleCompiler::encoding(
     iele::IeleValue *argument,
-    TypePointer type) {
+    TypePointer type,
+    bool hash) {
   if (type->isValueType() || type->category() == Type::Category::Mapping) {
     return argument;
   }
@@ -1513,15 +1514,19 @@ iele::IeleValue *IeleCompiler::encoding(
   types.push_back(type);
 
   // Call version of `encoding` that writes destination loc (NextFree)
-  encoding(arguments, types, NextFree, true);
+  encoding(arguments, types, NextFree, !hash);
 
   // Init register to be returned
   iele::IeleLocalVariable *EncodedVal = 
     iele::IeleLocalVariable::Create(&Context, "encoded.val", CompilingFunction);
-
-  // Load encoding into regster to be returned
-  iele::IeleInstruction::CreateLoad(EncodedVal, NextFree, CompilingBlock);
-
+  if (hash) {
+    iele::IeleInstruction::CreateSha3(
+      EncodedVal, NextFree, CompilingBlock);
+  } else {
+    // Load encoding into regster to be returned
+    iele::IeleInstruction::CreateLoad(EncodedVal, NextFree, CompilingBlock);
+  }
+  
   // Return register holding encoded bytestring
   return EncodedVal;
 }
@@ -2423,7 +2428,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
         iele::IeleValue *ArgValue = compileExpression(*arguments[arg]);
         solAssert(ArgValue,
                   "IeleCompiler: Failed to compile indexed event argument ");
-        // Store indexed argument
+        auto ArgType = arguments[arg]->annotation().type;
+        auto ParamType = function.parameterTypes()[arg];
+        ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+        ArgValue = encoding(ArgValue, ParamType, true);
         IndexedArguments.push_back(ArgValue);
       }
     }

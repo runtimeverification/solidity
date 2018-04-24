@@ -293,7 +293,8 @@ private:
   // Encoding functionality
   iele::IeleValue *encoding(
     iele::IeleValue *argument, 
-    TypePointer type);
+    TypePointer type,
+    bool hash = false);
   iele::IeleValue *encoding(
     llvm::SmallVectorImpl<iele::IeleValue *> &arguments, 
     TypePointers types,
