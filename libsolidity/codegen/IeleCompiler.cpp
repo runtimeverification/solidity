@@ -1128,8 +1128,13 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
 
   llvm::SmallVector<iele::IeleValue *, 4> Results;
 
-  for (unsigned i = 0; i < tuple.components().size(); i++)
-    Results.push_back(compileExpression(*tuple.components()[i]));
+  for (unsigned i = 0; i < tuple.components().size(); i++) {
+    if (CompilingLValue) {
+      Results.push_back(compileLValue(*tuple.components()[i]));
+    } else {
+      Results.push_back(compileExpression(*tuple.components()[i]));
+    }
+  }
 
   CompilingExpressionResult.insert(
     CompilingExpressionResult.end(), Results.begin(), Results.end());
