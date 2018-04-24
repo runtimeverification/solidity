@@ -1285,8 +1285,8 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
   return false;
 }
 
-IeleLValue *IeleCompiler::memberLValue(iele::IeleValue *Address, TypePointer memberType, DataLocation Loc) {
-  if (memberType->isValueType() || (memberType->isDynamicallySized() && Loc == DataLocation::Memory)) {
+IeleLValue *IeleCompiler::makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc) {
+  if (type->isValueType() || (type->isDynamicallySized() && Loc == DataLocation::Memory)) {
     return AddressLValue::Create(this, Address, Loc);
   }
   return ReadOnlyLValue::Create(Address);
@@ -1340,7 +1340,7 @@ void IeleCompiler::appendLValueDelete(IeleLValue *LValue, TypePointer type) {
         iele::IeleInstruction::Add, Member, Address, OffsetValue,
         CompilingBlock);
 
-      appendLValueDelete(memberLValue(Member, member.type, structType.location()), member.type);
+      appendLValueDelete(makeLValue(Member, member.type, structType.location()), member.type);
     }
     break;
   }
@@ -1416,7 +1416,7 @@ void IeleCompiler::appendLValueDelete(IeleLValue *LValue, TypePointer type) {
       solAssert(false, "not supported by IELE.");
     }
 
-    appendLValueDelete(memberLValue(Element, arrayType.baseType(), arrayType.location()), arrayType.baseType());
+    appendLValueDelete(makeLValue(Element, arrayType.baseType(), arrayType.location()), arrayType.baseType());
 
     iele::IeleValue *ElementSizeValue =
         iele::IeleIntConstant::Create(&Context, elementSize);
@@ -1731,7 +1731,7 @@ void IeleCompiler::doEncode(
       }
   
       elementType = ReferenceType::copyForLocationIfReference(arrayType.location(), elementType);
-      doEncode(NextFree, CrntPos, memberLValue(Element, elementType, arrayType.location()), ArgTypeSize, ArgLen, elementType, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, makeLValue(Element, elementType, arrayType.location()), ArgTypeSize, ArgLen, elementType, appendWidths, bigEndian);
   
       iele::IeleValue *ElementSizeValue =
           iele::IeleIntConstant::Create(&Context, elementSize);
@@ -1779,7 +1779,7 @@ void IeleCompiler::doEncode(
         CompilingBlock);
 
       TypePointer memberType = ReferenceType::copyForLocationIfReference(structType.location(), decl->type());
-      doEncode(NextFree, CrntPos, memberLValue(Member, memberType, structType.location()), ArgTypeSize, ArgLen, memberType, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, makeLValue(Member, memberType, structType.location()), ArgTypeSize, ArgLen, memberType, appendWidths, bigEndian);
     }
     break;
   }
@@ -1966,7 +1966,7 @@ void IeleCompiler::doDecode(
         solAssert(false, "not supported by IELE.");
       }
   
-      doDecode(NextFree, CrntPos, memberLValue(Element, elementType, DataLocation::Memory), ArgTypeSize, ArgLen, elementType);
+      doDecode(NextFree, CrntPos, makeLValue(Element, elementType, DataLocation::Memory), ArgTypeSize, ArgLen, elementType);
   
       iele::IeleValue *ElementSizeValue =
           iele::IeleIntConstant::Create(&Context, elementSize);
@@ -2020,7 +2020,7 @@ void IeleCompiler::doDecode(
         iele::IeleInstruction::Add, Member, AllocedValue, OffsetValue,
         CompilingBlock);
 
-      doDecode(NextFree, CrntPos, memberLValue(Member, decl->type(), DataLocation::Memory), ArgTypeSize, ArgLen, decl->type());
+      doDecode(NextFree, CrntPos, makeLValue(Member, decl->type(), DataLocation::Memory), ArgTypeSize, ArgLen, decl->type());
     }
     break;
   }
@@ -3062,7 +3062,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, AddressValue, ExprValue, OffsetValue,
         CompilingBlock);
-    CompilingExpressionResult.push_back(memberLValue(AddressValue, memberType, type.location()));
+    CompilingExpressionResult.push_back(makeLValue(AddressValue, memberType, type.location()));
     break;
   }
   case Type::Category::FixedBytes: {
@@ -3230,7 +3230,7 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
         iele::IeleInstruction::Add, AddressValue, ExprValue, OffsetValue,
         CompilingBlock);
 
-    CompilingExpressionResult.push_back(memberLValue(AddressValue, elementType, type.location()));
+    CompilingExpressionResult.push_back(makeLValue(AddressValue, elementType, type.location()));
     break;
   }
   case Type::Category::FixedBytes: {
@@ -3337,7 +3337,7 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
           iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
           CompilingBlock);
     }
-    CompilingExpressionResult.push_back(memberLValue(AddressValue, valueType, DataLocation::Storage));
+    CompilingExpressionResult.push_back(makeLValue(AddressValue, valueType, DataLocation::Storage));
     break;
   }
   case Type::Category::TypeType:
@@ -3818,7 +3818,7 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
     solAssert(ST,
               "IeleCompiler: failed to access compiling contract's symbol "
               "table.");
-    IeleLValue *LHSValue = memberLValue(ST->lookup(getIeleNameForStateVariable(stateVariable)), type, DataLocation::Storage);
+    IeleLValue *LHSValue = makeLValue(ST->lookup(getIeleNameForStateVariable(stateVariable)), type, DataLocation::Storage);
     solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of state variable"
                         " initialization");
 
@@ -4118,7 +4118,7 @@ void IeleCompiler::appendCopy(
         CompilingBlock);
 
       // Finally do the copy of the member value from source to destination.
-      appendCopy(memberLValue(MemberTo, memberToType, ToLoc), *memberToType, memberLValue(MemberFrom, memberFromType, FromLoc)->read(CompilingBlock), *memberFromType, ToLoc, FromLoc);
+      appendCopy(makeLValue(MemberTo, memberToType, ToLoc), *memberToType, makeLValue(MemberFrom, memberFromType, FromLoc)->read(CompilingBlock), *memberFromType, ToLoc, FromLoc);
     }
     break;
   }
@@ -4262,7 +4262,7 @@ void IeleCompiler::appendCopy(
         DoneValue, SizeVariableFrom, CompilingBlock);
       connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
  
-      appendCopy(memberLValue(ElementTo, toElementType, ToLoc), *toElementType, memberLValue(ElementFrom, elementType, FromLoc)->read(CompilingBlock), *elementType, ToLoc, FromLoc);
+      appendCopy(makeLValue(ElementTo, toElementType, ToLoc), *toElementType, makeLValue(ElementFrom, elementType, FromLoc)->read(CompilingBlock), *elementType, ToLoc, FromLoc);
   
       iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, ElementFrom, ElementFrom,

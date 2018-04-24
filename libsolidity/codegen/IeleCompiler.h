@@ -225,7 +225,7 @@ private:
   void appendVariable(iele::IeleValue *Identifier, std::string name,
                       bool isValueType = true);
 
-  IeleLValue *memberLValue(iele::IeleValue *Address, TypePointer memberType, DataLocation Loc);
+  IeleLValue *makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc);
 
   void appendLValueDelete(IeleLValue *LValue, TypePointer Type);
   void appendArrayLengthResize(bool Storage, iele::IeleValue *LValue, iele::IeleValue *NewLength);
