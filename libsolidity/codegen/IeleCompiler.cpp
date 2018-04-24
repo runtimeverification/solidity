@@ -181,11 +181,13 @@ void IeleCompiler::compileContract(
     // inheritance hierarchy.
     for (const VariableDeclaration *stateVariable : base->stateVariables()) {
       std::string VariableName = getIeleNameForStateVariable(stateVariable);
-      iele::IeleGlobalVariable *GV =
-        iele::IeleGlobalVariable::Create(&Context, VariableName,
-                                         CompilingContract);
-      GV->setStorageAddress(iele::IeleIntConstant::Create(
-                                &Context, NextStorageAddress));
+      if (!stateVariable->isConstant()) {
+        iele::IeleGlobalVariable *GV =
+          iele::IeleGlobalVariable::Create(&Context, VariableName,
+                                           CompilingContract);
+        GV->setStorageAddress(iele::IeleIntConstant::Create(
+                                  &Context, NextStorageAddress));
+      }
 
       if (stateVariable->isPublic()) {
         iele::IeleFunction::Create(&Context, true, VariableName + "()",
@@ -355,20 +357,31 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
   appendPayableCheck();
 
   iele::IeleValue *LoadedValue;
-  iele::IeleGlobalVariable *GV = llvm::dyn_cast<iele::IeleGlobalVariable>(ST->lookup(name));
-
-  if (auto arrayType = dynamic_cast<const ArrayType *>(stateVariable->annotation().type.get())) {
-    if (arrayType->isByteArray()) {
-      LoadedValue = encoding(GV, stateVariable->annotation().type);
-    } else {
-      // TODO: complex accessors
-      LoadedValue = GV;
+  if (stateVariable->isConstant()) {
+    LoadedValue = compileExpression(*stateVariable->value());
+    TypePointer rhsType = stateVariable->value()->annotation().type;
+    LoadedValue = appendTypeConversion(LoadedValue, rhsType, stateVariable->annotation().type);
+    if (auto arrayType = dynamic_cast<const ArrayType *>(stateVariable->annotation().type.get())) {
+      if (arrayType->isByteArray()) {
+        LoadedValue = encoding(LoadedValue, stateVariable->annotation().type);
+      }
     }
   } else {
-    LoadedValue = 
-      iele::IeleLocalVariable::Create(&Context, stateVariable->name() + ".val",
-                                      CompilingFunction);
-    iele::IeleInstruction::CreateSLoad(llvm::dyn_cast<iele::IeleLocalVariable>(LoadedValue), GV, CompilingBlock);
+    iele::IeleGlobalVariable *GV = llvm::dyn_cast<iele::IeleGlobalVariable>(ST->lookup(name));
+  
+    if (auto arrayType = dynamic_cast<const ArrayType *>(stateVariable->annotation().type.get())) {
+      if (arrayType->isByteArray()) {
+        LoadedValue = encoding(GV, stateVariable->annotation().type);
+      } else {
+        // TODO: complex accessors
+        LoadedValue = GV;
+      }
+    } else {
+      LoadedValue = 
+        iele::IeleLocalVariable::Create(&Context, stateVariable->name() + ".val",
+                                        CompilingFunction);
+      iele::IeleInstruction::CreateSLoad(llvm::dyn_cast<iele::IeleLocalVariable>(LoadedValue), GV, CompilingBlock);
+    }
   }
   
   llvm::SmallVector<iele::IeleValue *, 1> Returns;
@@ -2943,11 +2956,18 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         return false;
         //noop
       } else if (auto variable = dynamic_cast<const VariableDeclaration *>(memberAccess.annotation().referencedDeclaration)) {
-        std::string name = getIeleNameForStateVariable(variable);
-        iele::IeleValue *Result = ST->lookup(name);
-        solAssert(Result, "IeleCompiler: failed to find state variable in "
-                          "contract's symbol table");
-        appendVariable(Result, variable->name(), variable->annotation().type->isValueType());
+        if (variable->isConstant()) {
+          iele::IeleValue *Result = compileExpression(*variable->value());
+          TypePointer rhsType = variable->value()->annotation().type;
+          Result = appendTypeConversion(Result, rhsType, variable->annotation().type);
+          CompilingExpressionResult.push_back(Result);
+        } else {
+          std::string name = getIeleNameForStateVariable(variable);
+          iele::IeleValue *Result = ST->lookup(name);
+          solAssert(Result, "IeleCompiler: failed to find state variable in "
+                            "contract's symbol table");
+          appendVariable(Result, variable->name(), variable->annotation().type->isValueType());
+        }
         return false;
       } else {
         solAssert(false, "not implemented yet");
@@ -3598,8 +3618,16 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
   // If not found, lookup identifier in the contract's symbol table.
   bool isValueType = true;
   if (const VariableDeclaration *variableDecl =
-        dynamic_cast<const VariableDeclaration *>(declaration))
+        dynamic_cast<const VariableDeclaration *>(declaration)) {
     isValueType = variableDecl->annotation().type->isValueType();
+    if (variableDecl->isConstant()) {
+      iele::IeleValue *Identifier = compileExpression(*variableDecl->value());
+      TypePointer rhsType = variableDecl->value()->annotation().type;
+      Identifier = appendTypeConversion(Identifier, rhsType, variableDecl->annotation().type);
+      CompilingExpressionResult.push_back(Identifier);
+      return;
+    }
+  }
   ST = CompilingContract->getIeleValueSymbolTable();
   solAssert(ST,
             "IeleCompiler: failed to access compiling contract's symbol "
@@ -3919,7 +3947,7 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
                              rhsType, type);
     }
 
-    if (!InitValue)
+    if (!InitValue || stateVariable->isConstant())
       continue;
 
     // Lookup the state variable name in the contract's symbol table.
