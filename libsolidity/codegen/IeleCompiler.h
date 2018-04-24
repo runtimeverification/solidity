@@ -225,10 +225,10 @@ private:
   void appendVariable(iele::IeleValue *Identifier, std::string name,
                       bool isValueType = true);
 
-  IeleLValue *makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc);
+  IeleLValue *makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc, iele::IeleValue *Offset = nullptr);
 
   void appendLValueDelete(IeleLValue *LValue, TypePointer Type);
-  void appendArrayLengthResize(bool Storage, iele::IeleValue *LValue, iele::IeleValue *NewLength);
+  void appendArrayLengthResize(iele::IeleValue *LValue, iele::IeleValue *NewLength);
 
   iele::IeleLocalVariable *appendBinaryOperator(
       Token::Value Opcode, iele::IeleValue *LeftOperand,
