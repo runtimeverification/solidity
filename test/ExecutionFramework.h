@@ -275,9 +275,13 @@ public:
 
 	//@todo might be extended in the future
 	template <class Arg>
-	static std::vector<bytes> encodeDyn(Arg const& _arg)
+	static bytes encodeDyn(Arg const& _arg)
 	{
-		return encodeArgs(u256(0x20), u256(_arg.size()), _arg);
+		bytes encoded = encodeRefArgs(uint64_t(_arg.size()), _arg);
+		while (encoded.size() >= 2 && encoded[0] == 0 && encoded[1] <= 0x7f) {
+			encoded.erase(encoded.begin());
+		}
+		return encoded;
 	}
 
 	static bytes rlpEncode(bytes const& _first, std::vector<bytes> const& _second)
