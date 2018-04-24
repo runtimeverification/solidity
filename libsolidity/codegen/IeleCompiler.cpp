@@ -354,12 +354,23 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
 
   appendPayableCheck();
 
+  iele::IeleValue *LoadedValue;
   iele::IeleGlobalVariable *GV = llvm::dyn_cast<iele::IeleGlobalVariable>(ST->lookup(name));
-  iele::IeleLocalVariable *LoadedValue =
-    iele::IeleLocalVariable::Create(&Context, stateVariable->name() + ".val",
-                                    CompilingFunction);
-  iele::IeleInstruction::CreateSLoad(LoadedValue, GV, CompilingBlock);
 
+  if (auto arrayType = dynamic_cast<const ArrayType *>(stateVariable->annotation().type.get())) {
+    if (arrayType->isByteArray()) {
+      LoadedValue = encoding(GV, stateVariable->annotation().type);
+    } else {
+      // TODO: complex accessors
+      LoadedValue = GV;
+    }
+  } else {
+    LoadedValue = 
+      iele::IeleLocalVariable::Create(&Context, stateVariable->name() + ".val",
+                                      CompilingFunction);
+    iele::IeleInstruction::CreateSLoad(llvm::dyn_cast<iele::IeleLocalVariable>(LoadedValue), GV, CompilingBlock);
+  }
+  
   llvm::SmallVector<iele::IeleValue *, 1> Returns;
   Returns.push_back(LoadedValue);
 
