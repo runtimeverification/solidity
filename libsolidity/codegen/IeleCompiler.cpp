@@ -2717,7 +2717,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
                 "IeleCompiler: Failed to compile internal function call "
                 "argument");
       // Check if we need to do a memory to/from storage copy.
-      TypePointer ArgType = arguments[i]->annotation().type->mobileType();
+      TypePointer ArgType = arguments[i]->annotation().type;
+      ArgValue = appendTypeConversion(ArgValue, ArgType, ArgType->mobileType());
+      ArgType = ArgType->mobileType();
       Arguments.push_back(ArgValue);
       Types.push_back(ArgType);
     }
