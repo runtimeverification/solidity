@@ -18,6 +18,8 @@ class IeleContract;
 
 namespace solidity {
 
+class IeleLValue;
+
 class IeleCompiler : public ASTConstVisitor {
 public:
   explicit IeleCompiler() :
@@ -32,7 +34,6 @@ public:
     RevertStatusBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingLValue(false),
-    CompilingLValueKind(LValueKind::Reg),
     GasValue(nullptr),
     TransferValue(nullptr),
     NextStorageAddress(0),
@@ -89,6 +90,10 @@ public:
   virtual void endVisit(const Identifier &identifier) override;
   virtual void endVisit(const Literal &literal) override;
 
+  friend class AddressLValue;
+  friend class ByteArrayLValue;
+  friend class ArrayLengthLValue;
+
 private:
   iele::IeleContract *CompiledContract;
   std::map<const ContractDefinition *, iele::IeleContract *> CompiledContracts;
@@ -102,12 +107,23 @@ private:
   iele::IeleBlock *RevertBlock;
   iele::IeleBlock *RevertStatusBlock;
   iele::IeleBlock *AssertFailBlock;
-  llvm::SmallVector<iele::IeleValue *, 4> CompilingExpressionResult;
-  bool CompilingLValue;
+  struct Value {
+  private:
+    bool isLValue;
+    union {
+      iele::IeleValue *RValue;
+      IeleLValue *LValue;
+    };
+  public:
+    Value(iele::IeleValue *RValue) : isLValue(false), RValue(RValue) {}
+    Value(IeleLValue *LValue) : isLValue(true), LValue(LValue) {}
+    iele::IeleValue *rval(iele::IeleBlock *Block);
+    IeleLValue *lval() { solAssert(isLValue, "IeleCompiler: expression is not an lvalue"); return LValue; }
+  };
 
-  enum LValueKind { Default, Reg, Memory, Storage, ArrayLengthMemory, ArrayLengthStorage };
-  LValueKind CompilingLValueKind;
-  bigint CompilingLValueArrayElementSize;
+  llvm::SmallVector<Value, 4> CompilingExpressionResult;
+  bool CompilingLValue;
+  const ArrayType *CompilingLValueArrayType;
 
   iele::IeleValue *GasValue;
   iele::IeleValue *TransferValue;
@@ -150,10 +166,10 @@ private:
   void compileTuple(
       const Expression &expression,
       llvm::SmallVectorImpl<iele::IeleValue *> &Result);
-  iele::IeleValue *compileLValue(const Expression &expression);
+  IeleLValue *compileLValue(const Expression &expression);
   void compileLValues(
       const Expression &expression,
-      llvm::SmallVectorImpl<iele::IeleValue *> &Result);
+      llvm::SmallVectorImpl<IeleLValue *> &Result);
 
   void connectWithUnconditionalJump(iele::IeleBlock *SourceBlock, 
                                     iele::IeleBlock *DestinationBlock);
@@ -189,12 +205,12 @@ private:
 
   // Helper functions for copying a reference type to a storage location.
   void appendCopyFromStorageToStorage(
-      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
+      IeleLValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
   void appendCopyFromMemoryToStorage(
-      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
+      IeleLValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
 
   void appendCopyFromMemoryToMemory(
-      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
+      IeleLValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
 
   // Helper function for copying a storage reference type into a local newly
   // allocated memory copy. Returns a pointer to the copy.
@@ -202,19 +218,16 @@ private:
     const Type &ToType, iele::IeleValue *From, const Type &FromType);
 
   void appendCopy(
-      iele::IeleValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType, DataLocation ToLoc, DataLocation FromLoc, LValueKind ToKind, LValueKind FromKind);
+      IeleLValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType, DataLocation ToLoc, DataLocation FromLoc);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
   void appendVariable(iele::IeleValue *Identifier, std::string name,
                       bool isValueType = true);
 
-  LValueKind loadKind(TypePointer type, DataLocation loc);
-  LValueKind storeKind(DataLocation loc);
+  IeleLValue *makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc);
 
-  iele::IeleValue *appendLValueDereference(iele::IeleValue *LValue, LValueKind Kind = LValueKind::Default);
-  void appendLValueAssign(iele::IeleValue *LValue, iele::IeleValue *RValue, LValueKind Kind = LValueKind::Default);
-  void appendLValueDelete(iele::IeleValue *LValue, TypePointer Type, LValueKind Kind);
+  void appendLValueDelete(IeleLValue *LValue, TypePointer Type);
   void appendArrayLengthResize(bool Storage, iele::IeleValue *LValue, iele::IeleValue *NewLength);
 
   iele::IeleLocalVariable *appendBinaryOperator(
@@ -254,8 +267,8 @@ private:
 
   iele::IeleLocalVariable *appendMemorySpill();
 
-  bool shouldCopyStorageToStorage(const iele::IeleValue *To, const Type &From) const;
-  bool shouldCopyMemoryToStorage(const iele::IeleValue *To, const Type &From) const;
+  bool shouldCopyStorageToStorage(const IeleLValue *To, const Type &From) const;
+  bool shouldCopyMemoryToStorage(const IeleLValue *To, const Type &From) const;
   bool shouldCopyStorageToMemory(const Type &To, const Type &From) const;
 
   bool isMostDerived(const FunctionDefinition *d) const;
@@ -293,14 +306,14 @@ private:
 
   void doEncode(
     iele::IeleValue *NextFree,
-    iele::IeleLocalVariable *CrntPos, iele::IeleValue *ArgValue,
+    iele::IeleLocalVariable *CrntPos, IeleLValue *ArgValue,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, LValueKind Kind, bool appendWidths, bool BigEndian);
+    TypePointer type, bool appendWidths, bool BigEndian);
   void doDecode(
     iele::IeleValue *NextFree,
-    iele::IeleLocalVariable *CrntPos, iele::IeleValue *StoreAt,
+    iele::IeleLocalVariable *CrntPos, IeleLValue *StoreAt,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, LValueKind Kind);
+    TypePointer type);
 
   void appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value);
 };
