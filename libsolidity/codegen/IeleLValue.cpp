@@ -40,7 +40,7 @@ ByteArrayLValue::ByteArrayLValue(IeleCompiler *Compiler, iele::IeleValue *Addres
 
 void ByteArrayLValue::write(iele::IeleValue *Value, iele::IeleBlock *InsertAtEnd) const {
   if (Loc == DataLocation::Storage) {
-    iele::IeleLocalVariable *OldValue = iele::IeleLocalVariable::Create(&Compiler->Context, "string.value", Compiler->CompilingFunction);
+    iele::IeleLocalVariable *OldValue = iele::IeleLocalVariable::Create(&Compiler->Context, "string.val", Compiler->CompilingFunction);
     iele::IeleInstruction::CreateSLoad(OldValue, Address, InsertAtEnd);
     iele::IeleValue *Spill = Compiler->appendMemorySpill();
     iele::IeleInstruction::CreateStore(OldValue, Spill, InsertAtEnd);
