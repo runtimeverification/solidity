@@ -97,6 +97,41 @@ protected:
 		return h256(ret);
 	}
 
+	u256 callVoidReturnsUInt256(std::string const& _name)
+	{
+		bytes const& ret = callReturning(_name + "()");
+		BOOST_REQUIRE(ret.size() > 0 && ret.size() <= 32);
+		return fromBigEndian<u256>(ret);
+	}
+
+	u256 callAddressReturnsUInt256(std::string const& _name, u160 const& _arg)
+	{
+		bytes const& ret = callReturning(_name + "(address)", _arg);
+		BOOST_REQUIRE(ret.size() > 0 && ret.size() <= 32);
+		return fromBigEndian<u256>(ret);
+	}
+
+	bool callAddressUInt256ReturnsBool(std::string const& _name, u160 const& _arg1, u256 const& _arg2)
+	{
+		bytes const& ret = callReturning(_name + "(address,uint256)", _arg1, _arg2);
+		BOOST_REQUIRE(ret.size() == 1);
+		return ret[0];
+	}
+
+	bool callAddressAddressUInt256ReturnsBool(std::string const& _name, u160 const& _arg1, u160 const& _arg2, u256 const& _arg3)
+	{
+		bytes const& ret = callReturning(_name + "(address,address,uint256)", _arg1, _arg2, _arg3);
+		BOOST_REQUIRE(ret.size() == 1);
+		return ret[0];
+	}
+
+	u256 callAddressAddressReturnsUInt256(std::string const& _name, u160 const& _arg1, u160 const& _arg2)
+	{
+		bytes const& ret = callReturning(_name + "(address,address)", _arg1, _arg2);
+		BOOST_REQUIRE(ret.size() > 0 && ret.size() <= 32);
+		return fromBigEndian<u256>(ret);
+	}
+
 private:
 	u256 m_nextValue;
 	ExecutionFramework& m_framework;
