@@ -1106,6 +1106,7 @@ bool IeleCompiler::visit(const Assignment &assignment) {
 
   // Check if we need to do a memory/storage to storage copy. Only happens when
   // assigning to a state variable of refernece type.
+  RHSType = RHSType->mobileType();
   if (shouldCopyStorageToStorage(LHSValue, *RHSType))
     appendCopyFromStorageToStorage(LHSValue, LHSType, RHSValue, RHSType);
   else if (shouldCopyMemoryToStorage(LHSValue, *RHSType))
@@ -3638,6 +3639,7 @@ void IeleCompiler::endVisit(const Literal &literal) {
   case Type::Category::StringLiteral: {
     const auto &literalType = dynamic_cast<const StringLiteralType &>(*type);
     std::string value = literalType.value();
+    std::reverse(value.begin(), value.end());
     bigint value_integer = bigint(toHex(asBytes(value), 2, HexPrefix::Add));
     iele::IeleIntConstant *LiteralValue =
       iele::IeleIntConstant::Create(
@@ -3922,11 +3924,9 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
     if (type->isValueType()) {
       // Add assignment in constructor's body.
       LHSValue->write(InitValue, CompilingBlock);
-    } else if (type->category() == Type::Category::Array) {
-      // Add array copy in constructor's body.
-      solAssert(!stateVariable->value(), "not implemented yet");
-    } else if (type->category() == Type::Category::Struct) {
+    } else if (type->category() == Type::Category::Array || type->category() == Type::Category::Struct) {
       // Add struct copy in constructor's body.
+      rhsType = rhsType->mobileType();
       if (shouldCopyStorageToStorage(LHSValue, *rhsType))
         appendCopyFromStorageToStorage(LHSValue, type, InitValue, rhsType);
       else if (shouldCopyMemoryToStorage(LHSValue, *rhsType))
@@ -4867,6 +4867,24 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, Type
       iele::IeleIntConstant *Result = iele::IeleIntConstant::Create(
         &Context, value, true);
       return Result;
+    }
+    case Type::Category::Array: {
+      const ArrayType &targetType = dynamic_cast<const ArrayType &>(*TargetType);
+      solAssert(targetType.isByteArray(), "cannot convert string literal to non-byte-array");
+      iele::IeleValue *Ptr = appendArrayAllocation(targetType);
+      iele::IeleIntConstant *Length = iele::IeleIntConstant::Create(
+        &Context, value.size());
+      iele::IeleInstruction::CreateStore(
+        Length, Ptr, CompilingBlock);
+      iele::IeleLocalVariable *ValueAddress =
+        iele::IeleLocalVariable::Create(&Context, "string.value.address", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, ValueAddress, Ptr,
+        iele::IeleIntConstant::getOne(&Context),
+        CompilingBlock);
+      iele::IeleInstruction::CreateStore(
+        Value, ValueAddress, CompilingBlock);
+      return Ptr;
     }
     default:
       solAssert(false, "not implemented yet");
