@@ -18,6 +18,8 @@ class IeleContract;
 
 namespace solidity {
 
+class IeleLValue;
+
 class IeleCompiler : public ASTConstVisitor {
 public:
   explicit IeleCompiler() :
@@ -88,6 +90,10 @@ public:
   virtual bool visit(const IndexAccess &indexAccess) override;
   virtual void endVisit(const Identifier &identifier) override;
   virtual void endVisit(const Literal &literal) override;
+
+  friend class AddressLValue;
+  friend class ByteArrayLValue;
+  friend class ArrayLengthLValue;
 
 private:
   iele::IeleContract *CompiledContract;
