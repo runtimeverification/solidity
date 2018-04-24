@@ -2368,8 +2368,14 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
               "IeleCompiler: found fix-sized array type in new expression");
     solAssert(arrayType.dataStoredIn(DataLocation::Memory),
               "IeleCompiler: found storage allocation with new");
-    iele::IeleValue *ArrayValue =
-      appendArrayAllocation(arrayType, ArraySizeValue);
+    iele::IeleValue *ArrayValue;
+    if (arrayType.isByteArray()) {
+      ArrayValue = appendArrayAllocation(arrayType);
+      iele::IeleInstruction::CreateStore(
+        ArraySizeValue, ArrayValue, CompilingBlock);
+    } else {
+      ArrayValue = appendArrayAllocation(arrayType, ArraySizeValue);
+    }
 
     // Return pointer to allocated array.
     CompilingExpressionResult.push_back(ArrayValue);
