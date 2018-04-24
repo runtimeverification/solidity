@@ -2786,8 +2786,31 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     CompilingExpressionResult.push_back(Return);
     break;
   }
-  case FunctionType::Kind::ByteArrayPush:
-    solAssert(false, "not implemented yet");
+  case FunctionType::Kind::ByteArrayPush: {
+    iele::IeleValue *PushedValue = compileExpression(*arguments.front());
+    iele::IeleValue *ArrayValue = compileExpression(functionCall.expression());
+    IeleLValue *SizeLValue = AddressLValue::Create(this, ArrayValue, CompilingLValueArrayType->location());
+    iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock);
+    iele::IeleLocalVariable *StringAddress =
+      iele::IeleLocalVariable::Create(&Context, "string.address", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, StringAddress, ArrayValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+    IeleLValue *ElementLValue = ByteArrayLValue::Create(this, StringAddress, SizeValue, CompilingLValueArrayType->location());
+    ElementLValue->write(PushedValue, CompilingBlock);
+
+    iele::IeleLocalVariable *NewSize =
+      iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, NewSize, SizeValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+
+    SizeLValue->write(NewSize, CompilingBlock);
+    CompilingExpressionResult.push_back(NewSize);
+    break;
+  }
   case FunctionType::Kind::ArrayPush: {
     iele::IeleValue *PushedValue = compileExpression(*arguments.front());
     iele::IeleValue *ArrayValue = compileExpression(functionCall.expression());
