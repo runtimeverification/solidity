@@ -3514,7 +3514,7 @@ void IeleCompiler::appendVariable(iele::IeleValue *Identifier, std::string name,
         // In case of a global variable, if we aren't compiling an lvalue and
         // the global variable holds a value type, we have to load the global
         // variable.
-        CompilingExpressionResult.push_back(AddressLValue::Create(this, Identifier, DataLocation::Storage));
+        CompilingExpressionResult.push_back(AddressLValue::Create(this, Identifier, DataLocation::Storage, name));
       } else {
         CompilingExpressionResult.push_back(ReadOnlyLValue::Create(Identifier));
       }

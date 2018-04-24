@@ -16,8 +16,8 @@ iele::IeleValue *RegisterLValue::read(iele::IeleBlock *InsertAtEnd) const {
   return Var;
 }
 
-AddressLValue::AddressLValue(IeleCompiler *Compiler, iele::IeleValue *Address, DataLocation Loc) :
-  Compiler(Compiler), Address(Address), Loc(Loc) {}
+AddressLValue::AddressLValue(IeleCompiler *Compiler, iele::IeleValue *Address, DataLocation Loc, std::string Name) :
+  Compiler(Compiler), Address(Address), Loc(Loc), Name(Name) {}
 
 void AddressLValue::write(iele::IeleValue *Value, iele::IeleBlock *InsertAtEnd) const {
   if (Loc == DataLocation::Storage)
@@ -27,7 +27,7 @@ void AddressLValue::write(iele::IeleValue *Value, iele::IeleBlock *InsertAtEnd) 
 }
 
 iele::IeleValue *AddressLValue::read(iele::IeleBlock *InsertAtEnd) const {
-  iele::IeleLocalVariable *Result = iele::IeleLocalVariable::Create(&Compiler->Context, "loaded.val", Compiler->CompilingFunction);
+  iele::IeleLocalVariable *Result = iele::IeleLocalVariable::Create(&Compiler->Context, Name + ".val", Compiler->CompilingFunction);
   if (Loc == DataLocation::Storage)
     iele::IeleInstruction::CreateSLoad(Result, Address, InsertAtEnd);
   else
@@ -40,7 +40,7 @@ ByteArrayLValue::ByteArrayLValue(IeleCompiler *Compiler, iele::IeleValue *Addres
 
 void ByteArrayLValue::write(iele::IeleValue *Value, iele::IeleBlock *InsertAtEnd) const {
   if (Loc == DataLocation::Storage) {
-    iele::IeleLocalVariable *OldValue = iele::IeleLocalVariable::Create(&Compiler->Context, "loaded.value", Compiler->CompilingFunction);
+    iele::IeleLocalVariable *OldValue = iele::IeleLocalVariable::Create(&Compiler->Context, "string.value", Compiler->CompilingFunction);
     iele::IeleInstruction::CreateSLoad(OldValue, Address, InsertAtEnd);
     iele::IeleValue *Spill = Compiler->appendMemorySpill();
     iele::IeleInstruction::CreateStore(OldValue, Spill, InsertAtEnd);
@@ -52,7 +52,7 @@ void ByteArrayLValue::write(iele::IeleValue *Value, iele::IeleBlock *InsertAtEnd
 }
 
 iele::IeleValue *ByteArrayLValue::read(iele::IeleBlock *InsertAtEnd) const {
-  iele::IeleLocalVariable *Result = iele::IeleLocalVariable::Create(&Compiler->Context , "loaded.val", Compiler->CompilingFunction);
+  iele::IeleLocalVariable *Result = iele::IeleLocalVariable::Create(&Compiler->Context , "string.val", Compiler->CompilingFunction);
   if (Loc == DataLocation::Storage) {
     iele::IeleInstruction::CreateSLoad(Result, Address, InsertAtEnd);
     iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Byte, Result, Offset, Result, InsertAtEnd);

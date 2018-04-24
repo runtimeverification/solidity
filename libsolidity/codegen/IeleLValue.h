@@ -59,19 +59,20 @@ public:
 class AddressLValue : public IeleLValue
 {
 protected:
-  AddressLValue(IeleCompiler *Compiler, iele::IeleValue *Address, DataLocation Loc);
+  AddressLValue(IeleCompiler *Compiler, iele::IeleValue *Address, DataLocation Loc, std::string Name);
 
   IeleCompiler *Compiler;
   iele::IeleValue *Address;
   DataLocation Loc;
+  std::string Name;
 public:
   AddressLValue(const AddressLValue&) = delete;
   void operator=(const AddressLValue&) = delete;
 
   ~AddressLValue() = default;
 
-  static AddressLValue *Create(IeleCompiler *Compiler, iele::IeleValue *Address, DataLocation Loc) {
-    return new AddressLValue(Compiler, Address, Loc);
+  static AddressLValue *Create(IeleCompiler *Compiler, iele::IeleValue *Address, DataLocation Loc, std::string Name = "loaded") {
+    return new AddressLValue(Compiler, Address, Loc, Name);
   }
 
   virtual void write(iele::IeleValue *Value, iele::IeleBlock *InsertAtEnd) const override;
@@ -104,7 +105,7 @@ public:
 class ArrayLengthLValue : public AddressLValue
 {
 private:
-  ArrayLengthLValue(IeleCompiler *Compiler, iele::IeleValue *Address, DataLocation Loc) : AddressLValue(Compiler, Address, Loc) {}
+  ArrayLengthLValue(IeleCompiler *Compiler, iele::IeleValue *Address, DataLocation Loc) : AddressLValue(Compiler, Address, Loc, "array.length") {}
 
 public:
   ArrayLengthLValue(const ArrayLengthLValue&) = delete;
