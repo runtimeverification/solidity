@@ -30,7 +30,7 @@ contract LMSRMarketMaker is MarketMaker {
         require(market.eventContract().getOutcomeCount() > 1);
         int256[] memory netOutcomeTokensSold = getNetOutcomeTokensSold(market);
         // Calculate cost level based on net outcome token balances
-        int256 logN = Math.ln(uint8(netOutcomeTokensSold.length) * ONE);
+        int256 logN = Math.ln(uint256(netOutcomeTokensSold.length) * ONE);
         uint256 funding = market.funding();
         int256 costLevelBefore = calcCostLevel(logN, netOutcomeTokensSold, funding);
         // Add outcome token count to net outcome token balance
@@ -65,7 +65,7 @@ contract LMSRMarketMaker is MarketMaker {
         require(market.eventContract().getOutcomeCount() > 1);
         int256[] memory netOutcomeTokensSold = getNetOutcomeTokensSold(market);
         // Calculate cost level based on net outcome token balances
-        int256 logN = Math.ln(uint8(netOutcomeTokensSold.length) * ONE);
+        int256 logN = Math.ln(uint256(netOutcomeTokensSold.length) * ONE);
         uint256 funding = market.funding();
         int256 costLevelBefore = calcCostLevel(logN, netOutcomeTokensSold, funding);
         // Subtract outcome token count from the net outcome token balance
@@ -90,7 +90,7 @@ contract LMSRMarketMaker is MarketMaker {
     {
         require(market.eventContract().getOutcomeCount() > 1);
         int256[] memory netOutcomeTokensSold = getNetOutcomeTokensSold(market);
-        int256 logN = Math.ln(uint8(netOutcomeTokensSold.length) * ONE);
+        int256 logN = Math.ln(uint256(netOutcomeTokensSold.length) * ONE);
         uint256 funding = market.funding();
         // The price function is exp(quantities[i]/b) / sum(exp(q/b) for q in quantities)
         // To avoid overflow, calculate with
