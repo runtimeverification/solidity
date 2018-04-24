@@ -9,23 +9,23 @@ contract Market {
     /*
      *  Events
      */
-    event MarketFunding(uint funding);
+    event MarketFunding(uint256 funding);
     event MarketClosing();
-    event FeeWithdrawal(uint fees);
-    event OutcomeTokenPurchase(address indexed buyer, uint8 outcomeTokenIndex, uint outcomeTokenCount, uint cost);
-    event OutcomeTokenSale(address indexed seller, uint8 outcomeTokenIndex, uint outcomeTokenCount, uint profit);
-    event OutcomeTokenShortSale(address indexed buyer, uint8 outcomeTokenIndex, uint outcomeTokenCount, uint cost);
+    event FeeWithdrawal(uint256 fees);
+    event OutcomeTokenPurchase(address indexed buyer, uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 cost);
+    event OutcomeTokenSale(address indexed seller, uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 profit);
+    event OutcomeTokenShortSale(address indexed buyer, uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 cost);
 
     /*
      *  Storage
      */
     address public creator;
-    uint public createdAtBlock;
+    uint256 public createdAtBlock;
     Event public eventContract;
     MarketMaker public marketMaker;
     uint24 public fee;
-    uint public funding;
-    int[] public netOutcomeTokensSold;
+    uint256 public funding;
+    int256[] public netOutcomeTokensSold;
     Stages public stage;
 
     enum Stages {
@@ -37,11 +37,11 @@ contract Market {
     /*
      *  Public functions
      */
-    function fund(uint _funding) public;
+    function fund(uint256 _funding) public;
     function close() public;
-    function withdrawFees() public returns (uint);
-    function buy(uint8 outcomeTokenIndex, uint outcomeTokenCount, uint maxCost) public returns (uint);
-    function sell(uint8 outcomeTokenIndex, uint outcomeTokenCount, uint minProfit) public returns (uint);
-    function shortSell(uint8 outcomeTokenIndex, uint outcomeTokenCount, uint minProfit) public returns (uint);
-    function calcMarketFee(uint outcomeTokenCost) public constant returns (uint);
+    function withdrawFees() public returns (uint256);
+    function buy(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 maxCost) public returns (uint256);
+    function sell(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 minProfit) public returns (uint256);
+    function shortSell(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 minProfit) public returns (uint256);
+    function calcMarketFee(uint256 outcomeTokenCost) public constant returns (uint256);
 }

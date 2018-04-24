@@ -9,23 +9,23 @@ pragma solidity ^0.4.6;
 */
 library RLP {
 
- uint constant DATA_SHORT_START = 0x80;
- uint constant DATA_LONG_START = 0xB8;
- uint constant LIST_SHORT_START = 0xC0;
- uint constant LIST_LONG_START = 0xF8;
+ uint256 constant DATA_SHORT_START = 0x80;
+ uint256 constant DATA_LONG_START = 0xB8;
+ uint256 constant LIST_SHORT_START = 0xC0;
+ uint256 constant LIST_LONG_START = 0xF8;
 
- uint constant DATA_LONG_OFFSET = 0xB7;
- uint constant LIST_LONG_OFFSET = 0xF7;
+ uint256 constant DATA_LONG_OFFSET = 0xB7;
+ uint256 constant LIST_LONG_OFFSET = 0xF7;
 
 
  struct RLPItem {
-     uint _unsafe_memPtr;    // Pointer to the RLP-encoded bytes.
-     uint _unsafe_length;    // Number of bytes. This is the full length of the string.
+     uint256 _unsafe_memPtr;    // Pointer to the RLP-encoded bytes.
+     uint256 _unsafe_length;    // Number of bytes. This is the full length of the string.
  }
 
  struct Iterator {
      RLPItem _unsafe_item;   // Item that's being iterated over.
-     uint _unsafe_nextPtr;   // Position of the next item in the list.
+     uint256 _unsafe_nextPtr;   // Position of the next item in the list.
  }
 
  /* Iterator */
@@ -60,11 +60,11 @@ library RLP {
  /// @param self The RLP encoded bytes.
  /// @return An RLPItem
  function toRLPItem(bytes memory self) internal constant returns (RLPItem memory) {
-     uint len = self.length;
+     uint256 len = uint256(self.length);
      if (len == 0) {
          return RLPItem(0, 0);
      }
-     uint memPtr;
+     uint256 memPtr;
      assembly {
          memPtr := add(self, 0x20)
      }
@@ -78,7 +78,7 @@ library RLP {
  function toRLPItem(bytes memory self, bool strict) internal constant returns (RLPItem memory) {
      var item = toRLPItem(self);
      if(strict) {
-         uint len = self.length;
+         uint256 len = uint256(self.length);
          if(_payloadOffset(item) > len)
              throw;
          if(_itemLength(item._unsafe_memPtr) != len)
@@ -102,7 +102,7 @@ library RLP {
  function isList(RLPItem memory self) internal constant returns (bool ret) {
      if (self._unsafe_length == 0)
          return false;
-     uint memPtr = self._unsafe_memPtr;
+     uint256 memPtr = self._unsafe_memPtr;
      assembly {
          ret := iszero(lt(byte(0, mload(memPtr)), 0xC0))
      }
@@ -114,7 +114,7 @@ library RLP {
  function isData(RLPItem memory self) internal constant returns (bool ret) {
      if (self._unsafe_length == 0)
          return false;
-     uint memPtr = self._unsafe_memPtr;
+     uint256 memPtr = self._unsafe_memPtr;
      assembly {
          ret := lt(byte(0, mload(memPtr)), 0xC0)
      }
@@ -126,8 +126,8 @@ library RLP {
  function isEmpty(RLPItem memory self) internal constant returns (bool ret) {
      if(isNull(self))
          return false;
-     uint b0;
-     uint memPtr = self._unsafe_memPtr;
+     uint256 b0;
+     uint256 memPtr = self._unsafe_memPtr;
      assembly {
          b0 := byte(0, mload(memPtr))
      }
@@ -137,17 +137,17 @@ library RLP {
  /// @dev Get the number of items in an RLP encoded list.
  /// @param self The RLP item.
  /// @return The number of items.
- function items(RLPItem memory self) internal constant returns (uint) {
+ function items(RLPItem memory self) internal constant returns (uint256) {
      if (!isList(self))
          return 0;
-     uint b0;
-     uint memPtr = self._unsafe_memPtr;
+     uint256 b0;
+     uint256 memPtr = self._unsafe_memPtr;
      assembly {
          b0 := byte(0, mload(memPtr))
      }
-     uint pos = memPtr + _payloadOffset(self);
-     uint last = memPtr + self._unsafe_length - 1;
-     uint itms;
+     uint256 pos = memPtr + _payloadOffset(self);
+     uint256 last = memPtr + self._unsafe_length - 1;
+     uint256 itms;
      while(pos <= last) {
          pos += _itemLength(pos);
          itms++;
@@ -161,7 +161,7 @@ library RLP {
  function iterator(RLPItem memory self) internal constant returns (Iterator memory it) {
      if (!isList(self))
          throw;
-     uint ptr = self._unsafe_memPtr + _payloadOffset(self);
+     uint256 ptr = self._unsafe_memPtr + _payloadOffset(self);
      it._unsafe_item = self;
      it._unsafe_nextPtr = ptr;
  }
@@ -199,7 +199,7 @@ library RLP {
      var numItems = items(self);
      list = new RLPItem[](numItems);
      var it = iterator(self);
-     uint idx;
+     uint256 idx;
      while(hasNext(it)) {
          list[idx] = next(it);
          idx++;
@@ -223,7 +223,7 @@ library RLP {
  /// RLPItem is a list.
  /// @param self The RLPItem.
  /// @return The decoded string.
- function toUint(RLPItem memory self) internal constant returns (uint data) {
+ function toUint256(RLPItem memory self) internal constant returns (uint256 data) {
      if(!isData(self))
          throw;
      var (rStartPos, len) = _decode(self);
@@ -244,7 +244,7 @@ library RLP {
      var (rStartPos, len) = _decode(self);
      if (len != 1)
          throw;
-     uint temp;
+     uint256 temp;
      assembly {
          temp := byte(0, mload(rStartPos))
      }
@@ -263,7 +263,7 @@ library RLP {
      var (rStartPos, len) = _decode(self);
      if (len != 1)
          throw;
-     uint temp;
+     uint256 temp;
      assembly {
          temp := byte(0, mload(rStartPos))
      }
@@ -274,8 +274,8 @@ library RLP {
  /// RLPItem is a list.
  /// @param self The RLPItem.
  /// @return The decoded string.
- function toInt(RLPItem memory self) internal constant returns (int data) {
-     return int(toUint(self));
+ function toInt(RLPItem memory self) internal constant returns (int256 data) {
+     return int256(toUint256(self));
  }
 
  /// @dev Decode an RLPItem into a bytes32. This will not work if the
@@ -283,7 +283,7 @@ library RLP {
  /// @param self The RLPItem.
  /// @return The decoded string.
  function toBytes32(RLPItem memory self) internal constant returns (bytes32 data) {
-     return bytes32(toUint(self));
+     return bytes32(toUint256(self));
  }
 
  /// @dev Decode an RLPItem into an address. This will not work if the
@@ -302,11 +302,11 @@ library RLP {
  }
 
  // Get the payload offset.
- function _payloadOffset(RLPItem memory self) private constant returns (uint) {
+ function _payloadOffset(RLPItem memory self) private constant returns (uint256) {
      if(self._unsafe_length == 0)
          return 0;
-     uint b0;
-     uint memPtr = self._unsafe_memPtr;
+     uint256 b0;
+     uint256 memPtr = self._unsafe_memPtr;
      assembly {
          b0 := byte(0, mload(memPtr))
      }
@@ -320,8 +320,8 @@ library RLP {
  }
 
  // Get the full length of an RLP item.
- function _itemLength(uint memPtr) private constant returns (uint len) {
-     uint b0;
+ function _itemLength(uint256 memPtr) private constant returns (uint256 len) {
+     uint256 b0;
      assembly {
          b0 := byte(0, mload(memPtr))
      }
@@ -348,11 +348,11 @@ library RLP {
  }
 
  // Get start position and length of the data.
- function _decode(RLPItem memory self) private constant returns (uint memPtr, uint len) {
+ function _decode(RLPItem memory self) private constant returns (uint256 memPtr, uint256 len) {
      if(!isData(self))
          throw;
-     uint b0;
-     uint start = self._unsafe_memPtr;
+     uint256 b0;
+     uint256 start = self._unsafe_memPtr;
      assembly {
          b0 := byte(0, mload(start))
      }
@@ -365,7 +365,7 @@ library RLP {
          len = self._unsafe_length - 1;
          memPtr = start + 1;
      } else {
-         uint bLen;
+         uint256 bLen;
          assembly {
              bLen := sub(b0, 0xB7) // DATA_LONG_OFFSET
          }
@@ -376,7 +376,7 @@ library RLP {
  }
 
  // Assumes that enough memory has been allocated to store in target.
- function _copyToBytes(uint btsPtr, bytes memory tgt, uint btsLen) private constant {
+ function _copyToBytes(uint256 btsPtr, bytes memory tgt, uint256 btsLen) private constant {
      // Exploiting the fact that 'tgt' was the last thing to be allocated,
      // we can write entire words, and just overwrite any excess.
      assembly {
@@ -402,9 +402,9 @@ library RLP {
  // Check that an RLP item is valid.
      function _validate(RLPItem memory self) private constant returns (bool ret) {
          // Check that RLP is well-formed.
-         uint b0;
-         uint b1;
-         uint memPtr = self._unsafe_memPtr;
+         uint256 b0;
+         uint256 b1;
+         uint256 memPtr = self._unsafe_memPtr;
          assembly {
              b0 := byte(0, mload(memPtr))
              b1 := byte(1, mload(memPtr))

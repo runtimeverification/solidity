@@ -12,7 +12,7 @@ contract MultiSigWalletWithDailyLimitFactory is Factory {
     /// @param _required Number of required confirmations.
     /// @param _dailyLimit Amount in wei, which can be withdrawn without confirmations on a daily basis.
     /// @return Returns wallet address.
-    function create(address[] _owners, uint _required, uint _dailyLimit)
+    function create(address[] _owners, uint256 _required, uint256 _dailyLimit)
         public
         returns (address wallet)
     {

@@ -12,10 +12,10 @@ contract UltimateOracle is Oracle {
     /*
      *  Events
      */
-    event ForwardedOracleOutcomeAssignment(int outcome);
-    event OutcomeChallenge(address indexed sender, int outcome);
-    event OutcomeVote(address indexed sender, int outcome, uint amount);
-    event Withdrawal(address indexed sender, uint amount);
+    event ForwardedOracleOutcomeAssignment(int256 outcome);
+    event OutcomeChallenge(address indexed sender, int256 outcome);
+    event OutcomeVote(address indexed sender, int256 outcome, uint256 amount);
+    event Withdrawal(address indexed sender, uint256 amount);
 
     /*
      *  Storage
@@ -23,18 +23,18 @@ contract UltimateOracle is Oracle {
     Oracle public forwardedOracle;
     Token public collateralToken;
     uint8 public spreadMultiplier;
-    uint public challengePeriod;
-    uint public challengeAmount;
-    uint public frontRunnerPeriod;
+    uint256 public challengePeriod;
+    uint256 public challengeAmount;
+    uint256 public frontRunnerPeriod;
 
-    int public forwardedOutcome;
-    uint public forwardedOutcomeSetTimestamp;
-    int public frontRunner;
-    uint public frontRunnerSetTimestamp;
+    int256 public forwardedOutcome;
+    uint256 public forwardedOutcomeSetTimestamp;
+    int256 public frontRunner;
+    uint256 public frontRunnerSetTimestamp;
 
-    uint public totalAmount;
-    mapping (int => uint) public totalOutcomeAmounts;
-    mapping (address => mapping (int => uint)) public outcomeAmounts;
+    uint256 public totalAmount;
+    mapping (int256 => uint256) public totalOutcomeAmounts;
+    mapping (address => mapping (int256 => uint256)) public outcomeAmounts;
 
     /*
      *  Public functions
@@ -50,9 +50,9 @@ contract UltimateOracle is Oracle {
         Oracle _forwardedOracle,
         Token _collateralToken,
         uint8 _spreadMultiplier,
-        uint _challengePeriod,
-        uint _challengeAmount,
-        uint _frontRunnerPeriod
+        uint256 _challengePeriod,
+        uint256 _challengeAmount,
+        uint256 _frontRunnerPeriod
     )
         public
     {
@@ -86,7 +86,7 @@ contract UltimateOracle is Oracle {
 
     /// @dev Allows to challenge the oracle outcome
     /// @param _outcome Outcome to bid on
-    function challengeOutcome(int _outcome)
+    function challengeOutcome(int256 _outcome)
         public
     {
         // There was no challenge yet or the challenge period expired
@@ -104,10 +104,10 @@ contract UltimateOracle is Oracle {
     /// @dev Allows to challenge the oracle outcome
     /// @param _outcome Outcome to bid on
     /// @param amount Amount to bid
-    function voteForOutcome(int _outcome, uint amount)
+    function voteForOutcome(int256 _outcome, uint256 amount)
         public
     {
-        uint maxAmount = (totalAmount - totalOutcomeAmounts[_outcome]).mul(spreadMultiplier);
+        uint256 maxAmount = (totalAmount - totalOutcomeAmounts[_outcome]).mul(spreadMultiplier);
         if (amount > maxAmount)
             amount = maxAmount;
         // Outcome is challenged and front runner period is not over yet and tokens can be transferred
@@ -129,7 +129,7 @@ contract UltimateOracle is Oracle {
     /// @return Winnings
     function withdraw()
         public
-        returns (uint amount)
+        returns (uint256 amount)
     {
         // Outcome was challenged and ultimate outcome decided
         require(isFrontRunnerPeriodOver());
@@ -183,7 +183,7 @@ contract UltimateOracle is Oracle {
     function getOutcome()
         public
         constant
-        returns (int)
+        returns (int256)
     {
         if (isFrontRunnerPeriodOver())
             return frontRunner;

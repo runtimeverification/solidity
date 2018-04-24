@@ -76,8 +76,8 @@ contract moduleHandler is multiOwner, announcementTypes {
         (success, found, id) = getModuleIDByAddress(0x00);
         require( success );
         if ( ! found ) {
-            id = modules.length;
-            modules.length++;
+            id = uint256(modules.length);
+            modules.length = uint256(modules.length) + 1;
         }
         modules[id] = input;
     }

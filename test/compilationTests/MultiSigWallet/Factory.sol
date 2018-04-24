@@ -11,9 +11,9 @@ contract Factory {
     function getInstantiationCount(address creator)
         public
         constant
-        returns (uint)
+        returns (uint256)
     {
-        return instantiations[creator].length;
+        return uint256(instantiations[creator].length);
     }
 
     /// @dev Registers contract in factory registry.

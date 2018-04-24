@@ -12,9 +12,9 @@ contract FutarchyOracle is Oracle {
     /*
      *  Events
      */
-    event FutarchyFunding(uint funding);
+    event FutarchyFunding(uint256 funding);
     event FutarchyClosing();
-    event OutcomeAssignment(uint winningMarketIndex);
+    event OutcomeAssignment(uint256 winningMarketIndex);
 
     /*
      *  Constants
@@ -27,8 +27,8 @@ contract FutarchyOracle is Oracle {
     address creator;
     Market[] public markets;
     CategoricalEvent public categoricalEvent;
-    uint public deadline;
-    uint public winningMarketIndex;
+    uint256 public deadline;
+    uint256 public winningMarketIndex;
     bool public isSet;
 
     /*
@@ -61,12 +61,12 @@ contract FutarchyOracle is Oracle {
         Token collateralToken,
         Oracle oracle,
         uint8 outcomeCount,
-        int lowerBound,
-        int upperBound,
+        int256 lowerBound,
+        int256 upperBound,
         MarketFactory marketFactory,
         MarketMaker marketMaker,
         uint24 fee,
-        uint _deadline
+        uint256 _deadline
     )
         public
     {
@@ -90,7 +90,7 @@ contract FutarchyOracle is Oracle {
 
     /// @dev Funds all markets with equal amount of funding
     /// @param funding Amount of funding
-    function fund(uint funding)
+    function fund(uint256 funding)
         public
         isCreator
     {
@@ -114,7 +114,7 @@ contract FutarchyOracle is Oracle {
         isCreator
     {
         // Winning outcome has to be set
-        Market market = markets[uint(getOutcome())];
+        Market market = markets[uint256(getOutcome())];
         require(categoricalEvent.isOutcomeSet() && market.eventContract().isOutcomeSet());
         // Close market and transfer all outcome tokens from winning outcome to this contract
         market.close();
@@ -133,10 +133,10 @@ contract FutarchyOracle is Oracle {
         // Outcome is not set yet and deadline has passed
         require(!isSet && deadline <= now);
         // Find market with highest marginal price for long outcome tokens
-        uint highestMarginalPrice = markets[0].marketMaker().calcMarginalPrice(markets[0], LONG);
-        uint highestIndex = 0;
+        uint256 highestMarginalPrice = markets[0].marketMaker().calcMarginalPrice(markets[0], LONG);
+        uint256 highestIndex = 0;
         for (uint8 i = 1; i < markets.length; i++) {
-            uint marginalPrice = markets[i].marketMaker().calcMarginalPrice(markets[i], LONG);
+            uint256 marginalPrice = markets[i].marketMaker().calcMarginalPrice(markets[i], LONG);
             if (marginalPrice > highestMarginalPrice) {
                 highestMarginalPrice = marginalPrice;
                 highestIndex = i;
@@ -162,8 +162,8 @@ contract FutarchyOracle is Oracle {
     function getOutcome()
         public
         constant
-        returns (int)
+        returns (int256)
     {
-        return int(winningMarketIndex);
+        return int256(winningMarketIndex);
     }
 }

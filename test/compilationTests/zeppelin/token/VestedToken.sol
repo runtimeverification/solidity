@@ -51,7 +51,7 @@ contract VestedToken is StandardToken, LimitedTransferToken {
 
     if (tokenGrantsCount(_to) > MAX_GRANTS_PER_ADDRESS) throw;   // To prevent a user being spammed and have his balance locked (out of gas attack when calculating vesting).
 
-    uint256 count = grants[_to].push(
+    uint256 count = uint256(grants[_to].push(
                 TokenGrant(
                   _revokable ? msg.sender : 0, // avoid storing an extra 20 bytes when it is non-revokable
                   _value,
@@ -61,7 +61,7 @@ contract VestedToken is StandardToken, LimitedTransferToken {
                   _revokable,
                   _burnsOnRevoke
                 )
-              );
+              ));
 
     transfer(_to, _value);
 
@@ -90,8 +90,8 @@ contract VestedToken is StandardToken, LimitedTransferToken {
 
     // remove grant from array
     delete grants[_holder][_grantId];
-    grants[_holder][_grantId] = grants[_holder][grants[_holder].length.sub(1)];
-    grants[_holder].length -= 1;
+    grants[_holder][_grantId] = grants[_holder][uint256(grants[_holder].length).sub(1)];
+    grants[_holder].length = uint256(grants[_holder].length) - 1;
 
     balances[receiver] = balances[receiver].add(nonVested);
     balances[_holder] = balances[_holder].sub(nonVested);
@@ -131,7 +131,7 @@ contract VestedToken is StandardToken, LimitedTransferToken {
    * @return A uint256 representing the total amount of grants.
    */
   function tokenGrantsCount(address _holder) constant returns (uint256 index) {
-    return grants[_holder].length;
+    return uint256(grants[_holder].length);
   }
 
   /**
@@ -240,7 +240,7 @@ contract VestedToken is StandardToken, LimitedTransferToken {
    */
   function lastTokenIsTransferableDate(address holder) constant public returns (uint64 date) {
     date = uint64(now);
-    uint256 grantIndex = grants[holder].length;
+    uint256 grantIndex = uint256(grants[holder].length);
     for (uint256 i = 0; i < grantIndex; i++) {
       date = Math.max64(grants[holder][i].vesting, date);
     }

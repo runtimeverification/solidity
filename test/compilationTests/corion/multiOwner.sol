@@ -59,7 +59,7 @@ contract multiOwner is safeMath {
         for ( uint256 a=0 ; a<doDB[doHash].length ; a++ ) {
             require( doDB[doHash][a] != msg.sender );
         }
-        if ( doDB[doHash].length+1 >= ownersForChange() ) {
+        if ( uint256(doDB[doHash].length)+1 >= ownersForChange() ) {
             delete doDB[doHash];
             return true;
         } else {
