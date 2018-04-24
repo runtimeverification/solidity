@@ -10,9 +10,9 @@ contract StandardToken is Token {
     /*
      *  Storage
      */
-    mapping (address => uint) balances;
-    mapping (address => mapping (address => uint)) allowances;
-    uint totalTokens;
+    mapping (address => uint256) balances;
+    mapping (address => mapping (address => uint256)) allowances;
+    uint256 totalTokens;
 
     /*
      *  Public functions
@@ -21,7 +21,7 @@ contract StandardToken is Token {
     /// @param to Address of token receiver
     /// @param value Number of tokens to transfer
     /// @return Was transfer successful?
-    function transfer(address to, uint value)
+    function transfer(address to, uint256 value)
         public
         returns (bool)
     {
@@ -39,7 +39,7 @@ contract StandardToken is Token {
     /// @param to Address to where tokens are sent
     /// @param value Number of tokens to transfer
     /// @return Was transfer successful?
-    function transferFrom(address from, address to, uint value)
+    function transferFrom(address from, address to, uint256 value)
         public
         returns (bool)
     {
@@ -58,7 +58,7 @@ contract StandardToken is Token {
     /// @param spender Address of allowed account
     /// @param value Number of approved tokens
     /// @return Was approval successful?
-    function approve(address spender, uint value)
+    function approve(address spender, uint256 value)
         public
         returns (bool)
     {
@@ -74,7 +74,7 @@ contract StandardToken is Token {
     function allowance(address owner, address spender)
         public
         constant
-        returns (uint)
+        returns (uint256)
     {
         return allowances[owner][spender];
     }
@@ -85,7 +85,7 @@ contract StandardToken is Token {
     function balanceOf(address owner)
         public
         constant
-        returns (uint)
+        returns (uint256)
     {
         return balances[owner];
     }
@@ -95,7 +95,7 @@ contract StandardToken is Token {
     function totalSupply()
         public
         constant
-        returns (uint)
+        returns (uint256)
     {
         return totalTokens;
     }

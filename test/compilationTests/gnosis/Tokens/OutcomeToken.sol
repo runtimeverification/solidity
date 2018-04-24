@@ -10,8 +10,8 @@ contract OutcomeToken is StandardToken {
     /*
      *  Events
      */
-    event Issuance(address indexed owner, uint amount);
-    event Revocation(address indexed owner, uint amount);
+    event Issuance(address indexed owner, uint256 amount);
+    event Revocation(address indexed owner, uint256 amount);
 
     /*
      *  Storage
@@ -40,7 +40,7 @@ contract OutcomeToken is StandardToken {
     /// @dev Events contract issues new tokens for address. Returns success
     /// @param _for Address of receiver
     /// @param outcomeTokenCount Number of tokens to issue
-    function issue(address _for, uint outcomeTokenCount)
+    function issue(address _for, uint256 outcomeTokenCount)
         public
         isEventContract
     {
@@ -52,7 +52,7 @@ contract OutcomeToken is StandardToken {
     /// @dev Events contract revokes tokens for address. Returns success
     /// @param _for Address of token holder
     /// @param outcomeTokenCount Number of tokens to revoke
-    function revoke(address _for, uint outcomeTokenCount)
+    function revoke(address _for, uint256 outcomeTokenCount)
         public
         isEventContract
     {

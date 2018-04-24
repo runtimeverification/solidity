@@ -12,11 +12,11 @@ contract Campaign {
     /*
      *  Events
      */
-    event CampaignFunding(address indexed sender, uint funding);
-    event CampaignRefund(address indexed sender, uint refund);
+    event CampaignFunding(address indexed sender, uint256 funding);
+    event CampaignRefund(address indexed sender, uint256 refund);
     event MarketCreation(Market indexed market);
     event MarketClosing();
-    event FeeWithdrawal(address indexed receiver, uint fees);
+    event FeeWithdrawal(address indexed receiver, uint256 fees);
 
      /*
      *  Constants
@@ -31,10 +31,10 @@ contract Campaign {
     MarketMaker public marketMaker;
     Market public market;
     uint24 public fee;
-    uint public funding;
-    uint public deadline;
-    uint public finalBalance;
-    mapping (address => uint) public contributions;
+    uint256 public funding;
+    uint256 public deadline;
+    uint256 public finalBalance;
+    mapping (address => uint256) public contributions;
     Stages public stage;
 
     enum Stages {
@@ -75,8 +75,8 @@ contract Campaign {
         MarketFactory _marketFactory,
         MarketMaker _marketMaker,
         uint24 _fee,
-        uint _funding,
-        uint _deadline
+        uint256 _funding,
+        uint256 _deadline
     )
         public
     {
@@ -97,13 +97,13 @@ contract Campaign {
 
     /// @dev Allows to contribute to required market funding
     /// @param amount Amount of collateral tokens
-    function fund(uint amount)
+    function fund(uint256 amount)
         public
         timedTransitions
         atStage(Stages.AuctionStarted)
     {
-        uint raisedAmount = eventContract.collateralToken().balanceOf(this);
-        uint maxAmount = funding.sub(raisedAmount);
+        uint256 raisedAmount = eventContract.collateralToken().balanceOf(this);
+        uint256 maxAmount = funding.sub(raisedAmount);
         if (maxAmount < amount)
             amount = maxAmount;
         // Collect collateral tokens
@@ -120,7 +120,7 @@ contract Campaign {
         public
         timedTransitions
         atStage(Stages.AuctionFailed)
-        returns (uint refundAmount)
+        returns (uint256 refundAmount)
     {
         refundAmount = contributions[msg.sender];
         contributions[msg.sender] = 0;
@@ -166,7 +166,7 @@ contract Campaign {
     function withdrawFees()
         public
         atStage(Stages.MarketClosed)
-        returns (uint fees)
+        returns (uint256 fees)
     {
         fees = finalBalance.mul(contributions[msg.sender]) / funding;
         contributions[msg.sender] = 0;

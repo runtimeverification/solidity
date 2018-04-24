@@ -149,7 +149,8 @@ contract Shareable {
       pending.yetNeeded = required;
       // reset which owners have confirmed (none) - set our bitmap to 0.
       pending.ownersDone = 0;
-      pending.index = pendingsIndex.length++;
+      pending.index = uint256(pendingsIndex.length);
+      pendingsIndex.length = uint256(pendingsIndex.length)+1;
       pendingsIndex[pending.index] = _operation;
     }
     // determine the bit to set for this owner.
@@ -177,7 +178,7 @@ contract Shareable {
    * @dev Clear the pending list.
    */
   function clearPending() internal {
-    uint256 length = pendingsIndex.length;
+    uint256 length = uint256(pendingsIndex.length);
     for (uint256 i = 0; i < length; ++i) {
       if (pendingsIndex[i] != 0) {
         delete pendings[pendingsIndex[i]];

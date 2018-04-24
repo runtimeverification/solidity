@@ -10,16 +10,16 @@ contract SignedMessageOracle is Oracle {
      *  Events
      */
     event SignerReplacement(address indexed newSigner);
-    event OutcomeAssignment(int outcome);
+    event OutcomeAssignment(int256 outcome);
 
     /*
      *  Storage
      */
     address public signer;
     bytes32 public descriptionHash;
-    uint nonce;
+    uint256 nonce;
     bool public isSet;
-    int public outcome;
+    int256 public outcome;
 
     /*
      *  Modifiers
@@ -51,7 +51,7 @@ contract SignedMessageOracle is Oracle {
     /// @param v Signature parameter
     /// @param r Signature parameter
     /// @param s Signature parameter
-    function replaceSigner(address newSigner, uint _nonce, uint8 v, bytes32 r, bytes32 s)
+    function replaceSigner(address newSigner, uint256 _nonce, uint8 v, bytes32 r, bytes32 s)
         public
         isSigner
     {
@@ -69,7 +69,7 @@ contract SignedMessageOracle is Oracle {
     /// @param v Signature parameter
     /// @param r Signature parameter
     /// @param s Signature parameter
-    function setOutcome(int _outcome, uint8 v, bytes32 r, bytes32 s)
+    function setOutcome(int256 _outcome, uint8 v, bytes32 r, bytes32 s)
         public
     {
         // Result is not set yet and signer is valid
@@ -95,7 +95,7 @@ contract SignedMessageOracle is Oracle {
     function getOutcome()
         public
         constant
-        returns (int)
+        returns (int256)
     {
         return outcome;
     }

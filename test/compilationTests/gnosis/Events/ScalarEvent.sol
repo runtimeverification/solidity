@@ -17,8 +17,8 @@ contract ScalarEvent is Event {
     /*
      *  Storage
      */
-    int public lowerBound;
-    int public upperBound;
+    int256 public lowerBound;
+    int256 public upperBound;
 
     /*
      *  Public functions
@@ -31,8 +31,8 @@ contract ScalarEvent is Event {
     function ScalarEvent(
         Token _collateralToken,
         Oracle _oracle,
-        int _lowerBound,
-        int _upperBound
+        int256 _lowerBound,
+        int256 _upperBound
     )
         public
         Event(_collateralToken, _oracle, 2)
@@ -47,7 +47,7 @@ contract ScalarEvent is Event {
     /// @return Sender's winnings
     function redeemWinnings()
         public
-        returns (uint winnings)
+        returns (uint256 winnings)
     {
         // Winning outcome has to be set
         require(isOutcomeSet);
@@ -62,10 +62,10 @@ contract ScalarEvent is Event {
         // Map outcome to outcome range
         else
             convertedWinningOutcome = uint24(OUTCOME_RANGE * (outcome - lowerBound) / (upperBound - lowerBound));
-        uint factorShort = OUTCOME_RANGE - convertedWinningOutcome;
-        uint factorLong = OUTCOME_RANGE - factorShort;
-        uint shortOutcomeTokenCount = outcomeTokens[SHORT].balanceOf(msg.sender);
-        uint longOutcomeTokenCount = outcomeTokens[LONG].balanceOf(msg.sender);
+        uint256 factorShort = OUTCOME_RANGE - convertedWinningOutcome;
+        uint256 factorLong = OUTCOME_RANGE - factorShort;
+        uint256 shortOutcomeTokenCount = outcomeTokens[SHORT].balanceOf(msg.sender);
+        uint256 longOutcomeTokenCount = outcomeTokens[LONG].balanceOf(msg.sender);
         winnings = shortOutcomeTokenCount.mul(factorShort).add(longOutcomeTokenCount.mul(factorLong)) / OUTCOME_RANGE;
         // Revoke all outcome tokens
         outcomeTokens[SHORT].revoke(msg.sender, shortOutcomeTokenCount);

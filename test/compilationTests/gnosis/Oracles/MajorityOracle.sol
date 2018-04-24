@@ -21,7 +21,7 @@ contract MajorityOracle is Oracle {
     {
         // At least 2 oracles should be defined
         require(_oracles.length > 2);
-        for (uint i = 0; i < _oracles.length; i++)
+        for (uint256 i = 0; i < _oracles.length; i++)
             // Oracle address cannot be null
             require(address(_oracles[i]) != 0);
         oracles = _oracles;
@@ -32,15 +32,15 @@ contract MajorityOracle is Oracle {
     /// @return Outcome
     function getStatusAndOutcome()
         public
-        returns (bool outcomeSet, int outcome)
+        returns (bool outcomeSet, int256 outcome)
     {
-        uint i;
-        int[] memory outcomes = new int[](oracles.length);
-        uint[] memory validations = new uint[](oracles.length);
+        uint256 i;
+        int256[] memory outcomes = new int256[](oracles.length);
+        uint256[] memory validations = new uint256[](oracles.length);
         for (i = 0; i < oracles.length; i++)
             if (oracles[i].isOutcomeSet()) {
-                int _outcome = oracles[i].getOutcome();
-                for (uint j = 0; j <= i; j++)
+                int256 _outcome = oracles[i].getOutcome();
+                for (uint256 j = 0; j <= i; j++)
                     if (_outcome == outcomes[j]) {
                         validations[j] += 1;
                         break;
@@ -51,8 +51,8 @@ contract MajorityOracle is Oracle {
                         break;
                     }
             }
-        uint outcomeValidations = 0;
-        uint outcomeIndex = 0;
+        uint256 outcomeValidations = 0;
+        uint256 outcomeIndex = 0;
         for (i = 0; i < oracles.length; i++)
             if (validations[i] > outcomeValidations) {
                 outcomeValidations = validations[i];
@@ -81,7 +81,7 @@ contract MajorityOracle is Oracle {
     function getOutcome()
         public
         constant
-        returns (int)
+        returns (int256)
     {
         var (, winningOutcome) = getStatusAndOutcome();
         return winningOutcome;

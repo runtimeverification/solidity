@@ -11,8 +11,8 @@ contract LMSRMarketMaker is MarketMaker {
     /*
      *  Constants
      */
-    uint constant ONE = 0x10000000000000000;
-    int constant EXP_LIMIT = 2352680790717288641401;
+    uint256 constant ONE = 0x10000000000000000;
+    int256 constant EXP_LIMIT = 2352680790717288641401;
 
     /*
      *  Public functions
@@ -22,25 +22,25 @@ contract LMSRMarketMaker is MarketMaker {
     /// @param outcomeTokenIndex Index of outcome to buy
     /// @param outcomeTokenCount Number of outcome tokens to buy
     /// @return Cost
-    function calcCost(Market market, uint8 outcomeTokenIndex, uint outcomeTokenCount)
+    function calcCost(Market market, uint8 outcomeTokenIndex, uint256 outcomeTokenCount)
         public
         constant
-        returns (uint cost)
+        returns (uint256 cost)
     {
         require(market.eventContract().getOutcomeCount() > 1);
-        int[] memory netOutcomeTokensSold = getNetOutcomeTokensSold(market);
+        int256[] memory netOutcomeTokensSold = getNetOutcomeTokensSold(market);
         // Calculate cost level based on net outcome token balances
-        int logN = Math.ln(netOutcomeTokensSold.length * ONE);
-        uint funding = market.funding();
-        int costLevelBefore = calcCostLevel(logN, netOutcomeTokensSold, funding);
+        int256 logN = Math.ln(uint256(netOutcomeTokensSold.length) * ONE);
+        uint256 funding = market.funding();
+        int256 costLevelBefore = calcCostLevel(logN, netOutcomeTokensSold, funding);
         // Add outcome token count to net outcome token balance
-        require(int(outcomeTokenCount) >= 0);
-        netOutcomeTokensSold[outcomeTokenIndex] = netOutcomeTokensSold[outcomeTokenIndex].add(int(outcomeTokenCount));
+        require(int256(outcomeTokenCount) >= 0);
+        netOutcomeTokensSold[outcomeTokenIndex] = netOutcomeTokensSold[outcomeTokenIndex].add(int256(outcomeTokenCount));
         // Calculate cost level after balance was updated
-        int costLevelAfter = calcCostLevel(logN, netOutcomeTokensSold, funding);
+        int256 costLevelAfter = calcCostLevel(logN, netOutcomeTokensSold, funding);
         // Calculate cost as cost level difference
         require(costLevelAfter >= costLevelBefore);
-        cost = uint(costLevelAfter - costLevelBefore);
+        cost = uint256(costLevelAfter - costLevelBefore);
         // Take the ceiling to account for rounding
         if (cost / ONE * ONE == cost)
             cost /= ONE;
@@ -57,26 +57,26 @@ contract LMSRMarketMaker is MarketMaker {
     /// @param outcomeTokenIndex Index of outcome to sell
     /// @param outcomeTokenCount Number of outcome tokens to sell
     /// @return Profit
-    function calcProfit(Market market, uint8 outcomeTokenIndex, uint outcomeTokenCount)
+    function calcProfit(Market market, uint8 outcomeTokenIndex, uint256 outcomeTokenCount)
         public
         constant
-        returns (uint profit)
+        returns (uint256 profit)
     {
         require(market.eventContract().getOutcomeCount() > 1);
-        int[] memory netOutcomeTokensSold = getNetOutcomeTokensSold(market);
+        int256[] memory netOutcomeTokensSold = getNetOutcomeTokensSold(market);
         // Calculate cost level based on net outcome token balances
-        int logN = Math.ln(netOutcomeTokensSold.length * ONE);
-        uint funding = market.funding();
-        int costLevelBefore = calcCostLevel(logN, netOutcomeTokensSold, funding);
+        int256 logN = Math.ln(uint256(netOutcomeTokensSold.length) * ONE);
+        uint256 funding = market.funding();
+        int256 costLevelBefore = calcCostLevel(logN, netOutcomeTokensSold, funding);
         // Subtract outcome token count from the net outcome token balance
-        require(int(outcomeTokenCount) >= 0);
-        netOutcomeTokensSold[outcomeTokenIndex] = netOutcomeTokensSold[outcomeTokenIndex].sub(int(outcomeTokenCount));
+        require(int256(outcomeTokenCount) >= 0);
+        netOutcomeTokensSold[outcomeTokenIndex] = netOutcomeTokensSold[outcomeTokenIndex].sub(int256(outcomeTokenCount));
         // Calculate cost level after balance was updated
-        int costLevelAfter = calcCostLevel(logN, netOutcomeTokensSold, funding);
+        int256 costLevelAfter = calcCostLevel(logN, netOutcomeTokensSold, funding);
         // Calculate profit as cost level difference
         require(costLevelBefore >= costLevelAfter);
         // Take the floor
-        profit = uint(costLevelBefore - costLevelAfter) / ONE;
+        profit = uint256(costLevelBefore - costLevelAfter) / ONE;
     }
 
     /// @dev Returns marginal price of an outcome
@@ -86,12 +86,12 @@ contract LMSRMarketMaker is MarketMaker {
     function calcMarginalPrice(Market market, uint8 outcomeTokenIndex)
         public
         constant
-        returns (uint price)
+        returns (uint256 price)
     {
         require(market.eventContract().getOutcomeCount() > 1);
-        int[] memory netOutcomeTokensSold = getNetOutcomeTokensSold(market);
-        int logN = Math.ln(netOutcomeTokensSold.length * ONE);
-        uint funding = market.funding();
+        int256[] memory netOutcomeTokensSold = getNetOutcomeTokensSold(market);
+        int256 logN = Math.ln(uint256(netOutcomeTokensSold.length) * ONE);
+        uint256 funding = market.funding();
         // The price function is exp(quantities[i]/b) / sum(exp(q/b) for q in quantities)
         // To avoid overflow, calculate with
         // exp(quantities[i]/b - offset) / sum(exp(q/b - offset) for q in quantities)
@@ -108,10 +108,10 @@ contract LMSRMarketMaker is MarketMaker {
     /// @param netOutcomeTokensSold Net outcome tokens sold by market
     /// @param funding Initial funding for market
     /// @return Cost level
-    function calcCostLevel(int logN, int[] netOutcomeTokensSold, uint funding)
+    function calcCostLevel(int256 logN, int256[] netOutcomeTokensSold, uint256 funding)
         private
         constant
-        returns(int costLevel)
+        returns(int256 costLevel)
     {
         // The cost function is C = b * log(sum(exp(q/b) for q in quantities)).
         // To avoid overflow, we need to calc with an exponent offset:
@@ -119,7 +119,7 @@ contract LMSRMarketMaker is MarketMaker {
         var (sum, offset, ) = sumExpOffset(logN, netOutcomeTokensSold, funding, 0);
         costLevel = Math.ln(sum);
         costLevel = costLevel.add(offset);
-        costLevel = (costLevel.mul(int(ONE)) / logN).mul(int(funding));
+        costLevel = (costLevel.mul(int256(ONE)) / logN).mul(int256(funding));
     }
 
     /// @dev Calculates sum(exp(q/b - offset) for q in quantities), where offset is set
@@ -129,10 +129,10 @@ contract LMSRMarketMaker is MarketMaker {
     /// @param funding Initial funding for market
     /// @param outcomeIndex Index of exponential term to extract (for use by marginal price function)
     /// @return A result structure composed of the sum, the offset used, and the summand associated with the supplied index
-    function sumExpOffset(int logN, int[] netOutcomeTokensSold, uint funding, uint8 outcomeIndex)
+    function sumExpOffset(int256 logN, int256[] netOutcomeTokensSold, uint256 funding, uint8 outcomeIndex)
         private
         constant
-        returns (uint sum, int offset, uint outcomeExpTerm)
+        returns (uint256 sum, int256 offset, uint256 outcomeExpTerm)
     {
         // Naive calculation of this causes an overflow
         // since anything above a bit over 133*ONE supplied to exp will explode
@@ -149,13 +149,13 @@ contract LMSRMarketMaker is MarketMaker {
         // BIG offset will cause the tiny quantities to go really negative
         // causing the associated exponentials to vanish.
 
-        int maxQuantity = Math.max(netOutcomeTokensSold);
-        require(logN >= 0 && int(funding) >= 0);
-        offset = maxQuantity.mul(logN) / int(funding);
+        int256 maxQuantity = Math.max(netOutcomeTokensSold);
+        require(logN >= 0 && int256(funding) >= 0);
+        offset = maxQuantity.mul(logN) / int256(funding);
         offset = offset.sub(EXP_LIMIT);
-        uint term;
+        uint256 term;
         for (uint8 i = 0; i < netOutcomeTokensSold.length; i++) {
-            term = Math.exp((netOutcomeTokensSold[i].mul(logN) / int(funding)).sub(offset));
+            term = Math.exp((netOutcomeTokensSold[i].mul(logN) / int256(funding)).sub(offset));
             if (i == outcomeIndex)
                 outcomeExpTerm = term;
             sum = sum.add(term);
@@ -171,9 +171,9 @@ contract LMSRMarketMaker is MarketMaker {
     function getNetOutcomeTokensSold(Market market)
         private
         constant
-        returns (int[] quantities)
+        returns (int256[] quantities)
     {
-        quantities = new int[](market.eventContract().getOutcomeCount());
+        quantities = new int256[](market.eventContract().getOutcomeCount());
         for (uint8 i = 0; i < quantities.length; i++)
             quantities[i] = market.netOutcomeTokensSold(i);
     }

@@ -9,7 +9,7 @@ contract DifficultyOracleFactory {
     /*
      *  Events
      */
-    event DifficultyOracleCreation(address indexed creator, DifficultyOracle difficultyOracle, uint blockNumber);
+    event DifficultyOracleCreation(address indexed creator, DifficultyOracle difficultyOracle, uint256 blockNumber);
 
     /*
      *  Public functions
@@ -17,7 +17,7 @@ contract DifficultyOracleFactory {
     /// @dev Creates a new difficulty oracle contract
     /// @param blockNumber Target block number
     /// @return Oracle contract
-    function createDifficultyOracle(uint blockNumber)
+    function createDifficultyOracle(uint256 blockNumber)
         public
         returns (DifficultyOracle difficultyOracle)
     {

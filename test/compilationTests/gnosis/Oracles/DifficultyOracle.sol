@@ -9,20 +9,20 @@ contract DifficultyOracle is Oracle {
     /*
      *  Events
      */
-    event OutcomeAssignment(uint difficulty);
+    event OutcomeAssignment(uint256 difficulty);
 
     /*
      *  Storage
      */
-    uint public blockNumber;
-    uint public difficulty;
+    uint256 public blockNumber;
+    uint256 public difficulty;
 
     /*
      *  Public functions
      */
     /// @dev Contract constructor validates and sets target block number
     /// @param _blockNumber Target block number
-    function DifficultyOracle(uint _blockNumber)
+    function DifficultyOracle(uint256 _blockNumber)
         public
     {
         // Block has to be in the future
@@ -56,8 +56,8 @@ contract DifficultyOracle is Oracle {
     function getOutcome()
         public
         constant
-        returns (int)
+        returns (int256)
     {
-        return int(difficulty);
+        return int256(difficulty);
     }
 }

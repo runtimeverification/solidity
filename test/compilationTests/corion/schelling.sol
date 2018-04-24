@@ -70,14 +70,14 @@ contract schellingDB is safeMath, schellingVars {
         else { return (true, rounds[_id].totalAboveWeight, rounds[_id].totalBelowWeight, rounds[_id].reward, rounds[_id].blockHeight, rounds[_id].voted); }
     }
     function pushRound(uint256 _totalAboveWeight, uint256 _totalBelowWeight, uint256 _reward, uint256 _blockHeight, bool _voted) isOwner external returns(bool, uint256) {
-        return (true, rounds.push(_rounds(_totalAboveWeight, _totalBelowWeight, _reward, _blockHeight, _voted)));
+        return (true, uint256(rounds.push(_rounds(_totalAboveWeight, _totalBelowWeight, _reward, _blockHeight, _voted))));
     }
     function setRound(uint256 _id, uint256 _totalAboveWeight, uint256 _totalBelowWeight, uint256 _reward, uint256 _blockHeight, bool _voted) isOwner external returns(bool) {
         rounds[_id] = _rounds(_totalAboveWeight, _totalBelowWeight, _reward, _blockHeight, _voted);
         return true;
     }
     function getCurrentRound() constant returns(bool, uint256) {
-        return (true, rounds.length-1);
+        return (true, uint256(rounds.length)-1);
     }
     /*
         Voter

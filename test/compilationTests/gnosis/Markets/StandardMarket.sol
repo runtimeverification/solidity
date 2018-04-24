@@ -46,7 +46,7 @@ contract StandardMarket is Market {
         creator = _creator;
         createdAtBlock = block.number;
         eventContract = _eventContract;
-        netOutcomeTokensSold = new int[](eventContract.getOutcomeCount());
+        netOutcomeTokensSold = new int256[](eventContract.getOutcomeCount());
         fee = _fee;
         marketMaker = _marketMaker;
         stage = Stages.MarketCreated;
@@ -54,7 +54,7 @@ contract StandardMarket is Market {
 
     /// @dev Allows to fund the market with collateral tokens converting them into outcome tokens
     /// @param _funding Funding amount
-    function fund(uint _funding)
+    function fund(uint256 _funding)
         public
         isCreator
         atStage(Stages.MarketCreated)
@@ -86,7 +86,7 @@ contract StandardMarket is Market {
     function withdrawFees()
         public
         isCreator
-        returns (uint fees)
+        returns (uint256 fees)
     {
         fees = eventContract.collateralToken().balanceOf(this);
         // Transfer fees
@@ -99,15 +99,15 @@ contract StandardMarket is Market {
     /// @param outcomeTokenCount Amount of outcome tokens to buy
     /// @param maxCost The maximum cost in collateral tokens to pay for outcome tokens
     /// @return Cost in collateral tokens
-    function buy(uint8 outcomeTokenIndex, uint outcomeTokenCount, uint maxCost)
+    function buy(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 maxCost)
         public
         atStage(Stages.MarketFunded)
-        returns (uint cost)
+        returns (uint256 cost)
     {
         // Calculate cost to buy outcome tokens
-        uint outcomeTokenCost = marketMaker.calcCost(this, outcomeTokenIndex, outcomeTokenCount);
+        uint256 outcomeTokenCost = marketMaker.calcCost(this, outcomeTokenIndex, outcomeTokenCount);
         // Calculate fees charged by market
-        uint fees = calcMarketFee(outcomeTokenCost);
+        uint256 fees = calcMarketFee(outcomeTokenCost);
         cost = outcomeTokenCost.add(fees);
         // Check cost doesn't exceed max cost
         require(cost > 0 && cost <= maxCost);
@@ -119,8 +119,8 @@ contract StandardMarket is Market {
         // Transfer outcome tokens to buyer
         require(eventContract.outcomeTokens(outcomeTokenIndex).transfer(msg.sender, outcomeTokenCount));
         // Add outcome token count to market maker net balance
-        require(int(outcomeTokenCount) >= 0);
-        netOutcomeTokensSold[outcomeTokenIndex] = netOutcomeTokensSold[outcomeTokenIndex].add(int(outcomeTokenCount));
+        require(int256(outcomeTokenCount) >= 0);
+        netOutcomeTokensSold[outcomeTokenIndex] = netOutcomeTokensSold[outcomeTokenIndex].add(int256(outcomeTokenCount));
         OutcomeTokenPurchase(msg.sender, outcomeTokenIndex, outcomeTokenCount, cost);
     }
 
@@ -129,15 +129,15 @@ contract StandardMarket is Market {
     /// @param outcomeTokenCount Amount of outcome tokens to sell
     /// @param minProfit The minimum profit in collateral tokens to earn for outcome tokens
     /// @return Profit in collateral tokens
-    function sell(uint8 outcomeTokenIndex, uint outcomeTokenCount, uint minProfit)
+    function sell(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 minProfit)
         public
         atStage(Stages.MarketFunded)
-        returns (uint profit)
+        returns (uint256 profit)
     {
         // Calculate profit for selling outcome tokens
-        uint outcomeTokenProfit = marketMaker.calcProfit(this, outcomeTokenIndex, outcomeTokenCount);
+        uint256 outcomeTokenProfit = marketMaker.calcProfit(this, outcomeTokenIndex, outcomeTokenCount);
         // Calculate fee charged by market
-        uint fees = calcMarketFee(outcomeTokenProfit);
+        uint256 fees = calcMarketFee(outcomeTokenProfit);
         profit = outcomeTokenProfit.sub(fees);
         // Check profit is not too low
         require(profit > 0 && profit >= minProfit);
@@ -148,8 +148,8 @@ contract StandardMarket is Market {
         // Transfer profit to seller
         require(eventContract.collateralToken().transfer(msg.sender, profit));
         // Subtract outcome token count from market maker net balance
-        require(int(outcomeTokenCount) >= 0);
-        netOutcomeTokensSold[outcomeTokenIndex] = netOutcomeTokensSold[outcomeTokenIndex].sub(int(outcomeTokenCount));
+        require(int256(outcomeTokenCount) >= 0);
+        netOutcomeTokensSold[outcomeTokenIndex] = netOutcomeTokensSold[outcomeTokenIndex].sub(int256(outcomeTokenCount));
         OutcomeTokenSale(msg.sender, outcomeTokenIndex, outcomeTokenCount, profit);
     }
 
@@ -159,9 +159,9 @@ contract StandardMarket is Market {
     /// @param outcomeTokenCount Amount of outcome tokens to short sell
     /// @param minProfit The minimum profit in collateral tokens to earn for short sold outcome tokens
     /// @return Cost to short sell outcome in collateral tokens
-    function shortSell(uint8 outcomeTokenIndex, uint outcomeTokenCount, uint minProfit)
+    function shortSell(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 minProfit)
         public
-        returns (uint cost)
+        returns (uint256 cost)
     {
         // Buy all outcomes
         require(   eventContract.collateralToken().transferFrom(msg.sender, this, outcomeTokenCount)
@@ -169,7 +169,7 @@ contract StandardMarket is Market {
         eventContract.buyAllOutcomes(outcomeTokenCount);
         // Short sell selected outcome
         eventContract.outcomeTokens(outcomeTokenIndex).approve(this, outcomeTokenCount);
-        uint profit = this.sell(outcomeTokenIndex, outcomeTokenCount, minProfit);
+        uint256 profit = this.sell(outcomeTokenIndex, outcomeTokenCount, minProfit);
         cost = outcomeTokenCount - profit;
         // Transfer outcome tokens to buyer
         uint8 outcomeCount = eventContract.getOutcomeCount();
@@ -184,10 +184,10 @@ contract StandardMarket is Market {
     /// @dev Calculates fee to be paid to market maker
     /// @param outcomeTokenCost Cost for buying outcome tokens
     /// @return Fee for trade
-    function calcMarketFee(uint outcomeTokenCost)
+    function calcMarketFee(uint256 outcomeTokenCost)
         public
         constant
-        returns (uint)
+        returns (uint256)
     {
         return outcomeTokenCost * fee / FEE_RANGE;
     }
