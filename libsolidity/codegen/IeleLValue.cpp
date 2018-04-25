@@ -46,7 +46,7 @@ void ByteArrayLValue::write(iele::IeleValue *Value, iele::IeleBlock *InsertAtEnd
     iele::IeleInstruction::CreateStore(OldValue, Spill, InsertAtEnd);
     iele::IeleInstruction::CreateStore(Value, Spill, Offset, iele::IeleIntConstant::getOne(&Compiler->Context), InsertAtEnd);
     iele::IeleInstruction::CreateLoad(OldValue, Spill, InsertAtEnd);
-    iele::IeleInstruction::CreateSStore(OldValue, Spill, InsertAtEnd);
+    iele::IeleInstruction::CreateSStore(OldValue, Address, InsertAtEnd);
   } else
     iele::IeleInstruction::CreateStore(Value, Address, Offset, iele::IeleIntConstant::getOne(&Compiler->Context), InsertAtEnd);
 }
@@ -56,13 +56,15 @@ iele::IeleValue *ByteArrayLValue::read(iele::IeleBlock *InsertAtEnd) const {
   if (Loc == DataLocation::Storage) {
     iele::IeleInstruction::CreateSLoad(Result, Address, InsertAtEnd);
     iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Byte, Result, Offset, Result, InsertAtEnd);
-  } else
+  } else {
     iele::IeleInstruction::CreateLoad(Result, Address, Offset, iele::IeleIntConstant::getOne(&Compiler->Context), InsertAtEnd);
+    iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Byte, Result, iele::IeleIntConstant::getZero(&Compiler->Context), Result, InsertAtEnd);
+  }
   return Result;
 }
 
 void ArrayLengthLValue::write(iele::IeleValue *Value, iele::IeleBlock *InsertAtEnd) const {
   solAssert(Loc == DataLocation::Storage, "invalid location for array length write");
-  Compiler->appendArrayLengthResize(true, Address, Value);
+  Compiler->appendArrayLengthResize(Address, Value);
   AddressLValue::write(Value, Compiler->CompilingBlock);
 }
