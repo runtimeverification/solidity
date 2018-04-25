@@ -2887,15 +2887,17 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     IeleLValue *SizeLValue = AddressLValue::Create(this, ArrayValue, CompilingLValueArrayType->location());
     iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock);
 
-    const Type &elementType = *CompilingLValueArrayType->baseType();
+    TypePointer elementType = CompilingLValueArrayType->baseType();
+    TypePointer RHSType = arguments.front()->annotation().type;
+
     bigint elementSize;
     switch (CompilingLValueArrayType->location()) {
     case DataLocation::Storage: {
-      elementSize = elementType.storageSize();
+      elementSize = elementType->storageSize();
       break;
     }
     case DataLocation::Memory: {
-      elementSize = elementType.memorySize();
+      elementSize = elementType->memorySize();
       break;
     }
     case DataLocation::CallData:
@@ -2921,7 +2923,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::Add, AddressValue, AddressValue, ArrayValue,
       CompilingBlock);
 
-    AddressLValue::Create(this, AddressValue, CompilingLValueArrayType->location())->write(PushedValue, CompilingBlock);
+    IeleLValue *ElementLValue = makeLValue(AddressValue, elementType, CompilingLValueArrayType->location());
+    if (shouldCopyStorageToStorage(ElementLValue, *RHSType))
+      appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
+    else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))
+      appendCopyFromMemoryToStorage(ElementLValue, elementType, PushedValue, RHSType);
+    else if (shouldCopyMemoryToMemory(*elementType, ElementLValue, *RHSType))
+      appendCopyFromMemoryToMemory(ElementLValue, elementType, PushedValue, RHSType);
+    else
+      ElementLValue->write(PushedValue, CompilingBlock);
 
     iele::IeleLocalVariable *NewSize =
       iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
