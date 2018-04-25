@@ -1315,6 +1315,11 @@ IeleLValue *IeleCompiler::makeLValue(iele::IeleValue *Address, TypePointer type,
     return ByteArrayLValue::Create(this, Address, Offset, Loc);
   }
   if (type->isValueType() || (type->isDynamicallySized() && Loc == DataLocation::Memory)) {
+    if (auto arrayType = dynamic_cast<const ArrayType *>(type.get())) {
+      if (arrayType->isByteArray()) {
+        return ReadOnlyLValue::Create(Address);
+      }
+    }
     return AddressLValue::Create(this, Address, Loc);
   }
   return ReadOnlyLValue::Create(Address);
