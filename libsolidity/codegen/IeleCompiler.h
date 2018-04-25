@@ -138,6 +138,25 @@ private:
   std::string getIeleNameForFunction(const FunctionDefinition &function);
   std::string getIeleNameForStateVariable(const VariableDeclaration *stateVariable);
 
+  //--
+  
+  // Fills in the ctorAuxParams data structure i.e. for each constructor in the 
+  // class hierarchy, it computes the needed extra parameters and the additional
+  // information needed to correctly handle them. 
+  void computeCtorsAuxParams ();
+  
+  // Ctor -> Dest -> (paramName, Source)
+  std::map<const ContractDefinition *, 
+           /* const */ std::map<const ContractDefinition *, 
+                          std::pair<std::vector<std::string>, 
+                                    const ContractDefinition *>>> ctorAuxParams;  
+
+//   std::map<const FunctionDefinition *, 
+//            /* const */ std::map<const FunctionDefinition *, 
+//                           std::pair<std::vector<std::string>, 
+//                                     const FunctionDefinition *>>> ctorAuxParams;  
+  // ---
+
   // Infrastructure for handling modifiers (borrowed from ContractCompiler.cpp)
   // Lookup function modifier by name
   const ModifierDefinition &functionModifier(const std::string &_name) const;

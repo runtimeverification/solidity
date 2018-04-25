@@ -162,6 +162,7 @@ void IeleCompiler::compileContract(
     const ContractDefinition &contract,
     const std::map<const ContractDefinition *, iele::IeleContract *> &contracts) {
 
+
   CompiledContracts = contracts;
 
   // Create IeleContract.
@@ -175,6 +176,9 @@ void IeleCompiler::compileContract(
   // Store the current contract.
   CompilingContractInheritanceHierarchy = bases;
   bool most_derived = true;
+  
+  // Compute and store info for handling multiple inheritance
+  computeCtorsAuxParams();
 
   for (const ContractDefinition *base : bases) {
     // Add global variables corresponding to the current contract in the
@@ -272,7 +276,29 @@ void IeleCompiler::compileContract(
       CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
       CompilingBlock =
         iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
-      appendDefaultConstructor(base);
+
+
+      auto auxParams = ctorAuxParams[CompilingContractASTNode];
+      if (!auxParams.empty()) {
+        // Make iterator
+        std::map<const ContractDefinition *, 
+                std::pair<std::vector<std::string>, const ContractDefinition *>>::iterator it;
+
+        for(it = auxParams.begin(); it != auxParams.end(); ++it) {
+          auto auxParam = it -> second;
+          auto paramNames = auxParam.first;
+
+          for (std::string paramName : paramNames) {
+            if (!paramName.empty()) {
+              iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
+              VarNameMap[0][paramName] = paramName;
+            }
+          }
+        }
+      }
+      
+      appendDefaultConstructor(CompilingContractASTNode);
+
       iele::IeleInstruction::CreateRetVoid(CompilingBlock);
       appendRevertBlocks();
       CompilingBlock = nullptr;
@@ -286,12 +312,36 @@ void IeleCompiler::compileContract(
   if (const FunctionDefinition *constructor = contract.constructor())
     constructor->accept(*this);
   else {
+
+    // solAssert(false, "ghjkl");
+
     CompilingFunction =
       iele::IeleFunction::CreateInit(&Context, CompilingContract);
     CompilingFunctionStatus = iele::IeleLocalVariable::Create(&Context, "status", CompilingFunction);
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
-    appendDefaultConstructor(&contract);
+    
+    
+    auto auxParams = ctorAuxParams[CompilingContractASTNode];
+      if (!auxParams.empty()) {
+        // Make iterator
+        std::map<const ContractDefinition *, 
+                std::pair<std::vector<std::string>, const ContractDefinition *>>::iterator it;
+
+        for(it = auxParams.begin(); it != auxParams.end(); ++it) {
+          auto auxParam = it -> second;
+          auto paramNames = auxParam.first;
+
+          for (std::string paramName : paramNames) {
+            if (!paramName.empty()) {
+              iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
+              VarNameMap[0][paramName] = paramName;
+            }
+          }
+        }
+      }
+    
+    appendDefaultConstructor(CompilingContractASTNode);
     iele::IeleInstruction::CreateRetVoid(CompilingBlock);
     appendRevertBlocks();
     CompilingBlock = nullptr;
@@ -436,6 +486,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   solAssert(CompilingFunction,
             "IeleCompiler: failed to find function in compiling contract's"
             " symbol table");
+
   unsigned NumOfModifiers = CompilingFunctionASTNode->modifiers().size();
 
   // We store the formal argument names, which we'll use when generating in-range
@@ -450,6 +501,29 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     // never be referenced.
     if (!(arg->name() == ""))
        VarNameMap[NumOfModifiers][arg->name()] = genName;
+  }
+
+  // Add aux constructor params 
+  if (function.isConstructor()) {
+    auto auxParams = ctorAuxParams[CompilingContractASTNode];
+    if (!auxParams.empty()) {
+      
+      // Make iterator
+      std::map<const ContractDefinition *, 
+               std::pair<std::vector<std::string>, const ContractDefinition *>>::iterator it;
+
+      for(it = auxParams.begin(); it != auxParams.end(); ++it) {
+        auto auxParam = it -> second;
+        auto paramNames = auxParam.first;
+
+        for (std::string paramName : paramNames) {
+          if (!paramName.empty()) {
+            iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
+            VarNameMap[NumOfModifiers][paramName] = paramName;
+          }
+        }
+      }
+    }
   }
 
   // We store the return params names, which we'll use when generating a default
@@ -708,7 +782,6 @@ void IeleCompiler::appendModifierOrFunctionCode() {
 
     // constructor call should be excluded (and managed separeately)
     if (dynamic_cast<ContractDefinition const*>(modifierInvocation->name()->annotation().referencedDeclaration)) {
-      solAssert(false, "IeleCompiler: function modifiers on constructor not implemented yet.");
       appendModifierOrFunctionCode();
     }
     else {
@@ -2725,7 +2798,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 }
 
 template <class ArgClass, class ReturnClass, class ExpressionClass>
-void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function, bool encode) {
+void IeleCompiler::compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, 
+      const std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function, bool encode) {
     for (unsigned i = 0; i < arguments.size(); ++i) {
       iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
       solAssert(ArgValue,
@@ -3740,18 +3814,65 @@ void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {
     connectWithUnconditionalJump(CompilingBlock, AssertFailBlock);
 }
 
+void IeleCompiler::computeCtorsAuxParams() {
+  // Consider all contracts in hierarchy, starting from bottom
+  for (const ContractDefinition *def : CompilingContractInheritanceHierarchy) {
+    // For each one, consider all declared bases
+    
+    for (const auto &base : def->baseContracts()) {
+      // Get base contract
+      auto baseContract = dynamic_cast<const ContractDefinition *>(
+        base->name().annotation().referencedDeclaration);
+      solAssert(baseContract, "Must find base contract in inheritance specifier");
+
+      // Add aux param to all contracts which are between def and basecontract
+      bool found = false; 
+      for (const ContractDefinition *it : CompilingContractInheritanceHierarchy) {
+        
+        if (it == def) {
+          found = true;
+          continue;
+        }
+
+        if (it == baseContract) {
+          break;
+        }
+
+        if (found) {
+          // Register aux parameter
+          auto ctor = it /* -> constructor() */;
+          auto dest = baseContract /* -> constructor() */;
+
+          if (ctorAuxParams[ctor][dest].first.size() == 0) {
+            std::vector<std::string> pNames;
+
+            for (unsigned i = 0; i < (&base->arguments())->size(); i++) {
+              std::string newParamName = "aux" + getNextVarSuffix();
+              pNames.push_back(newParamName);
+            }
+
+            ctorAuxParams[ctor][dest] = std::make_pair(pNames, def);
+          }
+        } 
+        else {
+        }
+      }    
+    }  
+  }
+}
+
 void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) {
   // Init state variables.
   bool found = false;
-  std::map<const FunctionDefinition *, const std::vector<ASTPointer<Expression>> *> baseArguments;
+  std::map<const ContractDefinition *, const std::vector<ASTPointer<Expression>> *> baseArguments;
   for (const ContractDefinition *def : CompilingContractInheritanceHierarchy) {
     if (const FunctionDefinition *constructor = def->constructor()) {
       for (auto const& modifier : constructor->modifiers()) {
         auto baseContract = dynamic_cast<const ContractDefinition *>(
           modifier->name()->annotation().referencedDeclaration);
         if (baseContract) {
-          if (baseArguments.count(baseContract->constructor()) == 0) {
-            baseArguments[baseContract->constructor()] = &modifier->arguments();
+          if (baseArguments.count(baseContract) == 0) {
+            baseArguments[baseContract] = &modifier->arguments();
           }
         }
       }
@@ -3761,35 +3882,131 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
       auto baseContract = dynamic_cast<const ContractDefinition *>(
         base->name().annotation().referencedDeclaration);
       solAssert(baseContract, "Must find base contract in inheritance specifier");
-      if (baseArguments.count(baseContract->constructor()) == 0) {
-        baseArguments[baseContract->constructor()] = &base->arguments();
+      if (baseArguments.count(baseContract) == 0) {
+        baseArguments[baseContract] = &base->arguments();
       }
     }
     if (found) {
-      // Call the immediate base class init function.
-      llvm::SmallVector<iele::IeleLocalVariable *, 0> Returns;
-      llvm::SmallVector<iele::IeleValue *, 4> Arguments;
-
-      if (const FunctionDefinition *decl = def->constructor()) {
-        auto arguments = *baseArguments[decl];
-
-        const FunctionType &function = FunctionType(*decl);
-
-        compileFunctionArguments(&Arguments, &Returns, arguments, function, false);
-
-        solAssert(Returns.size() == 0, "Constructor doesn't return anything");
-      }
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
       solAssert(ST,
                 "IeleCompiler: failed to access compiling function's symbol "
                 "table.");
+      
       iele::IeleValue *ConstructorValue = ST->lookup(getIeleNameForContract(def) + ".init");
       solAssert(ConstructorValue, "IeleCompiler: failed to find constructor for contract " + getIeleNameForContract(def));
       iele::IeleGlobalValue *CalleeValue =
         llvm::dyn_cast<iele::IeleGlobalValue>(ConstructorValue);
+
+      // Call the immediate base class init function.
+      llvm::SmallVector<iele::IeleLocalVariable *, 0> Returns;
+      llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+
+
+    // unsigned NumOfModifiers = CompilingFunctionASTNode->modifiers().size();
+    unsigned NumOfModifiers;
+    if (CompilingFunctionASTNode)
+      NumOfModifiers = CompilingFunctionASTNode->modifiers().size();
+    else  
+      NumOfModifiers = 0;
+
+    
+    iele::IeleValueSymbolTable *FunST =
+        CompilingFunction->getIeleValueSymbolTable();
+      solAssert(FunST,
+        "IeleCompiler: failed to access compiling function's symbol "
+        "table.");
+      
+      if (const FunctionDefinition *decl = def->constructor()) { // !!!!!!!!!!!!!!!!!!!!!!!!!!
+       
+        
+        std::pair<std::vector<std::string>, const ContractDefinition *> auxParam = 
+          ctorAuxParams[contract][def];
+
+        if (auxParam.first.empty()) {
+          auto arguments = *baseArguments[def];
+          const FunctionType &function = FunctionType(*decl);
+
+          unsigned ModifierDepthCache = ModifierDepth;
+          ModifierDepth = NumOfModifiers;
+
+          compileFunctionArguments(&Arguments, &Returns, arguments, function, false);
+          
+          ModifierDepth = ModifierDepthCache;
+          
+          solAssert(Returns.size() == 0, "Constructor doesn't return anything");
+        }
+        else {
+          for (std::string p : auxParam.first) {
+            // Lookup aux arg
+            iele::IeleValue *AuxArg =
+              FunST->lookup(VarNameMap[NumOfModifiers][p]);
+            solAssert(AuxArg, "IeleCompiler: missing local variable " + p);
+            
+            Arguments.push_back(AuxArg);
+          }
+        }
+      } // !!!!!!!!!!!!!!!!!!!
+
+      // Handle auxiliary parameters
+      std::map<const ContractDefinition *, 
+                      std::pair<std::vector<std::string>, 
+                                const ContractDefinition *>> additionalParams = ctorAuxParams[def];
+      
+      if (!additionalParams.empty()) {
+        std::map<const ContractDefinition *, 
+              std::pair<std::vector<std::string>, const ContractDefinition *>>::iterator it;
+
+        for(it = additionalParams.begin(); it != additionalParams.end(); ++it) {
+          auto auxParamDest = it -> first;
+          auto auxParams    = it -> second;
+          auto paramNames   = auxParams.first;
+          auto paramSource  = auxParams.second;
+
+          if (paramSource != (contract)) {
+            std::pair<std::vector<std::string>, 
+                      const ContractDefinition *> p = ctorAuxParams[contract][auxParamDest];
+
+            if (!p.first.empty()) {
+              for (std::string pName : p.first) {
+                iele::IeleValue *AuxArg =
+                  FunST->lookup(VarNameMap[NumOfModifiers][pName]);
+                solAssert(AuxArg, "IeleCompiler: missing local variable " + pName);
+                Arguments.push_back(AuxArg);
+              }
+            }
+          } 
+          else {
+            const std::vector<ASTPointer<Expression>> arguments = *baseArguments[auxParamDest];
+            if (arguments.size() > 0) {
+              const FunctionType &function = FunctionType(*auxParamDest->constructor());
+              llvm::SmallVector<iele::IeleValue *, 4> AuxArguments;
+
+              unsigned ModifierDepthCache = ModifierDepth;
+              ModifierDepth = NumOfModifiers;
+
+              // compile args 
+              for (unsigned i = 0; i < arguments.size(); ++i) {
+                iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
+                solAssert(ArgValue,
+                          "IeleCompiler: Failed to compile internal function call "
+                          "argument");
+                AuxArguments.push_back(ArgValue);
+              }
+
+              ModifierDepth = ModifierDepthCache;
+
+              for (auto arg : AuxArguments) {
+                Arguments.push_back(arg);
+              }
+            }
+          }
+        }
+      }
+
       iele::IeleInstruction::CreateInternalCall(Returns, CalleeValue, Arguments, CompilingBlock);
       break;
     }
+
     if (def == contract) {
       found = true;
     }

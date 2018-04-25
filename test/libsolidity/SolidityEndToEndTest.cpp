@@ -5081,7 +5081,7 @@ BOOST_AUTO_TEST_CASE(swap_in_storage_overwrite)
 	ABI_CHECK(callContractFunction("y()"), encodeArgs(u256(1), u256(2)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(pass_dynamic_arguments_to_the_base, 1)
+// BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(pass_dynamic_arguments_to_the_base, 1)
 BOOST_AUTO_TEST_CASE(pass_dynamic_arguments_to_the_base)
 {
 	char const* sourceCode = R"(
@@ -5102,7 +5102,7 @@ BOOST_AUTO_TEST_CASE(pass_dynamic_arguments_to_the_base)
 	ABI_CHECK(callContractFunction("m_i()"), encodeArgs(4));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(pass_dynamic_arguments_to_the_base_base, 1)
+// BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(pass_dynamic_arguments_to_the_base_base, 1)
 BOOST_AUTO_TEST_CASE(pass_dynamic_arguments_to_the_base_base)
 {
 	char const* sourceCode = R"(
@@ -5126,7 +5126,7 @@ BOOST_AUTO_TEST_CASE(pass_dynamic_arguments_to_the_base_base)
 	ABI_CHECK(callContractFunction("m_i()"), encodeArgs(4));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(pass_dynamic_arguments_to_the_base_base_with_gap, 1)
+// BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(pass_dynamic_arguments_to_the_base_base_with_gap, 1)
 BOOST_AUTO_TEST_CASE(pass_dynamic_arguments_to_the_base_base_with_gap)
 {
 	char const* sourceCode = R"(
