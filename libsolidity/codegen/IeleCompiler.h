@@ -140,7 +140,7 @@ private:
 
   // Infrastructure for handling modifiers (borrowed from ContractCompiler.cpp)
   // Lookup function modifier by name
-  const ModifierDefinition &functionModifier(const std::string &_name) const;
+  const ModifierDefinition *functionModifier(const std::string &_name) const;
   void appendReturn(const FunctionDefinition &function, 
                     llvm::SmallVector<std::string, 4> ReturnParameterNames,
                     llvm::SmallVector<TypePointer, 4> ReturnParameterTypes); 

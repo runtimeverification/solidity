@@ -57,13 +57,13 @@ std::string IeleCompiler::getIeleNameForContract(
 }
 
 // lookup a ModifierDefinition by name (borrowed from CompilerContext.cpp)
-const ModifierDefinition &IeleCompiler::functionModifier(
+const ModifierDefinition *IeleCompiler::functionModifier(
     const std::string &_name) const {
   solAssert(!CompilingContractInheritanceHierarchy.empty(), "CurrentContract not set.");
   for (const ContractDefinition *CurrentContract : CompilingContractInheritanceHierarchy) {
     for (ModifierDefinition const* modifier: CurrentContract->functionModifiers())
       if (modifier->name() == _name)
-        return *modifier;
+        return modifier;
   }
   solAssert(false, "IeleCompiler: Function modifier not found.");
 }
@@ -775,17 +775,25 @@ void IeleCompiler::appendModifierOrFunctionCode() {
     }
     else {
       // Retrieve modifier definition from its name
-      ModifierDefinition const& modifier = functionModifier(modifierInvocation->name()->name());
+      const ModifierDefinition *modifier;
+      if (contractFor(CompilingFunctionASTNode)->isLibrary()) {
+        for (ModifierDefinition const* mod: contractFor(CompilingFunctionASTNode)->functionModifiers())
+          if (mod->name() == modifierInvocation->name()->name())
+            modifier = mod;
+      } else {
+        modifier = functionModifier(modifierInvocation->name()->name());
+      }
+      solAssert(modifier, "Could not find modifier");
 
       // Visit the modifier's parameters
-      for (const ASTPointer<const VariableDeclaration> &arg : modifier.parameters()) {
+      for (const ASTPointer<const VariableDeclaration> &arg : modifier->parameters()) {
         std::string genName = arg->name() + getNextVarSuffix();
         VarNameMap[ModifierDepth][arg->name()] = genName;
         iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
       }
 
       // Visit and initialize the modifier's local variables
-      for (const VariableDeclaration *local: modifier.localVariables()) {
+      for (const VariableDeclaration *local: modifier->localVariables()) {
         std::string genName = local->name() + getNextVarSuffix();
         VarNameMap[ModifierDepth][local->name()] = genName;
         iele::IeleLocalVariable *Local =
@@ -793,8 +801,10 @@ void IeleCompiler::appendModifierOrFunctionCode() {
         appendLocalVariableInitialization(Local, local);
       }
 
+      std::vector<ASTPointer<Expression>> const& modifierArguments =
+        modifierInvocation->arguments() ? *modifierInvocation->arguments() : std::vector<ASTPointer<Expression>>();
       // Is the modifier invocation well formed?
-      solAssert(modifier.parameters().size() == modifierInvocation->arguments()->size(),
+      solAssert(modifier->parameters().size() == modifierArguments.size(),
              "IeleCompiler: modifier has wrong number of parameters!");
 
       // Get Symbol Table
@@ -805,10 +815,10 @@ void IeleCompiler::appendModifierOrFunctionCode() {
 
       // Cycle through each parameter-argument pair; for each one, make an assignment.
       // This way, we pass arguments into the modifier.
-      for (unsigned i = 0; i < modifier.parameters().size(); ++i) {
+      for (unsigned i = 0; i < modifier->parameters().size(); ++i) {
         // Extract LHS and RHS from modifier definition and invocation
-        VariableDeclaration const& var = *modifier.parameters()[i];
-        Expression const& initValue    = *(*modifierInvocation->arguments())[i];
+        VariableDeclaration const& var = *modifier->parameters()[i];
+        Expression const& initValue    = *modifierArguments[i];
 
         // Temporarily set ModiferDepth to the level where all "top-level" (i.e. non-modifer related)
         // variable names are found; then, evaluate the RHS in this context;
@@ -829,7 +839,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
       }
 
       // Arguments to the modifier have been taken care off. Now move to modifier's body.
-      codeBlock = &modifier.body();
+      codeBlock = &modifier->body();
     }
   }
 
