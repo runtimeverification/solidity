@@ -515,7 +515,7 @@ void CompilerUtils::abiDecodeV2(TypePointers const& _parameterTypes, bool _fromM
 	m_context.adjustStackOffset(int(sizeOnStack(_parameterTypes)) - 3);
 	m_context << ret.tag();
 }
-
+/*
 void CompilerUtils::zeroInitialiseMemoryArray(ArrayType const& _type)
 {
 	if (_type.baseType()->hasSimpleZeroValueInMemory())
@@ -548,7 +548,7 @@ void CompilerUtils::zeroInitialiseMemoryArray(ArrayType const& _type)
 	}
 	m_context << Instruction::SWAP1 << Instruction::POP;
 }
-
+*/
 void CompilerUtils::memoryCopy32()
 {
 	// Stack here: size target source

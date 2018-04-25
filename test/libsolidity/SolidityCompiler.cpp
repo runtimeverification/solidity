@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(does_not_include_creation_time_only_internal_functions)
 	m_compiler.setOptimiserSettings(dev::test::Options::get().optimize);
 	BOOST_REQUIRE_MESSAGE(m_compiler.compile(), "Compiling contract failed");
 	bytes const& creationBytecode = m_compiler.object("C").bytecode;
-	bytes const& runtimeBytecode = m_compiler.runtimeObject("C").bytecode;
+	bytes const& runtimeBytecode = m_compiler.object("C").bytecode;
 	BOOST_CHECK(creationBytecode.size() >= 130);
 	BOOST_CHECK(creationBytecode.size() <= 160);
 	BOOST_CHECK(runtimeBytecode.size() >= 50);

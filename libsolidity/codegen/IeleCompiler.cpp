@@ -794,7 +794,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
       }
 
       // Is the modifier invocation well formed?
-      solAssert(modifier.parameters().size() == modifierInvocation->arguments().size(),
+      solAssert(modifier.parameters().size() == modifierInvocation->arguments()->size(),
              "IeleCompiler: modifier has wrong number of parameters!");
 
       // Get Symbol Table
@@ -808,7 +808,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
       for (unsigned i = 0; i < modifier.parameters().size(); ++i) {
         // Extract LHS and RHS from modifier definition and invocation
         VariableDeclaration const& var = *modifier.parameters()[i];
-        Expression const& initValue    = *modifierInvocation->arguments()[i];
+        Expression const& initValue    = *(*modifierInvocation->arguments())[i];
 
         // Temporarily set ModiferDepth to the level where all "top-level" (i.e. non-modifer related)
         // variable names are found; then, evaluate the RHS in this context;
@@ -3983,7 +3983,7 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
           modifier->name()->annotation().referencedDeclaration);
         if (baseContract) {
           if (baseArguments.count(baseContract->constructor()) == 0) {
-            baseArguments[baseContract->constructor()] = &modifier->arguments();
+            baseArguments[baseContract->constructor()] = modifier->arguments();
           }
         }
       }
@@ -3994,7 +3994,7 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
         base->name().annotation().referencedDeclaration);
       solAssert(baseContract, "Must find base contract in inheritance specifier");
       if (baseArguments.count(baseContract->constructor()) == 0) {
-        baseArguments[baseContract->constructor()] = &base->arguments();
+        baseArguments[baseContract->constructor()] = base->arguments();
       }
     }
     if (found) {

@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(exp_zero_literal)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f()", bytes()), toBigEndian(u256(1)));
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(1)));
 }
 
 
@@ -1836,9 +1836,9 @@ BOOST_AUTO_TEST_CASE(uncalled_blockhash)
 		}
 	)";
 	compileAndRun(code, 0, "C");
-	bytes result = callContractFunction("f()");
-	BOOST_REQUIRE_EQUAL(result.size(), 32);
-	BOOST_CHECK(result[0] != 0 || result[1] != 0 || result[2] != 0);
+	vector<bytes> result = callContractFunction("f()");
+	BOOST_REQUIRE_EQUAL(result[0].size(), 32);
+	BOOST_CHECK(result[0][0] != 0 || result[0][1] != 0 || result[0][2] != 0);
 }
 
 BOOST_AUTO_TEST_CASE(blockhash_shadow_resolution)
@@ -2132,8 +2132,8 @@ BOOST_AUTO_TEST_CASE(packed_keccak256_complex_types)
 	compileAndRun(sourceCode);
 	// Strangely, arrays are encoded with intra-element padding.
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(
-		dev::keccak256(encodeArgs(u256("0xfffffffffffffffffffffffffffffe"), u256("0xfffffffffffffffffffffffffffffd"), u256("0xfffffffffffffffffffffffffffffc"))),
-		dev::keccak256(encodeArgs(u256("0xfffffffffffffffffffffffffffffe"), u256("0xfffffffffffffffffffffffffffffd"), u256("0xfffffffffffffffffffffffffffffc"))),
+		dev::keccak256(encodeRefArray({u256("0xfffffffffffffffffffffffffffffe"), u256("0xfffffffffffffffffffffffffffffd"), u256("0xfffffffffffffffffffffffffffffc")}, 3, 15)),
+		dev::keccak256(encodeRefArray({u256("0xfffffffffffffffffffffffffffffe"), u256("0xfffffffffffffffffffffffffffffd"), u256("0xfffffffffffffffffffffffffffffc")}, 3, 15)),
 		dev::keccak256(fromHex(m_contractAddress.hex() + "26121ff0"))
 	));
 }
@@ -3610,7 +3610,7 @@ BOOST_AUTO_TEST_CASE(sha256_empty)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f()"), fromHex("0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+	ABI_CHECK(callContractFunction("f()"), vector<bytes>(1, fromHex("0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")));
 }
 
 BOOST_AUTO_TEST_CASE(ripemd160_empty)
@@ -3623,7 +3623,7 @@ BOOST_AUTO_TEST_CASE(ripemd160_empty)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f()"), fromHex("0x9c1185a5c5e9fc54612808977ee8f548b2258d31000000000000000000000000"));
+	ABI_CHECK(callContractFunction("f()"), vector<bytes>(1, fromHex("0x9c1185a5c5e9fc54612808977ee8f548b2258d31000000000000000000000000")));
 }
 
 BOOST_AUTO_TEST_CASE(keccak256_empty)
@@ -3636,7 +3636,7 @@ BOOST_AUTO_TEST_CASE(keccak256_empty)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f()"), fromHex("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"));
+	ABI_CHECK(callContractFunction("f()"), vector<bytes>(1, fromHex("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")));
 }
 
 BOOST_AUTO_TEST_CASE(keccak256_multiple_arguments)
@@ -7274,7 +7274,7 @@ BOOST_AUTO_TEST_CASE(library_function_external)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "Lib");
-	compileAndRun(sourceCode, 0, "Test", bytes(), map<string, Address>{{"Lib", m_contractAddress}});
+	compileAndRun(sourceCode, 0, "Test", vector<bytes>(), map<string, Address>{{"Lib", m_contractAddress}});
 	ABI_CHECK(callContractFunction("f(bytes)", u256(0x20), u256(5), "abcde"), encodeArgs("c"));
 }
 
@@ -10687,8 +10687,8 @@ BOOST_AUTO_TEST_CASE(revert_with_cause)
 	compileAndRun(sourceCode, 0, "C");
 	bool const haveReturndata = dev::test::Options::get().evmVersion().supportsReturndata();
 	bytes const errorSignature = bytes{0x08, 0xc3, 0x79, 0xa0};
-	ABI_CHECK(callContractFunction("f()"), haveReturndata ? encodeArgs(0, 0x40, 0x64) + errorSignature + encodeArgs(0x20, 7, "test123") + bytes(28, 0) : bytes());
-	ABI_CHECK(callContractFunction("g()"), haveReturndata ? encodeArgs(0, 0x40, 0x84) + errorSignature + encodeArgs(0x20, 44, "test1234567890123456789012345678901234567890") + bytes(28, 0): bytes());
+	ABI_CHECK(callContractFunction("f()"), haveReturndata ? encodeArgs(0, 0x40, 0x64, errorSignature) + encodeArgs(0x20, 7, "test123", bytes(28, 0)) : vector<bytes>());
+	ABI_CHECK(callContractFunction("g()"), haveReturndata ? encodeArgs(0, 0x40, 0x84, errorSignature) + encodeArgs(0x20, 44, "test1234567890123456789012345678901234567890", bytes(28, 0)): vector<bytes>());
 }
 
 BOOST_AUTO_TEST_CASE(require_with_message)
@@ -10742,11 +10742,11 @@ BOOST_AUTO_TEST_CASE(require_with_message)
 	compileAndRun(sourceCode, 0, "C");
 	bool const haveReturndata = dev::test::Options::get().evmVersion().supportsReturndata();
 	bytes const errorSignature = bytes{0x08, 0xc3, 0x79, 0xa0};
-	ABI_CHECK(callContractFunction("f(uint256)", 8), haveReturndata ? encodeArgs(1, 0x40, 0) : bytes());
-	ABI_CHECK(callContractFunction("f(uint256)", 5), haveReturndata ? encodeArgs(0, 0x40, 0x64) + errorSignature + encodeArgs(0x20, 6, "failed") + bytes(28, 0) : bytes());
-	ABI_CHECK(callContractFunction("g()"), haveReturndata ? encodeArgs(1, 0x40, 0) : bytes());
-	ABI_CHECK(callContractFunction("g()"), haveReturndata ? encodeArgs(0, 0x40, 0x64) + errorSignature + encodeArgs(0x20, 18, "only on second run") + bytes(28, 0) : bytes());
-	ABI_CHECK(callContractFunction("h()"), haveReturndata ? encodeArgs(0, 0x40, 0x64) + errorSignature + encodeArgs(0x20, 3, "abc") + bytes(28, 0): bytes());
+	ABI_CHECK(callContractFunction("f(uint256)", 8), haveReturndata ? encodeArgs(1, 0x40, 0) : vector<bytes>());
+	ABI_CHECK(callContractFunction("f(uint256)", 5), haveReturndata ? encodeArgs(0, 0x40, 0x64, errorSignature) + encodeArgs(0x20, 6, "failed", bytes(28, 0)) : vector<bytes>());
+	ABI_CHECK(callContractFunction("g()"), haveReturndata ? encodeArgs(1, 0x40, 0) : vector<bytes>());
+	ABI_CHECK(callContractFunction("g()"), haveReturndata ? encodeArgs(0, 0x40, 0x64, errorSignature) + encodeArgs(0x20, 18, "only on second run", bytes(28, 0)) : vector<bytes>());
+	ABI_CHECK(callContractFunction("h()"), haveReturndata ? encodeArgs(0, 0x40, 0x64, errorSignature) + encodeArgs(0x20, 3, "abc", bytes(28, 0)): vector<bytes>());
 }
 
 BOOST_AUTO_TEST_CASE(bubble_up_error_messages)
@@ -10784,8 +10784,8 @@ BOOST_AUTO_TEST_CASE(bubble_up_error_messages)
 	compileAndRun(sourceCode, 0, "C");
 	bool const haveReturndata = dev::test::Options::get().evmVersion().supportsReturndata();
 	bytes const errorSignature = bytes{0x08, 0xc3, 0x79, 0xa0};
-	ABI_CHECK(callContractFunction("f()"), haveReturndata ? encodeArgs(0, 0x40, 0x64) + errorSignature + encodeArgs(0x20, 7, "message") + bytes(28, 0) : bytes());
-	ABI_CHECK(callContractFunction("g()"), haveReturndata ? encodeArgs(0, 0x40, 0x64) + errorSignature + encodeArgs(0x20, 7, "message") + bytes(28, 0) : bytes());
+	ABI_CHECK(callContractFunction("f()"), haveReturndata ? encodeArgs(0, 0x40, 0x64, errorSignature) + encodeArgs(0x20, 7, "message", bytes(28, 0)) : vector<bytes>());
+	ABI_CHECK(callContractFunction("g()"), haveReturndata ? encodeArgs(0, 0x40, 0x64, errorSignature) + encodeArgs(0x20, 7, "message", bytes(28, 0)) : vector<bytes>());
 }
 
 BOOST_AUTO_TEST_CASE(bubble_up_error_messages_through_transfer)
@@ -10820,7 +10820,7 @@ BOOST_AUTO_TEST_CASE(bubble_up_error_messages_through_transfer)
 	compileAndRun(sourceCode, 0, "C");
 	bool const haveReturndata = dev::test::Options::get().evmVersion().supportsReturndata();
 	bytes const errorSignature = bytes{0x08, 0xc3, 0x79, 0xa0};
-	ABI_CHECK(callContractFunction("f()"), haveReturndata ? encodeArgs(0, 0x40, 0x64) + errorSignature + encodeArgs(0x20, 7, "message") + bytes(28, 0) : bytes());
+	ABI_CHECK(callContractFunction("f()"), haveReturndata ? encodeArgs(0, 0x40, 0x64, errorSignature) + encodeArgs(0x20, 7, "message", bytes(28, 0)) : vector<bytes>());
 }
 
 BOOST_AUTO_TEST_CASE(bubble_up_error_messages_through_create)
@@ -10857,7 +10857,7 @@ BOOST_AUTO_TEST_CASE(bubble_up_error_messages_through_create)
 	compileAndRun(sourceCode, 0, "C");
 	bool const haveReturndata = dev::test::Options::get().evmVersion().supportsReturndata();
 	bytes const errorSignature = bytes{0x08, 0xc3, 0x79, 0xa0};
-	ABI_CHECK(callContractFunction("f()"), haveReturndata ? encodeArgs(0, 0x40, 0x64) + errorSignature + encodeArgs(0x20, 7, "message") + bytes(28, 0) : bytes());
+	ABI_CHECK(callContractFunction("f()"), haveReturndata ? encodeArgs(0, 0x40, 0x64, errorSignature) + encodeArgs(0x20, 7, "message", bytes(28, 0)) : vector<bytes>());
 }
 
 BOOST_AUTO_TEST_CASE(negative_stack_height)
@@ -11638,12 +11638,12 @@ BOOST_AUTO_TEST_CASE(abi_encode_with_selector)
 	)";
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction("f0()"), encodeArgs(0x20, 4, "\x12\x34\x56\x78"));
-	bytes expectation;
-	expectation = encodeArgs(0x20, 4 + 0x60) + bytes{0x12, 0x34, 0x56, 0x78} + encodeArgs(0x20, 3, "abc") + bytes(0x20 - 4);
+	vector<bytes> expectation;
+	expectation = encodeArgs(0x20, 4 + 0x60) + vector<bytes>{{0x12, 0x34, 0x56, 0x78}} + encodeArgs(0x20, 3, "abc") + vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f1()"), expectation);
-	expectation = encodeArgs(0x20, 4 + 0x60) + bytes{0x12, 0x34, 0x56, 0x78} + encodeArgs(0x20, 3, "abc") + bytes(0x20 - 4);
+	expectation = encodeArgs(0x20, 4 + 0x60) + vector<bytes>{{0x12, 0x34, 0x56, 0x78}} + encodeArgs(0x20, 3, "abc") + vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f2()"), expectation);
-	expectation = encodeArgs(0x20, 4 + 0x20) + bytes{0x12, 0x34, 0x56, 0x78} + encodeArgs(u256(-1)) + bytes(0x20 - 4);
+	expectation = encodeArgs(0x20, 4 + 0x20) + vector<bytes>{{0x12, 0x34, 0x56, 0x78}} + encodeArgs(u256(-1)) + vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f3()"), expectation);
 }
 
@@ -11679,18 +11679,18 @@ BOOST_AUTO_TEST_CASE(abi_encode_with_selectorv2)
 	)";
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction("f0()"), encodeArgs(0x20, 4, "\x12\x34\x56\x78"));
-	bytes expectation;
-	expectation = encodeArgs(0x20, 4 + 0x60) + bytes{0x12, 0x34, 0x56, 0x78} + encodeArgs(0x20, 3, "abc") + bytes(0x20 - 4);
+	vector<bytes> expectation;
+	expectation = encodeArgs(0x20, 4 + 0x60) + vector<bytes>{{0x12, 0x34, 0x56, 0x78}} + encodeArgs(0x20, 3, "abc") + vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f1()"), expectation);
-	expectation = encodeArgs(0x20, 4 + 0x60) + bytes{0x12, 0x34, 0x56, 0x78} + encodeArgs(0x20, 3, "abc") + bytes(0x20 - 4);
+	expectation = encodeArgs(0x20, 4 + 0x60) + vector<bytes>{{0x12, 0x34, 0x56, 0x78}} + encodeArgs(0x20, 3, "abc") + vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f2()"), expectation);
-	expectation = encodeArgs(0x20, 4 + 0x20) + bytes{0x12, 0x34, 0x56, 0x78} + encodeArgs(u256(-1)) + bytes(0x20 - 4);
+	expectation = encodeArgs(0x20, 4 + 0x20) + vector<bytes>{{0x12, 0x34, 0x56, 0x78}} + encodeArgs(u256(-1)) + vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f3()"), expectation);
 	expectation =
 		encodeArgs(0x20, 4 + 0x120) +
-		bytes{0x12, 0x34, 0x56, 0x78} +
+		vector<bytes>{{0x12, 0x34, 0x56, 0x78}} +
 		encodeArgs(u256(-1), 0x60, u256(3), 0x1234567, 0x60, 0x1234, 38, "Lorem ipsum dolor sit ethereum........") +
-		bytes(0x20 - 4);
+		vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f4()"), expectation);
 }
 
@@ -11726,13 +11726,13 @@ BOOST_AUTO_TEST_CASE(abi_encode_with_signature)
 	)T";
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction("f0()"), encodeArgs(0x20, 4, "\xb3\xde\x64\x8b"));
-	bytes expectation;
-	expectation = encodeArgs(0x20, 4 + 0x60) + bytes{0xb3, 0xde, 0x64, 0x8b} + encodeArgs(0x20, 3, "abc") + bytes(0x20 - 4);
+	vector<bytes> expectation;
+	expectation = encodeArgs(0x20, 4 + 0x60) + vector<bytes>{{0xb3, 0xde, 0x64, 0x8b}} + encodeArgs(0x20, 3, "abc") + vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f1()"), expectation);
 	ABI_CHECK(callContractFunction("f1s()"), expectation);
 	expectation =
 		encodeArgs(0x40, 0x140, 4 + 0xc0) +
-		(bytes{0xe9, 0xc9, 0x21, 0xcd} + encodeArgs(0x20, 4, u256(-1), u256(-2), u256(-3), u256(-4)) + bytes(0x20 - 4)) +
+		(vector<bytes>{{0xe9, 0xc9, 0x21, 0xcd}} + encodeArgs(0x20, 4, u256(-1), u256(-2), u256(-3), u256(-4)) + vector<bytes>(1, bytes(0x20 - 4))) +
 		encodeArgs(2, 0, 0);
 	ABI_CHECK(callContractFunction("f2()"), expectation);
 }
@@ -11779,20 +11779,20 @@ BOOST_AUTO_TEST_CASE(abi_encode_with_signaturev2)
 	)T";
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction("f0()"), encodeArgs(0x20, 4, "\xb3\xde\x64\x8b"));
-	bytes expectation;
-	expectation = encodeArgs(0x20, 4 + 0x60) + bytes{0xb3, 0xde, 0x64, 0x8b} + encodeArgs(0x20, 3, "abc") + bytes(0x20 - 4);
+	vector<bytes> expectation;
+	expectation = encodeArgs(0x20, 4 + 0x60) + vector<bytes>{{0xb3, 0xde, 0x64, 0x8b}} + encodeArgs(0x20, 3, "abc") + vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f1()"), expectation);
 	ABI_CHECK(callContractFunction("f1s()"), expectation);
 	expectation =
 		encodeArgs(0x40, 0x140, 4 + 0xc0) +
-		(bytes{0xe9, 0xc9, 0x21, 0xcd} + encodeArgs(0x20, 4, u256(-1), u256(-2), u256(-3), u256(-4)) + bytes(0x20 - 4)) +
+		(vector<bytes>{{0xe9, 0xc9, 0x21, 0xcd}} + encodeArgs(0x20, 4, u256(-1), u256(-2), u256(-3), u256(-4)) + vector<bytes>(1, bytes(0x20 - 4))) +
 		encodeArgs(2, 0, 0);
 	ABI_CHECK(callContractFunction("f2()"), expectation);
 	expectation =
 		encodeArgs(0x20, 4 + 0x120) +
-		bytes{0x7c, 0x79, 0x30, 0x02} +
+		vector<bytes>{{0x7c, 0x79, 0x30, 0x02}} +
 		encodeArgs(u256(-1), 0x60, u256(3), 0x1234567, 0x60, 0x1234, 38, "Lorem ipsum dolor sit ethereum........") +
-		bytes(0x20 - 4);
+		vector<bytes>(1, bytes(0x20 - 4));
 	ABI_CHECK(callContractFunction("f4()"), expectation);
 }
 

@@ -330,7 +330,7 @@ BOOST_AUTO_TEST_CASE(regular_functions_exclude_fallback)
 		}
 	)";
 	testCreationTimeGas(sourceCode);
-	testRunTimeGas("x()", vector<bytes>{encodeArgs()});
+	testRunTimeGas("x()", vector<vector<bytes>>{encodeArgs()});
 }
 BOOST_AUTO_TEST_SUITE_END()
 
