@@ -5314,7 +5314,8 @@ BOOST_AUTO_TEST_CASE(pass_dynamic_arguments_to_the_base)
 			{}
 		}
 		contract Final is Derived(4) {
-		})";
+		}
+        )";
 	compileAndRun(sourceCode);
 	ABI_CHECK(callContractFunction("m_i()"), encodeArgs(4));
 }
@@ -5338,7 +5339,8 @@ BOOST_AUTO_TEST_CASE(pass_dynamic_arguments_to_the_base_base)
 			{}
 		}
 		contract Final is Derived(4) {
-		})";
+		}
+        )";
 	compileAndRun(sourceCode);
 	ABI_CHECK(callContractFunction("m_i()"), encodeArgs(4));
 }
@@ -5359,7 +5361,8 @@ BOOST_AUTO_TEST_CASE(pass_dynamic_arguments_to_the_base_base_with_gap)
 			function Derived(uint i) Base(i) {}
 		}
 		contract Final is Derived(4) {
-		})";
+		}
+        )";
 	compileAndRun(sourceCode);
 	ABI_CHECK(callContractFunction("m_i()"), encodeArgs(4));
 }
