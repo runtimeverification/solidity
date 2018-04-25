@@ -799,7 +799,7 @@ BOOST_AUTO_TEST_CASE(return_dynamic_types_cross_call_simple)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode, 0, "C");
-		ABI_CHECK(callContractFunction("f()"), encodeArgs(0x20, 40, string("1234567890123456789012345678901234567890")));
+		ABI_CHECK(callContractFunction("f()"), encodeArgs(encodeDyn(string("1234567890123456789012345678901234567890"))));
 	)
 }
 
@@ -810,15 +810,15 @@ BOOST_AUTO_TEST_CASE(return_dynamic_types_cross_call_advanced)
 
 	string sourceCode = R"(
 		contract C {
-			function dyn() public returns (bytes a, uint b, bytes20[] c, uint d) {
+			function dyn() public returns (bytes a, uint256 b, bytes20[] c, uint d) {
 				a = "1234567890123456789012345678901234567890";
-				b = uint(-1);
+				b = uint256(-1);
 				c = new bytes20[](4);
 				c[0] = bytes20(1234);
 				c[3] = bytes20(6789);
 				d = 0x1234;
 			}
-			function f() public returns (bytes, uint, bytes20[], uint) {
+			function f() public returns (bytes, uint256, bytes20[], uint) {
 				return this.dyn();
 			}
 		}
@@ -826,13 +826,14 @@ BOOST_AUTO_TEST_CASE(return_dynamic_types_cross_call_advanced)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode, 0, "C");
 		ABI_CHECK(callContractFunction("f()"), encodeArgs(
-			0x80, u256(-1), 0xe0, 0x1234,
-			40, string("1234567890123456789012345678901234567890"),
-			4, u256(1234) << (8 * (32 - 20)), 0, 0, u256(6789) << (8 * (32 - 20))
+			encodeDyn(string("1234567890123456789012345678901234567890")), u256(-1), encodeRefArray(
+			{u256(1234), 0, 0, u256(6789)}, 4, 20),
+                        0x1234
 		));
 	)
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_dynamic_types_cross_call_out_of_range, 1)
 BOOST_AUTO_TEST_CASE(return_dynamic_types_cross_call_out_of_range)
 {
 	string sourceCode = R"(

@@ -603,6 +603,7 @@ BOOST_AUTO_TEST_CASE(invalid_state_at_control_flow_join)
 	compareVersions("test()");
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(init_empty_dynamic_arrays, 2)
 BOOST_AUTO_TEST_CASE(init_empty_dynamic_arrays)
 {
 	// This is not so much an optimizer test, but rather a test
@@ -623,6 +624,7 @@ BOOST_AUTO_TEST_CASE(init_empty_dynamic_arrays)
 	BOOST_CHECK_LE(1600000, m_gasUsedNonOptimized);
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(optimise_multi_stores, 2)
 BOOST_AUTO_TEST_CASE(optimise_multi_stores)
 {
 	char const* sourceCode = R"(

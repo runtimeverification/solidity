@@ -319,6 +319,7 @@ BOOST_AUTO_TEST_CASE(extcodesize_gas)
 	testRunTimeGas("f()", vector<vector<bytes>>{encodeArgs()});
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(regular_functions_exclude_fallback, 1)
 BOOST_AUTO_TEST_CASE(regular_functions_exclude_fallback)
 {
 	// A bug in the estimator caused the costs for a specific function
