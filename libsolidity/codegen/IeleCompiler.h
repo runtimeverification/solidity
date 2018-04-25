@@ -268,7 +268,8 @@ private:
   iele::IeleLocalVariable *appendMemorySpill();
 
   bool shouldCopyStorageToStorage(const IeleLValue *To, const Type &From) const;
-  bool shouldCopyMemoryToStorage(const IeleLValue *To, const Type &From) const;
+  bool shouldCopyMemoryToStorage(const Type &ToType, const IeleLValue *To, const Type &From) const;
+  bool shouldCopyMemoryToMemory(const Type &ToType, const IeleLValue *To, const Type &From) const;
   bool shouldCopyStorageToMemory(const Type &To, const Type &From) const;
 
   bool isMostDerived(const FunctionDefinition *d) const;

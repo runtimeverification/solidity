@@ -1133,8 +1133,10 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   RHSType = RHSType->mobileType();
   if (shouldCopyStorageToStorage(LHSValue, *RHSType))
     appendCopyFromStorageToStorage(LHSValue, LHSType, RHSValue, RHSType);
-  else if (shouldCopyMemoryToStorage(LHSValue, *RHSType))
+  else if (shouldCopyMemoryToStorage(*LHSType, LHSValue, *RHSType))
     appendCopyFromMemoryToStorage(LHSValue, LHSType, RHSValue, RHSType);
+  else if (shouldCopyMemoryToMemory(*LHSType, LHSValue, *RHSType))
+    appendCopyFromMemoryToMemory(LHSValue, LHSType, RHSValue, RHSType);
   else {
     // Check for compound assignment.
     if (op != Token::Assign) {
@@ -4008,8 +4010,10 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
       rhsType = rhsType->mobileType();
       if (shouldCopyStorageToStorage(LHSValue, *rhsType))
         appendCopyFromStorageToStorage(LHSValue, type, InitValue, rhsType);
-      else if (shouldCopyMemoryToStorage(LHSValue, *rhsType))
+      else if (shouldCopyMemoryToStorage(*type, LHSValue, *rhsType))
         appendCopyFromMemoryToStorage(LHSValue, type, InitValue, rhsType);
+      else if (shouldCopyMemoryToMemory(*type, LHSValue, *rhsType))
+        appendCopyFromMemoryToMemory(LHSValue, type, InitValue, rhsType);
     } else {
       solAssert(type->category() == Type::Category::Mapping,
                 "IeleCompiler: found state variable initializer of unknown "
@@ -5017,10 +5021,18 @@ bool IeleCompiler::shouldCopyStorageToStorage(const IeleLValue *To,
          From.dataStoredIn(DataLocation::Storage);
 }
 
-bool IeleCompiler::shouldCopyMemoryToStorage(const IeleLValue *To,
+bool IeleCompiler::shouldCopyMemoryToStorage(const Type &ToType, const IeleLValue *To,
                                              const Type &From) const {
   return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         From.dataStoredIn(DataLocation::Memory);
+         From.dataStoredIn(DataLocation::Memory) &&
+         ToType.dataStoredIn(DataLocation::Storage);
+}
+
+bool IeleCompiler::shouldCopyMemoryToMemory(const Type &ToType, const IeleLValue *To,
+                                             const Type &From) const {
+  return dynamic_cast<const ReadOnlyLValue *>(To) &&
+         From.dataStoredIn(DataLocation::Memory) &&
+         ToType.dataStoredIn(DataLocation::Memory);
 }
 
 bool IeleCompiler::shouldCopyStorageToMemory(const Type &To,
