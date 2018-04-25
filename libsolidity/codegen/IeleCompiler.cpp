@@ -1159,6 +1159,7 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
   llvm::SmallVector<Value, 4> Results;
 
   for (unsigned i = 0; i < tuple.components().size(); i++) {
+    solAssert(tuple.components()[i], "not implemented yet");
     if (CompilingLValue) {
       Results.push_back(compileLValue(*tuple.components()[i]));
     } else {
