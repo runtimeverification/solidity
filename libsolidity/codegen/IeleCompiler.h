@@ -205,20 +205,20 @@ private:
 
   // Helper functions for copying a reference type to a storage location.
   void appendCopyFromStorageToStorage(
-      IeleLValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
+      IeleLValue *To, TypePointer ToType, iele::IeleValue *From, TypePointer FromType);
   void appendCopyFromMemoryToStorage(
-      IeleLValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
+      IeleLValue *To, TypePointer ToType, iele::IeleValue *From, TypePointer FromType);
 
   void appendCopyFromMemoryToMemory(
-      IeleLValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType);
+      IeleLValue *To, TypePointer ToType, iele::IeleValue *From, TypePointer FromType);
 
   // Helper function for copying a storage reference type into a local newly
   // allocated memory copy. Returns a pointer to the copy.
   iele::IeleValue *appendCopyFromStorageToMemory(
-    const Type &ToType, iele::IeleValue *From, const Type &FromType);
+    TypePointer ToType, iele::IeleValue *From, TypePointer FromType);
 
   void appendCopy(
-      IeleLValue *To, const Type &ToType, iele::IeleValue *From, const Type &FromType, DataLocation ToLoc, DataLocation FromLoc);
+      IeleLValue *To, TypePointer ToType, iele::IeleValue *From, TypePointer FromType, DataLocation ToLoc, DataLocation FromLoc);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
@@ -241,8 +241,8 @@ private:
       int bytes, bool issigned);
   iele::IeleValue *appendTypeConversion(
       iele::IeleValue *Operand,
-      const Type& SourceType,
-      const Type& TargetType);
+      TypePointer SourceType,
+      TypePointer TargetType);
 
   void appendTypeConversions(
     llvm::SmallVectorImpl<iele::IeleValue *> &Results, 
