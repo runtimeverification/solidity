@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE(incorrect_storage_access_bug)
 	compareVersions("f()");
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(sequence_number_for_calls, 1)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(sequence_number_for_calls, 3)
 BOOST_AUTO_TEST_CASE(sequence_number_for_calls)
 {
 	// This is a test for a bug that was present because we did not increment the sequence
