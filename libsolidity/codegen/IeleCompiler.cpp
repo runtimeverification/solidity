@@ -3975,39 +3975,29 @@ void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {
 void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) {
   // Init state variables.
   bool found = false;
-  std::map<const FunctionDefinition *, const std::vector<ASTPointer<Expression>> *> baseArguments;
   for (const ContractDefinition *def : CompilingContractInheritanceHierarchy) {
-    if (const FunctionDefinition *constructor = def->constructor()) {
-      for (auto const& modifier : constructor->modifiers()) {
-        auto baseContract = dynamic_cast<const ContractDefinition *>(
-          modifier->name()->annotation().referencedDeclaration);
-        if (baseContract) {
-          if (baseArguments.count(baseContract->constructor()) == 0) {
-            baseArguments[baseContract->constructor()] = modifier->arguments();
-          }
-        }
-      }
-    }
-
-    for (const auto &base : def->baseContracts()) {
-      auto baseContract = dynamic_cast<const ContractDefinition *>(
-        base->name().annotation().referencedDeclaration);
-      solAssert(baseContract, "Must find base contract in inheritance specifier");
-      if (baseArguments.count(baseContract->constructor()) == 0) {
-        baseArguments[baseContract->constructor()] = base->arguments();
-      }
-    }
     if (found) {
       // Call the immediate base class init function.
       llvm::SmallVector<iele::IeleLocalVariable *, 0> Returns;
       llvm::SmallVector<iele::IeleValue *, 4> Arguments;
 
       if (const FunctionDefinition *decl = def->constructor()) {
-        auto arguments = *baseArguments[decl];
+        auto baseArgumentNode = CompilingContractInheritanceHierarchy[0]->annotation().baseConstructorArguments[decl];
+        std::vector<ASTPointer<Expression>> const* arguments = nullptr;
+        if (auto inheritanceSpecifier = dynamic_cast<InheritanceSpecifier const*>(baseArgumentNode))
+          arguments = inheritanceSpecifier->arguments();
+        else if (auto modifierInvocation = dynamic_cast<ModifierInvocation const*>(baseArgumentNode))
+          arguments = modifierInvocation->arguments();
 
         const FunctionType &function = FunctionType(*decl);
 
-        compileFunctionArguments(&Arguments, &Returns, arguments, function, false);
+	const auto emptyArgs = std::vector<ASTPointer<Expression>>();
+	if (!arguments && function.parameterTypes().empty())
+          arguments = &emptyArgs;
+        solAssert(arguments, "cannot find base constructor arguments");
+        solAssert(arguments->size() == function.parameterTypes().size(), "wrong number of base constructor arguments");
+
+        compileFunctionArguments(&Arguments, &Returns, *arguments, function, false);
 
         solAssert(Returns.size() == 0, "Constructor doesn't return anything");
       }
