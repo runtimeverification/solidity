@@ -110,13 +110,6 @@ bool fitsPrecisionBaseX(
 	return bitsNeeded <= bitsMax;
 }
 
-/// Checks whether _mantissa * (10 ** _expBase10) fits into 4096 bits.
-bool fitsPrecisionBase10(bigint const& _mantissa, uint32_t _expBase10)
-{
-	double const log2Of10AwayFromZero = 3.3219280948873624;
-	return fitsPrecisionBaseX(_mantissa, log2Of10AwayFromZero, _expBase10);
-}
-
 /// Checks whether _mantissa * (2 ** _expBase10) fits into 4096 bits.
 bool fitsPrecisionBase2(bigint const& _mantissa, uint32_t _expBase2)
 {
@@ -782,8 +775,6 @@ tuple<bool, rational> RationalNumberType::isValidLiteral(Literal const& _literal
 
 			if (exp < 0)
 			{
-				if (!fitsPrecisionBase10(abs(value.denominator()), expAbs))
-					return make_tuple(false, rational(0));
 				value /= boost::multiprecision::pow(
 					bigint(10),
 					expAbs
@@ -791,8 +782,6 @@ tuple<bool, rational> RationalNumberType::isValidLiteral(Literal const& _literal
 			}
 			else if (exp > 0)
 			{
-				if (!fitsPrecisionBase10(abs(value.numerator()), expAbs))
-					return make_tuple(false, rational(0));
 				value *= boost::multiprecision::pow(
 					bigint(10),
 					expAbs
@@ -1020,7 +1009,13 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 
 				// Limit size to 4096 bits
 				if (!fitsPrecisionExp(abs(m_value.numerator()), absExp) || !fitsPrecisionExp(abs(m_value.denominator()), absExp))
-					return TypePointer();
+				{
+					if (isFractional())
+						return TypePointer();
+					if (m_value >= 0 || (absExp & 1) == 0)
+						return make_shared<IntegerType>();
+					return make_shared<IntegerType>(IntegerType::Modifier::Signed);
+				}
 
 				static auto const optimizedPow = [](bigint const& _base, uint32_t _exponent) -> bigint {
 					if (_base == 1)
@@ -1057,7 +1052,11 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 			{
 				uint32_t exponent = other.m_value.numerator().convert_to<uint32_t>();
 				if (!fitsPrecisionBase2(abs(m_value.numerator()), exponent))
-					return TypePointer();
+				{
+					if (m_value >= 0)
+						return make_shared<IntegerType>();
+					return make_shared<IntegerType>(IntegerType::Modifier::Signed);
+				}
 				value = m_value.numerator() * pow(bigint(2), exponent);
 			}
 			break;
@@ -1090,8 +1089,14 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 		}
 
 		// verify that numerator and denominator fit into 4096 bit after every operation
-		if (value.numerator() != 0 && max(mostSignificantBit(abs(value.numerator())), mostSignificantBit(abs(value.denominator()))) > 4096)
-			return TypePointer();
+		if (value.numerator() != 0 && max(mostSignificantBit(abs(value.numerator())), mostSignificantBit(abs(value.denominator()))) > 4096) {
+			if (value.denominator() != 1)
+				return TypePointer();
+			if (value >= 0)
+				return make_shared<IntegerType>();
+			else
+				return make_shared<IntegerType>(IntegerType::Modifier::Signed);
+		}
 
 		return make_shared<RationalNumberType>(value);
 	}
