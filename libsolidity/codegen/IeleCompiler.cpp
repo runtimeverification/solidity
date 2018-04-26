@@ -158,6 +158,18 @@ iele::IeleGlobalValue *IeleCompiler::convertFunctionToInternal(iele::IeleGlobalV
   solAssert(false, "not implemented yet: function pointers");
 }
 
+static void transitiveClosure(const ContractDefinition *contract, std::set<const ContractDefinition *> &dependencies) {
+  for (const ContractDefinition *dependency : contract->annotation().contractDependencies) {
+    dependencies.insert(dependency);
+    transitiveClosure(dependency, dependencies);
+  }
+}
+static void transitiveClosure(std::set<const ContractDefinition *> &dependencies) {
+  for (const ContractDefinition *contract : dependencies) {
+    transitiveClosure(contract, dependencies);
+  }
+}
+
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
     const std::map<const ContractDefinition *, iele::IeleContract *> &contracts) {
@@ -232,7 +244,9 @@ void IeleCompiler::compileContract(
     most_derived = false;
   }
 
-  for (auto dep : contract.annotation().contractDependencies) {
+  std::set<ContractDefinition const*> dependencies = contract.annotation().contractDependencies;
+  transitiveClosure(dependencies);
+  for (auto dep : dependencies) {
     if (dep->isLibrary()) {
       for (const FunctionDefinition *function : dep->definedFunctions()) {
         if (function->isConstructor() || function->isFallback() ||
@@ -347,7 +361,7 @@ void IeleCompiler::compileContract(
     CompilingFunction = nullptr;
   }
 
-  for (auto dep : contract.annotation().contractDependencies) {
+  for (auto dep : dependencies) {
     if (dep->isLibrary()) {
       for (const FunctionDefinition *function : dep->definedFunctions()) {
         if (function->isConstructor() || function->isFallback() || !function->isImplemented())
@@ -581,7 +595,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
 
   if (!function.isPayable()
-      && !contractFor(&function)->isLibrary()) {
+      && !contractFor(&function)->isLibrary() && function.isPublic()) {
     appendPayableCheck();
   }
   if (function.stateMutability() > StateMutability::View
@@ -3607,15 +3621,10 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
       appendTypeConversion(
           IndexValue,
           indexAccess.indexExpression()->annotation().type, keyType);
+    IndexValue = encoding(IndexValue, keyType);
     solAssert(IndexValue,
               "IeleCompiler: failed to compile index expression for index "
               "access.");
-
-    // Encode index expression to an unsigned integer.
-    solAssert(keyType->category() == Type::Category::Integer ||
-              keyType->category() == Type::Category::FixedBytes ||
-              keyType->category() == Type::Category::Contract,
-              "not implmented yet");
 
     // Hash index if needed.
     if (type.hasHashedKeyspace()) {
