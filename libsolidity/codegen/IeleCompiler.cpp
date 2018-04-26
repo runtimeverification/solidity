@@ -4155,7 +4155,6 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
         // No aux params to forward, compute value "normally"
         if (forwardingAuxParams.first.empty()) { 
 
-          //auto arguments = *baseArguments[def];
           auto baseArgumentNode = CompilingContractInheritanceHierarchy[0]->annotation().baseConstructorArguments[decl];
           std::vector<ASTPointer<Expression>> const* arguments = nullptr;
           if (auto inheritanceSpecifier = dynamic_cast<InheritanceSpecifier const*>(baseArgumentNode))
@@ -4163,13 +4162,15 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
           else if (auto modifierInvocation = dynamic_cast<ModifierInvocation const*>(baseArgumentNode))
             arguments = modifierInvocation->arguments();
           
-          const FunctionType &function = FunctionType(*decl);
-          unsigned ModifierDepthCache = ModifierDepth;
-          ModifierDepth = NumOfModifiers;
-          compileFunctionArguments(&Arguments, &Returns, *arguments, 
-                                   function, false);
-          ModifierDepth = ModifierDepthCache;
-          solAssert(Returns.size() == 0, "Constructor doesn't return anything");
+          if (arguments) {
+            const FunctionType &function = FunctionType(*decl);
+            unsigned ModifierDepthCache = ModifierDepth;
+            ModifierDepth = NumOfModifiers;
+            compileFunctionArguments(&Arguments, &Returns, *arguments, 
+                                    function, false);
+            ModifierDepth = ModifierDepthCache;
+            solAssert(Returns.size() == 0, "Constructor doesn't return anything");
+          }
         }
         // forward aux param to base constructor
         else {
@@ -4222,7 +4223,6 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
           // Base takes an aux param, carrying a value that needs to be 
           // evaluated in this contract. 
           else {
-            // const std::vector<ASTPointer<Expression>> arguments = *baseArguments[auxParamDest];
             auto decl = auxParamDest->constructor(); 
             auto baseArgumentNode = CompilingContractInheritanceHierarchy[0]->annotation().baseConstructorArguments[decl];
             std::vector<ASTPointer<Expression>> const* arguments = nullptr;
@@ -4231,29 +4231,31 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
             else if (auto modifierInvocation = dynamic_cast<ModifierInvocation const*>(baseArgumentNode))
               arguments = modifierInvocation->arguments();
 
-            if (arguments->size() > 0) {
-              const FunctionType &function = 
-                FunctionType(*auxParamDest->constructor());
-              llvm::SmallVector<iele::IeleValue *, 4> AuxArguments;
+            if (arguments) {
+              if (arguments->size() > 0) {
+                const FunctionType &function = 
+                  FunctionType(*auxParamDest->constructor());
+                llvm::SmallVector<iele::IeleValue *, 4> AuxArguments;
 
-              // Cache ModifierDepth
-              unsigned ModifierDepthCache = ModifierDepth;
-              ModifierDepth = NumOfModifiers;
+                // Cache ModifierDepth
+                unsigned ModifierDepthCache = ModifierDepth;
+                ModifierDepth = NumOfModifiers;
 
-              // compile args 
-              for (unsigned i = 0; i < arguments->size(); ++i) {
-                iele::IeleValue *ArgValue = compileExpression(*(*arguments)[i]);
-                solAssert(ArgValue,
-                          "IeleCompiler: Failed to compile internal function call "
-                          "argument");
-                AuxArguments.push_back(ArgValue);
-              }
+                // compile args 
+                for (unsigned i = 0; i < arguments->size(); ++i) {
+                  iele::IeleValue *ArgValue = compileExpression(*(*arguments)[i]);
+                  solAssert(ArgValue,
+                            "IeleCompiler: Failed to compile internal function call "
+                            "argument");
+                  AuxArguments.push_back(ArgValue);
+                }
 
-              // Restore ModifierDepth
-              ModifierDepth = ModifierDepthCache;
+                // Restore ModifierDepth
+                ModifierDepth = ModifierDepthCache;
 
-              for (auto arg : AuxArguments) {
-                Arguments.push_back(arg);
+                for (auto arg : AuxArguments) {
+                  Arguments.push_back(arg);
+                }
               }
             }
           }
