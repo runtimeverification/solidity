@@ -2406,9 +2406,14 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     }
     break;
   }
-  case FunctionType::Kind::Revert:
-      appendRevert();
+  case FunctionType::Kind::Revert: {
+      iele::IeleValue *Message = nullptr;
+      if (arguments.size() > 1) {
+        Message = compileExpression(*arguments[0]);
+      }
+      appendRevert(nullptr, Message);
       break;
+  }
   case FunctionType::Kind::Assert:
   case FunctionType::Kind::Require: {
     // Visit condition.
@@ -2427,8 +2432,13 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
                                         CompilingBlock);
     if (function.kind() == FunctionType::Kind::Assert)
       appendInvalid(InvConditionValue);
-    else
-      appendRevert(InvConditionValue);
+    else {
+      iele::IeleValue *Message = nullptr;
+      if (arguments.size() > 1) {
+        Message = compileExpression(*arguments[1]);
+      }
+      appendRevert(InvConditionValue, Message);
+    }
     break;
   }
   case FunctionType::Kind::AddMod: {
