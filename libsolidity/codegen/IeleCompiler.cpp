@@ -3536,15 +3536,10 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
       appendTypeConversion(
           IndexValue,
           indexAccess.indexExpression()->annotation().type, keyType);
+    IndexValue = encoding(IndexValue, keyType);
     solAssert(IndexValue,
               "IeleCompiler: failed to compile index expression for index "
               "access.");
-
-    // Encode index expression to an unsigned integer.
-    solAssert(keyType->category() == Type::Category::Integer ||
-              keyType->category() == Type::Category::FixedBytes ||
-              keyType->category() == Type::Category::Contract,
-              "not implmented yet");
 
     // Hash index if needed.
     if (type.hasHashedKeyspace()) {

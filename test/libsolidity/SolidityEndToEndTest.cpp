@@ -7033,7 +7033,6 @@ BOOST_AUTO_TEST_CASE(string_bytes_conversion)
 	ABI_CHECK(callContractFunction("l()"), encodeArgs(u256(6)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(string_as_mapping_key, 1)
 BOOST_AUTO_TEST_CASE(string_as_mapping_key)
 {
 	char const* sourceCode = R"(
@@ -7053,17 +7052,13 @@ BOOST_AUTO_TEST_CASE(string_as_mapping_key)
 	for (unsigned i = 0; i < strings.size(); i++)
 		ABI_CHECK(callContractFunction(
 			"set(string,uint)",
-			u256(0x40),
-			u256(7 + i),
-			u256(strings[i].size()),
-			strings[i]
+			encodeDyn(strings[i]),
+			u256(7 + i)
 		), encodeArgs());
 	for (unsigned i = 0; i < strings.size(); i++)
 		ABI_CHECK(callContractFunction(
 			"get(string)",
-			u256(0x20),
-			u256(strings[i].size()),
-			strings[i]
+			encodeDyn(strings[i])
 		), encodeArgs(u256(7 + i)));
 }
 
@@ -7237,7 +7232,6 @@ BOOST_AUTO_TEST_CASE(constant_string_literal)
 	ABI_CHECK(callContractFunction("unused()"), encodeArgs(2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_string_as_mapping_key_without_variable, 1)
 BOOST_AUTO_TEST_CASE(storage_string_as_mapping_key_without_variable)
 {
 	char const* sourceCode = R"(
@@ -7405,7 +7399,6 @@ BOOST_AUTO_TEST_CASE(fixed_arrays_as_return_type)
 	);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(internal_types_in_library, 1)
 BOOST_AUTO_TEST_CASE(internal_types_in_library)
 {
 	char const* sourceCode = R"(
@@ -7435,7 +7428,6 @@ BOOST_AUTO_TEST_CASE(internal_types_in_library)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(4), u256(17)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(using_library_structs, 1)
 BOOST_AUTO_TEST_CASE(using_library_structs)
 {
 	char const* sourceCode = R"(
