@@ -513,6 +513,8 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   // We store the formal argument names, which we'll use when generating in-range
   // checks in case of a public function.
   std::vector<iele::IeleArgument *> parameters;
+  // returnParameters.clear(); // otherwise, stuff keep getting added, regardless
+  //                           // of which function we are in (i.e. it breaks)
 
   // Visit formal arguments.
   for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
@@ -557,7 +559,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     std::string genName = ret->name() + getNextVarSuffix();
     ReturnParameterNames.push_back(genName);
     ReturnParameterTypes.push_back(ret->type());
-    iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
+    CompilingFunctionReturnParameters.push_back(iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction));
     // No need to keep track of the mapping for omitted return params, since
     // they will never be referenced.
     if (!(ret->name() == ""))
@@ -629,27 +631,65 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
       llvm::cast<iele::IeleLocalVariable>(RetParam), &*ret);
   }
 
+  // Make return block 
+  iele::IeleBlock *retBlock = iele::IeleBlock::Create(
+    &Context, "return");
+  
+  // Add it to stack of return locations
+  ReturnBlocks.push(retBlock);
+
   // Visit function body (inc modifiers). 
   CompilingFunctionASTNode = &function;
   ModifierDepth = -1;
   appendModifierOrFunctionCode();
 
-  // Add a ret if the last block doesn't end with a ret instruction.
-  if (!CompilingBlock->endsWithRet()) {
-    if (function.returnParameters().size() == 0) { // add a ret void
-      iele::IeleInstruction::CreateRetVoid(CompilingBlock);
-    } else { // return declared parameters
-        llvm::SmallVector<iele::IeleValue *, 4> Returns;
+  // Append return block
+  appendReturn(function, ReturnParameterNames, ReturnParameterTypes);
 
-        // Find Symbol Table for this function
-        iele::IeleValueSymbolTable *ST =
-          CompilingFunction->getIeleValueSymbolTable();
-        solAssert(ST,
-                  "IeleCompiler: failed to access compiling function's symbol "
-                  "table.");
+  // Append the exception blocks if needed.
+  appendRevertBlocks();
 
-        // Prepare arguments for the `ret` instruction by fetching the param names
-        for (unsigned i = 0; i < ReturnParameterNames.size(); i++) {
+  CompilingBlock = nullptr;
+  CompilingFunction = nullptr;
+  CompilingFunctionReturnParameters.clear(); // otherwise, stuff keep getting added, regardless
+                            // of which function we are in (i.e. it breaks)
+  return false;
+}
+
+void IeleCompiler::appendReturn(const FunctionDefinition &function, 
+    llvm::SmallVector<std::string, 4> ReturnParameterNames,
+    llvm::SmallVector<TypePointer, 4> ReturnParameterTypes) {
+
+  solAssert(!ReturnBlocks.empty(), "IeleCompiler: appendReturn error");
+
+  auto retBlock = ReturnBlocks.top();
+
+  // Append block
+  retBlock -> insertInto(CompilingFunction);
+  
+  // Set it as currently compiling block
+  CompilingBlock = retBlock;
+
+  if (function.returnParameters().size() == 0) { // add a ret void
+    iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+  } else { // return declared parameters
+      llvm::SmallVector<iele::IeleValue *, 4> Returns;
+
+      // Find Symbol Table for this function
+      iele::IeleValueSymbolTable *ST =
+        CompilingFunction->getIeleValueSymbolTable();
+      solAssert(ST,
+                "IeleCompiler: failed to access compiling function's symbol "
+                "table.");
+
+      // Prepare arguments for the `ret` instruction by fetching the param names
+      // for (const std::string paramName : ReturnParameterNames) {
+      //   iele::IeleValue *param = ST->lookup(paramName);
+      //   solAssert(param, "IeleCompiler: couldn't find return parameter name in symbol table:");
+      //   Returns.push_back(param);
+      // }
+
+      for (unsigned i = 0; i < ReturnParameterNames.size(); i++) {
           const std::string paramName = ReturnParameterNames[i];
           TypePointer paramType = ReturnParameterTypes[i];
           iele::IeleValue *param = ST->lookup(paramName);
@@ -661,17 +701,8 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
           }
         }
 
-        // Create `ret` instruction
-        iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
-    }
+      iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
   }
-
-  // Append the exception blocks if needed.
-  appendRevertBlocks();
-
-  CompilingBlock = nullptr;
-  CompilingFunction = nullptr;
-  return false;
 }
 
 void IeleCompiler::appendRevertBlocks(void) {
@@ -749,9 +780,10 @@ bool IeleCompiler::visit(const IfStatement &ifStatement) {
 bool IeleCompiler::visit(const Return &returnStatement) {
   const Expression *returnExpr = returnStatement.expression();
 
+  solAssert(!ReturnBlocks.empty(), "IeleCompiler: return jmp destination not set");
+  
   if (!returnExpr) {
-    // Create ret void.
-    iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+    connectWithUnconditionalJump(CompilingBlock, ReturnBlocks.top());    
     return false;
   }
 
@@ -775,7 +807,13 @@ bool IeleCompiler::visit(const Return &returnStatement) {
       EncodedReturnValues.push_back(Value);
     }
   }
-  iele::IeleInstruction::CreateRet(EncodedReturnValues, CompilingBlock);
+
+  for (unsigned i = 0; i < EncodedReturnValues.size(); ++i) {
+    iele::IeleInstruction::CreateAssign(
+      CompilingFunctionReturnParameters[i], EncodedReturnValues[i], CompilingBlock);        
+  }
+
+  connectWithUnconditionalJump(CompilingBlock, ReturnBlocks.top());
 
   return false;
 }
@@ -867,7 +905,21 @@ void IeleCompiler::appendModifierOrFunctionCode() {
 
   // Visit whatever is next (modifier's body or function body)
   if (codeBlock) {
+    iele::IeleBlock *JumpTarget;
+    if (ModifierDepth != 0) {
+      JumpTarget = iele::IeleBlock::Create(
+        &Context, "ret_jmp_dest");
+      ReturnBlocks.push(JumpTarget);
+    }
+    
     codeBlock->accept(*this);
+
+    if (ModifierDepth != 0) {
+      JumpTarget -> insertInto(CompilingFunction);
+      CompilingBlock = JumpTarget;
+      ReturnBlocks.pop();
+    }
+
   }
 
   ModifierDepth--;

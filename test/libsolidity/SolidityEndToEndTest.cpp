@@ -2759,7 +2759,6 @@ BOOST_AUTO_TEST_CASE(function_modifier)
 	ABI_CHECK(callContractFunctionWithValue("getOne()", 1), encodeArgs(1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_modifier_local_variables, 1)
 BOOST_AUTO_TEST_CASE(function_modifier_local_variables)
 {
 	char const* sourceCode = R"(
@@ -2799,7 +2798,6 @@ BOOST_AUTO_TEST_CASE(function_modifier_multi_invocation)
 	ABI_CHECK(callContractFunction("f(bool)", true), encodeArgs(2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_modifier_multi_with_return, 1)
 BOOST_AUTO_TEST_CASE(function_modifier_multi_with_return)
 {
 	// Note that return sets the return variable and jumps to the end of the current function or
@@ -2884,7 +2882,6 @@ BOOST_AUTO_TEST_CASE(function_modifier_multiple_times)
 	ABI_CHECK(callContractFunction("a()"), encodeArgs(2 + 5 + 3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_modifier_multiple_times_local_vars, 1)
 BOOST_AUTO_TEST_CASE(function_modifier_multiple_times_local_vars)
 {
 	char const* sourceCode = R"(
@@ -8756,7 +8753,6 @@ BOOST_AUTO_TEST_CASE(create_dynamic_array_with_zero_length)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_does_not_skip_modifier, 1)
 BOOST_AUTO_TEST_CASE(return_does_not_skip_modifier)
 {
 	char const* sourceCode = R"(
