@@ -5022,23 +5022,23 @@ bool IeleCompiler::shouldCopyStorageToStorage(const IeleLValue *To,
 }
 
 bool IeleCompiler::shouldCopyMemoryToStorage(const Type &ToType, const IeleLValue *To,
-                                             const Type &From) const {
+                                             const Type &FromType) const {
   return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         From.dataStoredIn(DataLocation::Memory) &&
+         FromType.dataStoredIn(DataLocation::Memory) &&
          ToType.dataStoredIn(DataLocation::Storage);
 }
 
 bool IeleCompiler::shouldCopyMemoryToMemory(const Type &ToType, const IeleLValue *To,
-                                             const Type &From) const {
+                                             const Type &FromType) const {
   return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         From.dataStoredIn(DataLocation::Memory) &&
+         FromType.dataStoredIn(DataLocation::Memory) &&
          ToType.dataStoredIn(DataLocation::Memory);
 }
 
-bool IeleCompiler::shouldCopyStorageToMemory(const Type &To,
-                                             const Type &From) const {
-  return To.dataStoredIn(DataLocation::Memory) &&
-         From.dataStoredIn(DataLocation::Storage);
+bool IeleCompiler::shouldCopyStorageToMemory(const Type &ToType,
+                                             const Type &FromType) const {
+  return ToType.dataStoredIn(DataLocation::Memory) &&
+         FromType.dataStoredIn(DataLocation::Storage);
 }
 
 void IeleCompiler::appendIeleRuntimeFill(
