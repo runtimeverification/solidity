@@ -82,7 +82,6 @@ BOOST_AUTO_TEST_CASE(value_types)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(string_literal, 1)
 BOOST_AUTO_TEST_CASE(string_literal)
 {
 	string sourceCode = R"(
@@ -97,9 +96,8 @@ BOOST_AUTO_TEST_CASE(string_literal)
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
 		REQUIRE_LOG_DATA(encodeLogs(
-			0x60, string("abcde"), 0xa0,
-			6, string("abcdef"),
-			0x8b, string("abcdefabcdefgehabcabcasdfjklabcdefabcedefghabcabcasdfjklabcdefabcdefghabcabcasdfjklabcdeefabcdefghabcabcasdefjklabcdefabcdefghabcabcasdfjkl")
+			uint64_t(6), string("abcdef"), string("abcde") + string(15, 0), 
+			uint64_t(0x8b), string("abcdefabcdefgehabcabcasdfjklabcdefabcedefghabcabcasdfjklabcdefabcdefghabcabcasdfjklabcdeefabcdefghabcabcasdefjklabcdefabcdefghabcabcasdfjkl")
 		));
 	)
 }
@@ -230,7 +228,6 @@ BOOST_AUTO_TEST_CASE(memory_byte_array)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_byte_array, 1)
 BOOST_AUTO_TEST_CASE(storage_byte_array)
 {
 	string sourceCode = R"(
@@ -249,9 +246,8 @@ BOOST_AUTO_TEST_CASE(storage_byte_array)
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
 		REQUIRE_LOG_DATA(encodeLogs(
-			0x40, 0x80,
-			31, string("123456789012345678901234567890a"),
-			75, string("ffff123456789012345678901234567890afffffffff123456789012345678901234567890a")
+			uint64_t(31), string("123456789012345678901234567890a"),
+			uint64_t(75), string("ffff123456789012345678901234567890afffffffff123456789012345678901234567890a")
 		));
 	)
 }

@@ -31,4 +31,5 @@ sleep 3
 ./build/test/soltest -c no -e build/report.xml -r detailed -m xml -k build/log.xml -l all -f xml  -- --ipcpath build/ipcfile --testpath test
 iconv -f iso-8859-1 -t utf-8 build/log.xml -o build/log-utf8.xml && mv -f build/log-utf8.xml build/log.xml
 xmllint --xpath "//TestCase[@assertions_failed!=@expected_failures]" build/report.xml && false
+xmllint --xpath '//TestCase[@result="skipped"]' build/report.xml && false
 kill %1 %2

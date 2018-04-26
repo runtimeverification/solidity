@@ -225,7 +225,6 @@ BOOST_AUTO_TEST_CASE(dynamic_nested_arrays)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(byte_arrays, 1)
 BOOST_AUTO_TEST_CASE(byte_arrays)
 {
 	string sourceCode = R"(
@@ -244,15 +243,14 @@ BOOST_AUTO_TEST_CASE(byte_arrays)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		std::vector<bytes> args = encodeArgs(
-			6, 0x60, 9,
-			7, "abcdefg"
+			6, encodeDyn(string("abcdefg")), 9
 		);
 		ABI_CHECK(
-			callContractFunction("f(uint,bytes,uint)", args),
+			callContractFunctionNoEncoding("f(uint,bytes,uint)", args),
 			encodeArgs(u256(6), u256(7), "d", 9)
 		);
 		ABI_CHECK(
-			callContractFunction("f_external(uint,bytes,uint)", args),
+			callContractFunctionNoEncoding("f_external(uint,bytes,uint)", args),
 			encodeArgs(u256(6), u256(7), "d", 9)
 		);
 	)
@@ -489,7 +487,6 @@ BOOST_AUTO_TEST_CASE(short_dynamic_input_array)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_input_bytes, 1)
 BOOST_AUTO_TEST_CASE(short_input_bytes)
 {
 	string sourceCode = R"(
@@ -500,14 +497,14 @@ BOOST_AUTO_TEST_CASE(short_input_bytes)
 	)";
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
-		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + std::vector<bytes>(1, bytes(5, 0))), encodeArgs());
-		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + std::vector<bytes>(1, bytes(6, 0))), encodeArgs());
-		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + std::vector<bytes>(1, bytes(7, 0))), encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(0x20, 7) + std::vector<bytes>(1, bytes(8, 0))), encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + std::vector<bytes>(1, bytes(5, 0))), encodeArgs());
-		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + std::vector<bytes>(1, bytes(6, 0))), encodeArgs());
-		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + std::vector<bytes>(1, bytes(7, 0))), encodeArgs(7));
-		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(0x20, 1, 0x20, 7) + std::vector<bytes>(1, bytes(8, 0))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(encodeRefArgs(7, bytes(5, 0)))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(encodeRefArgs(7, bytes(6, 0)))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(encodeRefArgs(7, bytes(7, 0)))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("e(bytes)", encodeArgs(encodeRefArgs(7, bytes(8, 0)))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(encodeRefArgs(1, 7, bytes(5, 0)))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(encodeRefArgs(1, 7, bytes(6, 0)))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(encodeRefArgs(1, 7, bytes(7, 0)))), encodeArgs(7));
+		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[])", encodeArgs(encodeRefArgs(1, 7, bytes(8, 0)))), encodeArgs(7));
 	)
 }
 
@@ -785,6 +782,90 @@ BOOST_AUTO_TEST_CASE(complex_struct)
 }
 
 
+BOOST_AUTO_TEST_CASE(return_dynamic_types_cross_call_simple)
+{
+	if (m_evmVersion == EVMVersion::homestead())
+		return;
+
+	string sourceCode = R"(
+		contract C {
+			function dyn() public returns (bytes) {
+				return "1234567890123456789012345678901234567890";
+			}
+			function f() public returns (bytes) {
+				return this.dyn();
+			}
+		}
+	)";
+	BOTH_ENCODERS(
+		compileAndRun(sourceCode, 0, "C");
+		ABI_CHECK(callContractFunction("f()"), encodeArgs(encodeDyn(string("1234567890123456789012345678901234567890"))));
+	)
+}
+
+BOOST_AUTO_TEST_CASE(return_dynamic_types_cross_call_advanced)
+{
+	if (m_evmVersion == EVMVersion::homestead())
+		return;
+
+	string sourceCode = R"(
+		contract C {
+			function dyn() public returns (bytes a, uint256 b, bytes20[] c, uint d) {
+				a = "1234567890123456789012345678901234567890";
+				b = uint256(-1);
+				c = new bytes20[](4);
+				c[0] = bytes20(1234);
+				c[3] = bytes20(6789);
+				d = 0x1234;
+			}
+			function f() public returns (bytes, uint256, bytes20[], uint) {
+				return this.dyn();
+			}
+		}
+	)";
+	BOTH_ENCODERS(
+		compileAndRun(sourceCode, 0, "C");
+		ABI_CHECK(callContractFunction("f()"), encodeArgs(
+			encodeDyn(string("1234567890123456789012345678901234567890")), u256(-1), encodeRefArray(
+			{u256(1234), 0, 0, u256(6789)}, 4, 20),
+                        0x1234
+		));
+	)
+}
+
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(return_dynamic_types_cross_call_out_of_range, 1)
+BOOST_AUTO_TEST_CASE(return_dynamic_types_cross_call_out_of_range)
+{
+	string sourceCode = R"(
+		contract C {
+			function dyn(uint x) public returns (bytes a) {
+				assembly {
+					mstore(0, 0x20)
+					mstore(0x20, 0x21)
+					return(0, x)
+				}
+			}
+			function f(uint x) public returns (bool) {
+				this.dyn(x);
+				return true;
+			}
+		}
+	)";
+	BOTH_ENCODERS(
+		compileAndRun(sourceCode, 0, "C");
+		if (m_evmVersion == EVMVersion::homestead())
+		{
+			ABI_CHECK(callContractFunction("f(uint256)", 0x60), encodeArgs(true));
+			ABI_CHECK(callContractFunction("f(uint256)", 0x7f), encodeArgs(true));
+		}
+		else
+		{
+			ABI_CHECK(callContractFunction("f(uint256)", 0x60), encodeArgs());
+			ABI_CHECK(callContractFunction("f(uint256)", 0x61), encodeArgs(true));
+		}
+		ABI_CHECK(callContractFunction("f(uint256)", 0x80), encodeArgs(true));
+	)
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 
