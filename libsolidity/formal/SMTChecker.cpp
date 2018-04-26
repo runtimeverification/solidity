@@ -19,8 +19,6 @@
 
 #ifdef HAVE_Z3
 #include <libsolidity/formal/Z3Interface.h>
-#elif HAVE_CVC4
-#include <libsolidity/formal/CVC4Interface.h>
 #else
 #include <libsolidity/formal/SMTLib2Interface.h>
 #endif
@@ -41,8 +39,6 @@ using namespace dev::solidity;
 SMTChecker::SMTChecker(ErrorReporter& _errorReporter, ReadCallback::Callback const& _readFileCallback):
 #ifdef HAVE_Z3
 	m_interface(make_shared<smt::Z3Interface>()),
-#elif HAVE_CVC4
-	m_interface(make_shared<smt::CVC4Interface>()),
 #else
 	m_interface(make_shared<smt::SMTLib2Interface>(_readFileCallback)),
 #endif
@@ -209,7 +205,7 @@ void SMTChecker::endVisit(Assignment const& _assignment)
 			_assignment.location(),
 			"Assertion checker does not yet implement compound assignment."
 		);
-	else if (!SSAVariable::isSupportedType(_assignment.annotation().type->category()))
+	else if (_assignment.annotation().type->category() != Type::Category::Integer)
 		m_errorReporter.warning(
 			_assignment.location(),
 			"Assertion checker does not yet implement type " + _assignment.annotation().type->toString()
@@ -276,15 +272,14 @@ void SMTChecker::endVisit(UnaryOperation const& _op)
 	{
 	case Token::Not: // !
 	{
-		solAssert(SSAVariable::isBool(_op.annotation().type->category()), "");
+		solAssert(_op.annotation().type->category() == Type::Category::Bool, "");
 		defineExpr(_op, !expr(_op.subExpression()));
 		break;
 	}
 	case Token::Inc: // ++ (pre- or postfix)
 	case Token::Dec: // -- (pre- or postfix)
 	{
-
-		solAssert(SSAVariable::isInteger(_op.annotation().type->category()), "");
+		solAssert(_op.annotation().type->category() == Type::Category::Integer, "");
 		solAssert(_op.subExpression().annotation().lValueRequested, "");
 		if (Identifier const* identifier = dynamic_cast<Identifier const*>(&_op.subExpression()))
 		{
@@ -381,7 +376,7 @@ void SMTChecker::endVisit(Identifier const& _identifier)
 	{
 		// Will be translated as part of the node that requested the lvalue.
 	}
-	else if (SSAVariable::isSupportedType(_identifier.annotation().type->category()))
+	else if (SSAVariable::supportedType(_identifier.annotation().type.get()))
 		defineExpr(_identifier, currentValue(*decl));
 	else if (FunctionType const* fun = dynamic_cast<FunctionType const*>(_identifier.annotation().type.get()))
 	{
@@ -455,37 +450,21 @@ void SMTChecker::arithmeticOperation(BinaryOperation const& _op)
 void SMTChecker::compareOperation(BinaryOperation const& _op)
 {
 	solAssert(_op.annotation().commonType, "");
-	if (SSAVariable::isSupportedType(_op.annotation().commonType->category()))
+	if (_op.annotation().commonType->category() == Type::Category::Integer)
 	{
 		smt::Expression left(expr(_op.leftExpression()));
 		smt::Expression right(expr(_op.rightExpression()));
 		Token::Value op = _op.getOperator();
-		shared_ptr<smt::Expression> value;
-		if (SSAVariable::isInteger(_op.annotation().commonType->category()))
-		{
-			value = make_shared<smt::Expression>(
-				op == Token::Equal ? (left == right) :
-				op == Token::NotEqual ? (left != right) :
-				op == Token::LessThan ? (left < right) :
-				op == Token::LessThanOrEqual ? (left <= right) :
-				op == Token::GreaterThan ? (left > right) :
-				/*op == Token::GreaterThanOrEqual*/ (left >= right)
-			);
-		}
-		else // Bool
-		{
-			solUnimplementedAssert(SSAVariable::isBool(_op.annotation().commonType->category()), "Operation not yet supported");
-			value = make_shared<smt::Expression>(
-				op == Token::Equal ? (left == right) :
-				op == Token::NotEqual ? (left != right) :
-				op == Token::LessThan ? (!left && right) :
-				op == Token::LessThanOrEqual ? (!left || right) :
-				op == Token::GreaterThan ? (left && !right) :
-				/*op == Token::GreaterThanOrEqual*/ (left || !right)
-			);
-		}
+		smt::Expression value = (
+			op == Token::Equal ? (left == right) :
+			op == Token::NotEqual ? (left != right) :
+			op == Token::LessThan ? (left < right) :
+			op == Token::LessThanOrEqual ? (left <= right) :
+			op == Token::GreaterThan ? (left > right) :
+			/*op == Token::GreaterThanOrEqual*/ (left >= right)
+		);
 		// TODO: check that other values for op are not possible.
-		defineExpr(_op, *value);
+		defineExpr(_op, value);
 	}
 	else
 		m_errorReporter.warning(
@@ -755,10 +734,10 @@ void SMTChecker::mergeVariables(vector<Declaration const*> const& _variables, sm
 
 bool SMTChecker::createVariable(VariableDeclaration const& _varDecl)
 {
-	if (SSAVariable::isSupportedType(_varDecl.type()->category()))
+	if (SSAVariable::supportedType(_varDecl.type().get()))
 	{
 		solAssert(m_variables.count(&_varDecl) == 0, "");
-		m_variables.emplace(&_varDecl, SSAVariable(_varDecl, *m_interface));
+		m_variables.emplace(&_varDecl, SSAVariable(&_varDecl, *m_interface));
 		return true;
 	}
 	else
@@ -845,7 +824,7 @@ void SMTChecker::createExpr(Expression const& _e)
 			m_expressions.emplace(&_e, m_interface->newBool(uniqueSymbol(_e)));
 			break;
 		default:
-			solUnimplementedAssert(false, "Type not implemented.");
+			solAssert(false, "Type not implemented.");
 		}
 	}
 }

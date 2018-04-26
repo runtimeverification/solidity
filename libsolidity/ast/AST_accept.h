@@ -94,8 +94,7 @@ void InheritanceSpecifier::accept(ASTVisitor& _visitor)
 	if (_visitor.visit(*this))
 	{
 		m_baseName->accept(_visitor);
-		if (m_arguments)
-			listAccept(*m_arguments, _visitor);
+		listAccept(m_arguments, _visitor);
 	}
 	_visitor.endVisit(*this);
 }
@@ -105,8 +104,7 @@ void InheritanceSpecifier::accept(ASTConstVisitor& _visitor) const
 	if (_visitor.visit(*this))
 	{
 		m_baseName->accept(_visitor);
-		if (m_arguments)
-			listAccept(*m_arguments, _visitor);
+		listAccept(m_arguments, _visitor);
 	}
 	_visitor.endVisit(*this);
 }
@@ -264,8 +262,7 @@ void ModifierInvocation::accept(ASTVisitor& _visitor)
 	if (_visitor.visit(*this))
 	{
 		m_modifierName->accept(_visitor);
-		if (m_arguments)
-			listAccept(*m_arguments, _visitor);
+		listAccept(m_arguments, _visitor);
 	}
 	_visitor.endVisit(*this);
 }
@@ -275,8 +272,7 @@ void ModifierInvocation::accept(ASTConstVisitor& _visitor) const
 	if (_visitor.visit(*this))
 	{
 		m_modifierName->accept(_visitor);
-		if (m_arguments)
-			listAccept(*m_arguments, _visitor);
+		listAccept(m_arguments, _visitor);
 	}
 	_visitor.endVisit(*this);
 }

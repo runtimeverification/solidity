@@ -20,7 +20,7 @@
 
 #include <libdevcore/StringUtils.h>
 
-#include <test/Options.h>
+#include "../TestHelper.h"
 
 using namespace std;
 

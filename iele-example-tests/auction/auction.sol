@@ -17,7 +17,7 @@ contract SimpleAuction {
     // Create a simple auction with `_biddingTime`
     // seconds bidding time on behalf of the
     // beneficiary address `_beneficiary`.
-    constructor(
+    function SimpleAuction(
         address _beneficiary,
         uint _biddingTime
     ) public {

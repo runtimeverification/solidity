@@ -21,8 +21,6 @@
 #include <libsolidity/interface/ErrorReporter.h>
 #include <libsolidity/interface/Version.h>
 
-#include <libdevcore/Algorithms.h>
-
 #include <boost/range/adaptor/map.hpp>
 
 #include <memory>
@@ -49,7 +47,7 @@ void PostTypeChecker::endVisit(ContractDefinition const&)
 {
 	solAssert(!m_currentConstVariable, "");
 	for (auto declaration: m_constVariables)
-		if (auto identifier = findCycle(*declaration))
+		if (auto identifier = findCycle(declaration))
 			m_errorReporter.typeError(
 				declaration->location(),
 				"The value of the constant " + declaration->name() +
@@ -89,24 +87,20 @@ bool PostTypeChecker::visit(Identifier const& _identifier)
 	return true;
 }
 
-VariableDeclaration const* PostTypeChecker::findCycle(VariableDeclaration const& _startingFrom)
+VariableDeclaration const* PostTypeChecker::findCycle(
+	VariableDeclaration const* _startingFrom,
+	set<VariableDeclaration const*> const& _seen
+)
 {
-	auto visitor = [&](VariableDeclaration const& _variable, CycleDetector<VariableDeclaration>& _cycleDetector)
+	if (_seen.count(_startingFrom))
+		return _startingFrom;
+	else if (m_constVariableDependencies.count(_startingFrom))
 	{
-		// Iterating through the dependencies needs to be deterministic and thus cannot
-		// depend on the memory layout.
-		// Because of that, we sort by AST node id.
-		vector<VariableDeclaration const*> dependencies(
-			m_constVariableDependencies[&_variable].begin(),
-			m_constVariableDependencies[&_variable].end()
-		);
-		sort(dependencies.begin(), dependencies.end(), [](VariableDeclaration const* _a, VariableDeclaration const* _b) -> bool
-		{
-			return _a->id() < _b->id();
-		});
-		for (auto v: dependencies)
-			if (_cycleDetector.run(*v))
-				return;
-	};
-	return CycleDetector<VariableDeclaration>(visitor).run(_startingFrom);
+		set<VariableDeclaration const*> seen(_seen);
+		seen.insert(_startingFrom);
+		for (auto v: m_constVariableDependencies[_startingFrom])
+			if (findCycle(v, seen))
+				return v;
+	}
+	return nullptr;
 }

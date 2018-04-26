@@ -57,13 +57,13 @@ std::string IeleCompiler::getIeleNameForContract(
 }
 
 // lookup a ModifierDefinition by name (borrowed from CompilerContext.cpp)
-const ModifierDefinition *IeleCompiler::functionModifier(
+const ModifierDefinition &IeleCompiler::functionModifier(
     const std::string &_name) const {
   solAssert(!CompilingContractInheritanceHierarchy.empty(), "CurrentContract not set.");
   for (const ContractDefinition *CurrentContract : CompilingContractInheritanceHierarchy) {
     for (ModifierDefinition const* modifier: CurrentContract->functionModifiers())
       if (modifier->name() == _name)
-        return modifier;
+        return *modifier;
   }
   solAssert(false, "IeleCompiler: Function modifier not found.");
 }
@@ -775,25 +775,17 @@ void IeleCompiler::appendModifierOrFunctionCode() {
     }
     else {
       // Retrieve modifier definition from its name
-      const ModifierDefinition *modifier;
-      if (contractFor(CompilingFunctionASTNode)->isLibrary()) {
-        for (ModifierDefinition const* mod: contractFor(CompilingFunctionASTNode)->functionModifiers())
-          if (mod->name() == modifierInvocation->name()->name())
-            modifier = mod;
-      } else {
-        modifier = functionModifier(modifierInvocation->name()->name());
-      }
-      solAssert(modifier, "Could not find modifier");
+      ModifierDefinition const& modifier = functionModifier(modifierInvocation->name()->name());
 
       // Visit the modifier's parameters
-      for (const ASTPointer<const VariableDeclaration> &arg : modifier->parameters()) {
+      for (const ASTPointer<const VariableDeclaration> &arg : modifier.parameters()) {
         std::string genName = arg->name() + getNextVarSuffix();
         VarNameMap[ModifierDepth][arg->name()] = genName;
         iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
       }
 
       // Visit and initialize the modifier's local variables
-      for (const VariableDeclaration *local: modifier->localVariables()) {
+      for (const VariableDeclaration *local: modifier.localVariables()) {
         std::string genName = local->name() + getNextVarSuffix();
         VarNameMap[ModifierDepth][local->name()] = genName;
         iele::IeleLocalVariable *Local =
@@ -801,10 +793,8 @@ void IeleCompiler::appendModifierOrFunctionCode() {
         appendLocalVariableInitialization(Local, local);
       }
 
-      std::vector<ASTPointer<Expression>> const& modifierArguments =
-        modifierInvocation->arguments() ? *modifierInvocation->arguments() : std::vector<ASTPointer<Expression>>();
       // Is the modifier invocation well formed?
-      solAssert(modifier->parameters().size() == modifierArguments.size(),
+      solAssert(modifier.parameters().size() == modifierInvocation->arguments().size(),
              "IeleCompiler: modifier has wrong number of parameters!");
 
       // Get Symbol Table
@@ -815,10 +805,10 @@ void IeleCompiler::appendModifierOrFunctionCode() {
 
       // Cycle through each parameter-argument pair; for each one, make an assignment.
       // This way, we pass arguments into the modifier.
-      for (unsigned i = 0; i < modifier->parameters().size(); ++i) {
+      for (unsigned i = 0; i < modifier.parameters().size(); ++i) {
         // Extract LHS and RHS from modifier definition and invocation
-        VariableDeclaration const& var = *modifier->parameters()[i];
-        Expression const& initValue    = *modifierArguments[i];
+        VariableDeclaration const& var = *modifier.parameters()[i];
+        Expression const& initValue    = *modifierInvocation->arguments()[i];
 
         // Temporarily set ModiferDepth to the level where all "top-level" (i.e. non-modifer related)
         // variable names are found; then, evaluate the RHS in this context;
@@ -839,7 +829,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
       }
 
       // Arguments to the modifier have been taken care off. Now move to modifier's body.
-      codeBlock = &modifier->body();
+      codeBlock = &modifier.body();
     }
   }
 
@@ -2887,17 +2877,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     IeleLValue *SizeLValue = AddressLValue::Create(this, ArrayValue, CompilingLValueArrayType->location());
     iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock);
 
-    TypePointer elementType = CompilingLValueArrayType->baseType();
-    TypePointer RHSType = arguments.front()->annotation().type;
-
+    const Type &elementType = *CompilingLValueArrayType->baseType();
     bigint elementSize;
     switch (CompilingLValueArrayType->location()) {
     case DataLocation::Storage: {
-      elementSize = elementType->storageSize();
+      elementSize = elementType.storageSize();
       break;
     }
     case DataLocation::Memory: {
-      elementSize = elementType->memorySize();
+      elementSize = elementType.memorySize();
       break;
     }
     case DataLocation::CallData:
@@ -2923,15 +2911,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::Add, AddressValue, AddressValue, ArrayValue,
       CompilingBlock);
 
-    IeleLValue *ElementLValue = makeLValue(AddressValue, elementType, CompilingLValueArrayType->location());
-    if (shouldCopyStorageToStorage(ElementLValue, *RHSType))
-      appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
-    else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))
-      appendCopyFromMemoryToStorage(ElementLValue, elementType, PushedValue, RHSType);
-    else if (shouldCopyMemoryToMemory(*elementType, ElementLValue, *RHSType))
-      appendCopyFromMemoryToMemory(ElementLValue, elementType, PushedValue, RHSType);
-    else
-      ElementLValue->write(PushedValue, CompilingBlock);
+    AddressLValue::Create(this, AddressValue, CompilingLValueArrayType->location())->write(PushedValue, CompilingBlock);
 
     iele::IeleLocalVariable *NewSize =
       iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
@@ -3995,29 +3975,39 @@ void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {
 void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) {
   // Init state variables.
   bool found = false;
+  std::map<const FunctionDefinition *, const std::vector<ASTPointer<Expression>> *> baseArguments;
   for (const ContractDefinition *def : CompilingContractInheritanceHierarchy) {
+    if (const FunctionDefinition *constructor = def->constructor()) {
+      for (auto const& modifier : constructor->modifiers()) {
+        auto baseContract = dynamic_cast<const ContractDefinition *>(
+          modifier->name()->annotation().referencedDeclaration);
+        if (baseContract) {
+          if (baseArguments.count(baseContract->constructor()) == 0) {
+            baseArguments[baseContract->constructor()] = &modifier->arguments();
+          }
+        }
+      }
+    }
+
+    for (const auto &base : def->baseContracts()) {
+      auto baseContract = dynamic_cast<const ContractDefinition *>(
+        base->name().annotation().referencedDeclaration);
+      solAssert(baseContract, "Must find base contract in inheritance specifier");
+      if (baseArguments.count(baseContract->constructor()) == 0) {
+        baseArguments[baseContract->constructor()] = &base->arguments();
+      }
+    }
     if (found) {
       // Call the immediate base class init function.
       llvm::SmallVector<iele::IeleLocalVariable *, 0> Returns;
       llvm::SmallVector<iele::IeleValue *, 4> Arguments;
 
       if (const FunctionDefinition *decl = def->constructor()) {
-        auto baseArgumentNode = CompilingContractInheritanceHierarchy[0]->annotation().baseConstructorArguments[decl];
-        std::vector<ASTPointer<Expression>> const* arguments = nullptr;
-        if (auto inheritanceSpecifier = dynamic_cast<InheritanceSpecifier const*>(baseArgumentNode))
-          arguments = inheritanceSpecifier->arguments();
-        else if (auto modifierInvocation = dynamic_cast<ModifierInvocation const*>(baseArgumentNode))
-          arguments = modifierInvocation->arguments();
+        auto arguments = *baseArguments[decl];
 
         const FunctionType &function = FunctionType(*decl);
 
-	const auto emptyArgs = std::vector<ASTPointer<Expression>>();
-	if (!arguments && function.parameterTypes().empty())
-          arguments = &emptyArgs;
-        solAssert(arguments, "cannot find base constructor arguments");
-        solAssert(arguments->size() == function.parameterTypes().size(), "wrong number of base constructor arguments");
-
-        compileFunctionArguments(&Arguments, &Returns, *arguments, function, false);
+        compileFunctionArguments(&Arguments, &Returns, arguments, function, false);
 
         solAssert(Returns.size() == 0, "Constructor doesn't return anything");
       }

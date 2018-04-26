@@ -42,21 +42,13 @@ else
     log_directory=""
 fi
 
-function printError() { echo "$(tput setaf 1)$1$(tput sgr0)"; }
-function printTask() { echo "$(tput bold)$(tput setaf 2)$1$(tput sgr0)"; }
-
-
-printTask "Running commandline tests..."
+echo "Running commandline tests..."
 "$REPO_ROOT/test/cmdlineTests.sh" &
 CMDLINE_PID=$!
 # Only run in parallel if this is run on CI infrastructure
 if [ -z "$CI" ]
 then
-    if ! wait $CMDLINE_PID
-    then
-        printError "Commandline tests FAILED"
-        exit 1
-    fi
+    wait $CMDLINE_PID
 fi
 
 function download_eth()
@@ -69,13 +61,13 @@ function download_eth()
         mkdir -p /tmp/test
         if grep -i trusty /etc/lsb-release >/dev/null 2>&1
         then
-            # built from 5ac09111bd0b6518365fe956e1bdb97a2db82af1 at 2018-04-05
-            ETH_BINARY=eth_2018-04-05_trusty
-            ETH_HASH="1e5e178b005e5b51f9d347df4452875ba9b53cc6"
+            # built from 1ecff3cac12f0fbbeea3e645f331d5ac026b24d3 at 2018-03-06
+            ETH_BINARY=eth_byzantium_trusty
+            ETH_HASH="5432ea81c150e8a3547615bf597cd6dce9e1e27b"
         else
-            # built from 5ac09111bd0b6518365fe956e1bdb97a2db82af1 at 2018-04-05
-            ETH_BINARY=eth_2018-04-05_artful
-            ETH_HASH="eb2d0df022753bb2b442ba73e565a9babf6828d6"
+            # built from ?? at 2018-02-13 ?
+            ETH_BINARY=eth_byzantium_artful
+            ETH_HASH="e527dd3e3dc17b983529dd7dcfb74a0d3a5aed4e"
         fi
         wget -q -O /tmp/test/eth https://github.com/ethereum/cpp-ethereum/releases/download/solidityTester/$ETH_BINARY
         test "$(shasum /tmp/test/eth)" = "$ETH_HASH  /tmp/test/eth"
@@ -102,25 +94,18 @@ download_eth
 ETH_PID=$(run_eth /tmp/test)
 
 progress="--show-progress"
-if [ "$CIRCLECI" ]
+if [ "$CI" ]
 then
     progress=""
-fi
-
-EVM_VERSIONS="homestead byzantium"
-
-if [ "$CIRCLECI" ] || [ -z "$CI" ]
-then
-EVM_VERSIONS+=" constantinople"
 fi
 
 # And then run the Solidity unit-tests in the matrix combination of optimizer / no optimizer
 # and homestead / byzantium VM, # pointing to that IPC endpoint.
 for optimize in "" "--optimize"
 do
-  for vm in $EVM_VERSIONS
+  for vm in homestead byzantium
   do
-    printTask "--> Running tests using "$optimize" --evm-version "$vm"..."
+    echo "--> Running tests using "$optimize" --evm-version "$vm"..."
     log=""
     if [ -n "$log_directory" ]
     then
@@ -131,15 +116,11 @@ do
         log=--logger=JUNIT,test_suite,$log_directory/noopt_$vm.xml $testargs_no_opt
       fi
     fi
-    "$REPO_ROOT"/build/test/soltest $progress $log -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --ipcpath /tmp/test/geth.ipc
+    "$REPO_ROOT"/build/test/soltest $progress $log -- "$optimize" --evm-version "$vm" --ipcpath /tmp/test/geth.ipc
   done
 done
 
-if ! wait $CMDLINE_PID
-then
-    printError "Commandline tests FAILED"
-    exit 1
-fi
+wait $CMDLINE_PID
 
 pkill "$ETH_PID" || true
 sleep 4

@@ -19,10 +19,9 @@
 * @date 2014
 */
 
-#include <test/Options.h>
+#include <test/TestHelper.h>
 
 #include <libsolidity/interface/EVMVersion.h>
-#include <libsolidity/interface/Exceptions.h>
 
 #include <boost/test/framework.hpp>
 
@@ -44,11 +43,6 @@ Options::Options()
 			ipcPath = suite.argv[i + 1];
 			i++;
 		}
-		else if (string(suite.argv[i]) == "--testpath" && i + 1 < suite.argc)
-		{
-			testPath = suite.argv[i + 1];
-			i++;
-		}
 		else if (string(suite.argv[i]) == "--optimize")
 			optimize = true;
 		else if (string(suite.argv[i]) == "--evm-version")
@@ -66,23 +60,6 @@ Options::Options()
 	if (!disableIPC && ipcPath.empty())
 		if (auto path = getenv("ETH_TEST_IPC"))
 			ipcPath = path;
-
-	if (testPath.empty())
-		if (auto path = getenv("ETH_TEST_PATH"))
-			testPath = path;
-}
-
-void Options::validate() const
-{
-	solAssert(
-		!dev::test::Options::get().testPath.empty(),
-		"No test path specified. The --testpath argument is required."
-	);
-	if (!disableIPC)
-		solAssert(
-			!dev::test::Options::get().ipcPath.empty(),
-			"No ipc path specified. The --ipcpath argument is required, unless --no-ipc is used."
-		);
 }
 
 dev::solidity::EVMVersion Options::evmVersion() const

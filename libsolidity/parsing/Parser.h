@@ -56,7 +56,6 @@ private:
 	/// This struct is shared for parsing a function header and a function type.
 	struct FunctionHeaderParserResult
 	{
-		bool isConstructor;
 		ASTPointer<ASTString> name;
 		ASTPointer<ParameterList> parameters;
 		ASTPointer<ParameterList> returnParameters;
@@ -74,11 +73,7 @@ private:
 	ASTPointer<InheritanceSpecifier> parseInheritanceSpecifier();
 	Declaration::Visibility parseVisibilitySpecifier(Token::Value _token);
 	StateMutability parseStateMutability(Token::Value _token);
-	FunctionHeaderParserResult parseFunctionHeader(
-		bool _forceEmptyName,
-		bool _allowModifiers,
-		ASTString const* _contractName = nullptr
-	);
+	FunctionHeaderParserResult parseFunctionHeader(bool _forceEmptyName, bool _allowModifiers);
 	ASTPointer<ASTNode> parseFunctionDefinitionOrFunctionTypeStateVariable(ASTString const* _contractName);
 	ASTPointer<FunctionDefinition> parseFunctionDefinition(ASTString const* _contractName);
 	ASTPointer<StructDefinition> parseStructDefinition();

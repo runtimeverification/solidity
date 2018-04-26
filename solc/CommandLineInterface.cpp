@@ -116,7 +116,6 @@ static string const g_strStandardJSON = "standard-json";
 static string const g_strStrictAssembly = "strict-assembly";
 static string const g_strPrettyJson = "pretty-json";
 static string const g_strVersion = "version";
-static string const g_strIgnoreMissingFiles = "ignore-missing";
 
 static string const g_argAbi = g_strAbi;
 static string const g_argPrettyJson = g_strPrettyJson;
@@ -153,7 +152,6 @@ static string const g_argStandardJSON = g_strStandardJSON;
 static string const g_argStrictAssembly = g_strStrictAssembly;
 static string const g_argVersion = g_strVersion;
 static string const g_stdinFileName = g_stdinFileNameStr;
-static string const g_argIgnoreMissingFiles = g_strIgnoreMissingFiles;
 
 /// Possible arguments to for --combined-json
 static set<string> const g_combinedJsonArgs
@@ -405,9 +403,8 @@ void CommandLineInterface::handleGasEstimation(string const& _contract)
 */
 }
 
-bool CommandLineInterface::readInputFilesAndConfigureRemappings()
+void CommandLineInterface::readInputFilesAndConfigureRemappings()
 {
-	bool ignoreMissing = m_args.count(g_argIgnoreMissingFiles);
 	bool addStdin = false;
 	if (!m_args.count(g_argInputFile))
 		addStdin = true;
@@ -424,27 +421,13 @@ bool CommandLineInterface::readInputFilesAndConfigureRemappings()
 				auto infile = boost::filesystem::path(path);
 				if (!boost::filesystem::exists(infile))
 				{
-					if (!ignoreMissing)
-					{
-						cerr << "\"" << infile << "\" is not found" << endl;
-						return false;
-					}
-					else
-						cerr << "\"" << infile << "\" is not found. Skipping." << endl;
-
+					cerr << "Skipping non-existent input file \"" << infile << "\"" << endl;
 					continue;
 				}
 
 				if (!boost::filesystem::is_regular_file(infile))
 				{
-					if (!ignoreMissing)
-					{
-						cerr << "\"" << infile << "\" is not a valid file" << endl;
-						return false;
-					}
-					else
-						cerr << "\"" << infile << "\" is not a valid file. Skipping." << endl;
-
+					cerr << "\"" << infile << "\" is not a valid file. Skipping" << endl;
 					continue;
 				}
 
@@ -455,8 +438,6 @@ bool CommandLineInterface::readInputFilesAndConfigureRemappings()
 		}
 	if (addStdin)
 		m_sourceCodes[g_stdinFileName] = dev::readStandardInput();
-
-	return true;
 }
 
 bool CommandLineInterface::parseLibraryOption(string const& _input)
@@ -623,8 +604,7 @@ Allowed options)",
 			g_argAllowPaths.c_str(),
 			po::value<string>()->value_name("path(s)"),
 			"Allow a given path for imports. A list of paths can be supplied by separating them with a comma."
-		)
-		(g_argIgnoreMissingFiles.c_str(), "Ignore missing files.");
+		);
 	po::options_description outputComponents("Output Components");
 	outputComponents.add_options()
 		(g_argAst.c_str(), "AST of all source files.")
@@ -641,7 +621,7 @@ Allowed options)",
 		(g_argNatspecUser.c_str(), "Natspec user documentation of all contracts.")
 		(g_argNatspecDev.c_str(), "Natspec developer documentation of all contracts.")
 		(g_argMetadata.c_str(), "Combined Metadata JSON whose Swarm hash is stored on-chain.")
-		(g_argFormal.c_str(), "Translated source suitable for formal analysis. (Deprecated)");
+		(g_argFormal.c_str(), "Translated source suitable for formal analysis.");
 	desc.add(outputComponents);
 
 	po::options_description allOptions = desc;
@@ -705,7 +685,7 @@ bool CommandLineInterface::processInput()
 		try
 		{
 			auto path = boost::filesystem::path(_path);
-			auto canonicalPath = weaklyCanonicalFilesystemPath(path);
+			auto canonicalPath = boost::filesystem::canonical(path);
 			bool isAllowed = false;
 			for (auto const& allowedDir: m_allowedDirectories)
 			{
@@ -721,16 +701,16 @@ bool CommandLineInterface::processInput()
 			}
 			if (!isAllowed)
 				return ReadCallback::Result{false, "File outside of allowed directories."};
-
-			if (!boost::filesystem::exists(canonicalPath))
+			else if (!boost::filesystem::exists(path))
 				return ReadCallback::Result{false, "File not found."};
-
-			if (!boost::filesystem::is_regular_file(canonicalPath))
+			else if (!boost::filesystem::is_regular_file(canonicalPath))
 				return ReadCallback::Result{false, "Not a valid file."};
-
-			auto contents = dev::readFileAsString(canonicalPath.string());
-			m_sourceCodes[path.string()] = contents;
-			return ReadCallback::Result{true, contents};
+			else
+			{
+				auto contents = dev::readFileAsString(canonicalPath.string());
+				m_sourceCodes[path.string()] = contents;
+				return ReadCallback::Result{true, contents};
+			}
 		}
 		catch (Exception const& _exception)
 		{
@@ -766,8 +746,7 @@ bool CommandLineInterface::processInput()
 		return true;
 	}
 
-	if (!readInputFilesAndConfigureRemappings())
-		return false;
+	readInputFilesAndConfigureRemappings();
 
 	if (m_args.count(g_argLibraries))
 		for (string const& library: m_args[g_argLibraries].as<vector<string>>())

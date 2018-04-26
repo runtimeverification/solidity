@@ -19,7 +19,7 @@
  * Unit tests for parsing Julia.
  */
 
-#include <test/Options.h>
+#include "../TestHelper.h"
 
 #include <test/libsolidity/ErrorCheck.h>
 

@@ -193,22 +193,14 @@ Declaration const* CompilerContext::nextFunctionToCompile() const
 	return m_functionCompilationQueue.nextFunctionToCompile();
 }
 
-ModifierDefinition const& CompilerContext::resolveVirtualFunctionModifier(
-	ModifierDefinition const& _modifier
-) const
+ModifierDefinition const& CompilerContext::functionModifier(string const& _name) const
 {
-	// Libraries do not allow inheritance and their functions can be inlined, so we should not
-	// search the inheritance hierarchy (which will be the wrong one in case the function
-	// is inlined).
-	if (auto scope = dynamic_cast<ContractDefinition const*>(_modifier.scope()))
-		if (scope->isLibrary())
-			return _modifier;
 	solAssert(!m_inheritanceHierarchy.empty(), "No inheritance hierarchy set.");
 	for (ContractDefinition const* contract: m_inheritanceHierarchy)
 		for (ModifierDefinition const* modifier: contract->functionModifiers())
-			if (modifier->name() == _modifier.name())
+			if (modifier->name() == _name)
 				return *modifier;
-	solAssert(false, "Function modifier " + _modifier.name() + " not found in inheritance hierarchy.");
+	solAssert(false, "Function modifier " + _name + " not found.");
 }
 
 unsigned CompilerContext::baseStackOffsetOfVariable(Declaration const& _declaration) const
@@ -262,20 +254,12 @@ CompilerContext& CompilerContext::appendRevert()
 	return *this << u256(0) << u256(0) << Instruction::REVERT;
 }
 
-CompilerContext& CompilerContext::appendConditionalRevert(bool _forwardReturnData)
+CompilerContext& CompilerContext::appendConditionalRevert()
 {
-	if (_forwardReturnData && m_evmVersion.supportsReturndata())
-		appendInlineAssembly(R"({
-			if condition {
-				returndatacopy(0, 0, returndatasize())
-				revert(0, returndatasize())
-			}
-		})", {"condition"});
-	else
-		appendInlineAssembly(R"({
-			if condition { revert(0, 0) }
-		})", {"condition"});
-	*this << Instruction::POP;
+	*this << Instruction::ISZERO;
+	eth::AssemblyItem afterTag = appendConditionalJump();
+	appendRevert();
+	*this << afterTag;
 	return *this;
 }
 

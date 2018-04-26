@@ -37,7 +37,7 @@ class SymbolicVariable
 {
 public:
 	SymbolicVariable(
-		Declaration const& _decl,
+		Declaration const* _decl,
 		smt::SolverInterface& _interface
 	);
 
@@ -46,7 +46,7 @@ public:
 		return valueAtSequence(_seq);
 	}
 
-	std::string uniqueSymbol(int _seq) const;
+	std::string uniqueSymbol() const;
 
 	/// Sets the var to the default value of its type.
 	virtual void setZeroValue(int _seq) = 0;
@@ -55,9 +55,13 @@ public:
 	virtual void setUnknownValue(int _seq) = 0;
 
 protected:
-	virtual smt::Expression valueAtSequence(int _seq) const = 0;
+	smt::Expression valueAtSequence(int _seq) const
+	{
+		return (*m_expression)(_seq);
+	}
 
-	Declaration const& m_declaration;
+	Declaration const* m_declaration;
+	std::shared_ptr<smt::Expression> m_expression = nullptr;
 	smt::SolverInterface& m_interface;
 };
 

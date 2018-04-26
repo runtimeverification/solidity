@@ -14,36 +14,40 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+/** @file TestHelper.h
+ */
 
 #pragma once
 
-#include <libsolidity/formal/SymbolicVariable.h>
+#include <libsolidity/interface/EVMVersion.h>
 
-#include <libsolidity/ast/Types.h>
+#include <boost/test/unit_test.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/version.hpp>
+
+#include <functional>
 
 namespace dev
 {
-namespace solidity
+namespace test
 {
 
-/**
- * Specialization of SymbolicVariable for Bool
- */
-class SymbolicBoolVariable: public SymbolicVariable
+struct Options: boost::noncopyable
 {
-public:
-	SymbolicBoolVariable(
-		Declaration const& _decl,
-		smt::SolverInterface& _interface
-	);
+	std::string ipcPath;
+	bool showMessages = false;
+	bool optimize = false;
+	bool disableIPC = false;
+	bool disableSMT = false;
 
-	/// Sets the var to false.
-	void setZeroValue(int _seq);
-	/// Does nothing since the SMT solver already knows the valid values.
-	void setUnknownValue(int _seq);
+	solidity::EVMVersion evmVersion() const;
 
-protected:
-	smt::Expression valueAtSequence(int _seq) const;
+	static Options const& get();
+
+private:
+	std::string evmVersionString;
+
+	Options();
 };
 
 }

@@ -40,7 +40,7 @@ This means that cyclic creation dependencies are impossible.
 
 ::
 
-    pragma solidity ^0.4.22;
+    pragma solidity ^0.4.16;
 
     contract OwnedToken {
         // TokenCreator is a contract type that is defined below.
@@ -52,7 +52,7 @@ This means that cyclic creation dependencies are impossible.
 
         // This is the constructor which registers the
         // creator and the assigned name.
-        constructor(bytes32 _name) public {
+        function OwnedToken(bytes32 _name) public {
             // State variables are accessed via their name
             // and not via e.g. this.owner. This also applies
             // to functions and especially in the constructors,
@@ -301,7 +301,7 @@ inheritable properties of contracts and may be overridden by derived contracts.
 
 ::
 
-    pragma solidity ^0.4.22;
+    pragma solidity ^0.4.11;
 
     contract owned {
         function owned() public { owner = msg.sender; }
@@ -315,10 +315,7 @@ inheritable properties of contracts and may be overridden by derived contracts.
         // function is executed and otherwise, an exception is
         // thrown.
         modifier onlyOwner {
-            require(
-                msg.sender == owner,
-                "Only owner can call this function."
-            );
+            require(msg.sender == owner);
             _;
         }
     }
@@ -363,10 +360,7 @@ inheritable properties of contracts and may be overridden by derived contracts.
     contract Mutex {
         bool locked;
         modifier noReentrancy() {
-            require(
-                !locked,
-                "Reentrant call."
-            );
+            require(!locked);
             locked = true;
             _;
             locked = false;
@@ -685,7 +679,7 @@ candidate, resolution fails.
         }
     }
 
-Calling ``f(50)`` would create a type error since ``50`` can be implicitly converted both to ``uint8``
+Calling ``f(50)`` would create a type error since ``250`` can be implicitly converted both to ``uint8``
 and ``uint256`` types. On another hand ``f(256)`` would resolve to ``f(uint256)`` overload as ``256`` cannot be implicitly
 converted to ``uint8``.
 
@@ -809,7 +803,7 @@ as topics. The event call above can be performed in the same way as
     }
 
 where the long hexadecimal number is equal to
-``keccak256("Deposit(address,bytes32,uint256)")``, the signature of the event.
+``keccak256("Deposit(address,hash256,uint256)")``, the signature of the event.
 
 Additional Resources for Understanding Events
 ==============================================
@@ -982,31 +976,8 @@ virtual method lookup.
 
 Constructors
 ============
-A constructor is an optional function declared with the ``constructor`` keyword which is executed upon contract creation. 
-Constructor functions can be either ``public`` or ``internal``. If there is no constructor, the contract will assume the
-default constructor: ``contructor() public {}``.
-
-
-::
-
-    pragma solidity ^0.4.22;
-
-    contract A {
-        uint public a;
-
-        constructor(uint _a) internal {
-            a = _a;
-        }
-    }
-
-    contract B is A(1) {
-        constructor() public {}
-    }
-
-A constructor set as ``internal`` causes the contract to be marked as :ref:`abstract <abstract-contract>`.
-
-.. note ::
-    Prior to version 0.4.22, constructors were defined as functions with the same name as the contract. This syntax is now deprecated.
+A constructor is an optional function with the same name as the contract which is executed upon contract creation. 
+Constructor functions can be either ``public`` or ``internal``.
 
 ::
 
@@ -1024,6 +995,7 @@ A constructor set as ``internal`` causes the contract to be marked as :ref:`abst
         function B() public {}
     }
 
+A constructor set as ``internal`` causes the contract to be marked as :ref:`abstract <abstract-contract>`.
 
 .. index:: ! base;constructor
 
@@ -1037,15 +1009,12 @@ the base constructors. This can be done in two ways::
 
     contract Base {
         uint x;
-        constructor(uint _x) public { x = _x; }
+        function Base(uint _x) public { x = _x; }
     }
 
-    contract Derived1 is Base(7) {
-        constructor(uint _y) public {}
-    }
-
-    contract Derived2 is Base {
-        constructor(uint _y) Base(_y * _y) public {}
+    contract Derived is Base(7) {
+        function Derived(uint _y) Base(_y * _y) public {
+        }
     }
 
 One way is directly in the inheritance list (``is Base(7)``).  The other is in
@@ -1055,9 +1024,8 @@ do it is more convenient if the constructor argument is a
 constant and defines the behaviour of the contract or
 describes it. The second way has to be used if the
 constructor arguments of the base depend on those of the
-derived contract. Arguments have to be given either in the
-inheritance list or in modifier-style in the derived constuctor.
-Specifying arguments in both places is an error.
+derived contract. If, as in this silly example, both places
+are used, the modifier-style argument takes precedence.
 
 .. index:: ! inheritance;multiple, ! linearization, ! C3 linearization
 
@@ -1215,7 +1183,7 @@ more advanced example to implement a set).
 
 ::
 
-    pragma solidity ^0.4.22;
+    pragma solidity ^0.4.16;
 
     library Set {
       // We define a new struct datatype that will be used to

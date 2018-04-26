@@ -24,7 +24,7 @@ using namespace dev;
 using namespace dev::solidity;
 
 SymbolicVariable::SymbolicVariable(
-	Declaration const& _decl,
+	Declaration const* _decl,
 	smt::SolverInterface& _interface
 ):
 	m_declaration(_decl),
@@ -32,9 +32,9 @@ SymbolicVariable::SymbolicVariable(
 {
 }
 
-string SymbolicVariable::uniqueSymbol(int _seq) const
+string SymbolicVariable::uniqueSymbol() const
 {
-	return m_declaration.name() + "_" + to_string(m_declaration.id()) + "_" + to_string(_seq);
+	return m_declaration->name() + "_" + to_string(m_declaration->id());
 }
 
 

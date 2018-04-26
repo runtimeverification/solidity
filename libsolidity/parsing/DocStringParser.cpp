@@ -119,17 +119,21 @@ DocStringParser::iter DocStringParser::parseDocTagParam(iter _pos, iter _end)
 		return _end;
 	}
 	auto nameEndPos = firstSpaceOrTab(nameStartPos, _end);
+	if (nameEndPos == _end)
+	{
+		appendError("End of param name not found: " + string(nameStartPos, _end));
+		return _end;
+	}
 	auto paramName = string(nameStartPos, nameEndPos);
 
 	auto descStartPos = skipWhitespace(nameEndPos, _end);
-	auto nlPos = find(descStartPos, _end, '\n');
-
-	if (descStartPos == nlPos)
+	if (descStartPos == _end)
 	{
 		appendError("No description given for param " + paramName);
 		return _end;
 	}
 
+	auto nlPos = find(descStartPos, _end, '\n');
 	auto paramDesc = string(descStartPos, nlPos);
 	newTag("param");
 	m_lastTag->paramName = paramName;

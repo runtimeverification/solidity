@@ -128,7 +128,6 @@ void ContractCompiler::appendCallValueCheck()
 {
 	// Throw if function is not payable but call contained ether.
 	m_context << Instruction::CALLVALUE;
-	// TODO: error message?
 	m_context.appendConditionalRevert();
 }
 
@@ -136,13 +135,33 @@ void ContractCompiler::appendInitAndConstructorCode(ContractDefinition const& _c
 {
 	solAssert(!_contract.isLibrary(), "Tried to initialize library.");
 	CompilerContext::LocationSetter locationSetter(m_context, _contract);
+	// Determine the arguments that are used for the base constructors.
+	std::vector<ContractDefinition const*> const& bases = _contract.annotation().linearizedBaseContracts;
+	for (ContractDefinition const* contract: bases)
+	{
+		if (FunctionDefinition const* constructor = contract->constructor())
+			for (auto const& modifier: constructor->modifiers())
+			{
+				auto baseContract = dynamic_cast<ContractDefinition const*>(
+					modifier->name()->annotation().referencedDeclaration);
+				if (baseContract)
+					if (m_baseArguments.count(baseContract->constructor()) == 0)
+						m_baseArguments[baseContract->constructor()] = &modifier->arguments();
+			}
 
-	m_baseArguments = &_contract.annotation().baseConstructorArguments;
+		for (ASTPointer<InheritanceSpecifier> const& base: contract->baseContracts())
+		{
+			ContractDefinition const* baseContract = dynamic_cast<ContractDefinition const*>(
+				base->name().annotation().referencedDeclaration
+			);
+			solAssert(baseContract, "");
 
+			if (m_baseArguments.count(baseContract->constructor()) == 0)
+				m_baseArguments[baseContract->constructor()] = &base->arguments();
+		}
+	}
 	// Initialization of state variables in base-to-derived order.
-	for (ContractDefinition const* contract: boost::adaptors::reverse(
-		_contract.annotation().linearizedBaseContracts
-	))
+	for (ContractDefinition const* contract: boost::adaptors::reverse(bases))
 		initializeStateVariables(*contract);
 
 	if (FunctionDefinition const* constructor = _contract.constructor())
@@ -216,16 +235,9 @@ void ContractCompiler::appendBaseConstructor(FunctionDefinition const& _construc
 	FunctionType constructorType(_constructor);
 	if (!constructorType.parameterTypes().empty())
 	{
-		solAssert(m_baseArguments, "");
-		solAssert(m_baseArguments->count(&_constructor), "");
-		std::vector<ASTPointer<Expression>> const* arguments = nullptr;
-		ASTNode const* baseArgumentNode = m_baseArguments->at(&_constructor);
-		if (auto inheritanceSpecifier = dynamic_cast<InheritanceSpecifier const*>(baseArgumentNode))
-			arguments = inheritanceSpecifier->arguments();
-		else if (auto modifierInvocation = dynamic_cast<ModifierInvocation const*>(baseArgumentNode))
-			arguments = modifierInvocation->arguments();
+		solAssert(m_baseArguments.count(&_constructor), "");
+		std::vector<ASTPointer<Expression>> const* arguments = m_baseArguments[&_constructor];
 		solAssert(arguments, "");
-		solAssert(arguments->size() == constructorType.parameterTypes().size(), "");
 		for (unsigned i = 0; i < arguments->size(); ++i)
 			compileExpression(*(arguments->at(i)), constructorType.parameterTypes()[i]);
 	}
@@ -266,10 +278,9 @@ void ContractCompiler::appendConstructor(FunctionDefinition const& _constructor)
 		m_context.appendProgramSize();
 		m_context << Instruction::DUP4 << Instruction::CODECOPY;
 		m_context << Instruction::DUP2 << Instruction::ADD;
-		m_context << Instruction::DUP1;
 		CompilerUtils(m_context).storeFreeMemoryPointer();
 		// stack: <memptr>
-		CompilerUtils(m_context).abiDecode(FunctionType(_constructor).parameterTypes(), true);
+		appendCalldataUnpacker(FunctionType(_constructor).parameterTypes(), true);
 	}
 	_constructor.accept(*this);
 }
@@ -328,7 +339,6 @@ void ContractCompiler::appendFunctionSelector(ContractDefinition const& _contrac
 		m_context << Instruction::STOP;
 	}
 	else
-		// TODO: error message here?
 		m_context.appendRevert();
 
 	for (auto const& it: interfaceFunctions)
@@ -357,8 +367,7 @@ void ContractCompiler::appendFunctionSelector(ContractDefinition const& _contrac
 		{
 			// Parameter for calldataUnpacker
 			m_context << CompilerUtils::dataStartOffset;
-			m_context << Instruction::DUP1 << Instruction::CALLDATASIZE << Instruction::SUB;
-			CompilerUtils(m_context).abiDecode(functionType->parameterTypes());
+			appendCalldataUnpacker(functionType->parameterTypes());
 		}
 		m_context.appendJumpTo(m_context.functionEntryLabel(functionType->declaration()));
 		m_context << returnTag;
@@ -371,6 +380,105 @@ void ContractCompiler::appendFunctionSelector(ContractDefinition const& _contrac
 		// Consumes the return parameters.
 		appendReturnValuePacker(functionType->returnParameterTypes(), _contract.isLibrary());
 	}
+}
+
+void ContractCompiler::appendCalldataUnpacker(TypePointers const& _typeParameters, bool _fromMemory)
+{
+	// We do not check the calldata size, everything is zero-padded
+
+	if (m_context.experimentalFeatureActive(ExperimentalFeature::ABIEncoderV2))
+	{
+		// Use the new JULIA-based decoding function
+		auto stackHeightBefore = m_context.stackHeight();
+		CompilerUtils(m_context).abiDecodeV2(_typeParameters, _fromMemory);
+		solAssert(m_context.stackHeight() - stackHeightBefore == CompilerUtils(m_context).sizeOnStack(_typeParameters) - 1, "");
+		return;
+	}
+
+	//@todo this does not yet support nested dynamic arrays
+
+	// Retain the offset pointer as base_offset, the point from which the data offsets are computed.
+	m_context << Instruction::DUP1;
+	for (TypePointer const& parameterType: _typeParameters)
+	{
+		// stack: v1 v2 ... v(k-1) base_offset current_offset
+		TypePointer type = parameterType->decodingType();
+		solUnimplementedAssert(type, "No decoding type found.");
+		if (type->category() == Type::Category::Array)
+		{
+			auto const& arrayType = dynamic_cast<ArrayType const&>(*type);
+			solUnimplementedAssert(!arrayType.baseType()->isDynamicallySized(), "Nested arrays not yet implemented.");
+			if (_fromMemory)
+			{
+				solUnimplementedAssert(
+					arrayType.baseType()->isValueType(),
+					"Nested memory arrays not yet implemented here."
+				);
+				// @todo If base type is an array or struct, it is still calldata-style encoded, so
+				// we would have to convert it like below.
+				solAssert(arrayType.location() == DataLocation::Memory, "");
+				if (arrayType.isDynamicallySized())
+				{
+					// compute data pointer
+					m_context << Instruction::DUP1 << Instruction::MLOAD;
+					m_context << Instruction::DUP3 << Instruction::ADD;
+					m_context << Instruction::SWAP2 << Instruction::SWAP1;
+					m_context << u256(0x20) << Instruction::ADD;
+				}
+				else
+				{
+					m_context << Instruction::SWAP1 << Instruction::DUP2;
+					m_context << u256(arrayType.calldataEncodedSize(true)) << Instruction::ADD;
+				}
+			}
+			else
+			{
+				// first load from calldata and potentially convert to memory if arrayType is memory
+				TypePointer calldataType = arrayType.copyForLocation(DataLocation::CallData, false);
+				if (calldataType->isDynamicallySized())
+				{
+					// put on stack: data_pointer length
+					CompilerUtils(m_context).loadFromMemoryDynamic(IntegerType(256), !_fromMemory);
+					// stack: base_offset data_offset next_pointer
+					m_context << Instruction::SWAP1 << Instruction::DUP3 << Instruction::ADD;
+					// stack: base_offset next_pointer data_pointer
+					// retrieve length
+					CompilerUtils(m_context).loadFromMemoryDynamic(IntegerType(256), !_fromMemory, true);
+					// stack: base_offset next_pointer length data_pointer
+					m_context << Instruction::SWAP2;
+					// stack: base_offset data_pointer length next_pointer
+				}
+				else
+				{
+					// leave the pointer on the stack
+					m_context << Instruction::DUP1;
+					m_context << u256(calldataType->calldataEncodedSize()) << Instruction::ADD;
+				}
+				if (arrayType.location() == DataLocation::Memory)
+				{
+					// stack: base_offset calldata_ref [length] next_calldata
+					// copy to memory
+					// move calldata type up again
+					CompilerUtils(m_context).moveIntoStack(calldataType->sizeOnStack());
+					CompilerUtils(m_context).convertType(*calldataType, arrayType, false, false, true);
+					// fetch next pointer again
+					CompilerUtils(m_context).moveToStackTop(arrayType.sizeOnStack());
+				}
+				// move base_offset up
+				CompilerUtils(m_context).moveToStackTop(1 + arrayType.sizeOnStack());
+				m_context << Instruction::SWAP1;
+			}
+		}
+		else
+		{
+			solAssert(!type->isDynamicallySized(), "Unknown dynamically sized type: " + type->toString());
+			CompilerUtils(m_context).loadFromMemoryDynamic(*type, !_fromMemory, true);
+			CompilerUtils(m_context).moveToStackTop(1 + type->sizeOnStack());
+			m_context << Instruction::SWAP1;
+		}
+		// stack: v1 v2 ... v(k-1) v(k) base_offset mem_offset
+	}
+	m_context << Instruction::POP << Instruction::POP;
 }
 
 void ContractCompiler::appendReturnValuePacker(TypePointers const& _typeParameters, bool _isLibrary)
@@ -896,21 +1004,15 @@ void ContractCompiler::appendModifierOrFunctionCode()
 			appendModifierOrFunctionCode();
 		else
 		{
-			ModifierDefinition const& nonVirtualModifier = dynamic_cast<ModifierDefinition const&>(
-				*modifierInvocation->name()->annotation().referencedDeclaration
-			);
-			ModifierDefinition const& modifier = m_context.resolveVirtualFunctionModifier(nonVirtualModifier);
+			ModifierDefinition const& modifier = m_context.functionModifier(modifierInvocation->name()->name());
 			CompilerContext::LocationSetter locationSetter(m_context, modifier);
-			std::vector<ASTPointer<Expression>> const& modifierArguments =
-				modifierInvocation->arguments() ? *modifierInvocation->arguments() : std::vector<ASTPointer<Expression>>();
-
-			solAssert(modifier.parameters().size() == modifierArguments.size(), "");
+			solAssert(modifier.parameters().size() == modifierInvocation->arguments().size(), "");
 			for (unsigned i = 0; i < modifier.parameters().size(); ++i)
 			{
 				m_context.addVariable(*modifier.parameters()[i]);
 				addedVariables.push_back(modifier.parameters()[i].get());
 				compileExpression(
-					*modifierArguments[i],
+					*modifierInvocation->arguments()[i],
 					modifier.parameters()[i]->annotation().type
 				);
 			}

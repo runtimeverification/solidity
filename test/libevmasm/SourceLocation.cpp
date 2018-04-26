@@ -22,7 +22,7 @@
 
 #include <libevmasm/SourceLocation.h>
 
-#include <test/Options.h>
+#include "../TestHelper.h"
 
 namespace dev
 {

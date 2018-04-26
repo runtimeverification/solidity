@@ -326,13 +326,7 @@ EVM bytecode and executed. The output of this execution is
 permanently stored as the code of the contract.
 This means that in order to create a contract, you do not
 send the actual code of the contract, but in fact code that
-returns that code when executed.
-
-.. note::
-  While a contract is being created, its code is still empty.
-  Because of that, you should not call back into the
-  contract under construction until its constructor has
-  finished executing.
+returns that code.
 
 .. index:: ! gas, ! gas price
 

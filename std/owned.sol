@@ -1,4 +1,4 @@
-pragma solidity ^0.4.22;
+pragma solidity ^0.4.0;
 
 contract owned {
     address owner;
@@ -9,7 +9,7 @@ contract owned {
         }
     }
 
-    constructor() public {
+    function owned() public {
         owner = msg.sender;
     }
 }

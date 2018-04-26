@@ -25,7 +25,7 @@
 #include <tuple>
 #include <libsolidity/parsing/Scanner.h>
 #include <libsolidity/analysis/SemVerHandler.h>
-#include <test/Options.h>
+#include "../TestHelper.h"
 
 using namespace std;
 

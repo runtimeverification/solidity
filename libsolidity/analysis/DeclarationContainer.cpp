@@ -45,8 +45,7 @@ Declaration const* DeclarationContainer::conflictingDeclaration(
 
 	if (
 		dynamic_cast<FunctionDefinition const*>(&_declaration) ||
-		dynamic_cast<EventDefinition const*>(&_declaration) ||
-		dynamic_cast<MagicVariableDeclaration const*>(&_declaration)
+		dynamic_cast<EventDefinition const*>(&_declaration)
 	)
 	{
 		// check that all other declarations with the same name are functions or a public state variable or events.
@@ -67,11 +66,6 @@ Declaration const* DeclarationContainer::conflictingDeclaration(
 			if (
 				dynamic_cast<EventDefinition const*>(&_declaration) &&
 				!dynamic_cast<EventDefinition const*>(declaration)
-			)
-				return declaration;
-			if (
-				dynamic_cast<MagicVariableDeclaration const*>(&_declaration) &&
-				!dynamic_cast<MagicVariableDeclaration const*>(declaration)
 			)
 				return declaration;
 			// Or, continue.

@@ -130,7 +130,7 @@ restrictions highly readable.
 
 ::
 
-    pragma solidity ^0.4.22;
+    pragma solidity ^0.4.11;
 
     contract AccessRestriction {
         // These will be assigned at the construction
@@ -147,10 +147,7 @@ restrictions highly readable.
         // a certain address.
         modifier onlyBy(address _account)
         {
-            require(
-                msg.sender == _account,
-                "Sender not authorized."
-            );
+            require(msg.sender == _account);
             // Do not forget the "_;"! It will
             // be replaced by the actual function
             // body when the modifier is used.
@@ -167,10 +164,7 @@ restrictions highly readable.
         }
 
         modifier onlyAfter(uint _time) {
-            require(
-                now >= _time,
-                "Function called too early."
-            );
+            require(now >= _time);
             _;
         }
 
@@ -192,10 +186,7 @@ restrictions highly readable.
         // This was dangerous before Solidity version 0.4.0,
         // where it was possible to skip the part after `_;`.
         modifier costs(uint _amount) {
-            require(
-                msg.value >= _amount,
-                "Not enough Ether provided."
-            );
+            require(msg.value >= _amount);
             _;
             if (msg.value > _amount)
                 msg.sender.send(msg.value - _amount);
@@ -203,7 +194,6 @@ restrictions highly readable.
 
         function forceOwnerChange(address _newOwner)
             public
-            payable
             costs(200 ether)
         {
             owner = _newOwner;
@@ -282,7 +272,7 @@ function finishes.
 
 ::
 
-    pragma solidity ^0.4.22;
+    pragma solidity ^0.4.11;
 
     contract StateMachine {
         enum Stages {
@@ -299,10 +289,7 @@ function finishes.
         uint public creationTime = now;
 
         modifier atStage(Stages _stage) {
-            require(
-                stage == _stage,
-                "Function cannot be called at this time."
-            );
+            require(stage == _stage);
             _;
         }
 

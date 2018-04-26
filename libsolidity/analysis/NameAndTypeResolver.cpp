@@ -47,9 +47,7 @@ NameAndTypeResolver::NameAndTypeResolver(
 	if (!m_scopes[nullptr])
 		m_scopes[nullptr].reset(new DeclarationContainer());
 	for (Declaration const* declaration: _globals)
-	{
-		solAssert(m_scopes[nullptr]->registerDeclaration(*declaration), "Unable to register global declaration.");
-	}
+		m_scopes[nullptr]->registerDeclaration(*declaration);
 }
 
 bool NameAndTypeResolver::registerDeclarations(SourceUnit& _sourceUnit, ASTNode const* _currentScope)
@@ -204,9 +202,8 @@ vector<Declaration const*> NameAndTypeResolver::cleanedDeclarations(
 		solAssert(
 			dynamic_cast<FunctionDefinition const*>(declaration) ||
 			dynamic_cast<EventDefinition const*>(declaration) ||
-			dynamic_cast<VariableDeclaration const*>(declaration) ||
-			dynamic_cast<MagicVariableDeclaration const*>(declaration),
-			"Found overloading involving something not a function, event or a (magic) variable."
+			dynamic_cast<VariableDeclaration const*>(declaration),
+			"Found overloading involving something not a function or a variable."
 		);
 
 		FunctionTypePointer functionType { declaration->functionType(false) };

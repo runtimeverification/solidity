@@ -36,7 +36,7 @@ of votes.
 
 ::
 
-    pragma solidity ^0.4.22;
+    pragma solidity ^0.4.16;
 
     /// @title Voting with delegation.
     contract Ballot {
@@ -87,25 +87,18 @@ of votes.
         // Give `voter` the right to vote on this ballot.
         // May only be called by `chairperson`.
         function giveRightToVote(address voter) public {
-            // If the first argument of `require` evaluates
-            // to `false`, execution terminates and all
-            // changes to the state and to Ether balances
-            // are reverted. 
-            // This used to consume all gas in old EVM versions, but
-            // not anymore.
-            // It is often a good idea to use `require` to check if
-            // functions are called correctly.
-            // As a second argument, you can also provide an
-            // explanation about what went wrong.
+            // If the argument of `require` evaluates to `false`,
+            // it terminates and reverts all changes to
+            // the state and to Ether balances. It is often
+            // a good idea to use this if functions are
+            // called incorrectly. But watch out, this
+            // will currently also consume all provided gas
+            // (this is planned to change in the future).
             require(
-                msg.sender == chairperson,
-                "Only chairperson can give right to vote."
+                (msg.sender == chairperson) &&
+                !voters[voter].voted &&
+                (voters[voter].weight == 0)
             );
-            require(
-                !voters[voter].voted,
-                "The voter already voted."
-            );
-            require(voters[voter].weight == 0);
             voters[voter].weight = 1;
         }
 
@@ -113,9 +106,10 @@ of votes.
         function delegate(address to) public {
             // assigns reference
             Voter storage sender = voters[msg.sender];
-            require(!sender.voted, "You already voted.");
+            require(!sender.voted);
 
-            require(to != msg.sender, "Self-delegation is disallowed.");
+            // Self-delegation is not allowed.
+            require(to != msg.sender);
 
             // Forward the delegation as long as
             // `to` also delegated.
@@ -129,7 +123,7 @@ of votes.
                 to = voters[to].delegate;
 
                 // We found a loop in the delegation, not allowed.
-                require(to != msg.sender, "Found loop in delegation.");
+                require(to != msg.sender);
             }
 
             // Since `sender` is a reference, this
@@ -152,7 +146,7 @@ of votes.
         /// to proposal `proposals[proposal].name`.
         function vote(uint proposal) public {
             Voter storage sender = voters[msg.sender];
-            require(!sender.voted, "Already voted.");
+            require(!sender.voted);
             sender.voted = true;
             sender.vote = proposal;
 
@@ -225,7 +219,7 @@ activate themselves.
 
 ::
 
-    pragma solidity ^0.4.22;
+    pragma solidity ^0.4.21;
 
     contract SimpleAuction {
         // Parameters of the auction. Times are either
@@ -277,17 +271,11 @@ activate themselves.
 
             // Revert the call if the bidding
             // period is over.
-            require(
-                now <= auctionEnd,
-                "Auction already ended."
-            );
+            require(now <= auctionEnd);
 
             // If the bid is not higher, send the
             // money back.
-            require(
-                msg.value > highestBid,
-                "There already is a higher bid."
-            );
+            require(msg.value > highestBid);
 
             if (highestBid != 0) {
                 // Sending back the money by simply using
@@ -337,8 +325,8 @@ activate themselves.
             // external contracts.
 
             // 1. Conditions
-            require(now >= auctionEnd, "Auction not yet ended.");
-            require(!ended, "auctionEnd has already been called.");
+            require(now >= auctionEnd); // auction did not yet end
+            require(!ended); // this function has already been called
 
             // 2. Effects
             ended = true;
@@ -388,7 +376,7 @@ high or low invalid bids.
 
 ::
 
-    pragma solidity ^0.4.22;
+    pragma solidity ^0.4.21;
 
     contract BlindAuction {
         struct Bid {
@@ -541,7 +529,7 @@ Safe Remote Purchase
 
 ::
 
-    pragma solidity ^0.4.22;
+    pragma solidity ^0.4.21;
 
     contract Purchase {
         uint public value;
@@ -556,7 +544,7 @@ Safe Remote Purchase
         function Purchase() public payable {
             seller = msg.sender;
             value = msg.value / 2;
-            require((2 * value) == msg.value, "Value has to be even.");
+            require((2 * value) == msg.value);
         }
 
         modifier condition(bool _condition) {
@@ -565,26 +553,17 @@ Safe Remote Purchase
         }
 
         modifier onlyBuyer() {
-            require(
-                msg.sender == buyer,
-                "Only buyer can call this."
-            );
+            require(msg.sender == buyer);
             _;
         }
 
         modifier onlySeller() {
-            require(
-                msg.sender == seller,
-                "Only seller can call this."
-            );
+            require(msg.sender == seller);
             _;
         }
 
         modifier inState(State _state) {
-            require(
-                state == _state,
-                "Invalid state."
-            );
+            require(state == _state);
             _;
         }
 
