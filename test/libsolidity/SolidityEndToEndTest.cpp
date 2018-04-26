@@ -827,15 +827,14 @@ BOOST_AUTO_TEST_CASE(high_bits_cleaning)
 	testContractAgainstCpp("run()", high_bits_cleaning_cpp);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(sign_extension, 1)
 BOOST_AUTO_TEST_CASE(sign_extension)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function run() returns(uint y) {
+			function run() returns(uint256 y) {
 				int64 x = -int32(0xff);
 				if (x >= 0xff) return 0;
-				return -uint(x);
+				return -uint256(x);
 			}
 		}
 	)";
