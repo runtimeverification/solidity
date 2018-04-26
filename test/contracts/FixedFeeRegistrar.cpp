@@ -135,7 +135,7 @@ protected:
 			s_compiledRegistrar.reset(new bytes(compileContract(registrarCode, "FixedFeeRegistrar")));
 
 		sendMessage(std::vector<bytes>(), "", *s_compiledRegistrar, true);
-		BOOST_REQUIRE(!m_output.empty());
+		BOOST_REQUIRE(m_status == 0);
 	}
 	u256 const m_fee = u256("69000000000000000000");
 };

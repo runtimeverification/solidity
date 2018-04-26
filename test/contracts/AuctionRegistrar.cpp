@@ -223,7 +223,7 @@ protected:
 			s_compiledRegistrar.reset(new bytes(compileContract(registrarCode, "GlobalRegistrar")));
 
 		sendMessage(std::vector<bytes>(), "", *s_compiledRegistrar, true);
-		BOOST_REQUIRE(!m_output.empty());
+		BOOST_REQUIRE(m_status == 0);
 	}
 
 	class RegistrarInterface: public ContractInterface
@@ -285,13 +285,11 @@ protected:
 /// This is a test suite that tests optimised code!
 BOOST_FIXTURE_TEST_SUITE(SolidityAuctionRegistrar, AuctionRegistrarTestFramework)
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(creation, 1)
 BOOST_AUTO_TEST_CASE(creation)
 {
 	deployRegistrar();
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(reserve, 1)
 BOOST_AUTO_TEST_CASE(reserve)
 {
 	// Test that reserving works for long strings
@@ -311,7 +309,6 @@ BOOST_AUTO_TEST_CASE(reserve)
 	}
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(double_reserve_long, 1)
 BOOST_AUTO_TEST_CASE(double_reserve_long)
 {
 	// Test that it is not possible to re-reserve from a different address.
@@ -327,7 +324,6 @@ BOOST_AUTO_TEST_CASE(double_reserve_long)
 	BOOST_CHECK_EQUAL(registrar.owner(name), account(0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(properties, 1)
 BOOST_AUTO_TEST_CASE(properties)
 {
 	// Test setting and retrieving  the various properties works.
@@ -366,7 +362,6 @@ BOOST_AUTO_TEST_CASE(properties)
 	}
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(transfer, 1)
 BOOST_AUTO_TEST_CASE(transfer)
 {
 	deployRegistrar();
@@ -379,7 +374,6 @@ BOOST_AUTO_TEST_CASE(transfer)
 	BOOST_CHECK_EQUAL(registrar.content(name), h256(u256(123)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(disown, 1)
 BOOST_AUTO_TEST_CASE(disown)
 {
 	deployRegistrar();
@@ -407,7 +401,6 @@ BOOST_AUTO_TEST_CASE(disown)
 	BOOST_CHECK_EQUAL(registrar.name(u160(124)), "");
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(auction_simple, 1)
 BOOST_AUTO_TEST_CASE(auction_simple)
 {
 	deployRegistrar();
@@ -419,20 +412,19 @@ BOOST_AUTO_TEST_CASE(auction_simple)
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), 0);
 	// "wait" until auction end
-	m_rpc.test_modifyTimestamp(currentTimestamp() + m_biddingTime + 10);
+	modifyTimestamp(currentTimestamp() + m_biddingTime + 10);
 	// trigger auction again
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), m_sender);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(auction_bidding, 1)
 BOOST_AUTO_TEST_CASE(auction_bidding)
 {
 	deployRegistrar();
 	string name = "x";
 
 	unsigned startTime = 0x776347e2;
-	m_rpc.test_modifyTimestamp(startTime);
+	modifyTimestamp(startTime);
 
 	RegistrarInterface registrar(*this);
 	// initiate auction
@@ -440,25 +432,24 @@ BOOST_AUTO_TEST_CASE(auction_bidding)
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), 0);
 	// overbid self
-	m_rpc.test_modifyTimestamp(startTime + m_biddingTime - 10);
+	modifyTimestamp(startTime + m_biddingTime - 10);
 	registrar.setNextValue(12);
 	registrar.reserve(name);
 	// another bid by someone else
 	sendEther(account(1), 10 * ether);
 	m_sender = account(1);
-	m_rpc.test_modifyTimestamp(startTime + 2 * m_biddingTime - 50);
+	modifyTimestamp(startTime + 2 * m_biddingTime - 50);
 	registrar.setNextValue(13);
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), 0);
 	// end auction by first bidder (which is not highest) trying to overbid again (too late)
 	m_sender = account(0);
-	m_rpc.test_modifyTimestamp(startTime + 4 * m_biddingTime);
+	modifyTimestamp(startTime + 4 * m_biddingTime);
 	registrar.setNextValue(20);
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), account(1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(auction_renewal, 1)
 BOOST_AUTO_TEST_CASE(auction_renewal)
 {
 	deployRegistrar();
@@ -469,17 +460,17 @@ BOOST_AUTO_TEST_CASE(auction_renewal)
 	// register name by auction
 	registrar.setNextValue(8);
 	registrar.reserve(name);
-	m_rpc.test_modifyTimestamp(startTime + 4 * m_biddingTime);
+	modifyTimestamp(startTime + 4 * m_biddingTime);
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), m_sender);
 
 	// try to re-register before interval end
 	sendEther(account(1), 10 * ether);
 	m_sender = account(1);
-	m_rpc.test_modifyTimestamp(currentTimestamp() + m_renewalInterval - 1);
+	modifyTimestamp(currentTimestamp() + m_renewalInterval - 1);
 	registrar.setNextValue(80);
 	registrar.reserve(name);
-	m_rpc.test_modifyTimestamp(currentTimestamp() + m_biddingTime);
+	modifyTimestamp(currentTimestamp() + m_biddingTime);
 	// if there is a bug in the renewal logic, this would transfer the ownership to account(1),
 	// but if there is no bug, this will initiate the auction, albeit with a zero bid
 	registrar.reserve(name);
