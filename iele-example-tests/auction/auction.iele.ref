@@ -68,6 +68,8 @@ entry:
   %timestamp = call @iele.timestamp()
   %tmp = add %timestamp, %_biddingTime_1
   sstore %tmp, @"auctionEnd"
+
+return:
   ret void
 
 throw:
@@ -101,6 +103,8 @@ if.end:
   sstore %caller, @"highestBidder"
   %callvalue10 = call @iele.callvalue()
   sstore %callvalue10, @"highestBid"
+
+return:
   ret void
 
 throw:
@@ -130,7 +134,11 @@ entry:
   %status = call @"deposit" at %beneficiary.val () send %highestBid.val, gaslimit %gas
   br %status, throw.status
   %highestBidder.val = sload @"highestBidder"
-  ret %highestBidder.val
+  %_2 = %highestBidder.val
+  br return
+
+return:
+  ret %_2
 
 throw:
   revert -1
