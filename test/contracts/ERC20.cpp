@@ -12,7 +12,7 @@ namespace test {
 namespace {
 
 static char const* ERC20Code = R"DELIMITER(
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.22;
 
 contract Token {
 	event Transfer(address indexed _from, address indexed _to, uint256 _value);
@@ -32,7 +32,7 @@ contract StandardToken is Token {
 	mapping (address =>
 		mapping (address => uint256)) m_allowance;
 
-	function StandardToken(address _initialOwner, uint256 _supply) public {
+	constructor(address _initialOwner, uint256 _supply) public {
 		supply = _supply;
 		balance[_initialOwner] = _supply;
 	}
