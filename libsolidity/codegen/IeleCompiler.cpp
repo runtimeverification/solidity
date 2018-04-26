@@ -158,13 +158,13 @@ iele::IeleGlobalValue *IeleCompiler::convertFunctionToInternal(iele::IeleGlobalV
   solAssert(false, "not implemented yet: function pointers");
 }
 
-void transitiveClosure(const ContractDefinition *contract, std::set<const ContractDefinition *> &dependencies) {
+static void transitiveClosure(const ContractDefinition *contract, std::set<const ContractDefinition *> &dependencies) {
   for (const ContractDefinition *dependency : contract->annotation().contractDependencies) {
     dependencies.insert(dependency);
     transitiveClosure(dependency, dependencies);
   }
 }
-void transitiveClosure(std::set<const ContractDefinition *> &dependencies) {
+static void transitiveClosure(std::set<const ContractDefinition *> &dependencies) {
   for (const ContractDefinition *contract : dependencies) {
     transitiveClosure(contract, dependencies);
   }
