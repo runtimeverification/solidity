@@ -14,8 +14,8 @@ define public @"beneficiary()"() {
 entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
-  %beneficiary.val = sload @"beneficiary"
-  ret %beneficiary.val
+  %loaded.val = sload @"beneficiary"
+  ret %loaded.val
 
 throw:
   revert -1
@@ -25,8 +25,8 @@ define public @"auctionEnd()"() {
 entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
-  %auctionEnd.val = sload @"auctionEnd"
-  ret %auctionEnd.val
+  %loaded.val = sload @"auctionEnd"
+  ret %loaded.val
 
 throw:
   revert -1
@@ -36,8 +36,8 @@ define public @"highestBidder()"() {
 entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
-  %highestBidder.val = sload @"highestBidder"
-  ret %highestBidder.val
+  %loaded.val = sload @"highestBidder"
+  ret %loaded.val
 
 throw:
   revert -1
@@ -47,8 +47,8 @@ define public @"highestBid()"() {
 entry:
   %callvalue = call @iele.callvalue()
   br %callvalue, throw
-  %highestBid.val = sload @"highestBid"
-  ret %highestBid.val
+  %loaded.val = sload @"highestBid"
+  ret %loaded.val
 
 throw:
   revert -1
