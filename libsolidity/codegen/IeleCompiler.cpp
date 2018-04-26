@@ -3871,7 +3871,8 @@ void IeleCompiler::endVisit(const Literal &literal) {
     iele::IeleIntConstant *LiteralValue =
       iele::IeleIntConstant::Create(
         &Context,
-        value_integer);
+        value_integer,
+        true);
     CompilingExpressionResult.push_back(LiteralValue);
     break;
   }
