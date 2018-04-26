@@ -158,6 +158,18 @@ iele::IeleGlobalValue *IeleCompiler::convertFunctionToInternal(iele::IeleGlobalV
   solAssert(false, "not implemented yet: function pointers");
 }
 
+void transitiveClosure(const ContractDefinition *contract, std::set<const ContractDefinition *> &dependencies) {
+  for (const ContractDefinition *dependency : contract->annotation().contractDependencies) {
+    dependencies.insert(dependency);
+    transitiveClosure(dependency, dependencies);
+  }
+}
+void transitiveClosure(std::set<const ContractDefinition *> &dependencies) {
+  for (const ContractDefinition *contract : dependencies) {
+    transitiveClosure(contract, dependencies);
+  }
+}
+
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
     const std::map<const ContractDefinition *, iele::IeleContract *> &contracts) {
@@ -228,7 +240,9 @@ void IeleCompiler::compileContract(
     most_derived = false;
   }
 
-  for (auto dep : contract.annotation().contractDependencies) {
+  std::set<ContractDefinition const*> dependencies = contract.annotation().contractDependencies;
+  transitiveClosure(dependencies);
+  for (auto dep : dependencies) {
     if (dep->isLibrary()) {
       for (const FunctionDefinition *function : dep->definedFunctions()) {
         if (function->isConstructor() || function->isFallback() ||
@@ -300,7 +314,7 @@ void IeleCompiler::compileContract(
     CompilingFunction = nullptr;
   }
 
-  for (auto dep : contract.annotation().contractDependencies) {
+  for (auto dep : dependencies) {
     if (dep->isLibrary()) {
       for (const FunctionDefinition *function : dep->definedFunctions()) {
         if (function->isConstructor() || function->isFallback() || !function->isImplemented())
