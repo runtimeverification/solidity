@@ -141,11 +141,19 @@ private:
   // Infrastructure for handling modifiers (borrowed from ContractCompiler.cpp)
   // Lookup function modifier by name
   const ModifierDefinition &functionModifier(const std::string &_name) const;
+  void appendReturn(const FunctionDefinition &function, 
+                    llvm::SmallVector<std::string, 4> ReturnParameterNames,
+                    llvm::SmallVector<TypePointer, 4> ReturnParameterTypes); 
   // Appends one layer of function modifier code of the current function, or the
   // function body itself if the last modifier was reached.
   void appendModifierOrFunctionCode();
   unsigned ModifierDepth;
-
+  // Maps each level of modifiers with a return target
+  std::stack<iele::IeleBlock *> ReturnBlocks;  
+  // Return parameters of the current function 
+  // TODO: do we really want to have this here?
+  std::vector<iele::IeleLocalVariable *> CompilingFunctionReturnParameters;
+  
   template <class ArgClass, class ReturnClass, class ExpressionClass>
   void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function, bool encode);
 
