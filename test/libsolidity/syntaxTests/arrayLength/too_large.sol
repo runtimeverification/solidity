@@ -1,5 +1,5 @@
 contract C {
-    uint[8**90] ids;
+    uint[8**2048] ids;
 }
 // ----
-// TypeError: (22-27): Invalid array length, expected integer literal or constant expression.
+// TypeError: (22-29): Invalid array length, expected integer literal or constant expression.
