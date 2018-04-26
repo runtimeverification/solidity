@@ -199,6 +199,10 @@ private:
   void appendLocalVariableInitialization(
           iele::IeleLocalVariable *Local, const VariableDeclaration *localVariable);
 
+  IeleLValue *appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue);
+  IeleLValue *appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc);
+  IeleLValue *appendStructAccess(const StructType &type, iele::IeleValue *ExprValue, std::string member, DataLocation Loc);
+
   iele::IeleValue *getReferenceTypeSize(
     const Type &type, iele::IeleValue *AddressValue);
 
