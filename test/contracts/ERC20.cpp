@@ -217,7 +217,6 @@ BOOST_AUTO_TEST_CASE(approve_Caller_Negative) {
 
   ABI_CHECK(callContractFunction("approve(address,uint256)", m_sender, -3),
             std::vector<bytes>());
-  BOOST_CHECK_EQUAL(m_status, 0xff);
   checkERC20EmptyLog();
   BOOST_CHECK_EQUAL(erc20.allowance(m_sender, m_sender), u256(0));
 }
@@ -252,7 +251,6 @@ BOOST_AUTO_TEST_CASE(approve_Other_Negative) {
   const u160 &other = u160(3);
   ABI_CHECK(callContractFunction("approve(address,uint256)", other, -3),
             std::vector<bytes>());
-  BOOST_CHECK_EQUAL(m_status, 0xff);
   checkERC20EmptyLog();
   BOOST_CHECK_EQUAL(erc20.allowance(m_sender, other), u256(0));
 }
@@ -510,7 +508,6 @@ BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_Negative) {
   ABI_CHECK(callContractFunction("transferFrom(address,address,uint256)",
                                  owner, target, -3),
             std::vector<bytes>());
-  BOOST_CHECK_EQUAL(m_status, 0xff);
   checkERC20EmptyLog();
   BOOST_CHECK_EQUAL(erc20.balanceOf(owner), supply);
   BOOST_CHECK_EQUAL(erc20.balanceOf(target), u256(0));
@@ -867,7 +864,6 @@ BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_Negative) {
   ABI_CHECK(callContractFunction("transferFrom(address,address,uint256)",
                                  owner, owner, -3),
             std::vector<bytes>());
-  BOOST_CHECK_EQUAL(m_status, 0xff);
   checkERC20EmptyLog();
   BOOST_CHECK_EQUAL(erc20.balanceOf(owner), supply);
   BOOST_CHECK_EQUAL(erc20.allowance(owner, spender), allowance);
@@ -917,7 +913,6 @@ BOOST_AUTO_TEST_CASE(transfer_Caller_Negative) {
 
   ABI_CHECK(callContractFunction("transfer(address,uint256)", m_sender, -1),
             std::vector<bytes>());
-  BOOST_CHECK_EQUAL(m_status, 0xff);
   checkERC20EmptyLog();
   BOOST_CHECK_EQUAL(erc20.balanceOf(m_sender), supply);
 }
@@ -995,7 +990,6 @@ BOOST_AUTO_TEST_CASE(transfer_Other_Negative) {
 
   ABI_CHECK(callContractFunction("transfer(address,uint256)", other, -1),
             std::vector<bytes>());
-  BOOST_CHECK_EQUAL(m_status, 0xff);
   checkERC20EmptyLog();
   BOOST_CHECK_EQUAL(erc20.balanceOf(m_sender), supply);
   BOOST_CHECK_EQUAL(erc20.balanceOf(other), u256(0));
