@@ -4,7 +4,7 @@
 ## Useful links
 To get started you can find an introduction to the language in the [Solidity documentation](https://solidity.readthedocs.org). In the documentation, you can find [code examples](https://solidity.readthedocs.io/en/latest/solidity-by-example.html) as well as [a reference](https://solidity.readthedocs.io/en/latest/solidity-in-depth.html) of the syntax and details on how to write smart contracts.
 
-You can start using [Solidity in your browser](https://ethereum.github.io/browser-solidity/) with no need to download or compile anything.
+You can start using [Solidity in your browser](http://remix.ethereum.org) with no need to download or compile anything.
 
 The changelog for this project can be found [here](https://github.com/ethereum/solidity/blob/develop/Changelog.md).
 
@@ -14,6 +14,6 @@ Solidity is still under development. So please do not hesitate and open an [issu
 See the [Solidity documentation](https://solidity.readthedocs.io/en/latest/installing-solidity.html#building-from-source) for build instructions.
 
 ## How to Contribute
-Please see our contribution guidelines in [the Solidity documentation](https://solidity.readthedocs.io/en/latest/contributing.html).
+Please see our [contribution guidelines](https://solidity.readthedocs.io/en/latest/contributing.html) in the Solidity documentation.
 
 Any contributions are welcome!
