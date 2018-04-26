@@ -54,7 +54,8 @@ ExecutionFramework::ExecutionFramework() :
 	m_evmVersion(dev::test::Options::get().evmVersion()),
 	m_optimize(dev::test::Options::get().optimize),
 	m_showMessages(dev::test::Options::get().showMessages),
-	m_sender(m_rpc.account(0))
+	m_sender(m_rpc.account(0)),
+	m_timestamp(0)
 {
 	m_rpc.test_rewindToBlock(0);
 }
@@ -109,19 +110,21 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 	d.gas = toHex(m_gas, HexPrefix::Add);
 	d.gasPrice = toHex(m_gasPrice, HexPrefix::Add);
 	d.value = toHex(_value, HexPrefix::Add);
-	time_t timestamp = time(nullptr);
-	m_rpc.test_modifyTimestamp(timestamp);
+	if (m_timestamp == 0)
+		m_timestamp = time(nullptr);
+	m_rpc.test_modifyTimestamp(m_timestamp);
 	if (!_isCreation)
 	{
 	        d.to = dev::toString(m_contractAddress);
 	        BOOST_REQUIRE(m_rpc.eth_getCode(d.to, "latest").size() > 2);
 		vector<string> const& outputs = m_rpc.iele_call(d);
-		m_rpc.test_modifyTimestamp(timestamp);
+		m_rpc.test_modifyTimestamp(m_timestamp);
 		m_output.clear();
 		for (auto const& output : outputs) {
 			m_output.push_back(fromHex(output, WhenError::Throw));
 		}
 	}
+	m_timestamp = m_timestamp + 1;
 
 	string txHash = m_rpc.iele_sendTransaction(d);
 	m_rpc.test_mineBlocks(1);
