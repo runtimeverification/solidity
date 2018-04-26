@@ -51,6 +51,16 @@ std::string IeleCompiler::getIeleNameForStateVariable(
   }
 }
 
+std::string IeleCompiler::getIeleNameForAccessor(
+    const VariableDeclaration *stateVariable) {
+  FunctionType accessorType(*stateVariable);
+  if (isMostDerived(stateVariable)) {
+    return accessorType.externalSignature();
+  } else {
+    return getIeleNameForContract(contractFor(stateVariable)) + "." + accessorType.externalSignature();
+  }
+}
+
 std::string IeleCompiler::getIeleNameForContract(
     const ContractDefinition *contract) {
   return contract->fullyQualifiedName();
@@ -202,7 +212,8 @@ void IeleCompiler::compileContract(
       }
 
       if (stateVariable->isPublic()) {
-        iele::IeleFunction::Create(&Context, true, VariableName + "()",
+        std::string AccessorName = getIeleNameForAccessor(stateVariable);
+        iele::IeleFunction::Create(&Context, true, AccessorName,
                                    CompilingContract);
       }
 
@@ -354,12 +365,13 @@ std::string IeleCompiler::getNextVarSuffix() {
 
 void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariable) {
   std::string name = getIeleNameForStateVariable(stateVariable);
+  std::string accessorName = getIeleNameForAccessor(stateVariable);
 
    // Lookup function in the contract's symbol table.
   iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
   solAssert(ST,
             "IeleCompiler: failed to access compiling contract's symbol table.");
-  CompilingFunction = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(name + "()"));
+  CompilingFunction = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(accessorName));
   solAssert(CompilingFunction,
             "IeleCompiler: failed to find function in compiling contract's"
             " symbol table");
@@ -370,37 +382,62 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
 
   appendPayableCheck();
 
-  iele::IeleValue *LoadedValue;
+  llvm::SmallVector<iele::IeleValue *, 4> Returns;
   if (stateVariable->isConstant()) {
-    LoadedValue = compileExpression(*stateVariable->value());
+    iele::IeleValue *LoadedValue = compileExpression(*stateVariable->value());
     TypePointer rhsType = stateVariable->value()->annotation().type;
     LoadedValue = appendTypeConversion(LoadedValue, rhsType, stateVariable->annotation().type);
     if (auto arrayType = dynamic_cast<const ArrayType *>(stateVariable->annotation().type.get())) {
       if (arrayType->isByteArray()) {
         LoadedValue = encoding(LoadedValue, stateVariable->annotation().type);
+      } else {
+        solAssert(false, "constant non-byte array");
       }
     }
+    Returns.push_back(LoadedValue);
   } else {
     iele::IeleGlobalVariable *GV = llvm::dyn_cast<iele::IeleGlobalVariable>(ST->lookup(name));
+
+    FunctionType accessorType(*stateVariable);
+    TypePointers paramTypes = accessorType.parameterTypes();
+
+    std::vector<iele::IeleArgument *> parameters;
   
-    if (auto arrayType = dynamic_cast<const ArrayType *>(stateVariable->annotation().type.get())) {
-      if (arrayType->isByteArray()) {
-        LoadedValue = encoding(GV, stateVariable->annotation().type);
+    // Visit formal arguments.
+    for (unsigned i = 0; i < paramTypes.size(); i++) {
+      std::string genName = getNextVarSuffix();
+      parameters.push_back(iele::IeleArgument::Create(&Context, genName, CompilingFunction));
+    }
+
+    TypePointer returnType = stateVariable->annotation().type;
+
+    iele::IeleValue *Address = makeLValue(GV, returnType, DataLocation::Storage)->read(CompilingBlock);
+
+    for (unsigned i = 0; i < paramTypes.size(); i++) {
+      if (auto mappingType = dynamic_cast<const MappingType *>(returnType.get())) {
+        Address = appendMappingAccess(*mappingType, parameters[i], Address)->read(CompilingBlock);
+        returnType = mappingType->valueType();
+      } else if (auto arrayType = dynamic_cast<const ArrayType *>(returnType.get())) {
+        Address = appendArrayAccess(*arrayType, parameters[i], Address, DataLocation::Storage)->read(CompilingBlock);
+        returnType = arrayType->baseType();
       } else {
-        // TODO: complex accessors
-        LoadedValue = GV;
+        solAssert(false, "Index access is allowed only for \"mapping\" and \"array\" types.");
+      }
+    }
+    auto returnTypes = accessorType.returnParameterTypes();
+    solAssert(returnTypes.size() >= 1, "accessor must return a type");
+    if (auto structType = dynamic_cast<const StructType *>(returnType.get())) {
+      auto const& names = accessorType.returnParameterNames();
+      for (unsigned i = 0; i < names.size(); i++) {
+        TypePointer memberType = structType->memberType(names[i]);
+        iele::IeleValue *Value = appendStructAccess(*structType, Address, names[i], DataLocation::Storage)->read(CompilingBlock);
+        Returns.push_back(encoding(Value, memberType));
       }
     } else {
-      LoadedValue = 
-        iele::IeleLocalVariable::Create(&Context, stateVariable->name() + ".val",
-                                        CompilingFunction);
-      iele::IeleInstruction::CreateSLoad(llvm::dyn_cast<iele::IeleLocalVariable>(LoadedValue), GV, CompilingBlock);
+      Returns.push_back(encoding(Address, returnType));
     }
   }
   
-  llvm::SmallVector<iele::IeleValue *, 1> Returns;
-  Returns.push_back(LoadedValue);
-
   iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
 
   appendRevertBlocks();
@@ -3131,7 +3168,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         // don't call getIeleNameFor here because this is part of an external call and therefore is only able to
         // see the most-derived function
         if (const auto *variable = dynamic_cast<const VariableDeclaration *>(declaration)) {
-          name = variable->name() + "()";
+          FunctionType accessorType(*variable);
+          name = accessorType.externalSignature();
         } else if (const auto *function = dynamic_cast<const FunctionDefinition *>(declaration)) {
           name = function->externalSignature();
         } else {

@@ -137,6 +137,7 @@ private:
   std::string getIeleNameForContract(const ContractDefinition *function);
   std::string getIeleNameForFunction(const FunctionDefinition &function);
   std::string getIeleNameForStateVariable(const VariableDeclaration *stateVariable);
+  std::string getIeleNameForAccessor(const VariableDeclaration *stateVariable);
 
   // Infrastructure for handling modifiers (borrowed from ContractCompiler.cpp)
   // Lookup function modifier by name
