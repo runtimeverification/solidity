@@ -510,7 +510,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
 
   if (!function.isPayable()
-      && !contractFor(&function)->isLibrary()) {
+      && !contractFor(&function)->isLibrary() && function.isPublic()) {
     appendPayableCheck();
   }
   if (function.stateMutability() > StateMutability::View
