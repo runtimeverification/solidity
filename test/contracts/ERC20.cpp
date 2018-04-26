@@ -120,6 +120,12 @@ protected:
 
   void checkERC20EmptyLog() const { BOOST_CHECK_EQUAL(m_logs.size(), 0); }
 
+  u160 makeAccountWithEther(int id) {
+    u160 accnt = account(id);
+    sendEther(accnt, 10 * ether);
+    return accnt;
+  }
+
   class ERC20Interface: public ContractInterface {
     public:
       ERC20Interface(SolidityExecutionFramework &framework) : ContractInterface(framework) {}
@@ -280,8 +286,8 @@ BOOST_AUTO_TEST_CASE(approve_SwitchCaller) {
   deployERC20(m_sender, supply);
   ERC20Interface erc20(*this);
 
-  const u160 &owner = u160(0x6);
-  const u160 &spender = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
+  const u160 &spender = makeAccountWithEther(2);
   const u256 &value = u256(0x19);
   m_sender = spender;
   BOOST_CHECK_EQUAL(erc20.allowance(owner, spender), u256(0));
@@ -345,7 +351,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_BalanceEqAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x2710);
   const u256 &value = u256(0x17);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = u160(0x5);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
@@ -366,7 +372,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_BalanceNEqAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x28);
   const u256 &value = u256(0x17);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = u160(0x5);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
@@ -387,7 +393,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_EntireAllowanceMoreThanBalance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x2711);
   const u256 &value = u256(0x2711);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = u160(0x5);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
@@ -408,7 +414,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_EntireBalanceEqAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x2710);
   const u256 &value = u256(0x2710);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = u160(0x5);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
@@ -429,7 +435,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_EntireBalanceMoreThanAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x270f);
   const u256 &value = u256(0x2710);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = u160(0x5);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
@@ -450,7 +456,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_MoreThanAllowanceLessThanBalance) 
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x28);
   const u256 &value = u256(0x29);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = u160(0x5);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
@@ -471,7 +477,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_MoreThanBalanceLessThanAllowance) 
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x3000);
   const u256 &value = u256(0x2711);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = u160(0x5);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
@@ -491,7 +497,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_MoreThanBalanceLessThanAllowance) 
 BOOST_AUTO_TEST_CASE(transferFrom_AllDistinct_Negative) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x28);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = u160(0x5);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
@@ -596,7 +602,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_CallerEqTo_BalanceNEqAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x28);
   const u256 &value = u256(0x17);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -616,7 +622,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_CallerEqTo_MoreThanAllowanceLessThanBalance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x28);
   const u256 &value = u256(0x29);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -636,7 +642,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_CallerEqTo_MoreThanBalanceLessThanAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x30000);
   const u256 &value = u256(0x27100);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -656,7 +662,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_Exploratory_MultipleTransfersSucceed) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x28);
   const u256 &value = u256(0xa);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target1 = u160(0x5);
   const u160 &target2 = u160(0x6);
   const u160 &spender = m_sender;
@@ -687,7 +693,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_Exploratory_MultipleTransfersThrow) {
   const u256 &allowance = u256(0x28);
   const u256 &value = u256(0xa);
   const u256 &valueToSpender = u256(0xb);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &target1 = u160(0x5);
   const u160 &target2 = u160(0x6);
   const u160 &spender = m_sender;
@@ -717,7 +723,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_BalanceEqAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x2710);
   const u256 &value = u256(0x17);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -736,7 +742,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_BalanceNEqAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x28);
   const u256 &value = u256(0x17);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -755,7 +761,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_EntireAllowanceMoreThanBalance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x2711);
   const u256 &value = u256(0x2711);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -774,7 +780,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_EntireBalanceEqAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x2710);
   const u256 &value = u256(0x2710);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -793,7 +799,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_EntireBalanceMoreThanAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x270f);
   const u256 &value = u256(0x2710);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -812,7 +818,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_MoreThanAllowanceLessThanBalance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x28);
   const u256 &value = u256(0x29);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -831,7 +837,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_MoreThanBalanceLessThanAllowance) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x3000);
   const u256 &value = u256(0x2711);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
@@ -849,7 +855,7 @@ BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_MoreThanBalanceLessThanAllowance) {
 BOOST_AUTO_TEST_CASE(transferFrom_FromEqTo_Negative) {
   const u256 &supply = u256(0x2710);
   const u256 &allowance = u256(0x28);
-  const u160 &owner = u160(0x7);
+  const u160 &owner = makeAccountWithEther(1);
   const u160 &spender = m_sender;
   deployERC20(owner, supply);
   ERC20Interface erc20(*this);
