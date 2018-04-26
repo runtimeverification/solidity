@@ -347,6 +347,10 @@ public:
 
 	}
 
+	void modifyTimestamp(size_t timestamp) {
+		m_timestamp = timestamp;
+	}
+
 private:
 	template <class CppFunction, class... Args>
 	auto callCppAndEncodeResult(CppFunction const& _cppFunction, Args const&... _arguments)
@@ -406,6 +410,7 @@ protected:
 	u256 m_status;
 	std::vector<LogEntry> m_logs;
 	u256 m_gasUsed;
+	size_t m_timestamp;
 };
 
 #define ABI_CHECK(result, expectation) do { \

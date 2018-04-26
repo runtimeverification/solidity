@@ -33,7 +33,7 @@ namespace test
 
 BOOST_FIXTURE_TEST_SUITE(Compiler, AnalysisFramework)
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(does_not_include_creation_time_only_internal_functions, 2)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(does_not_include_creation_time_only_internal_functions, 1)
 BOOST_AUTO_TEST_CASE(does_not_include_creation_time_only_internal_functions)
 {
 	char const* sourceCode = R"(

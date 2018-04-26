@@ -53,48 +53,41 @@ protected:
 
 	void callString(std::string const& _name, std::string const& _arg)
 	{
-		BOOST_CHECK(call(_name + "(string)", u256(0x20), _arg.length(), _arg).empty());
+		BOOST_CHECK(call(_name + "(string)", m_framework.encodeDyn(_arg)).empty());
 	}
 
 	void callStringAddress(std::string const& _name, std::string const& _arg1, u160 const& _arg2)
 	{
-		BOOST_CHECK(call(_name + "(string,address)", u256(0x40), _arg2, _arg1.length(), _arg1).empty());
+		BOOST_CHECK(call(_name + "(string,address)", m_framework.encodeDyn(_arg1), _arg2).empty());
 	}
 
 	void callStringAddressBool(std::string const& _name, std::string const& _arg1, u160 const& _arg2, bool _arg3)
 	{
-		BOOST_CHECK(call(_name + "(string,address,bool)", u256(0x60), _arg2, _arg3, _arg1.length(), _arg1).empty());
+		BOOST_CHECK(call(_name + "(string,address,bool)", m_framework.encodeDyn(_arg1), _arg2, _arg3).empty());
 	}
 
 	void callStringBytes32(std::string const& _name, std::string const& _arg1, h256 const& _arg2)
 	{
-		BOOST_CHECK(call(_name + "(string,bytes32)", u256(0x40), _arg2, _arg1.length(), _arg1).empty());
+		BOOST_CHECK(call(_name + "(string,bytes32)", m_framework.encodeDyn(_arg1), _arg2).empty());
 	}
 
 	u160 callStringReturnsAddress(std::string const& _name, std::string const& _arg)
 	{
-		bytes const& ret = callReturning(_name + "(string)", u256(0x20), _arg.length(), _arg);
-		BOOST_REQUIRE(ret.size() == 0x20);
-		BOOST_CHECK(std::count(ret.begin(), ret.begin() + 12, 0) == 12);
-		return u160(u256(h256(ret)));
+		bytes const& ret = callReturning(_name + "(string)", m_framework.encodeDyn(_arg));
+		return u160(u256(h256(ret, h256::AlignRight)));
 	}
 
 	std::string callAddressReturnsString(std::string const& _name, u160 const& _arg)
 	{
 		bytesConstRef const ret(&callReturning(_name + "(address)", _arg));
-		BOOST_REQUIRE(ret.size() >= 0x40);
-		u256 offset(h256(ret.cropped(0, 0x20)));
-		BOOST_REQUIRE_EQUAL(offset, 0x20);
-		u256 len(h256(ret.cropped(0x20, 0x20)));
-		BOOST_REQUIRE_EQUAL(ret.size(), 0x40 + ((len + 0x1f) / 0x20) * 0x20);
-		return ret.cropped(0x40, size_t(len)).toString();
+		u256 len(h256(ret.cropped(ret.size() - 8, 0x08), h256::AlignRight));
+		return ret.cropped(0x00, size_t(len)).toString();
 	}
 
 	h256 callStringReturnsBytes32(std::string const& _name, std::string const& _arg)
 	{
-		bytes const& ret = callReturning(_name + "(string)", u256(0x20), _arg.length(), _arg);
-		BOOST_REQUIRE(ret.size() == 0x20);
-		return h256(ret);
+		bytes const& ret = callReturning(_name + "(string)", m_framework.encodeDyn(_arg));
+		return h256(ret, h256::AlignRight);
 	}
 
 	u256 callVoidReturnsUInt256(std::string const& _name)
