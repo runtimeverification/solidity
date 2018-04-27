@@ -650,7 +650,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
       const auto &argType = arg.type();
       if (argType->isValueType()) {
         appendRangeCheck(ieleArg, *argType);
-      } else {
+      } else if (!function.isConstructor() || isMostDerived(&function)) {
         iele::IeleInstruction::CreateAssign(
           ieleArg, decoding(ieleArg, argType),
           CompilingBlock);
