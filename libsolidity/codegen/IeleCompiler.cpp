@@ -4147,7 +4147,6 @@ void IeleCompiler::computeCtorsAuxParams() {
         base->name().annotation().referencedDeclaration);
       solAssert(baseContract, 
                 "Must find base contract in inheritance specifier");
-
       // Add aux param to all contracts which are between def and basecontract
       // in the inheritance chain...
       bool found = false; 
@@ -4158,27 +4157,26 @@ void IeleCompiler::computeCtorsAuxParams() {
           continue;
         }
 
-        if (it == baseContract) {
+        if (it == baseContract)
           break;
-        }
 
         if (found) {
           if (ctorAuxParams[it][baseContract].first.size() == 0) {
             std::vector<std::string> auxParamNames;
 
-            std::vector<ASTPointer<Expression>> const& baseArguments =
-              base->arguments() ? *base->arguments() : std::vector<ASTPointer<Expression>>();
+            auto baseArgumentNode = CompilingContractInheritanceHierarchy[0]->annotation().baseConstructorArguments[baseContract->constructor()];
+            std::vector<ASTPointer<Expression>> const* arguments = nullptr;
+            if (auto inheritanceSpecifier = dynamic_cast<InheritanceSpecifier const*>(baseArgumentNode))
+               arguments = inheritanceSpecifier->arguments();
+             else if (auto modifierInvocation = dynamic_cast<ModifierInvocation const*>(baseArgumentNode))
+               arguments = modifierInvocation->arguments();
 
-
-            for (unsigned i = 0; i < baseArguments.size(); i++) {
-              std::string newParamName = "aux" + getNextVarSuffix();
-              auxParamNames.push_back(newParamName);
+            if (arguments) {
+              for (unsigned i = 0; i < arguments->size(); i++) {
+                std::string newParamName = "aux" + getNextVarSuffix();
+                auxParamNames.push_back(newParamName);
+              }
             }
-
-            // for (unsigned i = 0; i < (&base->arguments())->size(); i++) {
-            //   std::string newParamName = "aux" + getNextVarSuffix();
-            //   auxParamNames.push_back(newParamName);
-            // }
 
             ctorAuxParams[it][baseContract] = std::make_pair(auxParamNames, def);
           }
@@ -4229,7 +4227,6 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
 
         // No aux params to forward, compute value "normally"
         if (forwardingAuxParams.first.empty()) { 
-
           auto baseArgumentNode = CompilingContractInheritanceHierarchy[0]->annotation().baseConstructorArguments[decl];
           std::vector<ASTPointer<Expression>> const* arguments = nullptr;
           if (auto inheritanceSpecifier = dynamic_cast<InheritanceSpecifier const*>(baseArgumentNode))
