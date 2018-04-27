@@ -137,6 +137,7 @@ private:
   std::string getIeleNameForContract(const ContractDefinition *function);
   std::string getIeleNameForFunction(const FunctionDefinition &function);
   std::string getIeleNameForStateVariable(const VariableDeclaration *stateVariable);
+  std::string getIeleNameForAccessor(const VariableDeclaration *stateVariable);
 
   // Infrastructure for handling modifiers (borrowed from ContractCompiler.cpp)
   // Lookup function modifier by name
@@ -198,6 +199,10 @@ private:
   void appendDefaultConstructor(const ContractDefinition *contract);
   void appendLocalVariableInitialization(
           iele::IeleLocalVariable *Local, const VariableDeclaration *localVariable);
+
+  IeleLValue *appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue);
+  IeleLValue *appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc);
+  IeleLValue *appendStructAccess(const StructType &type, iele::IeleValue *ExprValue, std::string member, DataLocation Loc);
 
   iele::IeleValue *getReferenceTypeSize(
     const Type &type, iele::IeleValue *AddressValue);
