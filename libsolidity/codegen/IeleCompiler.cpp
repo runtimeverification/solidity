@@ -51,6 +51,16 @@ std::string IeleCompiler::getIeleNameForStateVariable(
   }
 }
 
+std::string IeleCompiler::getIeleNameForAccessor(
+    const VariableDeclaration *stateVariable) {
+  FunctionType accessorType(*stateVariable);
+  if (isMostDerived(stateVariable)) {
+    return accessorType.externalSignature();
+  } else {
+    return getIeleNameForContract(contractFor(stateVariable)) + "." + accessorType.externalSignature();
+  }
+}
+
 std::string IeleCompiler::getIeleNameForContract(
     const ContractDefinition *contract) {
   return contract->fullyQualifiedName();
@@ -206,7 +216,8 @@ void IeleCompiler::compileContract(
       }
 
       if (stateVariable->isPublic()) {
-        iele::IeleFunction::Create(&Context, true, VariableName + "()",
+        std::string AccessorName = getIeleNameForAccessor(stateVariable);
+        iele::IeleFunction::Create(&Context, true, AccessorName,
                                    CompilingContract);
       }
 
@@ -401,12 +412,13 @@ std::string IeleCompiler::getNextVarSuffix() {
 
 void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariable) {
   std::string name = getIeleNameForStateVariable(stateVariable);
+  std::string accessorName = getIeleNameForAccessor(stateVariable);
 
    // Lookup function in the contract's symbol table.
   iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
   solAssert(ST,
             "IeleCompiler: failed to access compiling contract's symbol table.");
-  CompilingFunction = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(name + "()"));
+  CompilingFunction = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(accessorName));
   solAssert(CompilingFunction,
             "IeleCompiler: failed to find function in compiling contract's"
             " symbol table");
@@ -417,37 +429,62 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
 
   appendPayableCheck();
 
-  iele::IeleValue *LoadedValue;
+  llvm::SmallVector<iele::IeleValue *, 4> Returns;
   if (stateVariable->isConstant()) {
-    LoadedValue = compileExpression(*stateVariable->value());
+    iele::IeleValue *LoadedValue = compileExpression(*stateVariable->value());
     TypePointer rhsType = stateVariable->value()->annotation().type;
     LoadedValue = appendTypeConversion(LoadedValue, rhsType, stateVariable->annotation().type);
     if (auto arrayType = dynamic_cast<const ArrayType *>(stateVariable->annotation().type.get())) {
       if (arrayType->isByteArray()) {
         LoadedValue = encoding(LoadedValue, stateVariable->annotation().type);
+      } else {
+        solAssert(false, "constant non-byte array");
       }
     }
+    Returns.push_back(LoadedValue);
   } else {
     iele::IeleGlobalVariable *GV = llvm::dyn_cast<iele::IeleGlobalVariable>(ST->lookup(name));
+
+    FunctionType accessorType(*stateVariable);
+    TypePointers paramTypes = accessorType.parameterTypes();
+
+    std::vector<iele::IeleArgument *> parameters;
   
-    if (auto arrayType = dynamic_cast<const ArrayType *>(stateVariable->annotation().type.get())) {
-      if (arrayType->isByteArray()) {
-        LoadedValue = encoding(GV, stateVariable->annotation().type);
+    // Visit formal arguments.
+    for (unsigned i = 0; i < paramTypes.size(); i++) {
+      std::string genName = getNextVarSuffix();
+      parameters.push_back(iele::IeleArgument::Create(&Context, genName, CompilingFunction));
+    }
+
+    TypePointer returnType = stateVariable->annotation().type;
+
+    iele::IeleValue *Address = makeLValue(GV, returnType, DataLocation::Storage)->read(CompilingBlock);
+
+    for (unsigned i = 0; i < paramTypes.size(); i++) {
+      if (auto mappingType = dynamic_cast<const MappingType *>(returnType.get())) {
+        Address = appendMappingAccess(*mappingType, parameters[i], Address)->read(CompilingBlock);
+        returnType = mappingType->valueType();
+      } else if (auto arrayType = dynamic_cast<const ArrayType *>(returnType.get())) {
+        Address = appendArrayAccess(*arrayType, parameters[i], Address, DataLocation::Storage)->read(CompilingBlock);
+        returnType = arrayType->baseType();
       } else {
-        // TODO: complex accessors
-        LoadedValue = GV;
+        solAssert(false, "Index access is allowed only for \"mapping\" and \"array\" types.");
+      }
+    }
+    auto returnTypes = accessorType.returnParameterTypes();
+    solAssert(returnTypes.size() >= 1, "accessor must return a type");
+    if (auto structType = dynamic_cast<const StructType *>(returnType.get())) {
+      auto const& names = accessorType.returnParameterNames();
+      for (unsigned i = 0; i < names.size(); i++) {
+        TypePointer memberType = structType->memberType(names[i]);
+        iele::IeleValue *Value = appendStructAccess(*structType, Address, names[i], DataLocation::Storage)->read(CompilingBlock);
+        Returns.push_back(encoding(Value, memberType));
       }
     } else {
-      LoadedValue = 
-        iele::IeleLocalVariable::Create(&Context, stateVariable->name() + ".val",
-                                        CompilingFunction);
-      iele::IeleInstruction::CreateSLoad(llvm::dyn_cast<iele::IeleLocalVariable>(LoadedValue), GV, CompilingBlock);
+      Returns.push_back(encoding(Address, returnType));
     }
   }
   
-  llvm::SmallVector<iele::IeleValue *, 1> Returns;
-  Returns.push_back(LoadedValue);
-
   iele::IeleInstruction::CreateRet(Returns, CompilingBlock);
 
   appendRevertBlocks();
@@ -2439,9 +2476,14 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     }
     break;
   }
-  case FunctionType::Kind::Revert:
-      appendRevert();
+  case FunctionType::Kind::Revert: {
+      iele::IeleValue *Message = nullptr;
+      if (arguments.size() > 1) {
+        Message = compileExpression(*arguments[0]);
+      }
+      appendRevert(nullptr, Message);
       break;
+  }
   case FunctionType::Kind::Assert:
   case FunctionType::Kind::Require: {
     // Visit condition.
@@ -2460,8 +2502,13 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
                                         CompilingBlock);
     if (function.kind() == FunctionType::Kind::Assert)
       appendInvalid(InvConditionValue);
-    else
-      appendRevert(InvConditionValue);
+    else {
+      iele::IeleValue *Message = nullptr;
+      if (arguments.size() > 1) {
+        Message = compileExpression(*arguments[1]);
+      }
+      appendRevert(InvConditionValue, Message);
+    }
     break;
   }
   case FunctionType::Kind::AddMod: {
@@ -3202,7 +3249,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         // don't call getIeleNameFor here because this is part of an external call and therefore is only able to
         // see the most-derived function
         if (const auto *variable = dynamic_cast<const VariableDeclaration *>(declaration)) {
-          name = variable->name() + "()";
+          FunctionType accessorType(*variable);
+          name = accessorType.externalSignature();
         } else if (const auto *function = dynamic_cast<const FunctionDefinition *>(declaration)) {
           name = function->externalSignature();
         } else {
@@ -3352,7 +3400,6 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     break;
   case Type::Category::Struct: {
     const StructType &type = dynamic_cast<const StructType &>(baseType);
-    const TypePointer memberType = type.memberType(member);
 
     // Visit accessed exression (skip in case of magic base expression).
     iele::IeleValue *ExprValue = compileExpression(memberAccess.expression());
@@ -3360,31 +3407,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
               "IeleCompiler: failed to compile base expression for member "
               "access.");
 
-    // Generate code for the access.
-    // First compute the offset from the start of the struct.
-    bigint offset;
-    switch (type.location()) {
-    case DataLocation::Storage: {
-      const auto& offsets = type.storageOffsetsOfMember(member);
-      offset = offsets.first;
-      break;
-    }
-    case DataLocation::Memory: {
-      offset = type.memoryOffsetOfMember(member);
-      break;
-    }
-    default:
-      solAssert(false, "IeleCompiler: Illegal data location for struct.");
-    }
-    iele::IeleValue *OffsetValue =
-      iele::IeleIntConstant::Create(&Context, offset);
-    // Then compute the address of the accessed element.
-    iele::IeleLocalVariable *AddressValue =
-      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, AddressValue, ExprValue, OffsetValue,
-        CompilingBlock);
-    CompilingExpressionResult.push_back(makeLValue(AddressValue, memberType, type.location()));
+    IeleLValue *AddressValue = appendStructAccess(type, ExprValue, member, type.location());
+    CompilingExpressionResult.push_back(AddressValue);
     break;
   }
   case Type::Category::FixedBytes: {
@@ -3461,7 +3485,6 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
   switch (baseType.category()) {
   case Type::Category::Array: {
     const ArrayType &type = dynamic_cast<const ArrayType &>(baseType);
-    TypePointer elementType = type.baseType();
 
     // Visit accessed exression.
     iele::IeleValue *ExprValue = compileExpression(indexAccess.baseExpression());
@@ -3482,83 +3505,8 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
               "IeleCompiler: failed to compile index expression for index "
               "access.");
 
-    // Generate code for the access.
-    bigint elementSize;
-    bigint size;
-    switch (type.location()) {
-    case DataLocation::Storage: {
-      elementSize = elementType->storageSize();
-      size = type.storageSize();
-      break;
-    }
-    case DataLocation::Memory: {
-      elementSize = elementType->memorySize();
-      size = type.memorySize();
-      break;
-    }
-    case DataLocation::CallData:
-      solAssert(false, "not supported by IELE.");
-    }
-    // First compute the offset from the start of the array.
-    iele::IeleValue *ElementSizeValue =
-      iele::IeleIntConstant::Create(&Context, elementSize);
-    iele::IeleLocalVariable *OffsetValue =
-      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-    if (!type.isByteArray()) {
-      iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Mul, OffsetValue, IndexValue,
-          ElementSizeValue, CompilingBlock);
-    }
-    if (type.isDynamicallySized() && !type.isByteArray()) {
-      // Add 1 to skip the first slot that holds the size.
-      iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Add, OffsetValue, OffsetValue,
-          iele::IeleIntConstant::getOne(&Context), CompilingBlock);
-    }
-    // Then compute the size of the array.
-    iele::IeleValue *SizeValue = nullptr;
-    if (type.isDynamicallySized()) {
-      // If the array is dynamically sized the size is stored in the first slot.
-      SizeValue =
-        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-      if (type.location() == DataLocation::Storage)
-        iele::IeleInstruction::CreateSLoad(
-            llvm::cast<iele::IeleLocalVariable>(SizeValue), ExprValue,
-            CompilingBlock);
-      else
-        iele::IeleInstruction::CreateLoad(
-            llvm::cast<iele::IeleLocalVariable>(SizeValue), ExprValue,
-            CompilingBlock);
-    } else {
-      SizeValue = iele::IeleIntConstant::Create(&Context, size);
-    }
-    // Then check for out-of-bounds access.
-    iele::IeleLocalVariable *OutOfRangeValue =
-      iele::IeleLocalVariable::Create(&Context, "index.out.of.range",
-                                      CompilingFunction);
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::CmpLt, OutOfRangeValue, IndexValue, 
-        iele::IeleIntConstant::getZero(&Context), CompilingBlock);
-    appendRevert(OutOfRangeValue);
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue, 
-        SizeValue, CompilingBlock);
-    appendRevert(OutOfRangeValue);
-    // Then compute the address of the accessed element and check for
-    // out-of-bounds access.
-    iele::IeleLocalVariable *AddressValue =
-      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-    if (type.isByteArray()) {
-      iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Add, AddressValue, ExprValue, iele::IeleIntConstant::getOne(&Context),
-          CompilingBlock);
-    } else {
-      iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Add, AddressValue, ExprValue, OffsetValue,
-          CompilingBlock);
-    }
-
-    CompilingExpressionResult.push_back(makeLValue(AddressValue, elementType, type.location(), type.isByteArray() ? IndexValue : nullptr));
+    IeleLValue *AddressValue = appendArrayAccess(type, IndexValue, ExprValue, type.location());
+    CompilingExpressionResult.push_back(AddressValue);
     break;
   }
   case Type::Category::FixedBytes: {
@@ -3604,7 +3552,6 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
   case Type::Category::Mapping: {
     const MappingType &type = dynamic_cast<const MappingType &>(baseType);
     TypePointer keyType = type.keyType();
-    TypePointer valueType = type.valueType();
 
     // Visit accessed exression.
     iele::IeleValue *ExprValue = compileExpression(indexAccess.baseExpression());
@@ -3625,42 +3572,9 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
     solAssert(IndexValue,
               "IeleCompiler: failed to compile index expression for index "
               "access.");
+    IeleLValue *AddressValue = appendMappingAccess(type, IndexValue, ExprValue);
 
-    // Hash index if needed.
-    if (type.hasHashedKeyspace()) {
-      iele::IeleLocalVariable *MemorySpillAddress = appendMemorySpill();
-      iele::IeleInstruction::CreateStore(
-          IndexValue, MemorySpillAddress, CompilingBlock);
-      iele::IeleLocalVariable *HashedIndexValue =
-        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-      iele::IeleInstruction::CreateSha3(
-          HashedIndexValue, MemorySpillAddress, CompilingBlock);
-      IndexValue = HashedIndexValue;
-    }
-
-    // Generate code for the access.
-    // First compute the address of the accessed value.
-    iele::IeleLocalVariable *AddressValue =
-      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-    if (type.hasInfiniteKeyspace()) {
-      // In this case AddressValue = ExprValue + IndexValue < nbits(StorageSize)
-      appendShiftBy(AddressValue, IndexValue,
-                    dev::bitsRequired(NextStorageAddress));
-      iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
-          CompilingBlock);
-    } else {
-      // In this case AddressValue = ExprValue + IndexValue * ValueTypeSize
-      iele::IeleValue *ValueTypeSize =
-        iele::IeleIntConstant::Create(&Context, valueType->storageSize());
-      iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Mul, AddressValue, IndexValue,
-          ValueTypeSize, CompilingBlock);
-      iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
-          CompilingBlock);
-    }
-    CompilingExpressionResult.push_back(makeLValue(AddressValue, valueType, DataLocation::Storage));
+    CompilingExpressionResult.push_back(AddressValue);
     break;
   }
   case Type::Category::TypeType:
@@ -3670,6 +3584,157 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
   }
 
   return false;
+}
+
+IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc) {
+  TypePointer elementType = type.baseType();
+
+  // Generate code for the access.
+  bigint elementSize;
+  bigint size;
+  switch (Loc) {
+  case DataLocation::Storage: {
+    elementSize = elementType->storageSize();
+    size = type.storageSize();
+    break;
+  }
+  case DataLocation::Memory: {
+    elementSize = elementType->memorySize();
+    size = type.memorySize();
+    break;
+  }
+  case DataLocation::CallData:
+    solAssert(false, "not supported by IELE.");
+  }
+  // First compute the offset from the start of the array.
+  iele::IeleValue *ElementSizeValue =
+    iele::IeleIntConstant::Create(&Context, elementSize);
+  iele::IeleLocalVariable *OffsetValue =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  if (!type.isByteArray()) {
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Mul, OffsetValue, IndexValue,
+        ElementSizeValue, CompilingBlock);
+  }
+  if (type.isDynamicallySized() && !type.isByteArray()) {
+    // Add 1 to skip the first slot that holds the size.
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, OffsetValue, OffsetValue,
+        iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+  }
+  // Then compute the size of the array.
+  iele::IeleValue *SizeValue = nullptr;
+  if (type.isDynamicallySized()) {
+    // If the array is dynamically sized the size is stored in the first slot.
+    SizeValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    if (Loc == DataLocation::Storage)
+      iele::IeleInstruction::CreateSLoad(
+          llvm::cast<iele::IeleLocalVariable>(SizeValue), ExprValue,
+          CompilingBlock);
+    else
+      iele::IeleInstruction::CreateLoad(
+          llvm::cast<iele::IeleLocalVariable>(SizeValue), ExprValue,
+          CompilingBlock);
+  } else {
+    SizeValue = iele::IeleIntConstant::Create(&Context, size);
+  }
+  // Then check for out-of-bounds access.
+  iele::IeleLocalVariable *OutOfRangeValue =
+    iele::IeleLocalVariable::Create(&Context, "index.out.of.range",
+                                    CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpLt, OutOfRangeValue, IndexValue, 
+      iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  appendRevert(OutOfRangeValue);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue, 
+      SizeValue, CompilingBlock);
+  appendRevert(OutOfRangeValue);
+  // Then compute the address of the accessed element and check for
+  // out-of-bounds access.
+  iele::IeleLocalVariable *AddressValue =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  if (type.isByteArray()) {
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, AddressValue, ExprValue, iele::IeleIntConstant::getOne(&Context),
+        CompilingBlock);
+  } else {
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, AddressValue, ExprValue, OffsetValue,
+        CompilingBlock);
+  }
+
+  return makeLValue(AddressValue, elementType, Loc, type.isByteArray() ? IndexValue : nullptr);
+}
+
+IeleLValue *IeleCompiler::appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue) {
+  TypePointer valueType = type.valueType();
+  // Hash index if needed.
+  if (type.hasHashedKeyspace()) {
+    iele::IeleLocalVariable *MemorySpillAddress = appendMemorySpill();
+    iele::IeleInstruction::CreateStore(
+        IndexValue, MemorySpillAddress, CompilingBlock);
+    iele::IeleLocalVariable *HashedIndexValue =
+      iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+    iele::IeleInstruction::CreateSha3(
+        HashedIndexValue, MemorySpillAddress, CompilingBlock);
+    IndexValue = HashedIndexValue;
+  }
+
+  // Generate code for the access.
+  // First compute the address of the accessed value.
+  iele::IeleLocalVariable *AddressValue =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  if (type.hasInfiniteKeyspace()) {
+    // In this case AddressValue = ExprValue + IndexValue < nbits(StorageSize)
+    appendShiftBy(AddressValue, IndexValue,
+                  dev::bitsRequired(NextStorageAddress));
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
+        CompilingBlock);
+  } else {
+    // In this case AddressValue = ExprValue + IndexValue * ValueTypeSize
+    iele::IeleValue *ValueTypeSize =
+      iele::IeleIntConstant::Create(&Context, valueType->storageSize());
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Mul, AddressValue, IndexValue,
+        ValueTypeSize, CompilingBlock);
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
+        CompilingBlock);
+  }
+  return makeLValue(AddressValue, valueType, DataLocation::Storage);
+}
+
+IeleLValue *IeleCompiler::appendStructAccess(const StructType &type, iele::IeleValue *ExprValue, std::string member, DataLocation Loc) {
+  const TypePointer memberType = type.memberType(member);
+
+  // Generate code for the access.
+  // First compute the offset from the start of the struct.
+  bigint offset;
+  switch (Loc) {
+  case DataLocation::Storage: {
+    const auto& offsets = type.storageOffsetsOfMember(member);
+    offset = offsets.first;
+    break;
+  }
+  case DataLocation::Memory: {
+    offset = type.memoryOffsetOfMember(member);
+    break;
+  }
+  default:
+    solAssert(false, "IeleCompiler: Illegal data location for struct.");
+  }
+  iele::IeleValue *OffsetValue =
+    iele::IeleIntConstant::Create(&Context, offset);
+  // Then compute the address of the accessed element.
+  iele::IeleLocalVariable *AddressValue =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, AddressValue, ExprValue, OffsetValue,
+      CompilingBlock);
+  return makeLValue(AddressValue, memberType, Loc);
 }
 
 void IeleCompiler::appendRangeCheck(iele::IeleValue *Value, bigint *min, bigint *max) {
@@ -3877,7 +3942,8 @@ void IeleCompiler::endVisit(const Literal &literal) {
     iele::IeleIntConstant *LiteralValue =
       iele::IeleIntConstant::Create(
         &Context,
-        value_integer);
+        value_integer,
+        true);
     CompilingExpressionResult.push_back(LiteralValue);
     break;
   }
