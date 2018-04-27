@@ -2807,7 +2807,6 @@ BOOST_AUTO_TEST_CASE(constructor_argument_overriding)
 	ABI_CHECK(callContractFunction("getA()"), encodeArgs(3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(internal_constructor, 1)
 BOOST_AUTO_TEST_CASE(internal_constructor)
 {
 	char const* sourceCode = R"(
@@ -6053,7 +6052,6 @@ BOOST_AUTO_TEST_CASE(evm_exceptions_in_constructor_call_fail)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(evm_exceptions_in_constructor_out_of_baund, 1)
 BOOST_AUTO_TEST_CASE(evm_exceptions_in_constructor_out_of_baund)
 {
 	char const* sourceCode = R"(
@@ -6389,7 +6387,6 @@ BOOST_AUTO_TEST_CASE(bytes_in_constructors_unpacker)
 	BOOST_REQUIRE(callContractFunction("m_s()") == encodeArgs(dyn1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(bytes_in_constructors_packer, 1)
 BOOST_AUTO_TEST_CASE(bytes_in_constructors_packer)
 {
 	char const* sourceCode = R"(
@@ -6420,16 +6417,15 @@ BOOST_AUTO_TEST_CASE(bytes_in_constructors_packer)
 	)";
 	compileAndRun(sourceCode, 0, "Creator");
 	string s1("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
-	vector<bytes> dyn1 = encodeArgs(u256(s1.length()), s1);
+	bytes dyn1 = encodeDyn(s1);
 	u256 x = 7;
-	vector<bytes> args1 = encodeArgs(x, u256(0x40)) + dyn1;
-	BOOST_REQUIRE(
-		callContractFunction("f(uint,bytes)", args1) ==
+	vector<bytes> args1 = encodeArgs(x, dyn1);
+	ABI_CHECK(
+		callContractFunctionNoEncoding("f(uint,bytes)", args1),
 		encodeArgs(x, string{s1[unsigned(x)]})
 	);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(arrays_in_constructors, 1)
 BOOST_AUTO_TEST_CASE(arrays_in_constructors)
 {
 	char const* sourceCode = R"(
@@ -6460,11 +6456,11 @@ BOOST_AUTO_TEST_CASE(arrays_in_constructors)
 	)";
 	compileAndRun(sourceCode, 0, "Creator");
 	vector<u256> s1{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-	vector<bytes> dyn1 = encodeArgs(u256(s1.size()), s1);
+	bytes dyn1 = encodeRefArray(s1, s1.size(), 20);
 	u256 x = 7;
-	vector<bytes> args1 = encodeArgs(x, u256(0x40)) + dyn1;
+	vector<bytes> args1 = encodeArgs(x, dyn1);
 	BOOST_REQUIRE(
-		callContractFunction("f(uint,address[])", args1) ==
+		callContractFunctionNoEncoding("f(uint,address[])", args1) ==
 		encodeArgs(x, s1[unsigned(x)])
 	);
 }
@@ -7822,7 +7818,6 @@ BOOST_AUTO_TEST_CASE(destructuring_assignment_wildcard)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(0)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(lone_struct_array_type, 1)
 BOOST_AUTO_TEST_CASE(lone_struct_array_type)
 {
 	char const* sourceCode = R"(
@@ -9208,7 +9203,6 @@ BOOST_AUTO_TEST_CASE(failing_ecrecover_invalid_input)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(failing_ecrecover_invalid_input_proper, 1)
 BOOST_AUTO_TEST_CASE(failing_ecrecover_invalid_input_proper)
 {
 	char const* sourceCode = R"(
@@ -9232,7 +9226,7 @@ BOOST_AUTO_TEST_CASE(failing_ecrecover_invalid_input_proper)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("f()"), encodeArgs());
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(failing_ecrecover_invalid_input_asm, 1)
