@@ -4243,9 +4243,8 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
             ModifierDepth = ModifierDepthCache;
             solAssert(Returns.size() == 0, "Constructor doesn't return anything");
           }
-        }
-        // forward aux param to base constructor
-        else {
+        } else {
+          // forward aux param to base constructor
           for (std::string auxParamName : forwardingAuxParams.first) {
             iele::IeleValue *AuxArg =
               FunST->lookup(VarNameMap[NumOfModifiers][auxParamName]);
@@ -4291,10 +4290,9 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
                 Arguments.push_back(AuxArg);
               }
             }
-          } 
-          // Base takes an aux param, carrying a value that needs to be 
-          // evaluated in this contract. 
-          else {
+          } else {
+            // Base takes an aux param, carrying a value that needs to be 
+            // evaluated in this contract. 
             auto decl = auxParamDest->constructor(); 
             auto baseArgumentNode = CompilingContractInheritanceHierarchy[0]->annotation().baseConstructorArguments[decl];
             std::vector<ASTPointer<Expression>> const* arguments = nullptr;
