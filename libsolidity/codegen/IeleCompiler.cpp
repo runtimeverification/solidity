@@ -3616,7 +3616,7 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
     break;
   }
   case Type::Category::TypeType:
-    solAssert(false, "not implemented yet: typetype");
+    break;
   default:
     solAssert(false, "IeleCompiler: Index access to unknown type.");
   }
