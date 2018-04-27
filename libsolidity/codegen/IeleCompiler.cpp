@@ -3075,6 +3075,41 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     CompilingExpressionResult.push_back(NewSize);
     break;
   }
+  case FunctionType::Kind::ABIEncode:
+  case FunctionType::Kind::ABIEncodePacked: {
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    TypePointers Types;
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      iele::IeleValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call "
+                "argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type;
+      ArgValue = appendTypeConversion(ArgValue, ArgType, ArgType->mobileType());
+      ArgType = ArgType->mobileType();
+      Arguments.push_back(ArgValue);
+      Types.push_back(ArgType);
+    }
+
+    TypePointer returnType = function.returnParameterTypes()[0];
+    iele::IeleValue *Return = appendArrayAllocation(dynamic_cast<const ArrayType &>(*returnType));
+
+    iele::IeleLocalVariable *StringAddress =
+      iele::IeleLocalVariable::Create(&Context, "string.address", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, StringAddress, Return,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+
+    iele::IeleValue *ByteWidth = encoding(Arguments, Types, StringAddress, function.kind() == FunctionType::Kind::ABIEncode);
+    
+    iele::IeleInstruction::CreateStore(
+      ByteWidth, Return, CompilingBlock);
+
+    CompilingExpressionResult.push_back(Return);
+    break;
+  }
   default:
       solAssert(false, "IeleCompiler: Invalid function type.");
   }

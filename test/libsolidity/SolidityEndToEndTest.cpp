@@ -11484,7 +11484,6 @@ BOOST_AUTO_TEST_CASE(snark)
 	BOOST_CHECK(callContractFunction("verifyTx()") == encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(abi_encode, 1)
 BOOST_AUTO_TEST_CASE(abi_encode)
 {
 	char const* sourceCode = R"(
@@ -11515,14 +11514,13 @@ BOOST_AUTO_TEST_CASE(abi_encode)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("f0()"), encodeArgs(0x20, 0));
-	ABI_CHECK(callContractFunction("f1()"), encodeArgs(0x20, 0x40, 1, 2));
-	ABI_CHECK(callContractFunction("f2()"), encodeArgs(0x20, 0xa0, 1, 0x60, 2, 3, "abc"));
-	ABI_CHECK(callContractFunction("f3()"), encodeArgs(0x20, 0xa0, 1, 0x60, 2, 3, "abc"));
-	ABI_CHECK(callContractFunction("f4()"), encodeArgs(0x20, 0x20, "ab"));
+	ABI_CHECK(callContractFunction("f0()"), encodeArgs(encodeDyn(string(""))));
+	ABI_CHECK(callContractFunction("f1()"), encodeArgs(encodeRefArgs(uint64_t(2), encodeLogs(1, 2))));
+	ABI_CHECK(callContractFunction("f2()"), encodeArgs(encodeRefArgs(uint64_t(2 + 3 + 8), encodeLogs(1, encodeDyn(string("abc")), 2))));
+	ABI_CHECK(callContractFunction("f3()"), encodeArgs(encodeRefArgs(uint64_t(2 + 3 + 8), encodeLogs(1, encodeDyn(string("abc")), 2))));
+	ABI_CHECK(callContractFunction("f4()"), encodeArgs(encodeRefArgs(uint64_t(2), encodeLogs("ab"))));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(abi_encode_v2, 1)
 BOOST_AUTO_TEST_CASE(abi_encode_v2)
 {
 	char const* sourceCode = R"(
@@ -11563,15 +11561,15 @@ BOOST_AUTO_TEST_CASE(abi_encode_v2)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("f0()"), encodeArgs(0x20, 0));
-	ABI_CHECK(callContractFunction("f1()"), encodeArgs(0x20, 0x40, 1, 2));
-	ABI_CHECK(callContractFunction("f2()"), encodeArgs(0x20, 0xa0, 1, 0x60, 2, 3, "abc"));
-	ABI_CHECK(callContractFunction("f3()"), encodeArgs(0x20, 0xa0, 1, 0x60, 2, 3, "abc"));
-	ABI_CHECK(callContractFunction("f4()"), encodeArgs(0x20, 0x160, 1, 0x80, 0xc0, 2, 3, "abc", 7, 0x40, 2, 2, 3));
+	ABI_CHECK(callContractFunction("f0()"), encodeArgs(encodeDyn(string(""))));
+	ABI_CHECK(callContractFunction("f1()"), encodeArgs(encodeRefArgs(uint64_t(2), encodeLogs(1, 2))));
+	ABI_CHECK(callContractFunction("f2()"), encodeArgs(encodeRefArgs(uint64_t(2 + 3 + 8), encodeLogs(1, encodeDyn(string("abc")), 2))));
+	ABI_CHECK(callContractFunction("f3()"), encodeArgs(encodeRefArgs(uint64_t(2 + 3 + 8), encodeLogs(1, encodeDyn(string("abc")), 2))));
+        bytes s = encodeRefArgs(bigint(7), 1, 2, bigint(2), bigint(3));
+	ABI_CHECK(callContractFunction("f4()"), encodeArgs(encodeRefArgs(uint64_t(2 + 3 + 8 + s.size()), encodeLogs(1, encodeDyn(string("abc")), s, 2))));
 }
 
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(abi_encodePacked, 1)
 BOOST_AUTO_TEST_CASE(abi_encodePacked)
 {
 	char const* sourceCode = R"(
@@ -11598,10 +11596,10 @@ BOOST_AUTO_TEST_CASE(abi_encodePacked)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("f0()"), encodeArgs(0x20, 0));
-	ABI_CHECK(callContractFunction("f1()"), encodeArgs(0x20, 2, "\x01\x02"));
-	ABI_CHECK(callContractFunction("f2()"), encodeArgs(0x20, 5, "\x01" "abc" "\x02"));
-	ABI_CHECK(callContractFunction("f3()"), encodeArgs(0x20, 5, "\x01" "abc" "\x02"));
+	ABI_CHECK(callContractFunction("f0()"), encodeArgs(encodeDyn(string(""))));
+	ABI_CHECK(callContractFunction("f1()"), encodeArgs(encodeDyn(string("\x01\x02"))));
+	ABI_CHECK(callContractFunction("f2()"), encodeArgs(encodeDyn(string("\x01" "abc" "\x02"))));
+	ABI_CHECK(callContractFunction("f3()"), encodeArgs(encodeDyn(string("\x01" "abc" "\x02"))));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(abi_encode_with_selector, 1)
