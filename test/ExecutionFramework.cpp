@@ -136,7 +136,6 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 	if (_isCreation)
 	{
 	        m_contractAddress = Address(receipt.contractAddress);
-	        BOOST_REQUIRE(m_contractAddress);
 	}
 
 	if (m_showMessages)

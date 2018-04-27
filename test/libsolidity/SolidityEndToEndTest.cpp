@@ -2815,7 +2815,8 @@ BOOST_AUTO_TEST_CASE(internal_constructor)
 			function C() internal {}
 		}
 	)";
-	BOOST_CHECK(compileAndRunWithoutCheck(sourceCode, 0, "C").empty());
+	compileAndRunWithoutCheck(sourceCode, 0, "C");
+	BOOST_CHECK(m_status != 0);
 }
 
 BOOST_AUTO_TEST_CASE(function_modifier)
@@ -6067,7 +6068,8 @@ BOOST_AUTO_TEST_CASE(evm_exceptions_in_constructor_out_of_baund)
 			}
 		}
 	)";
-	BOOST_CHECK(compileAndRunWithoutCheck(sourceCode, 0, "A") == bytes());
+	compileAndRunWithoutCheck(sourceCode, 0, "A");
+	BOOST_CHECK(m_status != 0);
 }
 
 BOOST_AUTO_TEST_CASE(positive_integers_to_signed)
