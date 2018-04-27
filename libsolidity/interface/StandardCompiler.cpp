@@ -547,13 +547,13 @@ Json::Value StandardCompiler::compileInternal(Json::Value const& _input)
 				m_compilerStack.sourceMapping(contractName)
 			);
 
+/*
 		if (isArtifactRequested(
 			outputSelection,
 			file,
 			name,
 			{ "evm.deployedBytecode", "evm.deployedBytecode.object", "evm.deployedBytecode.opcodes", "evm.deployedBytecode.sourceMap", "evm.deployedBytecode.linkReferences" }
 		))
-/*
 			evmData["deployedBytecode"] = collectEVMObject(
 				m_compilerStack.runtimeObject(contractName),
 				m_compilerStack.runtimeSourceMapping(contractName)
