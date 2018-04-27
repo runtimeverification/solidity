@@ -530,6 +530,10 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
  
+    if (!function.isPayable()) {
+      appendPayableCheck();
+    }
+
     for (unsigned i = 0; i < function.parameters().size(); i++) {
       const auto &arg = *function.parameters()[i];
       iele::IeleArgument *ieleArg = parameters[i];
@@ -631,16 +635,15 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   CompilingBlock =
     iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
 
-  if (!function.isPayable()
-      && !contractFor(&function)->isLibrary() && function.isPublic()) {
-    appendPayableCheck();
-  }
   if (function.stateMutability() > StateMutability::View
       && CompilingContractASTNode->isLibrary()) {
     appendRevert();
   }
 
   if (function.isPublic() && !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) && !contractFor(&function)->isLibrary()) {
+    if (!function.isPayable()) {
+      appendPayableCheck();
+    }
     for (unsigned i = 0; i < function.parameters().size(); i++) {
       const auto &arg = *function.parameters()[i];
       iele::IeleArgument *ieleArg = parameters[i];
