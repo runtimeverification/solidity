@@ -1294,64 +1294,189 @@ void IeleCompiler::appendConditional(
   CompilingBlock = JoinBlock;
 }
 
+static bool isLocalVariable(const Identifier *Id) {
+  if (const VariableDeclaration *Decl =
+        dynamic_cast<const VariableDeclaration *>(
+            Id->annotation().referencedDeclaration)) {
+    return Decl->isLocalVariable();
+  }
+
+  return false;
+}
+
 bool IeleCompiler::visit(const Assignment &assignment) {
   Token::Value op = assignment.assignmentOperator();
-  const Expression &LHS = assignment.leftHandSide();
   const Expression &RHS = assignment.rightHandSide();
-  solAssert(LHS.annotation().type->category() != Type::Category::Tuple,
-            "not implemented yet");
+  const Expression &LHS = assignment.leftHandSide();
 
-  TypePointer LHSType = LHS.annotation().type;
   TypePointer RHSType = RHS.annotation().type;
+  TypePointer LHSType = LHS.annotation().type;
+
+  if (RHSType->category() == Type::Category::Tuple)
+    solAssert(op == Token::Assign,
+              "IeleCompiler: found compound tuple assigment");
+
+  // Collect the lhs and rhs types.
+  llvm::SmallVector<TypePointer, 4> RHSTypes;
+  llvm::SmallVector<TypePointer, 4> LHSTypes;
+  if (RHSType->category() == Type::Category::Tuple) {
+    solAssert(LHSType->category() == Type::Category::Tuple,
+              "IeleCompiler: found assignment from tuple to variable");
+    const TupleType &RHSTupleType = dynamic_cast<const TupleType &>(*RHSType);
+    const TupleType &LHSTupleType = dynamic_cast<const TupleType &>(*LHSType);
+    RHSTypes.insert(RHSTypes.end(), RHSTupleType.components().begin(),
+                    RHSTupleType.components().end());
+    LHSTypes.insert(LHSTypes.end(), LHSTupleType.components().begin(),
+                    LHSTupleType.components().end());
+  } else {
+    solAssert(LHSType->category() != Type::Category::Tuple,
+              "IeleCompiler: found assignment from variable to tuple");
+    RHSTypes.push_back(RHSType);
+    LHSTypes.push_back(LHSType);
+  }
 
   // Visit RHS.
-  iele::IeleValue *RHSValue = compileExpression(RHS);
-  solAssert(RHSValue, "IeleCompiler: Failed to compile RHS of assignment");
+  llvm::SmallVector<iele::IeleValue *, 4> RHSValues;
+  compileTuple(RHS, RHSValues);
 
-  RHSValue = appendTypeConversion(RHSValue, RHSType, LHSType);
+  // Save RHS elements that are named variables (locals and formal/return
+  // aguments) into temporaries to ensure correct behavior of tuple assignment.
+  // For example (a, b) = (b, a) should swap the contents of a and b, and hence
+  // is not equivalent to either a = b; b = a or b = a; a = b but rather to
+  // t1 = b; t2 = a; b = t2; a = t1.
+  if (RHSType->category() == Type::Category::Tuple) {
+    if (const TupleExpression *RHSTuple =
+          dynamic_cast<const TupleExpression *>(&RHS)) {
+      const auto &Components = RHSTuple->components();
+
+      // Here, we also check the case of (x,) in the rhs of the assignment. We
+      // need to extend RHSValues in this case to maintain the invariant that
+      // LHSValues.size() <= RHSValues.size().
+      if (Components.size() == 2 && RHSValues.size() == 1) {
+        RHSValues.push_back(nullptr);
+        RHSTypes.push_back(nullptr);
+      }
+
+      solAssert(Components.size() == RHSValues.size(),
+                "IeleCompiler: failed to compile all elements of rhs of "
+                "tuple assignement");
+      for (unsigned i = 0; i < RHSValues.size(); ++i) {
+        if (const Identifier *Id =
+              dynamic_cast<const Identifier *>(&*Components[i])) {
+          if (isLocalVariable(Id)) {
+            iele::IeleLocalVariable *TmpVar =
+              iele::IeleLocalVariable::Create(
+                  &Context, "tmp", CompilingFunction);
+            iele::IeleInstruction::CreateAssign(
+                TmpVar, RHSValues[i], CompilingBlock);
+            RHSValues[i] = TmpVar;
+          }
+        }
+      }
+    }
+  }
 
   // Visit LHS.
-  IeleLValue *LHSValue = compileLValue(LHS);
-  solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of assignment");
+  llvm::SmallVector<IeleLValue *, 4> LHSValues;
+  compileLValues(LHS, LHSValues);
 
-  // Check if we need to do a memory/storage to storage copy. Only happens when
-  // assigning to a state variable of refernece type.
-  RHSType = RHSType->mobileType();
-  if (shouldCopyStorageToStorage(LHSValue, *RHSType))
-    appendCopyFromStorageToStorage(LHSValue, LHSType, RHSValue, RHSType);
-  else if (shouldCopyMemoryToStorage(*LHSType, LHSValue, *RHSType))
-    appendCopyFromMemoryToStorage(LHSValue, LHSType, RHSValue, RHSType);
-  else if (shouldCopyMemoryToMemory(*LHSType, LHSValue, *RHSType))
-    appendCopyFromMemoryToMemory(LHSValue, LHSType, RHSValue, RHSType);
-  else {
-    // Check for compound assignment.
-    if (op != Token::Assign) {
-      Token::Value binOp = Token::AssignmentToBinaryOp(op);
-      iele::IeleValue *LHSDeref = LHSValue->read(CompilingBlock);
-      RHSValue = appendBinaryOperator(binOp, LHSDeref, RHSValue, assignment.annotation().type);
+  // At this point the following invariants should be true:
+  solAssert(LHSValues.size() <= RHSValues.size(),
+            "IeleCompiler: found tuple assignment with incompatible lhs/rhs "
+            "sizes.");
+
+  solAssert(RHSValues.size() == RHSTypes.size(),
+            "IeleCompiler: found tuple with different number of components and "
+            "component types.");
+  solAssert(LHSValues.size() == LHSTypes.size(),
+            "IeleCompiler: found tuple with different number of components and "
+            "component types.");
+
+  // Extend LHSValues if needed to be equal in size with RHSValues. Also
+  // extend LHSTypes similarly.
+  if (LHSValues.size() < RHSValues.size()) {
+    if (LHSValues[LHSValues.size() - 1] == nullptr) {
+      for (unsigned i = 0; i < RHSValues.size() - LHSValues.size(); ++i) {
+        LHSValues.push_back(nullptr);
+        LHSTypes.push_back(nullptr);
+      }
+    } else if (LHSValues[0] == nullptr) {
+      for (unsigned i = 0; i < RHSValues.size() - LHSValues.size(); ++i) {
+        LHSValues.insert(LHSValues.begin(), nullptr);
+        LHSTypes.insert(LHSTypes.begin(), nullptr);
+      }
+    } else
+      solAssert(false, "IeleCompiler: found tuple assignment with incompatible "
+                       "lhs/rhs sizes.");
+  }
+
+  // Generate code for the assignements. To be backward compatible we need to
+  // do the assignments in reverse order, since solidity-to-evm compiles this to
+  // computation that pushes the rhs results into a stack and then pops and
+  // assigns them one by one.
+  for (int i = LHSValues.size() - 1; i >= 0; --i) {
+    IeleLValue *LHSValue = LHSValues[i];
+    TypePointer LHSComponentType = LHSTypes[i];
+    if (!LHSValue)
+      continue;
+
+    iele::IeleValue *RHSValue = RHSValues[i];
+    TypePointer RHSComponentType = RHSTypes[i];
+    solAssert(RHSValue, "IeleCompiler: Failed to compile RHS of assignement");
+
+    RHSValue =
+      appendTypeConversion(RHSValue, RHSComponentType, LHSComponentType);
+    RHSValues[i] = RHSValue; // save the converted rhs for returning as part
+                             // of the assignement expression result
+
+    // Check if we need to do a memory/storage to storage copy. Only happens when
+    // assigning to a state variable of refernece type.
+    RHSComponentType = RHSComponentType->mobileType();
+    if (shouldCopyStorageToStorage(LHSValue, *RHSComponentType))
+      appendCopyFromStorageToStorage(LHSValue, LHSComponentType, RHSValue, RHSComponentType);
+    else if (shouldCopyMemoryToStorage(*LHSComponentType, LHSValue, *RHSComponentType))
+      appendCopyFromMemoryToStorage(LHSValue, LHSComponentType, RHSValue, RHSComponentType);
+    else if (shouldCopyMemoryToMemory(*LHSComponentType, LHSValue, *RHSComponentType))
+      appendCopyFromMemoryToMemory(LHSValue, LHSComponentType, RHSValue, RHSComponentType);
+    else {
+      // Check for compound assignment.
+      if (op != Token::Assign) {
+        Token::Value binOp = Token::AssignmentToBinaryOp(op);
+        iele::IeleValue *LHSDeref = LHSValue->read(CompilingBlock);
+        RHSValue = appendBinaryOperator(binOp, LHSDeref, RHSValue, LHSComponentType);
+        // save the rhs for return as the assignment expression result
+        RHSValues[i] = RHSValue;
+      }
+
+      // Generate assignment code.
+      LHSValue->write(RHSValue, CompilingBlock);
     }
-
-    // Generate assignment code.
-    LHSValue->write(RHSValue, CompilingBlock);
   }
 
   // The result of the expression is the RHS.
-  CompilingExpressionResult.push_back(RHSValue);
+  CompilingExpressionResult.insert(
+    CompilingExpressionResult.end(), RHSValues.begin(), RHSValues.end());
   return false;
 }
 
 bool IeleCompiler::visit(const TupleExpression &tuple) {
-
   solAssert(!tuple.isInlineArray(), "not implemented yet");
 
+  auto const &Components = tuple.components();
   llvm::SmallVector<Value, 4> Results;
-
-  for (unsigned i = 0; i < tuple.components().size(); i++) {
-    solAssert(tuple.components()[i], "not implemented yet");
-    if (CompilingLValue) {
-      Results.push_back(compileLValue(*tuple.components()[i]));
+  for (unsigned i = 0; i < Components.size(); i++) {
+    const ASTPointer<Expression> &component = Components[i];
+    if (CompilingLValue && component) {
+      Results.push_back(compileLValue(*component));
+    } else if (CompilingLValue) {
+      Results.push_back((IeleLValue *)nullptr);
+    } else if (component) {
+      Results.push_back(compileExpression(*component));
     } else {
-      Results.push_back(compileExpression(*tuple.components()[i]));
+      // this the special (x,) rvalue tuple, the only case where an rvalue tuple
+      // is allowed to skip a component.
+      solAssert(Components.size() == 2 && i == 1,
+                "IeleCompiler: found rvalue tuple with missing elements");
     }
   }
 
@@ -5262,7 +5387,6 @@ iele::IeleValue *IeleCompiler::appendTypeConversion(iele::IeleValue *Value, Type
     solAssert(*SourceType == *TargetType || TargetType->category() == Type::Category::Integer, "Invalid enum conversion");
     return Value;
   case Type::Category::FixedPoint:
-  case Type::Category::Tuple:
   case Type::Category::Function: {
     solAssert(false, "not implemented yet");
     break;
