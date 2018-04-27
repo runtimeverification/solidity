@@ -10,15 +10,17 @@ The Solidity features that will not be supported are listed below along with the
 
 | Feature | Link | Reasons |
 |---------|------|---------|
-| `call` member of the Address type | [doc link](https://solidity.readthedocs.io/en/v0.4.20/units-and-global-variables.html#address-related) | SC NE |
-| `delegetcall` member of the Address type | [doc link](https://solidity.readthedocs.io/en/v0.4.20/units-and-global-variables.html#address-related) | SC NE |
-| `callcode` member of the Address type | [doc link](https://solidity.readthedocs.io/en/v0.4.20/units-and-global-variables.html#address-related) | DF SC NE |
-| `selector` member of the Function type | [doc link](https://solidity.readthedocs.io/en/v0.4.20/types.html#function-types) | NE |
-| `msg.sig`  built-in function for querying calldata | [doc link](https://solidity.readthedocs.io/en/v0.4.20/units-and-global-variables.html#block-and-transaction-properties) | NE |
-| `msg.data` built-in function for querying calldata | [doc link](https://solidity.readthedocs.io/en/v0.4.20/units-and-global-variables.html#block-and-transaction-properties) | NE |
-| Inline EVM assembly | [doc link](https://solidity.readthedocs.io/en/v0.4.20/assembly.html#solidity-assembly) | SC NE |
+| `call` member of the Address type | [doc link](https://solidity.readthedocs.io/en/v0.4.23/units-and-global-variables.html#address-related) | SC NE |
+| `delegatecall` member of the Address type | [doc link](https://solidity.readthedocs.io/en/v0.4.23/units-and-global-variables.html#address-related) | SC NE |
+| `callcode` member of the Address type | [doc link](https://solidity.readthedocs.io/en/v0.4.23/units-and-global-variables.html#address-related) | DF SC NE |
+| `selector` member of the Function type | [doc link](https://solidity.readthedocs.io/en/v0.4.23/types.html#function-types) | NE |
+| `msg.sig`  built-in function for querying calldata | [doc link](https://solidity.readthedocs.io/en/v0.4.23/units-and-global-variables.html#block-and-transaction-properties) | NE |
+| `msg.data` built-in function for querying calldata | [doc link](https://solidity.readthedocs.io/en/v0.4.23/units-and-global-variables.html#block-and-transaction-properties) | NE |
+| Inline EVM assembly | [doc link](https://solidity.readthedocs.io/en/v0.4.23/assembly.html#solidity-assembly) | SC NE |
+| `abi.encodeWithSignature` | [doc link](http://solidity.readthedocs.io/en/v0.4.23/units-and-global-variables.html#abi-encoding-functions) | NE |
+| `abi.encodeWithSelector` | [doc link](http://solidity.readthedocs.io/en/v0.4.23/units-and-global-variables.html#abi-encoding-functions) | NE |
 
-Finally, it is planned that the `uint` and `int` Solidity types will be changed from syntactic sugar for `uint256` and `int256` respectively to unbounded integer types. As a consequence of that, we also do not guarantee that we will follow the documented [storage](https://solidity.readthedocs.io/en/v0.4.20/miscellaneous.html#layout-of-state-variables-in-storage) and [memory](https://solidity.readthedocs.io/en/v0.4.20/miscellaneous.html#layout-in-memory) layouts, since we have to accommodate these new unbounded types.
+Finally, the `uint` and `int` Solidity types have been changed from syntactic sugar for `uint256` and `int256` respectively to unbounded integer types. As a consequence of that, we also do not guarantee that we will follow the documented [storage](https://solidity.readthedocs.io/en/v0.4.23/miscellaneous.html#layout-of-state-variables-in-storage) and [memory](https://solidity.readthedocs.io/en/v0.4.23/miscellaneous.html#layout-in-memory) layouts, since we have to accommodate these new unbounded types.
 
 ## Differences in behavior between Solidity-to-EVM and Solidity-to-IELE
 
