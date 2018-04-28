@@ -74,6 +74,7 @@ public:
 	{
 		bytes const& ret = compileAndRunWithoutCheck(_sourceCode, _value, _contractName, _arguments, _libraryAddresses);
 		BOOST_REQUIRE(ret.size() != 0);
+		BOOST_REQUIRE(m_status == 0);
 		return ret;
 	}
 

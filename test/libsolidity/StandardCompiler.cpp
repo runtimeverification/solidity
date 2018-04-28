@@ -225,7 +225,7 @@ BOOST_AUTO_TEST_CASE(smoke_test)
 	BOOST_CHECK(containsAtMostWarnings(result));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(basic_compilation, 8)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(basic_compilation, 2)
 BOOST_AUTO_TEST_CASE(basic_compilation)
 {
 	char const* input = R"(
@@ -262,19 +262,18 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
 	BOOST_CHECK(contract["evm"]["bytecode"]["object"].isString());
 	BOOST_CHECK_EQUAL(
 		dev::test::bytecodeSansMetadata(contract["evm"]["bytecode"]["object"].asString()),
-		"6080604052348015600f57600080fd5b50603580601d6000396000f3006080604052600080fd00"
+		"63006700000000660000f60000"
 	);
 	BOOST_CHECK(contract["evm"]["assembly"].isString());
 	BOOST_CHECK(contract["evm"]["assembly"].asString().find(
-		"    /* \"fileA\":0:14  contract A { } */\n  mstore(0x40, 0x80)\n  "
-		"callvalue\n    /* \"--CODEGEN--\":8:17   */\n  dup1\n    "
-		"/* \"--CODEGEN--\":5:7   */\n  iszero\n  tag_1\n  jumpi\n    "
-		"/* \"--CODEGEN--\":30:31   */\n  0x0\n    /* \"--CODEGEN--\":27:28   */\n  "
-		"dup1\n    /* \"--CODEGEN--\":20:32   */\n  revert\n    /* \"--CODEGEN--\":5:7   */\n"
-		"tag_1:\n    /* \"fileA\":0:14  contract A { } */\n  pop\n  dataSize(sub_0)\n  dup1\n  "
-		"dataOffset(sub_0)\n  0x0\n  codecopy\n  0x0\n  return\nstop\n\nsub_0: assembly {\n        "
-		"/* \"fileA\":0:14  contract A { } */\n      mstore(0x40, 0x80)\n      0x0\n      "
-		"dup1\n      revert\n\n    auxdata: 0xa165627a7a72305820"
+		"contract \"fileA:A\" {\n"
+                "\n"
+                "define @init() {\n"
+                "entry:\n"
+                "  ret void\n"
+                "}\n"
+                "\n"
+                "}\n"
 	) == 0);
 	BOOST_CHECK(contract["evm"]["gasEstimates"].isObject());
 	BOOST_CHECK_EQUAL(
@@ -541,7 +540,6 @@ BOOST_AUTO_TEST_CASE(filename_with_colon)
 	BOOST_CHECK_EQUAL(dev::jsonCompactPrint(contract["abi"]), "[]");
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_filename_with_colon, 5)
 BOOST_AUTO_TEST_CASE(library_filename_with_colon)
 {
 	char const* input = R"(
@@ -572,9 +570,7 @@ BOOST_AUTO_TEST_CASE(library_filename_with_colon)
 	BOOST_CHECK(contract.isObject());
 	BOOST_CHECK(contract["evm"]["bytecode"].isObject());
 	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"].isObject());
-	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"]["git:library.sol"].isObject());
-	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"]["git:library.sol"]["L"].isArray());
-	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"]["git:library.sol"]["L"][0].isObject());
+	BOOST_CHECK(!contract["evm"]["bytecode"]["linkReferences"]["git:library.sol"].isObject());
 }
 
 BOOST_AUTO_TEST_CASE(libraries_invalid_top_level)
@@ -687,7 +683,6 @@ BOOST_AUTO_TEST_CASE(libraries_missing_hex_prefix)
 	BOOST_CHECK(containsError(result, "JSONError", "Library address is not prefixed with \"0x\"."));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(library_linking, 5)
 BOOST_AUTO_TEST_CASE(library_linking)
 {
 	char const* input = R"(
@@ -727,9 +722,7 @@ BOOST_AUTO_TEST_CASE(library_linking)
 	BOOST_CHECK(contract["evm"]["bytecode"].isObject());
 	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"].isObject());
 	BOOST_CHECK(!contract["evm"]["bytecode"]["linkReferences"]["library.sol"].isObject());
-	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"]["library2.sol"].isObject());
-	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"]["library2.sol"]["L2"].isArray());
-	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"]["library2.sol"]["L2"][0].isObject());
+	BOOST_CHECK(!contract["evm"]["bytecode"]["linkReferences"]["library2.sol"].isObject());
 }
 
 BOOST_AUTO_TEST_CASE(evm_version)

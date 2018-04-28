@@ -231,14 +231,14 @@ BOOST_AUTO_TEST_CASE(function_calls)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f1(uint x) returns (uint) { return x*x; }
-			function f(uint x) returns (uint) { return f1(7+x) - this.f1(x**9); }
+			function f1(uint256 x) returns (uint256) { return x*x; }
+			function f(uint256 x) returns (uint256) { return f1(7+x) - this.f1(x**9); }
 		}
 	)";
 	compileBothVersions(sourceCode);
-	compareVersions("f(uint)", 0);
-	compareVersions("f(uint)", 10);
-	compareVersions("f(uint)", 36);
+	compareVersions("f(uint256)", 0);
+	compareVersions("f(uint256)", 10);
+	compareVersions("f(uint256)", 36);
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_write_in_loops, 1)
@@ -346,7 +346,7 @@ BOOST_AUTO_TEST_CASE(store_tags_as_unions)
 //	BOOST_CHECK_EQUAL(2, numSHA3s);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(incorrect_storage_access_bug, 3)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(incorrect_storage_access_bug, 1)
 BOOST_AUTO_TEST_CASE(incorrect_storage_access_bug)
 {
 	// This bug appeared because a Keccak-256 operation with too low sequence number was used,
@@ -355,11 +355,11 @@ BOOST_AUTO_TEST_CASE(incorrect_storage_access_bug)
 	char const* sourceCode = R"(
 		contract C
 		{
-			mapping(uint => uint) data;
+			mapping(uint256 => uint) data;
 			function f() returns (uint)
 			{
 				if(data[now] == 0)
-					data[uint(-7)] = 5;
+					data[uint256(-7)] = 5;
 				return data[now];
 			}
 		}
@@ -368,7 +368,7 @@ BOOST_AUTO_TEST_CASE(incorrect_storage_access_bug)
 	compareVersions("f()");
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(sequence_number_for_calls, 3)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(sequence_number_for_calls, 1)
 BOOST_AUTO_TEST_CASE(sequence_number_for_calls)
 {
 	// This is a test for a bug that was present because we did not increment the sequence
@@ -380,7 +380,7 @@ BOOST_AUTO_TEST_CASE(sequence_number_for_calls)
 		}
 	)";
 	compileBothVersions(sourceCode);
-	compareVersions("f(string,string)", 0x40, 0x80, 3, "abc", 3, "def");
+	compareVersions("f(string,string)", encodeDyn(string("abc")), encodeDyn(string("def")));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(computing_constants, 2)

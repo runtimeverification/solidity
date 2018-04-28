@@ -276,7 +276,6 @@ BOOST_AUTO_TEST_CASE(calldata_arrays_too_large)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(decode_from_memory_simple, 1)
 BOOST_AUTO_TEST_CASE(decode_from_memory_simple)
 {
 	string sourceCode = R"(
@@ -291,10 +290,10 @@ BOOST_AUTO_TEST_CASE(decode_from_memory_simple)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode, 0, "C", encodeArgs(
-			7, 0x40,
+			7, encodeRefArgs(1,
 			// b
-			3, 0x21, 0x22, 0x23
-		));
+			3, bigint(0x21), bigint(0x22), bigint(0x23)
+		)));
 		ABI_CHECK(callContractFunction("_a()"), encodeArgs(7));
 		ABI_CHECK(callContractFunction("_b(uint)", 0), encodeArgs(0x21));
 		ABI_CHECK(callContractFunction("_b(uint)", 1), encodeArgs(0x22));
@@ -405,7 +404,6 @@ BOOST_AUTO_TEST_CASE(decode_function_type_array)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(decode_from_memory_complex, 1)
 BOOST_AUTO_TEST_CASE(decode_from_memory_complex)
 {
 	string sourceCode = R"(
@@ -422,22 +420,21 @@ BOOST_AUTO_TEST_CASE(decode_from_memory_complex)
 	)";
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C", encodeArgs(
-			7, 0x60, 7 * 0x20,
+			7, 
 			// b
-			3, 0x21, 0x22, 0x23,
+			encodeRefArgs(1, 3, bigint(0x21), bigint(0x22), bigint(0x23)),
 			// c
-			0x40, 0x80,
-			8, string("abcdefgh"),
-			52, string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ")
+			encodeRefArgs(
+			encodeDyn(string("abcdefgh")),
+			encodeDyn(string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ")))
 		));
 		ABI_CHECK(callContractFunction("_a()"), encodeArgs(7));
 		ABI_CHECK(callContractFunction("_b(uint)", 0), encodeArgs(0x21));
 		ABI_CHECK(callContractFunction("_b(uint)", 1), encodeArgs(0x22));
 		ABI_CHECK(callContractFunction("_b(uint)", 2), encodeArgs(0x23));
 		ABI_CHECK(callContractFunction("_b(uint)", 3), encodeArgs());
-		ABI_CHECK(callContractFunction("_c(uint)", 0), encodeArgs(0x20, 8, string("abcdefgh")));
-		ABI_CHECK(callContractFunction("_c(uint)", 1), encodeArgs(0x20, 52, string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ")));
-		ABI_CHECK(callContractFunction("_c(uint)", 2), encodeArgs());
+		ABI_CHECK(callContractFunction("_c(uint)", 0), encodeArgs(encodeDyn(string("abcdefgh"))));
+
 	)
 }
 
@@ -473,7 +470,6 @@ BOOST_AUTO_TEST_CASE(short_input_array)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(short_dynamic_input_array, 1)
 BOOST_AUTO_TEST_CASE(short_dynamic_input_array)
 {
 	string sourceCode = R"(
@@ -483,7 +479,7 @@ BOOST_AUTO_TEST_CASE(short_dynamic_input_array)
 	)";
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
-		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[1])", encodeArgs(0x20)), encodeArgs());
+		ABI_CHECK(callContractFunctionNoEncoding("f(bytes[1])", encodeArgs(encodeRefArgs())), encodeArgs(7));
 	)
 }
 

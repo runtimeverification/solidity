@@ -202,7 +202,6 @@ BOOST_AUTO_TEST_CASE(memory_array_two_dim)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_byte_array, 1)
 BOOST_AUTO_TEST_CASE(memory_byte_array)
 {
 	string sourceCode = R"(
@@ -220,10 +219,10 @@ BOOST_AUTO_TEST_CASE(memory_byte_array)
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
 		REQUIRE_LOG_DATA(encodeLogs(
-			10, 0x60, 11,
-			2, 0x40, 0xc0,
-			66, string("abcabcdefghjklmnopqrsuvwabcdefgijklmnopqrstuwabcdefgijklmnoprstuvw"),
-			63, string("abcdefghijklmnopqrtuvwabcfghijklmnopqstuvwabcdeghijklmopqrstuvw")
+			bigint(10), 1, 2,
+			uint64_t(66), string("abcabcdefghjklmnopqrsuvwabcdefgijklmnopqrstuwabcdefgijklmnoprstuvw"),
+			uint64_t(63), string("abcdefghijklmnopqrtuvwabcfghijklmnopqstuvwabcdeghijklmopqrstuvw"),
+                        bigint(11)
 		));
 	)
 }
@@ -368,7 +367,6 @@ BOOST_AUTO_TEST_CASE(external_function_cleanup)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(calldata, 1)
 BOOST_AUTO_TEST_CASE(calldata)
 {
 	string sourceCode = R"(
@@ -381,15 +379,13 @@ BOOST_AUTO_TEST_CASE(calldata)
 	)";
 	string s("abcdef");
 	string t("abcdefgggggggggggggggggggggggggggggggggggggggghhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeggg");
-	bool newEncoder = false;
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		callContractFunction("f(bytes)", 0x20, s.size(), s);
+		callContractFunction("f(bytes)", encodeArgs(encodeDyn(s)));
 		// The old encoder did not pad to multiples of 32 bytes
-		REQUIRE_LOG_DATA(encodeLogs(0x20, s.size()) + (newEncoder ? encodeLogs(s) : asBytes(s)));
-		callContractFunction("f(bytes)", 0x20, t.size(), t);
-		REQUIRE_LOG_DATA(encodeLogs(0x20, t.size()) + (newEncoder ? encodeLogs(t) : asBytes(t)));
-		newEncoder = true;
+		REQUIRE_LOG_DATA(encodeLogs(uint64_t(s.size()), s));
+		callContractFunction("f(bytes)", encodeArgs(encodeDyn(t)));
+		REQUIRE_LOG_DATA(encodeLogs(uint64_t(t.size()), t));
 	)
 }
 

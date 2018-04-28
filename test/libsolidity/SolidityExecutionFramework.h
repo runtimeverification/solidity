@@ -54,7 +54,6 @@ public:
 	{
 		bytes const& bytecode = compileContract(_sourceCode, _contractName, _libraryAddresses);
 		sendMessage(_arguments, "", bytecode, true, _value);
-		BOOST_REQUIRE(m_status == 0);
 		m_output.clear();
                 m_output.push_back(bytecode);
 		return m_output[0];
