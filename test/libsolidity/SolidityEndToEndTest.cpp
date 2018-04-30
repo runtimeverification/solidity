@@ -404,7 +404,6 @@ BOOST_AUTO_TEST_CASE(multiple_functions)
 	ABI_CHECK(callContractFunction("i_am_not_there()"), vector<bytes>());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(named_args, 1)
 BOOST_AUTO_TEST_CASE(named_args)
 {
 	char const* sourceCode = R"(
@@ -414,10 +413,9 @@ BOOST_AUTO_TEST_CASE(named_args)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("b()", vector<bytes>()), encodeArgs(toBigEndian(u256(123))));
+	ABI_CHECK(callContractFunction("b()"), encodeArgs(u256(123)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(disorder_named_args, 1)
 BOOST_AUTO_TEST_CASE(disorder_named_args)
 {
 	char const* sourceCode = R"(
@@ -427,7 +425,7 @@ BOOST_AUTO_TEST_CASE(disorder_named_args)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("b()", vector<bytes>()), encodeArgs(toBigEndian(u256(123))));
+	ABI_CHECK(callContractFunction("b()"), encodeArgs(u256(123)));
 }
 
 BOOST_AUTO_TEST_CASE(while_loop)
