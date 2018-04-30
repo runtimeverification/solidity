@@ -5260,7 +5260,6 @@ BOOST_AUTO_TEST_CASE(array_copy_including_mapping)
 	BOOST_CHECK(storageEmpty(m_contractAddress));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(swap_in_storage_overwrite, 1)
 BOOST_AUTO_TEST_CASE(swap_in_storage_overwrite)
 {
 	// This tests a swap in storage which does not work as one
@@ -7669,7 +7668,6 @@ BOOST_AUTO_TEST_CASE(multi_variable_declaration)
 }
 
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(tuples, 1)
 BOOST_AUTO_TEST_CASE(tuples)
 {
 	char const* sourceCode = R"(
@@ -7701,7 +7699,6 @@ BOOST_AUTO_TEST_CASE(tuples)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(0)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(string_tuples, 1)
 BOOST_AUTO_TEST_CASE(string_tuples)
 {
 	char const* sourceCode = R"(
@@ -7718,8 +7715,8 @@ BOOST_AUTO_TEST_CASE(string_tuples)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(0x40), u256(8), u256(3), string("abc")));
-	ABI_CHECK(callContractFunction("g()"), encodeArgs(u256(0x40), u256(0x80), u256(3), string("abc"), u256(3), string("def")));
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(encodeDyn(string("abc")), u256(8)));
+	ABI_CHECK(callContractFunction("g()"), encodeArgs(encodeDyn(string("abc")), encodeDyn(string("def"))));
 }
 
 BOOST_AUTO_TEST_CASE(decayed_tuple)
@@ -7752,7 +7749,6 @@ BOOST_AUTO_TEST_CASE(inline_tuple_with_rational_numbers)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(1)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(destructuring_assignment, 1)
 BOOST_AUTO_TEST_CASE(destructuring_assignment)
 {
 	char const* sourceCode = R"(
@@ -7789,10 +7785,9 @@ BOOST_AUTO_TEST_CASE(destructuring_assignment)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f(bytes)", u256(0x20), u256(5), string("abcde")), encodeArgs(u256(0)));
+	ABI_CHECK(callContractFunction("f(bytes)", encodeArgs(encodeDyn(string("abcde")))), encodeArgs(u256(0)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(destructuring_assignment_wildcard, 1)
 BOOST_AUTO_TEST_CASE(destructuring_assignment_wildcard)
 {
 	char const* sourceCode = R"(
