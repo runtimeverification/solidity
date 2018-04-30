@@ -1460,9 +1460,55 @@ bool IeleCompiler::visit(const Assignment &assignment) {
 }
 
 bool IeleCompiler::visit(const TupleExpression &tuple) {
-  solAssert(!tuple.isInlineArray(), "not implemented yet");
-
   auto const &Components = tuple.components();
+
+  // Case of inline arrays.
+  if (tuple.isInlineArray()) {
+    const ArrayType &arrayType =
+      dynamic_cast<const ArrayType &>(*tuple.annotation().type);
+    TypePointer elementType = arrayType.baseType();
+    bigint elementSize = elementType->memorySize();
+
+    // Allocate memory for the array.
+    iele::IeleValue *ArrayValue = appendArrayAllocation(arrayType);
+
+    // Visit tuple components and initialize array elements.
+    bigint offset = 0;
+    for (unsigned i = 0; i < Components.size(); ++i) {
+      // Visit component.
+      iele::IeleValue *InitValue = compileExpression(*Components[i]);
+      TypePointer componentType = Components[i]->annotation().type;
+      InitValue = appendTypeConversion(InitValue, componentType, elementType);
+
+      // Address in the new array in which we should copy the argument value.
+      iele::IeleLocalVariable *AddressValue =
+        iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, AddressValue, ArrayValue,
+          iele::IeleIntConstant::Create(&Context, offset), CompilingBlock);
+
+      // Do the copy.
+      solAssert(!elementType->dataStoredIn(DataLocation::Storage),
+                "IeleCompiler: found init value for inline array element in "
+                "storage after type conversion");
+      if (elementType->dataStoredIn(DataLocation::Memory))
+        appendIeleRuntimeCopy(
+            InitValue, AddressValue,
+            iele::IeleIntConstant::Create(&Context, elementSize),
+            DataLocation::Memory, DataLocation::Memory);
+      else
+        iele::IeleInstruction::CreateStore(InitValue, AddressValue,
+                                           CompilingBlock);
+
+      offset += elementSize;
+    }
+
+    // Return pointer to the newly allocated array.
+    CompilingExpressionResult.push_back(ArrayValue);
+    return false;
+  }
+
+  // Case of tuple.
   llvm::SmallVector<Value, 4> Results;
   for (unsigned i = 0; i < Components.size(); i++) {
     const ASTPointer<Expression> &component = Components[i];
@@ -4534,8 +4580,9 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
     if (type->isValueType()) {
       // Add assignment in constructor's body.
       LHSValue->write(InitValue, CompilingBlock);
-    } else if (type->category() == Type::Category::Array || type->category() == Type::Category::Struct) {
-      // Add struct copy in constructor's body.
+    } else if (type->category() == Type::Category::Array ||
+               type->category() == Type::Category::Struct) {
+      // Add code for copy in constructor's body.
       rhsType = rhsType->mobileType();
       if (shouldCopyStorageToStorage(LHSValue, *rhsType))
         appendCopyFromStorageToStorage(LHSValue, type, InitValue, rhsType);
@@ -4652,7 +4699,7 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
 }
 
 iele::IeleLocalVariable *IeleCompiler::appendArrayAllocation(
-    const ArrayType &type, iele::IeleValue *NumElemsValue, bool StoreLength) {
+    const ArrayType &type, iele::IeleValue *NumElemsValue) {
   const Type &elementType = *type.baseType();
   solAssert(elementType.category() != Type::Category::Mapping,
             "IeleCompiler: requested memory allocation of array of mappigns.");
@@ -4698,7 +4745,7 @@ iele::IeleLocalVariable *IeleCompiler::appendArrayAllocation(
   iele::IeleLocalVariable *ArrayAllocValue = appendIeleRuntimeAllocateMemory(SizeValue);
 
   // Save length for dynamically sized arrays.
-  if (type.isDynamicallySized() && !type.isByteArray() && StoreLength) {
+  if (type.isDynamicallySized() && !type.isByteArray()) {
     iele::IeleInstruction::CreateStore(NumElemsValue, ArrayAllocValue,
                                        CompilingBlock);
   }
