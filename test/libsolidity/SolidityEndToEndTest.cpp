@@ -7734,7 +7734,6 @@ BOOST_AUTO_TEST_CASE(decayed_tuple)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(2)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_tuple_with_rational_numbers, 1)
 BOOST_AUTO_TEST_CASE(inline_tuple_with_rational_numbers)
 {
 	char const* sourceCode = R"(
@@ -8161,7 +8160,6 @@ BOOST_AUTO_TEST_CASE(bound_function_to_string)
 	ABI_CHECK(callContractFunction("g()"), encodeArgs(u256(3)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_array_storage_to_memory_conversion_strings, 1)
 BOOST_AUTO_TEST_CASE(inline_array_storage_to_memory_conversion_strings)
 {
 	char const* sourceCode = R"(
@@ -8175,10 +8173,9 @@ BOOST_AUTO_TEST_CASE(inline_array_storage_to_memory_conversion_strings)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(0x40), u256(0x80), u256(3), string("ray"), u256(2), string("mi")));
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(encodeDyn(string("ray")), encodeDyn(string("mi"))));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_array_strings_from_document, 1)
 BOOST_AUTO_TEST_CASE(inline_array_strings_from_document)
 {
 	char const* sourceCode = R"(
@@ -8190,13 +8187,12 @@ BOOST_AUTO_TEST_CASE(inline_array_strings_from_document)
 		}
 	)";
 	compileAndRun(sourceCode);
-	ABI_CHECK(callContractFunction("f(uint)", u256(0)), encodeArgs(u256(0x20), u256(4), string("This")));
-	ABI_CHECK(callContractFunction("f(uint)", u256(1)), encodeArgs(u256(0x20), u256(2), string("is")));
-	ABI_CHECK(callContractFunction("f(uint)", u256(2)), encodeArgs(u256(0x20), u256(2), string("an")));
-	ABI_CHECK(callContractFunction("f(uint)", u256(3)), encodeArgs(u256(0x20), u256(5), string("array")));
+	ABI_CHECK(callContractFunction("f(uint)", u256(0)), encodeArgs(encodeDyn(string("This"))));
+	ABI_CHECK(callContractFunction("f(uint)", u256(1)), encodeArgs(encodeDyn(string("is"))));
+	ABI_CHECK(callContractFunction("f(uint)", u256(2)), encodeArgs(encodeDyn(string("an"))));
+	ABI_CHECK(callContractFunction("f(uint)", u256(3)), encodeArgs(encodeDyn(string("array"))));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_array_storage_to_memory_conversion_ints, 1)
 BOOST_AUTO_TEST_CASE(inline_array_storage_to_memory_conversion_ints)
 {
 	char const* sourceCode = R"(
@@ -8213,7 +8209,6 @@ BOOST_AUTO_TEST_CASE(inline_array_storage_to_memory_conversion_ints)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(3, 6));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_array_index_access_ints, 1)
 BOOST_AUTO_TEST_CASE(inline_array_index_access_ints)
 {
 	char const* sourceCode = R"(
@@ -8227,7 +8222,6 @@ BOOST_AUTO_TEST_CASE(inline_array_index_access_ints)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(3));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_array_index_access_strings, 1)
 BOOST_AUTO_TEST_CASE(inline_array_index_access_strings)
 {
 	char const* sourceCode = R"(
@@ -8243,10 +8237,9 @@ BOOST_AUTO_TEST_CASE(inline_array_index_access_strings)
 	)";
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction("test()"), encodeArgs());
-	ABI_CHECK(callContractFunction("tester()"), encodeArgs(u256(0x20), u256(3), string("abc")));
+	ABI_CHECK(callContractFunction("tester()"), encodeArgs(encodeDyn(string("abc"))));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_array_return, 1)
 BOOST_AUTO_TEST_CASE(inline_array_return)
 {
 	char const* sourceCode = R"(
@@ -8263,10 +8256,10 @@ BOOST_AUTO_TEST_CASE(inline_array_return)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("f()"), encodeArgs(1, 2, 3, 4, 5));
+    std::vector<u256> args = {1, 2, 3, 4, 5};
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(encodeRefArray(args, 1)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_array_singleton, 1)
 BOOST_AUTO_TEST_CASE(inline_array_singleton)
 {
 	// This caused a failure since the type was not converted to its mobile type.
@@ -8281,7 +8274,6 @@ BOOST_AUTO_TEST_CASE(inline_array_singleton)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(4)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_long_string_return, 1)
 BOOST_AUTO_TEST_CASE(inline_long_string_return)
 {
 		char const* sourceCode = R"(
@@ -8297,7 +8289,6 @@ BOOST_AUTO_TEST_CASE(inline_long_string_return)
 	ABI_CHECK(callContractFunction("f()"), vector<bytes>(1, encodeDyn(strLong)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(fixed_bytes_index_access, 1)
 BOOST_AUTO_TEST_CASE(fixed_bytes_index_access)
 {
 	char const* sourceCode = R"(
@@ -8314,9 +8305,9 @@ BOOST_AUTO_TEST_CASE(fixed_bytes_index_access)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("f(bytes32)", "789"), encodeArgs("9"));
-	ABI_CHECK(callContractFunction("g(bytes32)", "789"), encodeArgs(u256(int('5'))));
-	ABI_CHECK(callContractFunction("data(uint)", u256(1)), encodeArgs("8"));
+	ABI_CHECK(callContractFunction("f(bytes32)", string("789", 3) + string(29, 0)), encodeArgs("9"));
+	ABI_CHECK(callContractFunction("g(bytes32)", string("789", 3) + string(29, 0)), encodeArgs(u256(int('5'))));
+	ABI_CHECK(callContractFunction("data(uint)", u256(1)), encodeArgs(string("8", 1) + string(15, 0)));
 }
 
 BOOST_AUTO_TEST_CASE(fixed_bytes_length_access)
@@ -8330,7 +8321,7 @@ BOOST_AUTO_TEST_CASE(fixed_bytes_length_access)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("f(bytes32)", "789"), encodeArgs(u256(32), u256(16), u256(8)));
+	ABI_CHECK(callContractFunction("f(bytes32)", string("789", 3) + string(29, 0)), encodeArgs(u256(32), u256(16), u256(8)));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inline_assembly_write_to_stack, 1)
@@ -8954,7 +8945,6 @@ BOOST_AUTO_TEST_CASE(skip_dynamic_types)
 	ABI_CHECK(callContractFunction("g()"), encodeArgs(u256(7), u256(8)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(skip_dynamic_types_for_structs, 1)
 BOOST_AUTO_TEST_CASE(skip_dynamic_types_for_structs)
 {
 	// For accessors, the dynamic types are already removed in the external signature itself.
