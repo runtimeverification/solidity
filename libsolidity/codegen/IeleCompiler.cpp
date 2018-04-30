@@ -2354,11 +2354,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     return false;
   }
 
-  /* const */ std::vector<ASTPointer<const Expression>> arguments;
+  std::vector<ASTPointer<const Expression>> arguments;
   FunctionTypePointer functionType;
 	auto callArgumentNames = functionCall.names();  
 	auto callArguments = functionCall.arguments();
-
 
   if (functionCall.annotation().kind ==
         FunctionCallKind::StructConstructorCall) {
