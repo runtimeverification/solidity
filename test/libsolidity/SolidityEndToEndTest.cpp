@@ -6907,7 +6907,6 @@ BOOST_AUTO_TEST_CASE(struct_constructor_nested)
 	ABI_CHECK(callContractFunction("get()"), out);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_named_constructor, 1)
 BOOST_AUTO_TEST_CASE(struct_named_constructor)
 {
 	char const* sourceCode = R"(
@@ -7277,7 +7276,6 @@ BOOST_AUTO_TEST_CASE(library_stray_values)
 	ABI_CHECK(callContractFunction("f(uint)", u256(33)), encodeArgs(u256(42)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(cross_contract_types, 1)
 BOOST_AUTO_TEST_CASE(cross_contract_types)
 {
 	char const* sourceCode = R"(
@@ -8102,7 +8100,6 @@ BOOST_AUTO_TEST_CASE(using_for_overload)
 	ABI_CHECK(callContractFunction("x()"), encodeArgs(u256(6 * 7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(using_for_by_name, 1)
 BOOST_AUTO_TEST_CASE(using_for_by_name)
 {
 	char const* sourceCode = R"(
