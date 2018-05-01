@@ -223,7 +223,7 @@ private:
   // argument can be used to allocate dynamically-sized arrays, where the initial
   // size is not known at compile time.
   iele::IeleLocalVariable *appendArrayAllocation(
-      const ArrayType &type, iele::IeleValue *NumElemsValue = nullptr, bool StoreLength = true);
+      const ArrayType &type, iele::IeleValue *NumElemsValue = nullptr);
 
   // Helper function for memory struct allocation.
   iele::IeleLocalVariable *appendStructAllocation(const StructType &type);
