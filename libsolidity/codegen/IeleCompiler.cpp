@@ -295,6 +295,7 @@ void IeleCompiler::compileContract(
     if (base == &contract) {
       continue;
     }
+    VarNameMap.clear();
     if (const FunctionDefinition *constructor = base->constructor()) {
       constructor->accept(*this);
     } else {
@@ -335,6 +336,7 @@ void IeleCompiler::compileContract(
 
   CompilingContractASTNode = &contract;
 
+  VarNameMap.clear();
   // Similarly visit the contract's constructor.
   if (const FunctionDefinition *constructor = contract.constructor())
     constructor->accept(*this);
@@ -375,6 +377,7 @@ void IeleCompiler::compileContract(
   for (auto dep : dependencies) {
     if (dep->isLibrary()) {
       for (const FunctionDefinition *function : dep->definedFunctions()) {
+        VarNameMap.clear();
         if (function->isConstructor() || function->isFallback() || !function->isImplemented())
           continue;
         function->accept(*this);
@@ -386,6 +389,7 @@ void IeleCompiler::compileContract(
   for (const ContractDefinition *base : bases) {
     CompilingContractASTNode = base;
     for (const FunctionDefinition *function : base->definedFunctions()) {
+      VarNameMap.clear();
       if (function->isConstructor() || function->isFallback() || !function->isImplemented())
         continue;
       function->accept(*this);
