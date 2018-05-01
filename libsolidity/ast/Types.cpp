@@ -1609,7 +1609,7 @@ bigint ArrayType::storageSize() const
 	if (isByteArray())
 		return 2;
 	if (isDynamicallySized())
-		return MAX_ARRAY_SIZE + 1; // One extra slot for the length
+		return MAX_ARRAY_SIZE * baseType()->storageSize() + 1; // One extra slot for the length
 
 	if (length() > MAX_ARRAY_SIZE)
 		BOOST_THROW_EXCEPTION(Error(Error::Type::TypeError) << errinfo_comment("Array too large."));
