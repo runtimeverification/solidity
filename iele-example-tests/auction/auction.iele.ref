@@ -94,7 +94,7 @@ entry:
   br %tmp7, if.end
   %highestBidder.val8 = sload @"highestBidder"
   %highestBid.val9 = sload @"highestBid"
-  %gas = call @iele.gaslimit()
+  %gas = call @iele.gas()
   %status = call @"deposit" at %highestBidder.val8 () send %highestBid.val9, gaslimit %gas
   br %status, throw.status
 
@@ -130,7 +130,7 @@ entry:
   sstore 1, @"ended"
   %beneficiary.val = sload @"beneficiary"
   %highestBid.val = sload @"highestBid"
-  %gas = call @iele.gaslimit()
+  %gas = call @iele.gas()
   %status = call @"deposit" at %beneficiary.val () send %highestBid.val, gaslimit %gas
   br %status, throw.status
   %highestBidder.val = sload @"highestBidder"
