@@ -2383,7 +2383,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
         if ((found = (parameterName == *callArgumentNames[j])))
           arguments.push_back(callArguments[j]);
       solAssert(found, "");
-		}
+    }
   }
   else {
     arguments = callArguments;
