@@ -9678,7 +9678,6 @@ BOOST_AUTO_TEST_CASE(same_function_in_construction_and_runtime)
 	ABI_CHECK(callContractFunction("initial()"), encodeArgs(u256(4)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(same_function_in_construction_and_runtime_equality_check, 1)
 BOOST_AUTO_TEST_CASE(same_function_in_construction_and_runtime_equality_check)
 {
 	char const* sourceCode = R"(
