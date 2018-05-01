@@ -4532,6 +4532,47 @@ BOOST_AUTO_TEST_CASE(dynamic_arrays_in_storage)
 	ABI_CHECK(callContractFunction("getData(uint)", 8), encodeArgs(10, 11));
 }
 
+BOOST_AUTO_TEST_CASE(nested_dynamic_array_in_storage)
+{
+  char const* sourceCode = R"(
+    contract A {
+      uint[][] a;
+      uint b;
+      uint c;
+
+      constructor() {
+        c = 3;
+        a.length = 10;
+        for (uint i = 0; i < 10; ++i)
+          a[i].length = 100;
+      }
+
+      function getLengths() returns (uint l1, uint l2) { l1 = a.length; l2 = a[3].length; }
+      function set(uint i, uint j, uint v, uint cv)  { a[i][j] = v; c = cv; }
+      function get(uint i, uint j) returns (uint) { return a[i][j] + c; }
+    }
+  )";
+  compileAndRun(sourceCode);
+  ABI_CHECK(callContractFunction("getLengths()"), encodeArgs(10, 100));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 0, 0), encodeArgs(3));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 1, 0), encodeArgs(3));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 5, 54), encodeArgs(3));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 10, 0), vector<bytes>());
+  ABI_CHECK(callContractFunction("get(uint,uint)", 0, 100), vector<bytes>());
+  ABI_CHECK(callContractFunction("set(uint,uint,uint,uint)", 0, 100, 1, 30), vector<bytes>());
+  ABI_CHECK(callContractFunction("get(uint,uint)", 0, 0), encodeArgs(3));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 1, 0), encodeArgs(3));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 5, 54), encodeArgs(3));
+  ABI_CHECK(callContractFunction("set(uint,uint,uint,uint)", 1, 0, 2, 40), vector<bytes>());
+  ABI_CHECK(callContractFunction("get(uint,uint)", 0, 0), encodeArgs(40));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 1, 0), encodeArgs(42));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 5, 54), encodeArgs(40));
+  ABI_CHECK(callContractFunction("set(uint,uint,uint,uint)", 5, 54, 3, 50), vector<bytes>());
+  ABI_CHECK(callContractFunction("get(uint,uint)", 0, 0), encodeArgs(50));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 1, 0), encodeArgs(52));
+  ABI_CHECK(callContractFunction("get(uint,uint)", 5, 54), encodeArgs(53));
+}
+
 BOOST_AUTO_TEST_CASE(fixed_out_of_bounds_array_access)
 {
 	char const* sourceCode = R"(
