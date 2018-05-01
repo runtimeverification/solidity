@@ -2356,8 +2356,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
   std::vector<ASTPointer<const Expression>> arguments;
   FunctionTypePointer functionType;
-	auto callArgumentNames = functionCall.names();  
-	auto callArguments = functionCall.arguments();
+  auto callArgumentNames = functionCall.names();  
+  auto callArguments = functionCall.arguments();
 
   if (functionCall.annotation().kind ==
         FunctionCallKind::StructConstructorCall) {
@@ -2371,20 +2371,18 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     solAssert(functionType->parameterTypes().size() ==
         structType.memoryMemberTypes().size(),
         "IeleCompiler: struct constructor with missing arguments");
-  }
-  else {
+  } else {
     functionType = std::dynamic_pointer_cast<const FunctionType>(
         functionCall.expression().annotation().type);
   }
 
   if (!callArgumentNames.empty()) {
-		for (auto const& parameterName: functionType->parameterNames())
-		{
-			bool found = false;
-			for (size_t j = 0; j < callArgumentNames.size() && !found; j++)
-				if ((found = (parameterName == *callArgumentNames[j])))
-					arguments.push_back(callArguments[j]);
-			solAssert(found, "");
+    for (auto const& parameterName: functionType->parameterNames()) {
+      bool found = false;
+      for (size_t j = 0; j < callArgumentNames.size() && !found; j++)
+        if ((found = (parameterName == *callArgumentNames[j])))
+          arguments.push_back(callArguments[j]);
+      solAssert(found, "");
 		}
   }
   else {
