@@ -504,7 +504,7 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 	compareVersions("hexEncodeTest(address)", u256(0x123456789));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inconsistency, 3)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inconsistency, 1)
 BOOST_AUTO_TEST_CASE(inconsistency)
 {
 	// This is a test of a bug in the optimizer.
