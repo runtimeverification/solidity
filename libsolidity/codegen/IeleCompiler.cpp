@@ -2674,7 +2674,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleLocalVariable *GasValue =
       iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
     iele::IeleInstruction::CreateIntrinsicCall(
-       iele::IeleInstruction::Gaslimit, GasValue, EmptyArguments,
+       iele::IeleInstruction::Gas, GasValue, EmptyArguments,
        CompilingBlock);
 
     // Create call to deposit.
