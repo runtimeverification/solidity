@@ -3740,22 +3740,19 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
 
     bigint min = 0;
     bigint max = type.numBytes() - 1;
+    solAssert(max > 0, "IeleCompiler: found bytes0 type");
     appendRangeCheck(IndexValue, &min, &max);
 
-    iele::IeleLocalVariable *ShiftValue =
+    iele::IeleLocalVariable *ByteValue =
       iele::IeleLocalVariable::Create(&Context, "tmp",
                                       CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Sub, ShiftValue, IndexValue,
-      iele::IeleIntConstant::Create(&Context, bigint(type.numBytes())),
-      CompilingBlock);
+      iele::IeleInstruction::Sub, ByteValue,
+      iele::IeleIntConstant::Create(&Context, bigint(max)),
+      IndexValue, CompilingBlock);
     iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Shift, ShiftValue, ExprValue, ShiftValue, CompilingBlock);
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::And, ShiftValue, ShiftValue,
-      iele::IeleIntConstant::Create(&Context, bigint(255)),
-      CompilingBlock);
-    CompilingExpressionResult.push_back(ShiftValue);
+      iele::IeleInstruction::Byte, ByteValue, ByteValue, ExprValue, CompilingBlock);
+    CompilingExpressionResult.push_back(ByteValue);
     break;
   }
   case Type::Category::Mapping: {
