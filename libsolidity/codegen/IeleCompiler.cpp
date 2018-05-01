@@ -478,7 +478,7 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
       for (unsigned i = 0; i < names.size(); i++) {
         TypePointer memberType = structType->memberType(names[i]);
         IeleRValue *LoadedValue = appendStructAccess(*structType, Value->getValue(), names[i], DataLocation::Storage)->read(CompilingBlock);
-        LoadedValue = encoding(Value, memberType);
+        LoadedValue = encoding(LoadedValue, memberType);
         Returns.insert(Returns.end(), LoadedValue->getValues().begin(), LoadedValue->getValues().end());
       }
     } else {
