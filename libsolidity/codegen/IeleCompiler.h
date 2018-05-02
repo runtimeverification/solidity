@@ -246,7 +246,7 @@ private:
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
   IeleLValue *appendGlobalVariable(iele::IeleValue *Identifier, std::string name,
-                      bool isValueType = true);
+                      bool isValueType, unsigned sizeInRegisters);
 
   IeleLValue *makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc, iele::IeleValue *Offset = nullptr);
 

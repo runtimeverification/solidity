@@ -3444,7 +3444,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
                "IeleCompiler: failed to access compiling contract's symbol "
                "table.");
       if (iele::IeleValue *Identifier = ST->lookup(name)) {
-        IeleLValue *var = appendGlobalVariable(Identifier, functionDef->name(), true);
+        IeleLValue *var = appendGlobalVariable(Identifier, functionDef->name(), true, 1);
         IeleRValue *RValue = var->read(CompilingBlock);
         Result.insert(Result.begin(), RValue->getValues().begin(), RValue->getValues().end());
         CompilingExpressionResult.push_back(IeleRValue::Create(Result));
@@ -3503,7 +3503,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
           solAssert(Result, "IeleCompiler: failed to find state variable in "
                             "contract's symbol table");
           CompilingExpressionResult.push_back(
-            appendGlobalVariable(Result, variable->name(), variable->annotation().type->isValueType()));
+            appendGlobalVariable(Result, variable->name(), variable->annotation().type->isValueType(), variable->annotation().type->sizeInRegisters()));
         }
         return false;
       } else {
@@ -4166,9 +4166,11 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
 
   // If not found, lookup identifier in the contract's symbol table.
   bool isValueType = true;
+  unsigned sizeInRegisters = 1;
   if (const VariableDeclaration *variableDecl =
         dynamic_cast<const VariableDeclaration *>(declaration)) {
     isValueType = variableDecl->annotation().type->isValueType();
+    sizeInRegisters = variableDecl->annotation().type->sizeInRegisters();
     if (variableDecl->isConstant()) {
       IeleRValue *Identifier = compileExpression(*variableDecl->value());
       TypePointer rhsType = variableDecl->value()->annotation().type;
@@ -4182,7 +4184,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
             "IeleCompiler: failed to access compiling contract's symbol "
             "table.");
   if (iele::IeleValue *Identifier = ST->lookup(name)) {
-    CompilingExpressionResult.push_back(appendGlobalVariable(Identifier, identifier.name(), isValueType));
+    CompilingExpressionResult.push_back(appendGlobalVariable(Identifier, identifier.name(), isValueType, sizeInRegisters));
     return;
   }
 
@@ -4194,13 +4196,13 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
 }
 
 IeleLValue *IeleCompiler::appendGlobalVariable(iele::IeleValue *Identifier, std::string name,
-                                  bool isValueType) {
+                                  bool isValueType, unsigned sizeInRegisters) {
     if (llvm::isa<iele::IeleGlobalVariable>(Identifier)) {
       if (isValueType) {
         // In case of a global variable, if we aren't compiling an lvalue and
         // the global variable holds a value type, we have to load the global
         // variable.
-        return AddressLValue::Create(this, Identifier, DataLocation::Storage, name);
+        return AddressLValue::Create(this, Identifier, DataLocation::Storage, name, sizeInRegisters);
       } else {
         return ReadOnlyLValue::Create(IeleRValue::Create({Identifier}));
       }
