@@ -296,7 +296,6 @@ BOOST_AUTO_TEST_CASE(conditional_expression_tuples)
 	ABI_CHECK(callContractFunction("f(bool)", false), encodeArgs(u256(3), u256(4)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(conditional_expression_functions, 1)
 BOOST_AUTO_TEST_CASE(conditional_expression_functions)
 {
 	char const* sourceCode = R"(
@@ -1817,7 +1816,6 @@ BOOST_AUTO_TEST_CASE(transfer_ether)
 	ABI_CHECK(callContractFunction("b(address,uint)", oogRecipient, 10), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(uncalled_blockhash, 1)
 BOOST_AUTO_TEST_CASE(uncalled_blockhash)
 {
 	char const* code = R"(
@@ -2107,7 +2105,6 @@ BOOST_AUTO_TEST_CASE(packed_keccak256)
 	testContractAgainstCpp("a(bytes32)", f, u256(-1));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_keccak256_complex_types, 1)
 BOOST_AUTO_TEST_CASE(packed_keccak256_complex_types)
 {
 	char const* sourceCode = R"(
@@ -2127,9 +2124,9 @@ BOOST_AUTO_TEST_CASE(packed_keccak256_complex_types)
 	compileAndRun(sourceCode);
 	// Strangely, arrays are encoded with intra-element padding.
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(
-		dev::keccak256(encodeRefArray({u256("0xfffffffffffffffffffffffffffffe"), u256("0xfffffffffffffffffffffffffffffd"), u256("0xfffffffffffffffffffffffffffffc")}, 3, 15)),
-		dev::keccak256(encodeRefArray({u256("0xfffffffffffffffffffffffffffffe"), u256("0xfffffffffffffffffffffffffffffd"), u256("0xfffffffffffffffffffffffffffffc")}, 3, 15)),
-		dev::keccak256(fromHex(m_contractAddress.hex() + "26121ff0"))
+		dev::keccak256(fromHex("fffffffffffffffffffffffffffffe" "fffffffffffffffffffffffffffffd" "fffffffffffffffffffffffffffffc")),
+		dev::keccak256(fromHex("fffffffffffffffffffffffffffffe" "fffffffffffffffffffffffffffffd" "fffffffffffffffffffffffffffffc")),
+		dev::keccak256(fromHex(m_contractAddress.hex() + "0001"))
 	));
 }
 
@@ -2327,7 +2324,6 @@ BOOST_AUTO_TEST_CASE(calls_to_this)
 	BOOST_REQUIRE(callContractFunction("callHelper(uint,uint)", a, b) == encodeArgs(a * b + 10));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(inter_contract_calls_with_local_vars, 1)
 BOOST_AUTO_TEST_CASE(inter_contract_calls_with_local_vars)
 {
 	// note that a reference to another contract's function occupies two stack slots,
@@ -2572,7 +2568,6 @@ BOOST_AUTO_TEST_CASE(gas_and_value_basic)
 	BOOST_REQUIRE(callContractFunction("checkState()") == encodeArgs(false, 20 - 5));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(value_complex, 1)
 BOOST_AUTO_TEST_CASE(value_complex)
 {
 	char const* sourceCode = R"(
@@ -2596,7 +2591,6 @@ BOOST_AUTO_TEST_CASE(value_complex)
 	BOOST_REQUIRE(callContractFunction("sendAmount(uint)", 5) == encodeArgs(8));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(value_insane, 1)
 BOOST_AUTO_TEST_CASE(value_insane)
 {
 	char const* sourceCode = R"(
@@ -3018,15 +3012,14 @@ BOOST_AUTO_TEST_CASE(function_modifier_library_inheritance)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(0x202));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(crazy_elementary_typenames_on_stack, 1)
 BOOST_AUTO_TEST_CASE(crazy_elementary_typenames_on_stack)
 {
 	char const* sourceCode = R"(
 		contract C {
-			function f() returns (uint r) {
+			function f() returns (uint256 r) {
 				uint; uint; uint; uint;
 				int x = -7;
-				var a = uint;
+				var a = uint256;
 				return a(x);
 			}
 		}
@@ -8152,7 +8145,6 @@ BOOST_AUTO_TEST_CASE(using_for_by_name)
 	ABI_CHECK(callContractFunction("x()"), encodeArgs(u256(6 * 7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(bound_function_in_var, 1)
 BOOST_AUTO_TEST_CASE(bound_function_in_var)
 {
 	char const* sourceCode = R"(
@@ -9411,7 +9403,6 @@ BOOST_AUTO_TEST_CASE(mem_resize_is_not_paid_at_call)
 	ABI_CHECK(callContractFunction("f(address)", cAddr), encodeArgs(u256(7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(calling_uninitialized_function, 1)
 BOOST_AUTO_TEST_CASE(calling_uninitialized_function)
 {
 	char const* sourceCode = R"(
@@ -9479,7 +9470,6 @@ BOOST_AUTO_TEST_CASE(calling_uninitialized_function_through_array)
 	ABI_CHECK(callContractFunction("t()"), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(pass_function_types_internally, 1)
 BOOST_AUTO_TEST_CASE(pass_function_types_internally)
 {
 	char const* sourceCode = R"(
@@ -9498,7 +9488,6 @@ BOOST_AUTO_TEST_CASE(pass_function_types_internally)
 	ABI_CHECK(callContractFunction("f(uint)", 7), encodeArgs(u256(8)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(pass_function_types_externally, 1)
 BOOST_AUTO_TEST_CASE(pass_function_types_externally)
 {
 	char const* sourceCode = R"(
@@ -9521,7 +9510,6 @@ BOOST_AUTO_TEST_CASE(pass_function_types_externally)
 	ABI_CHECK(callContractFunction("f2(uint)", 7), encodeArgs(u256(8)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(receive_external_function_type, 1)
 BOOST_AUTO_TEST_CASE(receive_external_function_type)
 {
 	char const* sourceCode = R"(
@@ -9536,7 +9524,7 @@ BOOST_AUTO_TEST_CASE(receive_external_function_type)
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction(
 		"f(function)",
-		m_contractAddress.asBytes() + FixedHash<4>(dev::keccak256("g()")).asBytes() + bytes(32 - 4 - 20, 0)
+		m_contractAddress, 1
 	), encodeArgs(u256(7)));
 }
 //TODO: function pointers?
@@ -9559,7 +9547,6 @@ BOOST_AUTO_TEST_CASE(return_external_function_type)
 	);
 }
 */
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(store_function, 1)
 BOOST_AUTO_TEST_CASE(store_function)
 {
 	char const* sourceCode = R"(
@@ -9587,7 +9574,6 @@ BOOST_AUTO_TEST_CASE(store_function)
 	ABI_CHECK(callContractFunction("t()"), encodeArgs(u256(9)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(store_function_in_constructor, 1)
 BOOST_AUTO_TEST_CASE(store_function_in_constructor)
 {
 	char const* sourceCode = R"(
@@ -9614,7 +9600,6 @@ BOOST_AUTO_TEST_CASE(store_function_in_constructor)
 
 // TODO: store bound internal library functions
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(store_internal_unused_function_in_constructor, 1)
 BOOST_AUTO_TEST_CASE(store_internal_unused_function_in_constructor)
 {
 	char const* sourceCode = R"(
@@ -9636,7 +9621,6 @@ BOOST_AUTO_TEST_CASE(store_internal_unused_function_in_constructor)
 	ABI_CHECK(callContractFunction("t()"), encodeArgs(u256(7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(store_internal_unused_library_function_in_constructor, 1)
 BOOST_AUTO_TEST_CASE(store_internal_unused_library_function_in_constructor)
 {
 	char const* sourceCode = R"(
@@ -9699,7 +9683,6 @@ BOOST_AUTO_TEST_CASE(same_function_in_construction_and_runtime_equality_check)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_type_library_internal, 1)
 BOOST_AUTO_TEST_CASE(function_type_library_internal)
 {
 	char const* sourceCode = R"(
@@ -9722,11 +9705,10 @@ BOOST_AUTO_TEST_CASE(function_type_library_internal)
 	)";
 
 	compileAndRun(sourceCode, 0, "C");
-	ABI_CHECK(callContractFunction("f(uint[])", 0x20, 3, u256(1), u256(7), u256(3)), encodeArgs(u256(11)));
+	ABI_CHECK(callContractFunction("f(uint[])", encodeRefArgs(1, 3, bigint(1), bigint(7), bigint(3))), encodeArgs(u256(11)));
 }
 
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(call_function_returning_function, 1)
 BOOST_AUTO_TEST_CASE(call_function_returning_function)
 {
 	char const* sourceCode = R"(
@@ -9756,7 +9738,6 @@ BOOST_AUTO_TEST_CASE(call_function_returning_function)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(2)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(mapping_of_functions, 1)
 BOOST_AUTO_TEST_CASE(mapping_of_functions)
 {
 	char const* sourceCode = R"(
@@ -9797,7 +9778,6 @@ BOOST_AUTO_TEST_CASE(mapping_of_functions)
 	ABI_CHECK(callContractFunction("success()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(packed_functions, 1)
 BOOST_AUTO_TEST_CASE(packed_functions)
 {
 	char const* sourceCode = R"(
@@ -9846,7 +9826,6 @@ BOOST_AUTO_TEST_CASE(packed_functions)
 	ABI_CHECK(callContractFunction("x()"), encodeArgs(u256(2)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_memory_array, 1)
 BOOST_AUTO_TEST_CASE(function_memory_array)
 {
 	char const* sourceCode = R"(
@@ -9878,7 +9857,6 @@ BOOST_AUTO_TEST_CASE(function_memory_array)
 	ABI_CHECK(callContractFunction("test(uint,uint)", u256(10), u256(5)), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_delete_storage, 1)
 BOOST_AUTO_TEST_CASE(function_delete_storage)
 {
 	char const* sourceCode = R"(
@@ -9906,7 +9884,6 @@ BOOST_AUTO_TEST_CASE(function_delete_storage)
 	ABI_CHECK(callContractFunction("ca()"), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_delete_stack, 1)
 BOOST_AUTO_TEST_CASE(function_delete_stack)
 {
 	char const* sourceCode = R"(
@@ -9924,7 +9901,6 @@ BOOST_AUTO_TEST_CASE(function_delete_stack)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs());
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(copy_function_storage_array, 1)
 BOOST_AUTO_TEST_CASE(copy_function_storage_array)
 {
 	char const* sourceCode = R"(
@@ -9947,7 +9923,6 @@ BOOST_AUTO_TEST_CASE(copy_function_storage_array)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(u256(7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_array_cross_calls, 1)
 BOOST_AUTO_TEST_CASE(function_array_cross_calls)
 {
 	char const* sourceCode = R"(
@@ -9987,7 +9962,6 @@ BOOST_AUTO_TEST_CASE(function_array_cross_calls)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(u256(5), u256(6), u256(7)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(external_function_to_address, 1)
 BOOST_AUTO_TEST_CASE(external_function_to_address)
 {
 	char const* sourceCode = R"(
@@ -10003,11 +9977,10 @@ BOOST_AUTO_TEST_CASE(external_function_to_address)
 
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(true));
-	ABI_CHECK(callContractFunction("g(function)", vector<bytes>(1, fromHex("00000000000000000000000000000000000004226121ff00000000000000000"))), encodeArgs(u160(0x42)));
+	ABI_CHECK(callContractFunction("g(function)", 0x42, 0x1234), encodeArgs(u160(0x42)));
 }
 
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(copy_internal_function_array_to_storage, 1)
 BOOST_AUTO_TEST_CASE(copy_internal_function_array_to_storage)
 {
 	char const* sourceCode = R"(

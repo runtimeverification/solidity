@@ -302,7 +302,6 @@ BOOST_AUTO_TEST_CASE(decode_from_memory_simple)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(decode_function_type, 1)
 BOOST_AUTO_TEST_CASE(decode_function_type)
 {
 	string sourceCode = R"(
@@ -337,7 +336,6 @@ BOOST_AUTO_TEST_CASE(decode_function_type)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(decode_function_type_array, 1)
 BOOST_AUTO_TEST_CASE(decode_function_type_array)
 {
 	string sourceCode = R"(
@@ -633,7 +631,6 @@ BOOST_AUTO_TEST_CASE(struct_short)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_function, 1)
 BOOST_AUTO_TEST_CASE(struct_function)
 {
 	string sourceCode = R"(
