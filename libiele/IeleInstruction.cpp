@@ -361,6 +361,32 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
   return AccountCallInst;
 }
 
+IeleInstruction *IeleInstruction::CreateCallAddress(
+    IeleLocalVariable *ReturnValue,
+    IeleGlobalValue *Callee, IeleValue *AddressValue,
+    IeleInstruction *InsertBefore) {
+  solAssert(ReturnValue && Callee && AddressValue,
+            "CreateCallAddress: Invalid operands");
+  IeleInstruction *CallAddressInst = new IeleInstruction(CallAddress, InsertBefore);
+  CallAddressInst->getIeleLValueList().push_back(ReturnValue);
+  CallAddressInst->getIeleOperandList().push_back(Callee);
+  CallAddressInst->getIeleOperandList().push_back(AddressValue);
+  return CallAddressInst;
+}
+
+IeleInstruction *IeleInstruction::CreateCallAddress(
+    IeleLocalVariable *ReturnValue,
+    IeleGlobalValue *Callee, IeleValue *AddressValue,
+    IeleBlock *InsertAtEnd) {
+  solAssert(ReturnValue && Callee && AddressValue,
+            "CreateCallAddress: Invalid operands");
+  IeleInstruction *CallAddressInst = new IeleInstruction(CallAddress, InsertAtEnd);
+  CallAddressInst->getIeleLValueList().push_back(ReturnValue);
+  CallAddressInst->getIeleOperandList().push_back(Callee);
+  CallAddressInst->getIeleOperandList().push_back(AddressValue);
+  return CallAddressInst;
+}
+
 IeleInstruction *IeleInstruction::CreateIntrinsicCall(
     IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
@@ -797,10 +823,13 @@ static void printCall(llvm::raw_ostream &OS, const IeleInstruction *I) {
 
   // in case of account calls, print called account
   if (I->getOpcode() == IeleInstruction::CallAt ||
-      I->getOpcode() == IeleInstruction::StaticCallAt) {
+      I->getOpcode() == IeleInstruction::StaticCallAt ||
+      I->getOpcode() == IeleInstruction::CallAddress) {
     OS << " at ";
     (*It)->printAsValue(OS);
     ++It;
+    if (I->getOpcode() == IeleInstruction::CallAddress)
+      return;
     OS << " ";
   }
 

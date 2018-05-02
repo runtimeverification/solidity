@@ -224,6 +224,15 @@ public:
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateCallAddress(
+      IeleLocalVariable *ReturnValue,
+      IeleGlobalValue *Callee, IeleValue *AddressValue,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateCallAddress(
+      IeleLocalVariable *ReturnValue,
+      IeleGlobalValue *Callee, IeleValue *AddressValue,
+      IeleBlock *InsertAtEnd);
+
   static IeleInstruction *CreateIntrinsicCall(
       IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
