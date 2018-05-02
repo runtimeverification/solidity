@@ -88,6 +88,7 @@ public:
   virtual bool visit(const NewExpression &newExpression) override;
   virtual bool visit(const MemberAccess &memberAccess) override;
   virtual bool visit(const IndexAccess &indexAccess) override;
+  virtual bool visit(const ElementaryTypeNameExpression &typeName) override;
   virtual void endVisit(const Identifier &identifier) override;
   virtual void endVisit(const Literal &literal) override;
 

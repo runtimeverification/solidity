@@ -3744,6 +3744,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else if (member == "sig")
       solAssert(false, "IeleCompiler: member not supported in IELE");
+    else if (member == "blockhash")
+      CompilingExpressionResult.push_back(IeleRValue::Create({}));
     else
       solAssert(false, "IeleCompiler: Unknown magic member.");
     break;
@@ -4268,6 +4270,11 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
     solAssert(false, "not implemented yet");
   }
   appendRangeCheck(Value->getValue(), &min, &max);
+}
+
+bool IeleCompiler::visit(const ElementaryTypeNameExpression &typeName) {
+  CompilingExpressionResult.push_back(IeleRValue::Create({}));
+  return false;
 }
 
 void IeleCompiler::endVisit(const Identifier &identifier) {
@@ -4838,7 +4845,7 @@ void IeleCompiler::appendLocalVariableInitialization(
       InitValue = appendStructAllocation(structType);
   }
   else {
-    solAssert(type->isValueType() ||
+    solAssert(type->isValueType() || type->category() == Type::Category::TypeType ||
               type->category() == Type::Category::Mapping,
               "IeleCompiler: found local variable of unknown type");
     // Local variables are always automatically initialized to zero. We don't
