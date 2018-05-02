@@ -2789,13 +2789,13 @@ unsigned FunctionType::gasIndex() const
 		kind = m_kind;
 	}
 
-	unsigned size = 0;
+	unsigned index = 0;
 
 	switch(kind)
 	{
 	case Kind::External:
 	case Kind::CallCode:
-		size = 2;
+		index = 2;
 		break;
 	case Kind::BareCall:
 	case Kind::BareCallCode:
@@ -2805,13 +2805,13 @@ unsigned FunctionType::gasIndex() const
 	case Kind::ArrayPush:
 	case Kind::ByteArrayPush:
         case Kind::Creation:
-		size = 1;
+		index = 1;
 		break;
 	default:
 		break;
 	}
 
-        return size;
+        return index;
 }
 
 unsigned FunctionType::valueIndex() const
@@ -2825,13 +2825,13 @@ unsigned FunctionType::valueIndex() const
 		kind = m_kind;
 	}
 
-	unsigned size = 0;
+	unsigned index = 0;
 
 	switch(kind)
 	{
 	case Kind::External:
 	case Kind::CallCode:
-		size = 2;
+		index = 2;
 		break;
 	case Kind::BareCall:
 	case Kind::BareCallCode:
@@ -2841,16 +2841,16 @@ unsigned FunctionType::valueIndex() const
 	case Kind::ArrayPush:
 	case Kind::ByteArrayPush:
         case Kind::Creation:
-		size = 1;
+		index = 1;
 		break;
 	default:
 		break;
 	}
 
 	if (m_gasSet)
-		size++;
+		index++;
 
-        return size;
+        return index;
 }
 
 FunctionTypePointer FunctionType::interfaceFunctionType() const
