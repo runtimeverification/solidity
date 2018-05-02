@@ -3444,7 +3444,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
                "IeleCompiler: failed to access compiling contract's symbol "
                "table.");
       if (iele::IeleValue *Identifier = ST->lookup(name)) {
-        IeleLValue *var = appendVariable(Identifier, functionDef->name(), true);
+        IeleLValue *var = appendGlobalVariable(Identifier, functionDef->name(), true);
         IeleRValue *RValue = var->read(CompilingBlock);
         Result.insert(Result.begin(), RValue->getValues().begin(), RValue->getValues().end());
         CompilingExpressionResult.push_back(IeleRValue::Create(Result));
@@ -3503,7 +3503,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
           solAssert(Result, "IeleCompiler: failed to find state variable in "
                             "contract's symbol table");
           CompilingExpressionResult.push_back(
-            appendVariable(Result, variable->name(), variable->annotation().type->isValueType()));
+            appendGlobalVariable(Result, variable->name(), variable->annotation().type->isValueType()));
         }
         return false;
       } else {
@@ -4182,7 +4182,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
             "IeleCompiler: failed to access compiling contract's symbol "
             "table.");
   if (iele::IeleValue *Identifier = ST->lookup(name)) {
-    CompilingExpressionResult.push_back(appendVariable(Identifier, identifier.name(), isValueType));
+    CompilingExpressionResult.push_back(appendGlobalVariable(Identifier, identifier.name(), isValueType));
     return;
   }
 
@@ -4193,7 +4193,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
   return;
 }
 
-IeleLValue *IeleCompiler::appendVariable(iele::IeleValue *Identifier, std::string name,
+IeleLValue *IeleCompiler::appendGlobalVariable(iele::IeleValue *Identifier, std::string name,
                                   bool isValueType) {
     if (llvm::isa<iele::IeleGlobalVariable>(Identifier)) {
       if (isValueType) {
@@ -4204,8 +4204,6 @@ IeleLValue *IeleCompiler::appendVariable(iele::IeleValue *Identifier, std::strin
       } else {
         return ReadOnlyLValue::Create(IeleRValue::Create({Identifier}));
       }
-    } else if (llvm::isa<iele::IeleLocalVariable>(Identifier)) {
-      solAssert(false, "not implemented");
     } else {
       return ReadOnlyLValue::Create(IeleRValue::Create({Identifier}));
     }
