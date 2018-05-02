@@ -95,6 +95,7 @@ public:
   friend class AddressLValue;
   friend class ByteArrayLValue;
   friend class ArrayLengthLValue;
+  friend class RecursiveStructLValue;
 
 private:
   iele::IeleContract *CompiledContract;
@@ -227,6 +228,10 @@ private:
   // Helper function for memory struct allocation.
   iele::IeleLocalVariable *appendStructAllocation(const StructType &type);
 
+  // Helper function for a recursive struct allocation in storage.
+  iele::IeleLocalVariable *appendRecursiveStructAllocation(
+      const StructType &type);
+
   // Helper functions for copying a reference type to a storage location.
   void appendCopyFromStorageToStorage(
       IeleLValue *To, TypePointer ToType, IeleRValue *From, TypePointer FromType);
@@ -252,6 +257,14 @@ private:
   IeleLValue *makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc, iele::IeleValue *Offset = nullptr);
 
   void appendLValueDelete(IeleLValue *LValue, TypePointer Type);
+
+  // Infrastructure for deleting recursive structs.
+  std::map<std::string, iele::IeleFunction *> RecursiveStructDestructors;
+  iele::IeleFunction *getRecursiveStructDestructor(const StructType &type);
+
+  // Helper function that appends code for deleting a struct.
+  void appendStructDelete(const StructType &type, iele::IeleValue *Address);
+
   void appendArrayLengthResize(iele::IeleValue *LValue, iele::IeleValue *NewLength);
 
   iele::IeleLocalVariable *appendBinaryOperator(
@@ -307,6 +320,8 @@ private:
   // management runtime and indicate that the runtime should be included as part
   // of the compiling contract.
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
+      iele::IeleValue *NumSlots);
+  iele::IeleLocalVariable *appendIeleRuntimeAllocateStorage(
       iele::IeleValue *NumSlots);
   void appendIeleRuntimeFill(
       iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value,

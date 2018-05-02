@@ -100,3 +100,46 @@ void ArrayLengthLValue::write(IeleRValue *Value, iele::IeleBlock *InsertAtEnd) c
   Compiler->appendArrayLengthResize(Address, Value->getValue());
   AddressLValue::write(Value, Compiler->CompilingBlock);
 }
+
+RecursiveStructLValue::RecursiveStructLValue(
+    IeleRValue *Value, const StructType &type, IeleCompiler *Compiler) :
+  ReadOnlyLValue(Value), type(type), Compiler(Compiler) {}
+
+IeleRValue *RecursiveStructLValue::read(iele::IeleBlock *InsertAtEnd) const {
+  solAssert(InsertAtEnd == Compiler->CompilingBlock,
+            "IeleCompiler: requested code generation for recursive struct "
+            "lvalue dereference in block other than the current compiling "
+            "block");
+
+  // Dereference the lvalue to get the address of the first slot of the struct.
+  iele::IeleLocalVariable *RecStructAddress =
+    iele::IeleLocalVariable::Create(
+        &Compiler->Context, "rec.struct.addr", Compiler->CompilingFunction);
+  iele::IeleInstruction::CreateSLoad(
+      RecStructAddress, Value->getValue(), InsertAtEnd);
+
+  // Create join block.
+  iele::IeleBlock *JoinBlock =
+    iele::IeleBlock::Create(&Compiler->Context, "rec.struct.found");
+
+  // Check for zero and jump to join block if pointer is not zero.
+  Compiler->connectWithConditionalJump(
+      RecStructAddress, InsertAtEnd, JoinBlock);
+
+  // Allocate a new recursive struct and store the address of its first slot
+  // in the lvalue.
+  iele::IeleLocalVariable *RecStructAllocAddress =
+    Compiler->appendRecursiveStructAllocation(type);
+  iele::IeleInstruction::CreateSStore(
+      RecStructAllocAddress, Value->getValue(), InsertAtEnd);
+  iele::IeleInstruction::CreateAssign(
+      RecStructAddress, RecStructAllocAddress, InsertAtEnd);
+
+  // Continue code generation in the join block.
+  JoinBlock->insertInto(Compiler->CompilingFunction);
+  Compiler->CompilingBlock = JoinBlock;
+  
+  // Return the address of the first slot of the 
+  // recusrive struct.
+  return IeleRValue::Create({RecStructAddress});
+}

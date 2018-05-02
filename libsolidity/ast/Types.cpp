@@ -1608,12 +1608,28 @@ bigint ArrayType::storageSize() const
 {
 	if (isByteArray())
 		return 2;
-	if (isDynamicallySized())
-		return MAX_ARRAY_SIZE * baseType()->storageSize() + 1; // One extra slot for the length
+
+	bigint baseTypeSize;
+
+	// Recursive structs are stored as pointers in storage arrays,
+	// so their size as an element type is 1.
+	if (baseType()->category() == Category::Struct) {
+		const StructType &baseStructType = dynamic_cast<const StructType &>(*baseType());
+		if (baseStructType.recursive())
+			baseTypeSize = bigint(1);
+		else
+			baseTypeSize = baseType()->storageSize();
+	} else {
+		baseTypeSize = baseType()->storageSize();
+	}
+
+	if (isDynamicallySized()) {
+		return MAX_ARRAY_SIZE * baseTypeSize + 1; // One extra slot for the length
+	}
 
 	if (length() > MAX_ARRAY_SIZE)
 		BOOST_THROW_EXCEPTION(Error(Error::Type::TypeError) << errinfo_comment("Array too large."));
-	return length() * baseType()->storageSize();
+	return length() * baseTypeSize;
 }
 
 bigint ArrayType::memorySize() const
@@ -1953,7 +1969,6 @@ unsigned StructType::calldataEncodedSize(bool _padded) const
 }
 
 bool StructType::isDynamicallyEncoded() const {
-  solAssert(!recursive(), "");
   for (auto const &m : members(nullptr)) {
     if (m.type->isDynamicallyEncoded())
       return true;
@@ -1962,7 +1977,9 @@ bool StructType::isDynamicallyEncoded() const {
 }
 
 bigint StructType::getFixedBitwidth() const {
-  solAssert(!recursive(), "");
+  if (recursive())
+    return bigint(0);
+
   bigint bitwidth;
   for (auto const &m : members(nullptr)) {
     if (bigint b = m.type->getFixedBitwidth())
@@ -1975,7 +1992,6 @@ bigint StructType::getFixedBitwidth() const {
 
 bigint StructType::memorySize() const
 {
-	solAssert(!recursive(), "");
 	bigint size;
 	for (auto const& t: memoryMemberTypes())
 		size += t->memorySize();
@@ -1984,7 +2000,6 @@ bigint StructType::memorySize() const
 
 bigint StructType::storageSize() const
 {
-	solAssert(!recursive(), "");
 	return max<bigint>(1, members(nullptr).storageSize());
 }
 
@@ -3184,17 +3199,32 @@ bigint MappingType::getFixedBitwidth() const {
 }
 
 bigint MappingType::storageSize() const {
+  bigint valueTypeSize;
+
+  // Recursive structs are stored as pointers in mappings,
+  // so their size as a value type is 1.
+  if (valueType()->category() == Category::Struct) {
+    const StructType &valueStructType =
+      dynamic_cast<const StructType &>(*valueType());
+    if (valueStructType.recursive())
+      valueTypeSize = bigint(1);
+    else
+      valueTypeSize = valueType()->storageSize();;
+  } else {
+    valueTypeSize = valueType()->storageSize();
+  }
+
   if (hasInfiniteKeyspace()) {
-    return valueType()->storageSize();
+    return valueTypeSize;
   } else if (hasHashedKeyspace()) {
-    return (bigint(1) << 256) * valueType()->storageSize();
+    return (bigint(1) << 256) * valueTypeSize;
   } else {
     bigint keyBitwidth = keyType()->getFixedBitwidth();
     solAssert(keyBitwidth, "IeleCompiler: found mapping with finite, non-hashed"
                            " keyspace and statically unknown key bitwidth");
     solAssert(keyBitwidth < bigint(UINT64_MAX),
               "IeleCompiler: found mapping with too large key bitwidth");
-    return (bigint(1) << uint64_t(keyBitwidth)) * valueType()->storageSize();
+    return (bigint(1) << uint64_t(keyBitwidth)) * valueTypeSize;
   }
 }
 
@@ -3203,7 +3233,9 @@ bool MappingType::containsInfiniteMapping() const {
 }
 
 bool MappingType::hasInfiniteKeyspace() const {
-  return !keyType()->getFixedBitwidth() && !valueType()->containsInfiniteMapping();
+  // for now, we disable infinite keyspaces
+  //return !keyType()->getFixedBitwidth() && !valueType()->containsInfiniteMapping();
+  return false;
 }
 
 bool MappingType::hasHashedKeyspace() const {
