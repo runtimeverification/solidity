@@ -196,7 +196,7 @@ private:
                                   iele::IeleBlock *SouceBlock, 
                                   iele::IeleBlock *DestinationBlock);
 
-  iele::IeleGlobalValue *convertFunctionToInternal(iele::IeleGlobalValue *Callee);
+  iele::IeleValue *convertFunctionToInternal(iele::IeleValue *Callee);
 
   void appendPayableCheck(void);
   void appendRevert(iele::IeleValue *Condition = nullptr, iele::IeleValue *Status = nullptr);

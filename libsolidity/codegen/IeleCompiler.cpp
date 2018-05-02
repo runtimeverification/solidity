@@ -16,6 +16,7 @@ using namespace dev;
 using namespace dev::solidity;
 
 auto UInt = std::make_shared<IntegerType>();
+auto UInt16 = std::make_shared<IntegerType>(16);
 auto SInt = std::make_shared<IntegerType>(IntegerType::Modifier::Signed);
 auto Address = std::make_shared<IntegerType>(160, IntegerType::Modifier::Address);
 
@@ -141,7 +142,7 @@ bool hasTwoFunctions(const FunctionType &function, bool isConstructor, bool isLi
   if (isConstructor || isLibrary) {
     return false;
   }
-  if (function.declaration().visibility() != Declaration::Visibility::Public) {
+  if (!function.hasDeclaration() || function.declaration().visibility() != Declaration::Visibility::Public) {
     return false;
   }
   for (TypePointer type : function.parameterTypes()) {
@@ -157,7 +158,7 @@ bool hasTwoFunctions(const FunctionType &function, bool isConstructor, bool isLi
   return false;
 }
 
-iele::IeleGlobalValue *IeleCompiler::convertFunctionToInternal(iele::IeleGlobalValue *Callee) {
+iele::IeleValue *IeleCompiler::convertFunctionToInternal(iele::IeleValue *Callee) {
   if (iele::IeleFunction *function = llvm::dyn_cast<iele::IeleFunction>(Callee)) {
     iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
     solAssert(ST,
@@ -165,7 +166,7 @@ iele::IeleGlobalValue *IeleCompiler::convertFunctionToInternal(iele::IeleGlobalV
     std::string name = function->getName();
     return llvm::dyn_cast<iele::IeleGlobalValue>(ST->lookup(name + ".internal"));
   }
-  solAssert(false, "not implemented yet: function pointers");
+  return Callee;
 }
 
 static void transitiveClosure(const ContractDefinition *contract, std::set<const ContractDefinition *> &dependencies) {
@@ -1189,8 +1190,6 @@ bool IeleCompiler::visit(
     for (unsigned i = 0; i < assignments.size(); ++i) {
       const VariableDeclaration *varDecl = assignments[i];
       if (varDecl) {
-        solAssert(varDecl->type()->category() != Type::Category::Function,
-                  "not implemented yet");
         // Visit LHS. We lookup the LHS name in the function's symbol table,
         // where we should find it.
         IeleLValue *LHSValue =
@@ -2257,9 +2256,53 @@ void IeleCompiler::doEncode(
     }
     break;
   }
-  case Type::Category::Function:
-      solAssert(false, 
-                "IeleCompiler: encoding of given type not implemented yet");
+  case Type::Category::Function: {
+    const FunctionType &functionType = dynamic_cast<const FunctionType &>(*type);
+    FunctionType::Kind kind;
+    if (functionType.kind() == FunctionType::Kind::SetGas || functionType.kind() == FunctionType::Kind::SetValue)
+    {
+      solAssert(functionType.returnParameterTypes().size() == 1, "");
+      kind = dynamic_cast<FunctionType const&>(*functionType.returnParameterTypes().front()).kind();
+    } else {
+      kind = functionType.kind();
+    }
+    unsigned index = 0;
+    switch (kind) {
+    case FunctionType::Kind::External:
+    case FunctionType::Kind::CallCode:
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[0]})), ArgTypeSize, ArgLen, Address, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[1]})), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
+      index = 2;
+      break;
+    case FunctionType::Kind::BareCall:
+    case FunctionType::Kind::BareCallCode:
+    case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::Internal:
+    case FunctionType::Kind::DelegateCall:
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[0]})), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
+      index = 1;
+      break;
+    case FunctionType::Kind::ArrayPush:
+    case FunctionType::Kind::ByteArrayPush:
+      solAssert(false, "not implemented yet");
+    default:
+      break;
+    }
+    if (functionType.gasSet()) {
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[index]})), ArgTypeSize, ArgLen, UInt, appendWidths, bigEndian);
+      index++;
+    }
+    if (functionType.valueSet()) {
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[index]})), ArgTypeSize, ArgLen, UInt, appendWidths, bigEndian);
+      index++;
+    }
+    if (functionType.bound()) {
+      std::vector<iele::IeleValue *> boundValue;
+      boundValue.insert(boundValue.end(), ArgValue->getValues().begin() + index, ArgValue->getValues().end());
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create(boundValue)), ArgTypeSize, ArgLen, functionType.selfType(), appendWidths, bigEndian);
+    }
+    break;
+  }
   default:
       solAssert(false, "IeleCompiler: invalid type for encoding");
   }
@@ -2531,6 +2574,62 @@ void IeleCompiler::doDecode(
     }
     break;
   }
+  case Type::Category::Function: {
+    const FunctionType &functionType = dynamic_cast<const FunctionType &>(*type);
+    FunctionType::Kind kind;
+    if (functionType.kind() == FunctionType::Kind::SetGas || functionType.kind() == FunctionType::Kind::SetValue)
+    {
+      solAssert(functionType.returnParameterTypes().size() == 1, "");
+      kind = dynamic_cast<FunctionType const&>(*functionType.returnParameterTypes().front()).kind();
+    } else {
+      kind = functionType.kind();
+    }
+    std::vector<iele::IeleLocalVariable *> Results;
+    std::vector<iele::IeleValue *> ResultValues;
+    for (unsigned i = 0; i < functionType.sizeInRegisters(); i++) {
+      auto reg = iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      Results.push_back(reg);
+      ResultValues.push_back(reg);
+    }
+    unsigned index = 0;
+    switch (kind) {
+    case FunctionType::Kind::External:
+    case FunctionType::Kind::CallCode:
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[0]}), ArgTypeSize, ArgLen, Address);
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[1]}), ArgTypeSize, ArgLen, UInt16);
+      index = 2;
+      break;
+    case FunctionType::Kind::BareCall:
+    case FunctionType::Kind::BareCallCode:
+    case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::Internal:
+    case FunctionType::Kind::DelegateCall:
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[0]}), ArgTypeSize, ArgLen, UInt16);
+      index = 1;
+      break;
+    case FunctionType::Kind::ArrayPush:
+    case FunctionType::Kind::ByteArrayPush:
+      solAssert(false, "not implemented yet");
+    default:
+      break;
+    }
+    if (functionType.gasSet()) {
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[index]}), ArgTypeSize, ArgLen, UInt);
+      index++;
+    }
+    if (functionType.valueSet()) {
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[index]}), ArgTypeSize, ArgLen, UInt);
+      index++;
+    }
+    if (functionType.bound()) {
+      std::vector<iele::IeleLocalVariable *> boundValue;
+      boundValue.insert(boundValue.end(), Results.begin() + index, Results.end());
+      doDecode(NextFree, CrntPos, RegisterLValue::Create(boundValue), ArgTypeSize, ArgLen, functionType.selfType());
+    }
+    StoreAt->write(IeleRValue::Create(ResultValues), CompilingBlock);
+    break;
+  }
+
   default: 
     solAssert(false, "invalid reference type");
     break;
@@ -2816,8 +2915,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     // Visit callee.
     IeleRValue *CalleeValues = compileExpression(functionCall.expression());
-    iele::IeleGlobalValue *CalleeValue;
-    CalleeValue = llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValues->getValues()[0]);
+    iele::IeleValue *CalleeValue = CalleeValues->getValues()[0];
     if (CalleeValues->getValues().size() > 1) {
       Arguments.insert(Arguments.begin(), CalleeValues->getValues().begin() + 1, CalleeValues->getValues().end());
     }
@@ -2954,8 +3052,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     compileFunctionArguments(Arguments, ReturnRegisters, Returns, arguments, function, true);
 
     IeleRValue *CalleeValue = compileExpression(functionCall.expression());
-    iele::IeleGlobalValue *FunctionCalleeValue =
-      llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValue->getValues()[1]);
+    iele::IeleValue *FunctionCalleeValue = CalleeValue->getValues()[1];
     iele::IeleValue *AddressValue =
       CalleeValue->getValues()[0];
 
@@ -4101,6 +4198,71 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
     min = 0;
     max = type.numberOfMembers() - 1;
     break;
+  }
+  case Type::Category::Function: {
+    const FunctionType &functionType = dynamic_cast<const FunctionType &>(Type);
+    FunctionType::Kind kind;
+    if (functionType.kind() == FunctionType::Kind::SetGas || functionType.kind() == FunctionType::Kind::SetValue)
+    {
+      solAssert(functionType.returnParameterTypes().size() == 1, "");
+      kind = dynamic_cast<FunctionType const&>(*functionType.returnParameterTypes().front()).kind();
+    } else {
+      kind = functionType.kind();
+    }
+    unsigned index = 0;
+    min = 0;
+    switch (kind) {
+    case FunctionType::Kind::External:
+    case FunctionType::Kind::CallCode:
+      max = (bigint(1) << 160) - 1;
+      appendRangeCheck(Value->getValues()[0], &min, &max);
+      max = (bigint(1) << 16) - 1;
+      appendRangeCheck(Value->getValues()[1], &min, &max);
+      index = 2;
+      break;
+    case FunctionType::Kind::BareCall:
+    case FunctionType::Kind::BareCallCode:
+    case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::Internal:
+    case FunctionType::Kind::DelegateCall:
+      max = (bigint(1) << 16) - 1;
+      appendRangeCheck(Value->getValues()[0], &min, &max);
+      index = 1;
+      break;
+    case FunctionType::Kind::ArrayPush:
+    case FunctionType::Kind::ByteArrayPush:
+      solAssert(false, "not implemented yet");
+    default:
+      break;
+    }
+    if (functionType.gasSet()) {
+      bigint min = 0;
+      if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value->getValue())) {
+        if (constant->getValue() < 0) {
+          appendRevert();
+        }
+      } else {
+        appendRangeCheck(Value->getValue(), &min, nullptr);
+      }
+      index++;
+    }
+    if (functionType.valueSet()) {
+      bigint min = 0;
+      if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value->getValue())) {
+        if (constant->getValue() < 0) {
+          appendRevert();
+        }
+      } else {
+        appendRangeCheck(Value->getValue(), &min, nullptr);
+      }
+      index++;
+    }
+    if (functionType.bound()) {
+      std::vector<iele::IeleValue *> boundValue;
+      boundValue.insert(boundValue.end(), Value->getValues().begin() + index, Value->getValues().end());
+      appendRangeCheck(IeleRValue::Create(boundValue), *functionType.selfType());
+    }
+    return;
   }
   default:
     solAssert(false, "not implemented yet");
