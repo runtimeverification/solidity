@@ -306,7 +306,7 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
     bool StaticCall,
     IeleLocalVariable *StatusValue,
     llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-    IeleGlobalValue *Callee, IeleValue *AddressValue,
+    IeleValue *Callee, IeleValue *AddressValue,
     IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleInstruction *InsertBefore) {
@@ -335,7 +335,7 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
     bool StaticCall,
     IeleLocalVariable *StatusValue,
     llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-    IeleGlobalValue *Callee, IeleValue *AddressValue,
+    IeleValue *Callee, IeleValue *AddressValue,
     IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleBlock *InsertAtEnd) {
@@ -396,7 +396,7 @@ IeleInstruction *IeleInstruction::CreateIntrinsicCall(
 
 IeleInstruction *IeleInstruction::CreateInternalCall(
     llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-    IeleGlobalValue *Callee,
+    IeleValue *Callee,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleInstruction *InsertBefore) {
   solAssert(Callee, "CreateInternalCall: Invalid operands");
@@ -414,7 +414,7 @@ IeleInstruction *IeleInstruction::CreateInternalCall(
 
 IeleInstruction *IeleInstruction::CreateInternalCall(
     llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-    IeleGlobalValue *Callee,
+    IeleValue *Callee,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
     IeleBlock *InsertAtEnd) {
   solAssert(Callee, "CreateInternalCall: Invalid operands");
