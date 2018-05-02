@@ -5,6 +5,8 @@
 #include "libsolidity/ast/ASTVisitor.h"
 #include "libevmasm/LinkerObject.h"
 
+#include "libsolidity/codegen/IeleRValue.h"
+
 #include "llvm/Support/raw_ostream.h"
 
 #include <map>
@@ -19,6 +21,7 @@ class IeleContract;
 namespace solidity {
 
 class IeleLValue;
+class IeleRValue;
 
 class IeleCompiler : public ASTConstVisitor {
 public:
@@ -34,8 +37,6 @@ public:
     RevertStatusBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingLValue(false),
-    GasValue(nullptr),
-    TransferValue(nullptr),
     NextStorageAddress(0),
     CompilingContractASTNode(nullptr),
     CompilingFunctionASTNode(nullptr),
@@ -111,22 +112,19 @@ private:
   private:
     bool isLValue;
     union {
-      iele::IeleValue *RValue;
+      IeleRValue *RValue;
       IeleLValue *LValue;
     };
   public:
-    Value(iele::IeleValue *RValue) : isLValue(false), RValue(RValue) {}
+    Value(IeleRValue *RValue) : isLValue(false), RValue(RValue) {}
     Value(IeleLValue *LValue) : isLValue(true), LValue(LValue) {}
-    iele::IeleValue *rval(iele::IeleBlock *Block);
+    IeleRValue *rval(iele::IeleBlock *Block);
     IeleLValue *lval() { solAssert(isLValue, "IeleCompiler: expression is not an lvalue"); return LValue; }
   };
 
   llvm::SmallVector<Value, 4> CompilingExpressionResult;
   bool CompilingLValue;
   const ArrayType *CompilingLValueArrayType;
-
-  iele::IeleValue *GasValue;
-  iele::IeleValue *TransferValue;
 
   bigint NextStorageAddress;
 
@@ -155,7 +153,6 @@ private:
   // Lookup function modifier by name
   const ModifierDefinition *functionModifier(const std::string &_name) const;
   void appendReturn(const FunctionDefinition &function, 
-                    llvm::SmallVector<std::string, 4> ReturnParameterNames,
                     llvm::SmallVector<TypePointer, 4> ReturnParameterTypes); 
   // Appends one layer of function modifier code of the current function, or the
   // function body itself if the last modifier was reached.
@@ -165,10 +162,15 @@ private:
   std::stack<iele::IeleBlock *> ReturnBlocks;  
   // Return parameters of the current function 
   // TODO: do we really want to have this here?
-  std::vector<iele::IeleLocalVariable *> CompilingFunctionReturnParameters;
+  std::vector<IeleLValue *> CompilingFunctionReturnParameters;
   
-  template <class ArgClass, class ReturnClass, class ExpressionClass>
-  void compileFunctionArguments(ArgClass *Arguments, ReturnClass *Returns, const::std::vector<ASTPointer<ExpressionClass>> &arguments, const FunctionType &function, bool encode);
+  template <typename ExpressionClass>
+  void compileFunctionArguments(
+      llvm::SmallVectorImpl<iele::IeleValue *> &Arguments,
+      llvm::SmallVectorImpl<iele::IeleLocalVariable *> &ReturnRegisters, 
+      llvm::SmallVectorImpl<IeleLValue *> &Returns,
+      const std::vector<ASTPointer<ExpressionClass>> &arguments,
+      const FunctionType &function, bool encode);
 
   // Infrastructure for unique variable names generation and mapping
   int NextUniqueIntToken = 0;
@@ -176,17 +178,13 @@ private:
   std::string getNextVarSuffix();
   // It is not enough to map names to names; we need such a mapping for each "layer",
   // that is for each function modifier.
-  std::map<unsigned, std::map <std::string, std::string>> VarNameMap;
+  std::map<unsigned, std::map <std::string, IeleLValue *>> VarNameMap;
 
   // Helpers for the compilation process.
-  iele::IeleValue *compileExpression(const Expression &expression);
-  void compileExpressions(
-      const Expression &Expression,
-      llvm::SmallVectorImpl<iele::IeleValue *> &Result,
-      unsigned numExpressions);
+  IeleRValue *compileExpression(const Expression &expression);
   void compileTuple(
       const Expression &expression,
-      llvm::SmallVectorImpl<iele::IeleValue *> &Result);
+      llvm::SmallVectorImpl<IeleRValue *> &Result);
   IeleLValue *compileLValue(const Expression &expression);
   void compileLValues(
       const Expression &expression,
@@ -204,13 +202,13 @@ private:
   void appendRevert(iele::IeleValue *Condition = nullptr, iele::IeleValue *Status = nullptr);
   void appendInvalid(iele::IeleValue *Condition = nullptr);
   void appendRangeCheck(iele::IeleValue *Value, bigint *min, bigint *max);
-  void appendRangeCheck(iele::IeleValue *Value, const Type &Type);
+  void appendRangeCheck(IeleRValue *Value, const Type &Type);
 
   void appendRevertBlocks(void);
 
   void appendDefaultConstructor(const ContractDefinition *contract);
   void appendLocalVariableInitialization(
-          iele::IeleLocalVariable *Local, const VariableDeclaration *localVariable);
+          IeleLValue *Local, const VariableDeclaration *localVariable);
 
   IeleLValue *appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue);
   IeleLValue *appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc);
@@ -230,24 +228,24 @@ private:
 
   // Helper functions for copying a reference type to a storage location.
   void appendCopyFromStorageToStorage(
-      IeleLValue *To, TypePointer ToType, iele::IeleValue *From, TypePointer FromType);
+      IeleLValue *To, TypePointer ToType, IeleRValue *From, TypePointer FromType);
   void appendCopyFromMemoryToStorage(
-      IeleLValue *To, TypePointer ToType, iele::IeleValue *From, TypePointer FromType);
+      IeleLValue *To, TypePointer ToType, IeleRValue *From, TypePointer FromType);
 
   void appendCopyFromMemoryToMemory(
-      IeleLValue *To, TypePointer ToType, iele::IeleValue *From, TypePointer FromType);
+      IeleLValue *To, TypePointer ToType, IeleRValue *From, TypePointer FromType);
 
   // Helper function for copying a storage reference type into a local newly
   // allocated memory copy. Returns a pointer to the copy.
   iele::IeleValue *appendCopyFromStorageToMemory(
-    TypePointer ToType, iele::IeleValue *From, TypePointer FromType);
+    TypePointer ToType, IeleRValue *From, TypePointer FromType);
 
   void appendCopy(
-      IeleLValue *To, TypePointer ToType, iele::IeleValue *From, TypePointer FromType, DataLocation ToLoc, DataLocation FromLoc);
+      IeleLValue *To, TypePointer ToType, IeleRValue *From, TypePointer FromType, DataLocation ToLoc, DataLocation FromLoc);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
-  void appendVariable(iele::IeleValue *Identifier, std::string name,
+  IeleLValue *appendGlobalVariable(iele::IeleValue *Identifier, std::string name,
                       bool isValueType = true);
 
   IeleLValue *makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc, iele::IeleValue *Offset = nullptr);
@@ -264,29 +262,29 @@ private:
       int shiftAmount);
   void appendMask(iele::IeleLocalVariable *Result, iele::IeleValue *Value, 
       int bytes, bool issigned);
-  iele::IeleValue *appendTypeConversion(
-      iele::IeleValue *Operand,
+  IeleRValue *appendTypeConversion(
+      IeleRValue *Operand,
       TypePointer SourceType,
       TypePointer TargetType);
 
   void appendTypeConversions(
-    llvm::SmallVectorImpl<iele::IeleValue *> &Results, 
-    llvm::SmallVectorImpl<iele::IeleValue *> &RHSValues,
+    llvm::SmallVectorImpl<IeleRValue *> &Results, 
+    llvm::SmallVectorImpl<IeleRValue *> &RHSValues,
     TypePointer SourceType, TypePointers TargetTypes);
 
-  iele::IeleLocalVariable *appendBooleanOperator(
+  iele::IeleValue *appendBooleanOperator(
       Token::Value Opcode,
       const Expression &LeftOperand,
       const Expression &RightOperand);
 
   void appendConditional(
       iele::IeleValue *ConditionValue,
-      llvm::SmallVectorImpl<iele::IeleLocalVariable *> &Results,
-      const std::function<void(llvm::SmallVectorImpl<iele::IeleValue *> &)> &TrueExpression,
-      const std::function<void(llvm::SmallVectorImpl<iele::IeleValue *> &)> &FalseExpression);
+      llvm::SmallVectorImpl<IeleLValue *> &Results,
+      const std::function<void(llvm::SmallVectorImpl<IeleRValue *> &)> &TrueExpression,
+      const std::function<void(llvm::SmallVectorImpl<IeleRValue *> &)> &FalseExpression);
 
   void appendConditionalBranch(
-    llvm::SmallVectorImpl<iele::IeleValue *> &Results,
+    llvm::SmallVectorImpl<IeleRValue *> &Results,
     const Expression &Branch,
     TypePointer Type);
 
@@ -317,18 +315,18 @@ private:
       DataLocation FromLoc, DataLocation ToLoc);
   
   // Encoding functionality
-  iele::IeleValue *encoding(
-    iele::IeleValue *argument, 
+  IeleRValue *encoding(
+    IeleRValue *argument, 
     TypePointer type,
     bool hash = false);
   iele::IeleValue *encoding(
-    llvm::SmallVectorImpl<iele::IeleValue *> &arguments, 
+    llvm::SmallVectorImpl<IeleRValue *> &arguments, 
     TypePointers types,
     iele::IeleLocalVariable *NextFree,
     bool appendWidths);
 
-  iele::IeleValue *decoding(
-    iele::IeleValue *encoded,
+  IeleRValue *decoding(
+    IeleRValue *encoded,
     TypePointer type);
 
   void doEncode(

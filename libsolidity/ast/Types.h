@@ -237,6 +237,7 @@ public:
 	virtual bool isValueType() const { return false; }
 	/// DEPRECATED
 	virtual unsigned sizeOnStack() const { return 1; }
+	virtual unsigned sizeInRegisters() const { return 1; }
 	/// If it is possible to initialize such a value in memory by just writing zeros
 	/// of the size memoryHeadSize().
 	virtual bool hasSimpleZeroValueInMemory() const { return true; }
@@ -1038,6 +1039,9 @@ public:
 	virtual bool isValueType() const override { return true; }
 	virtual bool canLiveOutsideStorage() const override { return m_kind == Kind::Internal || m_kind == Kind::External; }
 	virtual unsigned sizeOnStack() const override;
+	virtual unsigned sizeInRegisters() const override;
+	unsigned gasIndex() const;
+	unsigned valueIndex() const;
 	virtual bool hasSimpleZeroValueInMemory() const override { return false; }
 	virtual MemberList::MemberMap nativeMembers(ContractDefinition const* _currentScope) const override;
 	virtual TypePointer encodingType() const override;
