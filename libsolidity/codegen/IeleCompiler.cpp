@@ -5662,7 +5662,15 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
     return Value;
   case Type::Category::FixedPoint:
     solAssert(false, "not implemented yet");
-    break;
+  case Type::Category::Function: {
+    solAssert(TargetType->category() == Type::Category::Integer, "Invalid type conversion requested.");
+    const IntegerType &targetType = dynamic_cast<const IntegerType &>(*TargetType);
+    solAssert(targetType.isAddress(), "Function type can only be converted to address.");
+    const FunctionType &sourceType = dynamic_cast<const FunctionType &>(*SourceType);
+    solAssert(sourceType.kind() == FunctionType::Kind::External, "Only external function type can be converted.");
+    solAssert(Value->getValues().size() == 2, "Incorrect number of rvalues.");
+    return IeleRValue::Create({Value->getValues()[0]});
+  }
   case Type::Category::Struct:
   case Type::Category::Array:
     if (shouldCopyStorageToMemory(*TargetType, *SourceType))
