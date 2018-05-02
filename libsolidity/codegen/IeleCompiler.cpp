@@ -5661,7 +5661,6 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
     solAssert(*SourceType == *TargetType || TargetType->category() == Type::Category::Integer, "Invalid enum conversion");
     return Value;
   case Type::Category::FixedPoint:
-  case Type::Category::Function: {
     solAssert(false, "not implemented yet");
     break;
   case Type::Category::Struct:
@@ -5731,7 +5730,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       return nullptr;
     }
   }
-  case Type::Category::Bool:
+  case Type::Category::Bool: {
     solAssert(*SourceType == *TargetType, "Invalid conversion for bool.");
     return Value;
   }
