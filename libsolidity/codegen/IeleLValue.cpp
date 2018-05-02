@@ -34,7 +34,8 @@ void AddressLValue::write(IeleRValue *Value, iele::IeleBlock *InsertAtEnd) const
       iele::IeleLocalVariable *Element = iele::IeleLocalVariable::Create(&Compiler->Context, Name + ".address", Compiler->CompilingFunction);
       ElementRValue = Element;
       iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, Element, Address, iele::IeleIntConstant::Create(&Compiler->Context, i));
+        iele::IeleInstruction::Add, Element, Address, iele::IeleIntConstant::Create(&Compiler->Context, i),
+        InsertAtEnd);
     }
     if (Loc == DataLocation::Storage)
       iele::IeleInstruction::CreateSStore(Value->getValues()[i], ElementRValue, InsertAtEnd);
@@ -55,7 +56,8 @@ IeleRValue *AddressLValue::read(iele::IeleBlock *InsertAtEnd) const {
       iele::IeleLocalVariable *Element = iele::IeleLocalVariable::Create(&Compiler->Context, Name + ".address", Compiler->CompilingFunction);
       ElementRValue = Element;
       iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, Element, Address, iele::IeleIntConstant::Create(&Compiler->Context, i));
+        iele::IeleInstruction::Add, Element, Address, iele::IeleIntConstant::Create(&Compiler->Context, i),
+        InsertAtEnd);
     }
     if (Loc == DataLocation::Storage)
       iele::IeleInstruction::CreateSLoad(Result, ElementRValue, InsertAtEnd);
