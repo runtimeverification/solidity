@@ -2683,7 +2683,7 @@ bigint FunctionType::getFixedBitwidth() const
 bigint FunctionType::storageSize() const
 {
 	if (m_kind == Kind::External || m_kind == Kind::Internal)
-		return 1;
+		return sizeInRegisters();
 	else
 		solAssert(false, "Storage size of non-storable function type requested.");
 }
