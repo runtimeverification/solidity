@@ -2739,11 +2739,13 @@ unsigned FunctionType::sizeOnStack() const
 
 unsigned FunctionType::sizeInRegisters() const
 {
-	Kind kind = m_kind;
+	Kind kind;
 	if (m_kind == Kind::SetGas || m_kind == Kind::SetValue)
 	{
 		solAssert(m_returnParameterTypes.size() == 1, "");
 		kind = dynamic_cast<FunctionType const&>(*m_returnParameterTypes.front()).m_kind;
+	} else {
+		kind = m_kind;
 	}
 
 	unsigned size = 0;
@@ -2778,11 +2780,13 @@ unsigned FunctionType::sizeInRegisters() const
 
 unsigned FunctionType::gasIndex() const
 {	
-	Kind kind = m_kind;
+	Kind kind;
 	if (m_kind == Kind::SetGas || m_kind == Kind::SetValue)
 	{
 		solAssert(m_returnParameterTypes.size() == 1, "");
 		kind = dynamic_cast<FunctionType const&>(*m_returnParameterTypes.front()).m_kind;
+	} else {
+		kind = m_kind;
 	}
 
 	unsigned size = 0;
@@ -2812,11 +2816,13 @@ unsigned FunctionType::gasIndex() const
 
 unsigned FunctionType::valueIndex() const
 {
-	Kind kind = m_kind;
+	Kind kind;
 	if (m_kind == Kind::SetGas || m_kind == Kind::SetValue)
 	{
 		solAssert(m_returnParameterTypes.size() == 1, "");
 		kind = dynamic_cast<FunctionType const&>(*m_returnParameterTypes.front()).m_kind;
+	} else {
+		kind = m_kind;
 	}
 
 	unsigned size = 0;
