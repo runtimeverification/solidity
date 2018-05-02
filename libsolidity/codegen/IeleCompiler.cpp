@@ -3645,9 +3645,14 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
           solAssert(false, "Contract member is neither variable nor function.");
         }
         std::vector<iele::IeleValue *> Values;
-        iele::IeleValue *Result = iele::IeleFunction::Create(&Context, true, name);
-        Values.insert(Values.end(), ContractValue->getValues().begin(), ContractValue->getValues().end());
-        Values.insert(Values.begin() + 1, Result);
+        iele::IeleGlobalValue *Function = iele::IeleFunction::Create(&Context, true, name);
+        iele::IeleLocalVariable *Result =
+          iele::IeleLocalVariable::Create(&Context, "function.pointer", CompilingFunction);
+        iele::IeleInstruction::CreateCallAddress(
+          Result, Function, ContractValue->getValue(),
+          CompilingBlock);
+        Values.push_back(ContractValue->getValue());
+        Values.push_back(Result);
         CompilingExpressionResult.push_back(IeleRValue::Create(Values));
         return false;
       }
