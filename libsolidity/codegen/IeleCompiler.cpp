@@ -317,10 +317,8 @@ void IeleCompiler::compileContract(
           auto paramNames = forwardingAuxParams.first;
 
           for (std::string paramName : paramNames) {
-            if (!paramName.empty()) {
-              iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
-              VarNameMap[0][paramName] = RegisterLValue::Create({arg});
-            }
+            iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
+            VarNameMap[0][paramName] = RegisterLValue::Create({arg});
           }
         }
       }
@@ -349,20 +347,18 @@ void IeleCompiler::compileContract(
     
     // Add constructor's aux params
     auto auxParams = ctorAuxParams[CompilingContractASTNode];
-      if (!auxParams.empty()) {
-        // Make iterator
-        std::map<const ContractDefinition *, 
-                std::pair<std::vector<std::string>, const ContractDefinition *>>::iterator it;
+    if (!auxParams.empty()) {
+      // Make iterator
+      std::map<const ContractDefinition *, 
+              std::pair<std::vector<std::string>, const ContractDefinition *>>::iterator it;
 
-        for(it = auxParams.begin(); it != auxParams.end(); ++it) {
-          auto forwardingAuxParams = it -> second;
-          auto paramNames = forwardingAuxParams.first;
+      for(it = auxParams.begin(); it != auxParams.end(); ++it) {
+        auto forwardingAuxParams = it -> second;
+        auto paramNames = forwardingAuxParams.first;
 
-          for (std::string paramName : paramNames) {
-            if (!paramName.empty()) {
-              iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
-              VarNameMap[0][paramName] = RegisterLValue::Create({arg});
-          }
+        for (std::string paramName : paramNames) {
+          iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
+          VarNameMap[0][paramName] = RegisterLValue::Create({arg});
         }
       }
     }
