@@ -145,6 +145,7 @@ case $(uname -s) in
                     boost \
                     cmake \
                     git \
+		    llvm \
                     ethereum-git \
                 ;;
 
