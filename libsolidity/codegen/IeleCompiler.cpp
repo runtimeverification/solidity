@@ -3030,7 +3030,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     solAssert(arguments.size() == functionType->parameterTypes().size(),
               "IeleCompiler: struct constructor called with wrong number "
               "of arguments");
-    solAssert(arguments.size() > 0, "IeleCompiler: empty struct found");
 
     // Allocate memory for the struct.
     iele::IeleValue *StructValue = appendStructAllocation(structType);
