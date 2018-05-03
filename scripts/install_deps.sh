@@ -191,6 +191,7 @@ case $(uname -s) in
                         #stretch
                         echo "Installing solidity dependencies on Debian Stretch (9.x)."
                         install_z3="libz3-dev"
+			echo "deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-5.0 main" | sudo tee /etc/apt/sources.list.d/stretch-llvm-5.0.list
                         ;;
                     10)
                         #buster
@@ -206,9 +207,13 @@ case $(uname -s) in
                         ;;
                 esac
 
+		# Add package source for llvm-5.0
+				
+				
+
                 # Install "normal packages"
                 sudo apt-get -y update
-                sudo apt-get -y install \
+                sudo apt-get -y --allow-unauthenticated install \
                     build-essential \
                     cmake \
                     g++ \
@@ -217,6 +222,7 @@ case $(uname -s) in
                     libboost-all-dev \
                     unzip \
                     llvm-5.0\
+		    zlib1g-dev\
                     "$install_z3"
 
 
