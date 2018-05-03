@@ -217,7 +217,6 @@ case $(uname -s) in
                     libboost-all-dev \
                     unzip \
                     llvm-5.0\
-                    libxml2-utils\
                     "$install_z3"
 
 
@@ -329,7 +328,6 @@ case $(uname -s) in
                     git \
                     libboost-all-dev \
                     llvm-5.0\
-                    libxml2-utils\
                     "$install_z3"
                 if [ "$CI" = true ]; then
                     # install Z3 from PPA if the distribution does not provide it
