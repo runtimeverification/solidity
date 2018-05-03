@@ -3135,11 +3135,23 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     break;
   }
   case FunctionType::Kind::Revert: {
-      iele::IeleValue *Message = nullptr;
-      if (arguments.size() > 1) {
-        Message = compileExpression(*arguments[0])->getValue();
+      iele::IeleValue *MessageValue = nullptr;
+      if (arguments.size() > 0) {
+        IeleRValue *Message = compileExpression(*arguments[0]);
+        TypePointer ArgType = arguments[0]->annotation().type;
+        auto ParamType = function.parameterTypes()[0];
+        Message = appendTypeConversion(Message, ArgType, ParamType);
+
+        iele::IeleLocalVariable *NextFree = appendMemorySpill();
+        llvm::SmallVector<IeleRValue *, 1> args;
+        args.push_back(Message);
+        TypePointers types;
+        types.push_back(ParamType);
+        encoding(args, types, NextFree, false);
+        iele::IeleInstruction::CreateLoad(CompilingFunctionStatus, NextFree, CompilingBlock);
+        MessageValue = CompilingFunctionStatus;
       }
-      appendRevert(nullptr, Message);
+      appendRevert(nullptr, MessageValue);
       break;
   }
   case FunctionType::Kind::Assert:
@@ -3161,11 +3173,23 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     if (function.kind() == FunctionType::Kind::Assert)
       appendInvalid(InvConditionValue);
     else {
-      iele::IeleValue *Message = nullptr;
+      iele::IeleValue *MessageValue = nullptr;
       if (arguments.size() > 1) {
-        Message = compileExpression(*arguments[1])->getValue();
+        IeleRValue *Message = compileExpression(*arguments[1]);
+        TypePointer ArgType = arguments[1]->annotation().type;
+        auto ParamType = function.parameterTypes()[1];
+        Message = appendTypeConversion(Message, ArgType, ParamType);
+
+        iele::IeleLocalVariable *NextFree = appendMemorySpill();
+        llvm::SmallVector<IeleRValue *, 1> args;
+        args.push_back(Message);
+        TypePointers types;
+        types.push_back(ParamType);
+        encoding(args, types, NextFree, false);
+        iele::IeleInstruction::CreateLoad(CompilingFunctionStatus, NextFree, CompilingBlock);
+        MessageValue = CompilingFunctionStatus;
       }
-      appendRevert(InvConditionValue, Message);
+      appendRevert(InvConditionValue, MessageValue);
     }
     break;
   }
