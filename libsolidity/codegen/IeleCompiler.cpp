@@ -2677,6 +2677,10 @@ void IeleCompiler::doDecode(
       iele::IeleInstruction::CreateLoad(
         StringValue, NextFree, CrntPos, ArgLen, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Twos,
+        StringValue, ArgLen, StringValue,
+        CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::BSwap, 
         StringValue, ArgLen, StringValue,
         CompilingBlock);
