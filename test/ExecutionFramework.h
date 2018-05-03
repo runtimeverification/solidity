@@ -408,7 +408,7 @@ protected:
 	u256 const m_gasPrice = 100 * szabo;
 	u256 const m_gas = 100000000;
 	std::vector<bytes> m_output;
-	u256 m_status;
+	bigint m_status;
 	std::vector<LogEntry> m_logs;
 	u256 m_gasUsed;
 	size_t m_timestamp;
