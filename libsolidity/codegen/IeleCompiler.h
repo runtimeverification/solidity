@@ -37,7 +37,7 @@ public:
     RevertStatusBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingLValue(false),
-    NextStorageAddress(0),
+    NextStorageAddress(1),
     CompilingContractASTNode(nullptr),
     CompilingFunctionASTNode(nullptr),
     ModifierDepth(-1) { }
