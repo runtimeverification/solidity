@@ -6,6 +6,9 @@ It works.
 
 It works. 
 
+Todo
+ [] add llvm-5 repo for all supported versions (only latest for now)
+
 ## Fedora
 
 * Vagrant box: https://app.vagrantup.com/generic/boxes/fedora27
