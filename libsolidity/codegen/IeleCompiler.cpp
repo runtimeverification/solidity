@@ -2298,10 +2298,9 @@ void IeleCompiler::doDecode(
         if (intType.isSigned()) {
           break;
         } else {
-          // Falls through
-	  [[fallthrough]]; // since above comment is not always recognized
 	}
       }
+      // Falls through
       case Type::Category::Contract:
       case Type::Category::FixedBytes:
       case Type::Category::Enum:
@@ -5340,9 +5339,9 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
       iele::IeleIntConstant::getZero(&Context),
       RightOperand, CompilingBlock);
     RightOperand = ShiftValue;
-    // fall through
-    [[fallthrough]];
   }
+  // Looks like "fallthrough comments" must be immediately before "case"
+  // fall through
   case Token::SHL: {
     BinOpcode = iele::IeleInstruction::Shift; 
     bigint min = 0;
