@@ -145,7 +145,7 @@ case $(uname -s) in
                     boost \
                     cmake \
                     git \
-		    llvm \
+		            llvm \
                     ethereum-git \
                 ;;
 
@@ -223,7 +223,7 @@ case $(uname -s) in
                     libboost-all-dev \
                     unzip \
                     llvm-5.0\
-		    zlib1g-dev\
+		            zlib1g-dev\
                     "$install_z3"
 
 
@@ -249,9 +249,9 @@ case $(uname -s) in
                     gcc-c++ \
                     git \
                     libtool \
-		    llvm \
-		    llvm-devel \
-		    zlib-devel
+		            llvm \
+		            llvm-devel \
+		            zlib-devel
 
                 ;;
 
@@ -391,7 +391,8 @@ case $(uname -s) in
                     
                     # get zlib                  
                     sudo yum -y install zlib-devel
-# Get latest boost thanks to this guy: http://vicendominguez.blogspot.de/2014/04/boost-c-library-rpm-packages-for-centos.html
+                    
+                    # Get latest boost thanks to this guy: http://vicendominguez.blogspot.de/2014/04/boost-c-library-rpm-packages-for-centos.html
                     sudo yum -y remove boost-devel
                     sudo wget http://repo.enetres.net/enetres.repo -O /etc/yum.repos.d/enetres.repo
                     sudo yum install boost-devel
