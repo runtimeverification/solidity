@@ -406,7 +406,7 @@ protected:
 	Address m_contractAddress;
 	u256 m_blockNumber;
 	u256 const m_gasPrice = 100 * szabo;
-	u256 const m_gas = 100000000;
+	u256 const m_gas = 20000000;
 	std::vector<bytes> m_output;
 	bigint m_status;
 	std::vector<LogEntry> m_logs;
