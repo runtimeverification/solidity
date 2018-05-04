@@ -9,6 +9,10 @@ It works.
 Todo
  [] add llvm-5 repo for all supported versions (only latest for now)
 
+## Arch Linux 
+
+It works!
+
 ## Fedora
 
 * Vagrant box: https://app.vagrantup.com/generic/boxes/fedora27
@@ -37,12 +41,6 @@ Drop us a message at https://gitter.im/ethereum/solidity-dev.
 * Package to be added: https://pkgs.alpinelinux.org/package/edge/main/x86_64/llvm5-dev
 * Same issue, distro not recognised by script
 
-## Arch Linux 
-
-* Vagrant box: https://app.vagrantup.com/generic/boxes/arch
-* As usual, distro not recognised by script
-* Looks like there's only llvm-6, no 5!
-    * tried (manually), but `clang` still wants version 5
 
 ## OSX
 
