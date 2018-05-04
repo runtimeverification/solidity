@@ -16,6 +16,7 @@ using namespace dev;
 using namespace dev::solidity;
 
 auto UInt = std::make_shared<IntegerType>();
+auto UInt16 = std::make_shared<IntegerType>(16);
 auto SInt = std::make_shared<IntegerType>(IntegerType::Modifier::Signed);
 auto Address = std::make_shared<IntegerType>(160, IntegerType::Modifier::Address);
 
@@ -141,7 +142,7 @@ bool hasTwoFunctions(const FunctionType &function, bool isConstructor, bool isLi
   if (isConstructor || isLibrary) {
     return false;
   }
-  if (function.declaration().visibility() != Declaration::Visibility::Public) {
+  if (!function.hasDeclaration() || function.declaration().visibility() != Declaration::Visibility::Public) {
     return false;
   }
   for (TypePointer type : function.parameterTypes()) {
@@ -157,7 +158,7 @@ bool hasTwoFunctions(const FunctionType &function, bool isConstructor, bool isLi
   return false;
 }
 
-iele::IeleGlobalValue *IeleCompiler::convertFunctionToInternal(iele::IeleGlobalValue *Callee) {
+iele::IeleValue *IeleCompiler::convertFunctionToInternal(iele::IeleValue *Callee) {
   if (iele::IeleFunction *function = llvm::dyn_cast<iele::IeleFunction>(Callee)) {
     iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
     solAssert(ST,
@@ -165,7 +166,7 @@ iele::IeleGlobalValue *IeleCompiler::convertFunctionToInternal(iele::IeleGlobalV
     std::string name = function->getName();
     return llvm::dyn_cast<iele::IeleGlobalValue>(ST->lookup(name + ".internal"));
   }
-  solAssert(false, "not implemented yet: function pointers");
+  return Callee;
 }
 
 static void transitiveClosure(const ContractDefinition *contract, std::set<const ContractDefinition *> &dependencies) {
@@ -1189,8 +1190,6 @@ bool IeleCompiler::visit(
     for (unsigned i = 0; i < assignments.size(); ++i) {
       const VariableDeclaration *varDecl = assignments[i];
       if (varDecl) {
-        solAssert(varDecl->type()->category() != Type::Category::Function,
-                  "not implemented yet");
         // Visit LHS. We lookup the LHS name in the function's symbol table,
         // where we should find it.
         IeleLValue *LHSValue =
@@ -2257,9 +2256,53 @@ void IeleCompiler::doEncode(
     }
     break;
   }
-  case Type::Category::Function:
-      solAssert(false, 
-                "IeleCompiler: encoding of given type not implemented yet");
+  case Type::Category::Function: {
+    const FunctionType &functionType = dynamic_cast<const FunctionType &>(*type);
+    FunctionType::Kind kind;
+    if (functionType.kind() == FunctionType::Kind::SetGas || functionType.kind() == FunctionType::Kind::SetValue)
+    {
+      solAssert(functionType.returnParameterTypes().size() == 1, "");
+      kind = dynamic_cast<FunctionType const&>(*functionType.returnParameterTypes().front()).kind();
+    } else {
+      kind = functionType.kind();
+    }
+    unsigned index = 0;
+    switch (kind) {
+    case FunctionType::Kind::External:
+    case FunctionType::Kind::CallCode:
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[0]})), ArgTypeSize, ArgLen, Address, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[1]})), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
+      index = 2;
+      break;
+    case FunctionType::Kind::BareCall:
+    case FunctionType::Kind::BareCallCode:
+    case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::Internal:
+    case FunctionType::Kind::DelegateCall:
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[0]})), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
+      index = 1;
+      break;
+    case FunctionType::Kind::ArrayPush:
+    case FunctionType::Kind::ByteArrayPush:
+      solAssert(false, "not implemented yet");
+    default:
+      break;
+    }
+    if (functionType.gasSet()) {
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[index]})), ArgTypeSize, ArgLen, UInt, appendWidths, bigEndian);
+      index++;
+    }
+    if (functionType.valueSet()) {
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[index]})), ArgTypeSize, ArgLen, UInt, appendWidths, bigEndian);
+      index++;
+    }
+    if (functionType.bound()) {
+      std::vector<iele::IeleValue *> boundValue;
+      boundValue.insert(boundValue.end(), ArgValue->getValues().begin() + index, ArgValue->getValues().end());
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create(boundValue)), ArgTypeSize, ArgLen, functionType.selfType(), appendWidths, bigEndian);
+    }
+    break;
+  }
   default:
       solAssert(false, "IeleCompiler: invalid type for encoding");
   }
@@ -2531,6 +2574,62 @@ void IeleCompiler::doDecode(
     }
     break;
   }
+  case Type::Category::Function: {
+    const FunctionType &functionType = dynamic_cast<const FunctionType &>(*type);
+    FunctionType::Kind kind;
+    if (functionType.kind() == FunctionType::Kind::SetGas || functionType.kind() == FunctionType::Kind::SetValue)
+    {
+      solAssert(functionType.returnParameterTypes().size() == 1, "");
+      kind = dynamic_cast<FunctionType const&>(*functionType.returnParameterTypes().front()).kind();
+    } else {
+      kind = functionType.kind();
+    }
+    std::vector<iele::IeleLocalVariable *> Results;
+    std::vector<iele::IeleValue *> ResultValues;
+    for (unsigned i = 0; i < functionType.sizeInRegisters(); i++) {
+      auto reg = iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+      Results.push_back(reg);
+      ResultValues.push_back(reg);
+    }
+    unsigned index = 0;
+    switch (kind) {
+    case FunctionType::Kind::External:
+    case FunctionType::Kind::CallCode:
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[0]}), ArgTypeSize, ArgLen, Address);
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[1]}), ArgTypeSize, ArgLen, UInt16);
+      index = 2;
+      break;
+    case FunctionType::Kind::BareCall:
+    case FunctionType::Kind::BareCallCode:
+    case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::Internal:
+    case FunctionType::Kind::DelegateCall:
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[0]}), ArgTypeSize, ArgLen, UInt16);
+      index = 1;
+      break;
+    case FunctionType::Kind::ArrayPush:
+    case FunctionType::Kind::ByteArrayPush:
+      solAssert(false, "not implemented yet");
+    default:
+      break;
+    }
+    if (functionType.gasSet()) {
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[index]}), ArgTypeSize, ArgLen, UInt);
+      index++;
+    }
+    if (functionType.valueSet()) {
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[index]}), ArgTypeSize, ArgLen, UInt);
+      index++;
+    }
+    if (functionType.bound()) {
+      std::vector<iele::IeleLocalVariable *> boundValue;
+      boundValue.insert(boundValue.end(), Results.begin() + index, Results.end());
+      doDecode(NextFree, CrntPos, RegisterLValue::Create(boundValue), ArgTypeSize, ArgLen, functionType.selfType());
+    }
+    StoreAt->write(IeleRValue::Create(ResultValues), CompilingBlock);
+    break;
+  }
+
   default: 
     solAssert(false, "invalid reference type");
     break;
@@ -2816,8 +2915,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     // Visit callee.
     IeleRValue *CalleeValues = compileExpression(functionCall.expression());
-    iele::IeleGlobalValue *CalleeValue;
-    CalleeValue = llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValues->getValues()[0]);
+    iele::IeleValue *CalleeValue = CalleeValues->getValues()[0];
     if (CalleeValues->getValues().size() > 1) {
       Arguments.insert(Arguments.begin(), CalleeValues->getValues().begin() + 1, CalleeValues->getValues().end());
     }
@@ -2954,8 +3052,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     compileFunctionArguments(Arguments, ReturnRegisters, Returns, arguments, function, true);
 
     IeleRValue *CalleeValue = compileExpression(functionCall.expression());
-    iele::IeleGlobalValue *FunctionCalleeValue =
-      llvm::dyn_cast<iele::IeleGlobalValue>(CalleeValue->getValues()[1]);
+    iele::IeleValue *FunctionCalleeValue = CalleeValue->getValues()[1];
     iele::IeleValue *AddressValue =
       CalleeValue->getValues()[0];
 
@@ -3444,7 +3541,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
                "IeleCompiler: failed to access compiling contract's symbol "
                "table.");
       if (iele::IeleValue *Identifier = ST->lookup(name)) {
-        IeleLValue *var = appendGlobalVariable(Identifier, functionDef->name(), true);
+        IeleLValue *var = appendGlobalVariable(Identifier, functionDef->name(), true, 1);
         IeleRValue *RValue = var->read(CompilingBlock);
         Result.insert(Result.begin(), RValue->getValues().begin(), RValue->getValues().end());
         CompilingExpressionResult.push_back(IeleRValue::Create(Result));
@@ -3503,7 +3600,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
           solAssert(Result, "IeleCompiler: failed to find state variable in "
                             "contract's symbol table");
           CompilingExpressionResult.push_back(
-            appendGlobalVariable(Result, variable->name(), variable->annotation().type->isValueType()));
+            appendGlobalVariable(Result, variable->name(), variable->annotation().type->isValueType(), variable->annotation().type->sizeInRegisters()));
         }
         return false;
       } else {
@@ -3548,9 +3645,14 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
           solAssert(false, "Contract member is neither variable nor function.");
         }
         std::vector<iele::IeleValue *> Values;
-        iele::IeleValue *Result = iele::IeleFunction::Create(&Context, true, name);
-        Values.insert(Values.end(), ContractValue->getValues().begin(), ContractValue->getValues().end());
-        Values.insert(Values.begin() + 1, Result);
+        iele::IeleGlobalValue *Function = iele::IeleFunction::Create(&Context, true, name);
+        iele::IeleLocalVariable *Result =
+          iele::IeleLocalVariable::Create(&Context, "function.pointer", CompilingFunction);
+        iele::IeleInstruction::CreateCallAddress(
+          Result, Function, ContractValue->getValue(),
+          CompilingBlock);
+        Values.push_back(ContractValue->getValue());
+        Values.push_back(Result);
         CompilingExpressionResult.push_back(IeleRValue::Create(Values));
         return false;
       }
@@ -3647,6 +3749,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else if (member == "sig")
       solAssert(false, "IeleCompiler: member not supported in IELE");
+    else if (member == "blockhash")
+      CompilingExpressionResult.push_back(IeleRValue::Create({}));
     else
       solAssert(false, "IeleCompiler: Unknown magic member.");
     break;
@@ -4102,10 +4206,80 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
     max = type.numberOfMembers() - 1;
     break;
   }
+  case Type::Category::Function: {
+    const FunctionType &functionType = dynamic_cast<const FunctionType &>(Type);
+    FunctionType::Kind kind;
+    if (functionType.kind() == FunctionType::Kind::SetGas || functionType.kind() == FunctionType::Kind::SetValue)
+    {
+      solAssert(functionType.returnParameterTypes().size() == 1, "");
+      kind = dynamic_cast<FunctionType const&>(*functionType.returnParameterTypes().front()).kind();
+    } else {
+      kind = functionType.kind();
+    }
+    unsigned index = 0;
+    min = 0;
+    switch (kind) {
+    case FunctionType::Kind::External:
+    case FunctionType::Kind::CallCode:
+      max = (bigint(1) << 160) - 1;
+      appendRangeCheck(Value->getValues()[0], &min, &max);
+      max = (bigint(1) << 16) - 1;
+      appendRangeCheck(Value->getValues()[1], &min, &max);
+      index = 2;
+      break;
+    case FunctionType::Kind::BareCall:
+    case FunctionType::Kind::BareCallCode:
+    case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::Internal:
+    case FunctionType::Kind::DelegateCall:
+      max = (bigint(1) << 16) - 1;
+      appendRangeCheck(Value->getValues()[0], &min, &max);
+      index = 1;
+      break;
+    case FunctionType::Kind::ArrayPush:
+    case FunctionType::Kind::ByteArrayPush:
+      solAssert(false, "not implemented yet");
+    default:
+      break;
+    }
+    if (functionType.gasSet()) {
+      bigint min = 0;
+      if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value->getValue())) {
+        if (constant->getValue() < 0) {
+          appendRevert();
+        }
+      } else {
+        appendRangeCheck(Value->getValue(), &min, nullptr);
+      }
+      index++;
+    }
+    if (functionType.valueSet()) {
+      bigint min = 0;
+      if (iele::IeleIntConstant *constant = llvm::dyn_cast<iele::IeleIntConstant>(Value->getValue())) {
+        if (constant->getValue() < 0) {
+          appendRevert();
+        }
+      } else {
+        appendRangeCheck(Value->getValue(), &min, nullptr);
+      }
+      index++;
+    }
+    if (functionType.bound()) {
+      std::vector<iele::IeleValue *> boundValue;
+      boundValue.insert(boundValue.end(), Value->getValues().begin() + index, Value->getValues().end());
+      appendRangeCheck(IeleRValue::Create(boundValue), *functionType.selfType());
+    }
+    return;
+  }
   default:
     solAssert(false, "not implemented yet");
   }
   appendRangeCheck(Value->getValue(), &min, &max);
+}
+
+bool IeleCompiler::visit(const ElementaryTypeNameExpression &typeName) {
+  CompilingExpressionResult.push_back(IeleRValue::Create({}));
+  return false;
 }
 
 void IeleCompiler::endVisit(const Identifier &identifier) {
@@ -4166,9 +4340,11 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
 
   // If not found, lookup identifier in the contract's symbol table.
   bool isValueType = true;
+  unsigned sizeInRegisters = 1;
   if (const VariableDeclaration *variableDecl =
         dynamic_cast<const VariableDeclaration *>(declaration)) {
     isValueType = variableDecl->annotation().type->isValueType();
+    sizeInRegisters = variableDecl->annotation().type->sizeInRegisters();
     if (variableDecl->isConstant()) {
       IeleRValue *Identifier = compileExpression(*variableDecl->value());
       TypePointer rhsType = variableDecl->value()->annotation().type;
@@ -4182,7 +4358,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
             "IeleCompiler: failed to access compiling contract's symbol "
             "table.");
   if (iele::IeleValue *Identifier = ST->lookup(name)) {
-    CompilingExpressionResult.push_back(appendGlobalVariable(Identifier, identifier.name(), isValueType));
+    CompilingExpressionResult.push_back(appendGlobalVariable(Identifier, identifier.name(), isValueType, sizeInRegisters));
     return;
   }
 
@@ -4194,13 +4370,13 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
 }
 
 IeleLValue *IeleCompiler::appendGlobalVariable(iele::IeleValue *Identifier, std::string name,
-                                  bool isValueType) {
+                                  bool isValueType, unsigned sizeInRegisters) {
     if (llvm::isa<iele::IeleGlobalVariable>(Identifier)) {
       if (isValueType) {
         // In case of a global variable, if we aren't compiling an lvalue and
         // the global variable holds a value type, we have to load the global
         // variable.
-        return AddressLValue::Create(this, Identifier, DataLocation::Storage, name);
+        return AddressLValue::Create(this, Identifier, DataLocation::Storage, name, sizeInRegisters);
       } else {
         return ReadOnlyLValue::Create(IeleRValue::Create({Identifier}));
       }
@@ -4674,7 +4850,7 @@ void IeleCompiler::appendLocalVariableInitialization(
       InitValue = appendStructAllocation(structType);
   }
   else {
-    solAssert(type->isValueType() ||
+    solAssert(type->isValueType() || type->category() == Type::Category::TypeType ||
               type->category() == Type::Category::Mapping,
               "IeleCompiler: found local variable of unknown type");
     // Local variables are always automatically initialized to zero. We don't
@@ -5490,9 +5666,16 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
     solAssert(*SourceType == *TargetType || TargetType->category() == Type::Category::Integer, "Invalid enum conversion");
     return Value;
   case Type::Category::FixedPoint:
-  case Type::Category::Function: {
     solAssert(false, "not implemented yet");
-    break;
+  case Type::Category::Function: {
+    solAssert(TargetType->category() == Type::Category::Integer, "Invalid type conversion requested.");
+    const IntegerType &targetType = dynamic_cast<const IntegerType &>(*TargetType);
+    solAssert(targetType.isAddress(), "Function type can only be converted to address.");
+    const FunctionType &sourceType = dynamic_cast<const FunctionType &>(*SourceType);
+    solAssert(sourceType.kind() == FunctionType::Kind::External, "Only external function type can be converted.");
+    solAssert(Value->getValues().size() == 2, "Incorrect number of rvalues.");
+    return IeleRValue::Create({Value->getValues()[0]});
+  }
   case Type::Category::Struct:
   case Type::Category::Array:
     if (shouldCopyStorageToMemory(*TargetType, *SourceType))
@@ -5560,7 +5743,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       return nullptr;
     }
   }
-  case Type::Category::Bool:
+  case Type::Category::Bool: {
     solAssert(*SourceType == *TargetType, "Invalid conversion for bool.");
     return Value;
   }

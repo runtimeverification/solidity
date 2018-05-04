@@ -88,6 +88,7 @@ public:
   virtual bool visit(const NewExpression &newExpression) override;
   virtual bool visit(const MemberAccess &memberAccess) override;
   virtual bool visit(const IndexAccess &indexAccess) override;
+  virtual bool visit(const ElementaryTypeNameExpression &typeName) override;
   virtual void endVisit(const Identifier &identifier) override;
   virtual void endVisit(const Literal &literal) override;
 
@@ -196,7 +197,7 @@ private:
                                   iele::IeleBlock *SouceBlock, 
                                   iele::IeleBlock *DestinationBlock);
 
-  iele::IeleGlobalValue *convertFunctionToInternal(iele::IeleGlobalValue *Callee);
+  iele::IeleValue *convertFunctionToInternal(iele::IeleValue *Callee);
 
   void appendPayableCheck(void);
   void appendRevert(iele::IeleValue *Condition = nullptr, iele::IeleValue *Status = nullptr);
@@ -246,7 +247,7 @@ private:
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
   IeleLValue *appendGlobalVariable(iele::IeleValue *Identifier, std::string name,
-                      bool isValueType = true);
+                      bool isValueType, unsigned sizeInRegisters);
 
   IeleLValue *makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc, iele::IeleValue *Offset = nullptr);
 

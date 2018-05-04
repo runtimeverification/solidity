@@ -211,7 +211,7 @@ public:
       bool StaticCall,
       IeleLocalVariable *StatusValue,
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-      IeleGlobalValue *Callee, IeleValue *AddressValue,
+      IeleValue *Callee, IeleValue *AddressValue,
       IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleInstruction *InsertBefore = nullptr);
@@ -219,11 +219,20 @@ public:
       bool StaticCall,
       IeleLocalVariable *StatusValue,
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-      IeleGlobalValue *Callee, IeleValue *AddressValue,
+      IeleValue *Callee, IeleValue *AddressValue,
       IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleBlock *InsertAtEnd);
 
+  static IeleInstruction *CreateCallAddress(
+      IeleLocalVariable *ReturnValue,
+      IeleGlobalValue *Callee, IeleValue *AddressValue,
+      IeleInstruction *InsertBefore = nullptr);
+  static IeleInstruction *CreateCallAddress(
+      IeleLocalVariable *ReturnValue,
+      IeleGlobalValue *Callee, IeleValue *AddressValue,
+      IeleBlock *InsertAtEnd);
+
   static IeleInstruction *CreateIntrinsicCall(
       IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
@@ -235,12 +244,12 @@ public:
 
   static IeleInstruction *CreateInternalCall(
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-      IeleGlobalValue *Callee,
+      IeleValue *Callee,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateInternalCall(
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
-      IeleGlobalValue *Callee,
+      IeleValue *Callee,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
       IeleBlock *InsertAtEnd);
 

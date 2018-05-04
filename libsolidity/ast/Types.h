@@ -1186,6 +1186,7 @@ public:
 	virtual bool containsInfiniteMapping() const override;
 	virtual bool canLiveOutsideStorage() const override { return false; }
 	virtual unsigned sizeOnStack() const override;
+	virtual unsigned sizeInRegisters() const override { return 0; }
 	virtual bool hasSimpleZeroValueInMemory() const override { solAssert(false, ""); }
 	virtual std::string toString(bool _short) const override { return "type(" + m_actualType->toString(_short) + ")"; }
 	virtual MemberList::MemberMap nativeMembers(ContractDefinition const* _currentScope) const override;
