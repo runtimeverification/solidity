@@ -5,7 +5,7 @@
 #include "IeleValueSymbolTable.h"
 
 #include <libsolidity/interface/Exceptions.h>
-
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Program.h"
 #include <llvm/Config/llvm-config.h>
@@ -131,14 +131,15 @@ bytes IeleContract::toBinary() const {
   const char *args[] = {"iele-assemble", "-", nullptr};
   const StringRef input = tempin_str;
   const StringRef output = tempout_str;
-  const StringRef *redirects[] = {&input, &output, nullptr};
 
 #if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 5
-  #error LLVM 5 found!
+  //#error LLVM 5 found!
+  const StringRef *redirects[] = {&input, &output, nullptr};
 #endif
 
 #if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 6
-  #error LLVM 6 found!
+  // #error LLVM 6 found!
+  const StringRef *redirects[] = {Optional::create(&input), Optional::create(&output), Optional::create(nullptr)};  
 #endif
 
   int exit = ExecuteAndWait(program, args, nullptr, redirects);
