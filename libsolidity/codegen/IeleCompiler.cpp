@@ -1899,6 +1899,7 @@ iele::IeleFunction *IeleCompiler::getRecursiveStructDestructor(
 
   std::string typeID = type.richIdentifier();
 
+  // Lookup destructor in the cache.
   auto It = RecursiveStructDestructors.find(typeID);
   if (It != RecursiveStructDestructors.end())
     return It->second;
@@ -5330,84 +5331,23 @@ void IeleCompiler::appendCopy(
     } else {
       AllocedValue = To->read(CompilingBlock)->getValue();
     }
-    // We loop over the members of the source struct type.
-    for (auto const &member : structType.members(nullptr)) {
-      // First find the types of the corresponding member in the source and
-      // destination struct types.
-      TypePointer memberFromType = member.type;
-      TypePointer memberToType;
-      for (auto const &toMember : toStructType.members(nullptr)) {
-        if (member.name == toMember.name) {
-          memberToType = toMember.type;
-          break;
-        }
-      }
 
-      // Ensure we are skipping mapping members when copying to memory.
-      solAssert(!memberToType ||
-                memberToType->category() != Type::Category::Mapping ||
-                ToLoc == DataLocation::Storage,
-                "IeleCompiler: found memory struct with mapping field");
-      solAssert(memberFromType->category() != Type::Category::Mapping ||
-                FromLoc == DataLocation::Storage,
-                "IeleCompiler: found memory struct with mapping field");
-      if (memberFromType->category() == Type::Category::Mapping &&
-          ToLoc == DataLocation::Memory) {
-        continue;
-      }
-
-      // Then compute the offset from the start of the struct for the current
-      // member. The offset may differ in the source and destination, due to
-      // skipping of mappings in memory copies of structs.
-      bigint fromOffset, toOffset;
-      switch (FromLoc) {
-      case DataLocation::Storage: {
-        const auto& offsets = structType.storageOffsetsOfMember(member.name);
-        fromOffset = offsets.first;
-        break;
-      }
-      case DataLocation::Memory: {
-        fromOffset = structType.memoryOffsetOfMember(member.name);
-        break;
-      case DataLocation::CallData:
-        solAssert(false, "Call data not supported in IELE");
-      }
-      }
-      switch (ToLoc) {
-      case DataLocation::Storage: {
-        const auto& offsets = toStructType.storageOffsetsOfMember(member.name);
-        toOffset = offsets.first;
-        break;
-      }
-      case DataLocation::Memory: {
-        toOffset = toStructType.memoryOffsetOfMember(member.name);
-        break;
-      case DataLocation::CallData: 
-        solAssert(false, "Call data not supported in IELE");
-      }
-      }
-
-      // Then compute the current member address in the source and destination
-      // struct objects.
-      iele::IeleLocalVariable *MemberFrom =
-        iele::IeleLocalVariable::Create(&Context, "copy.from.address", CompilingFunction);
-      iele::IeleValue *FromOffsetValue =
-        iele::IeleIntConstant::Create(&Context, fromOffset);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, MemberFrom, From->getValue(), FromOffsetValue,
-        CompilingBlock);
-
-      iele::IeleLocalVariable *MemberTo =
-        iele::IeleLocalVariable::Create(&Context, "copy.to.address", CompilingFunction);
-      iele::IeleValue *ToOffsetValue =
-        iele::IeleIntConstant::Create(&Context, toOffset);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, MemberTo, AllocedValue, ToOffsetValue,
-        CompilingBlock);
-
-      // Finally do the copy of the member value from source to destination.
-      appendCopy(makeLValue(MemberTo, memberToType, ToLoc), memberToType, makeLValue(MemberFrom, memberFromType, FromLoc)->read(CompilingBlock), memberFromType, ToLoc, FromLoc);
+    if (structType.recursive()) {
+      // Call the recursive copier.
+      iele::IeleFunction *Copier =
+        getRecursiveStructCopier(structType, FromLoc, toStructType, ToLoc);
+      llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
+      llvm::SmallVector<iele::IeleValue *, 2> Arguments;
+      Arguments.push_back(From->getValue());
+      Arguments.push_back(AllocedValue);
+      iele::IeleInstruction::CreateInternalCall(
+          EmptyResults, Copier, Arguments, CompilingBlock);
+      break;
     }
+
+    // Append the code for copying the struct members.
+    appendStructCopy(structType, From->getValue(), FromLoc,
+                     toStructType, AllocedValue, ToLoc);
     break;
   }
   case Type::Category::Array: {
@@ -5620,6 +5560,149 @@ void IeleCompiler::appendCopy(
   }
   default:
     solAssert(false, "Invalid type in appendCopy");
+  }
+}
+
+iele::IeleFunction *IeleCompiler::getRecursiveStructCopier(
+    const StructType &type, DataLocation FromLoc,
+    const StructType &toType, DataLocation ToLoc) {
+  solAssert(type.recursive(),
+            "IeleCompiler: attempted to construct recursive copier "
+            "for non-recursive source struct type");
+  solAssert(toType.recursive(),
+            "IeleCompiler: attempted to construct recursive copier "
+            "for non-recursive target struct type");
+
+  std::string typeID = type.richIdentifier();
+  std::string toTypeID = toType.richIdentifier();
+
+  // Lookup copier in the cache.
+  auto It = RecursiveStructCopiers.find(typeID);
+  if (It != RecursiveStructCopiers.end()) {
+    auto ItTo = It->second.find(toTypeID);
+    if (ItTo != It->second.end())
+      return ItTo->second;
+  }
+
+  // Generate a recursive function to copy a struct of the specific type.
+  iele::IeleFunction *Copier =
+    iele::IeleFunction::Create(
+        &Context, false, "ielert.copy." + typeID + ".to." + toTypeID,
+        CompilingContract);
+
+  // Register copier function.
+  RecursiveStructCopiers[typeID][toTypeID] = Copier;
+
+  // Add the from/to address arguments.
+  iele::IeleArgument *Address =
+    iele::IeleArgument::Create(&Context, "from.addr", Copier);
+
+  iele::IeleArgument *ToAddress =
+    iele::IeleArgument::Create(&Context, "to.addr", Copier);
+
+  // Add the first block.
+  iele::IeleBlock *CopierBlock =
+    iele::IeleBlock::Create(&Context, "entry", Copier);
+
+  // Append the code for copying the struct members and returning.
+  std::swap(CompilingFunction, Copier);
+  std::swap(CompilingBlock, CopierBlock);
+  appendStructCopy(type, Address, FromLoc, toType, ToAddress, ToLoc);
+  iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+  std::swap(CompilingFunction, Copier);
+  std::swap(CompilingBlock, CopierBlock);
+
+  return Copier;
+}
+
+void IeleCompiler::appendStructCopy(
+    const StructType &type, iele::IeleValue *Address, DataLocation FromLoc,
+    const StructType &toType, iele::IeleValue *ToAddress, DataLocation ToLoc) {
+  // We loop over the members of the source struct type.
+  for (auto const &member : type.members(nullptr)) {
+    // First find the types of the corresponding member in the source and
+    // destination struct types.
+    TypePointer memberFromType = member.type;
+    TypePointer memberToType;
+    for (auto const &toMember : toType.members(nullptr)) {
+      if (member.name == toMember.name) {
+        memberToType = toMember.type;
+        break;
+      }
+    }
+
+    // Ensure we are skipping mapping members when copying to memory.
+    solAssert(!memberToType ||
+              memberToType->category() != Type::Category::Mapping ||
+              ToLoc == DataLocation::Storage,
+              "IeleCompiler: found memory struct with mapping field");
+    solAssert(memberFromType->category() != Type::Category::Mapping ||
+              FromLoc == DataLocation::Storage,
+              "IeleCompiler: found memory struct with mapping field");
+    if (memberFromType->category() == Type::Category::Mapping &&
+        ToLoc == DataLocation::Memory) {
+      continue;
+    }
+
+    solAssert(memberToType, "IeleCompiler: could not find corresponding "
+                            "non-mapping member in copy target struct type");
+
+    // Then compute the offset from the start of the struct for the current
+    // member. The offset may differ in the source and destination, due to
+    // skipping of mappings in memory copies of structs.
+    bigint fromOffset, toOffset;
+    switch (FromLoc) {
+    case DataLocation::Storage: {
+      const auto& offsets = type.storageOffsetsOfMember(member.name);
+      fromOffset = offsets.first;
+      break;
+    }
+    case DataLocation::Memory: {
+      fromOffset = type.memoryOffsetOfMember(member.name);
+      break;
+    case DataLocation::CallData:
+      solAssert(false, "Call data not supported in IELE");
+    }
+    }
+    switch (ToLoc) {
+    case DataLocation::Storage: {
+      const auto& offsets = toType.storageOffsetsOfMember(member.name);
+      toOffset = offsets.first;
+      break;
+    }
+    case DataLocation::Memory: {
+      toOffset = toType.memoryOffsetOfMember(member.name);
+      break;
+    case DataLocation::CallData:
+      solAssert(false, "Call data not supported in IELE");
+    }
+    }
+
+    // Then compute the current member address in the source and destination
+    // struct objects.
+    iele::IeleLocalVariable *MemberFrom =
+      iele::IeleLocalVariable::Create(&Context, "copy.from.address",
+                                      CompilingFunction);
+    iele::IeleValue *FromOffsetValue =
+      iele::IeleIntConstant::Create(&Context, fromOffset);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, MemberFrom, Address, FromOffsetValue,
+      CompilingBlock);
+
+    iele::IeleLocalVariable *MemberTo =
+      iele::IeleLocalVariable::Create(&Context, "copy.to.address",
+                                      CompilingFunction);
+    iele::IeleValue *ToOffsetValue =
+      iele::IeleIntConstant::Create(&Context, toOffset);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, MemberTo, ToAddress, ToOffsetValue,
+      CompilingBlock);
+
+    // Finally do the copy of the member value from source to destination.
+    appendCopy(
+        makeLValue(MemberTo, memberToType, ToLoc), memberToType,
+        makeLValue(MemberFrom, memberFromType, FromLoc)->read(CompilingBlock),
+        memberFromType, ToLoc, FromLoc);
   }
 }
 

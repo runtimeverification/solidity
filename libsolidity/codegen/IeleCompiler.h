@@ -247,7 +247,20 @@ private:
     TypePointer ToType, IeleRValue *From, TypePointer FromType);
 
   void appendCopy(
-      IeleLValue *To, TypePointer ToType, IeleRValue *From, TypePointer FromType, DataLocation ToLoc, DataLocation FromLoc);
+      IeleLValue *To, TypePointer ToType, IeleRValue *From,
+      TypePointer FromType, DataLocation ToLoc, DataLocation FromLoc);
+
+  // Infrastructure for copying recursive structs.
+  std::map<std::string, std::map<std::string, iele::IeleFunction *>>
+    RecursiveStructCopiers;
+  iele::IeleFunction *getRecursiveStructCopier(
+      const StructType &type, DataLocation FromLoc,
+      const StructType &toType, DataLocation ToLoc);
+
+  // Helper function that appends code for copying a struct.
+  void appendStructCopy(
+      const StructType &type, iele::IeleValue *Address, DataLocation FromLoc,
+      const StructType &toType, iele::IeleValue *ToAddress, DataLocation ToLoc);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 

@@ -10551,6 +10551,27 @@ BOOST_AUTO_TEST_CASE(recursive_structs)
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(1)));
 }
 
+BOOST_AUTO_TEST_CASE(recursive_struct_copy)
+{
+	char const* sourceCode = R"(
+		contract C {
+			struct S {
+				S[] x;
+			}
+			S sstorage;
+			function f() returns (uint) {
+				S memory s;
+				s.x = new S[](10);
+                s.x[5] = S(new S[](100));
+				sstorage = s;
+				return s.x[5].x.length;
+			}
+		}
+	)";
+	compileAndRun(sourceCode, 0, "C");
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(100)));
+}
+
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(invalid_instruction, 1)
 BOOST_AUTO_TEST_CASE(invalid_instruction)
 {
