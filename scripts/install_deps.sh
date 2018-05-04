@@ -61,6 +61,7 @@ detect_linux_distro() {
     else
         DISTRO=''
     fi
+    DISTRO=Fedora
     echo $DISTRO
 }
 
@@ -239,7 +240,7 @@ case $(uname -s) in
 
                 # Install "normal packages"
                 # See https://fedoraproject.org/wiki/Package_management_system.
-                dnf install \
+                sudo dnf install \
                     autoconf \
                     automake \
                     boost-devel \
@@ -248,7 +249,10 @@ case $(uname -s) in
                     gcc \
                     gcc-c++ \
                     git \
-                    libtool
+                    libtool \
+		    llvm \
+		    llvm-devel \
+		    zlib-devel
 
                 ;;
 
