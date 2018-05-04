@@ -3566,6 +3566,226 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     break;
   }
+  case FunctionType::Kind::ECAdd: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 2> ReturnRegisters;
+    iele::IeleLocalVariable *ResultX =
+      iele::IeleLocalVariable::Create(&Context, "ecadd.x", CompilingFunction);
+    iele::IeleLocalVariable *ResultY =
+      iele::IeleLocalVariable::Create(&Context, "ecadd.y", CompilingFunction);
+    ReturnRegisters.push_back(ResultX);
+    ReturnRegisters.push_back(ResultY);
+
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      IeleRValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call "
+                "argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type;
+      TypePointer ParamType = function.parameterTypes()[i];
+      auto arrayType = dynamic_cast<const ArrayType *>(ParamType.get());
+      ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+      iele::IeleValue *x = appendArrayAccess(*arrayType, iele::IeleIntConstant::getZero(&Context),
+          ArgValue->getValue(), arrayType->location())->read(CompilingBlock)->getValue();
+      iele::IeleValue *y = appendArrayAccess(*arrayType, iele::IeleIntConstant::getOne(&Context),
+          ArgValue->getValue(), arrayType->location())->read(CompilingBlock)->getValue();
+      Arguments.push_back(x);
+      Arguments.push_back(y);
+    }
+
+    IeleRValue *CalleeValue = compileExpression(functionCall.expression());
+    iele::IeleGlobalVariable *FunctionCalleeValue =
+      iele::IeleGlobalVariable::Create(&Context, "iele.ecadd");
+    iele::IeleValue *AddressValue =
+      iele::IeleIntConstant::getOne(&Context);
+
+    iele::IeleLocalVariable *StatusValue =
+      CompilingFunctionStatus;
+
+    iele::IeleValue *GasValue;
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasLeft =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasLeft, EmptyArguments,
+        CompilingBlock);
+      GasValue = GasLeft;
+    } else {
+      GasValue = CalleeValue->getValues()[0];
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      true, StatusValue, ReturnRegisters, FunctionCalleeValue, AddressValue,
+      nullptr, GasValue, Arguments, CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    auto returnType = dynamic_cast<const ArrayType *>(function.returnParameterTypes()[0].get());
+    iele::IeleValue *Return = appendArrayAllocation(*returnType);
+    appendArrayAccess(*returnType, iele::IeleIntConstant::getZero(&Context),
+      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[0]}), CompilingBlock);
+    appendArrayAccess(*returnType, iele::IeleIntConstant::getOne(&Context),
+      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[1]}), CompilingBlock);
+    CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
+    break;
+  }
+  case FunctionType::Kind::ECMul: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 3> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 2> ReturnRegisters;
+    iele::IeleLocalVariable *ResultX =
+      iele::IeleLocalVariable::Create(&Context, "ecmul.x", CompilingFunction);
+    iele::IeleLocalVariable *ResultY =
+      iele::IeleLocalVariable::Create(&Context, "ecmul.y", CompilingFunction);
+    ReturnRegisters.push_back(ResultX);
+    ReturnRegisters.push_back(ResultY);
+
+    IeleRValue *ArgValue = compileExpression(*arguments[0]);
+    solAssert(ArgValue,
+              "IeleCompiler: Failed to compile internal function call "
+              "argument");
+    // Check if we need to do a memory to/from storage copy.
+    TypePointer ArgType = arguments[0]->annotation().type;
+    TypePointer ParamType = function.parameterTypes()[0];
+    auto arrayType = dynamic_cast<const ArrayType *>(ParamType.get());
+    ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+    iele::IeleValue *x = appendArrayAccess(*arrayType, iele::IeleIntConstant::getZero(&Context),
+        ArgValue->getValue(), arrayType->location())->read(CompilingBlock)->getValue();
+    iele::IeleValue *y = appendArrayAccess(*arrayType, iele::IeleIntConstant::getOne(&Context),
+        ArgValue->getValue(), arrayType->location())->read(CompilingBlock)->getValue();
+    Arguments.push_back(x);
+    Arguments.push_back(y);
+
+    ArgValue = compileExpression(*arguments[1]);
+    solAssert(ArgValue,
+              "IeleCompiler: Failed to compile internal function call "
+              "argument");
+    // Check if we need to do a memory to/from storage copy.
+    ArgType = arguments[1]->annotation().type;
+    ParamType = function.parameterTypes()[1];
+    ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+    Arguments.push_back(ArgValue->getValue());
+
+    IeleRValue *CalleeValue = compileExpression(functionCall.expression());
+    iele::IeleGlobalVariable *FunctionCalleeValue =
+      iele::IeleGlobalVariable::Create(&Context, "iele.ecmul");
+    iele::IeleValue *AddressValue =
+      iele::IeleIntConstant::getOne(&Context);
+
+    iele::IeleLocalVariable *StatusValue =
+      CompilingFunctionStatus;
+
+    iele::IeleValue *GasValue;
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasLeft =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasLeft, EmptyArguments,
+        CompilingBlock);
+      GasValue = GasLeft;
+    } else {
+      GasValue = CalleeValue->getValues()[0];
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      true, StatusValue, ReturnRegisters, FunctionCalleeValue, AddressValue,
+      nullptr, GasValue, Arguments, CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    auto returnType = dynamic_cast<const ArrayType *>(function.returnParameterTypes()[0].get());
+    iele::IeleValue *Return = appendArrayAllocation(*returnType);
+    appendArrayAccess(*returnType, iele::IeleIntConstant::getZero(&Context),
+      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[0]}), CompilingBlock);
+    appendArrayAccess(*returnType, iele::IeleIntConstant::getOne(&Context),
+      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[1]}), CompilingBlock);
+    CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
+    break;
+  }
+  case FunctionType::Kind::ECPairing: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 2> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 1> ReturnRegisters;
+    iele::IeleLocalVariable *Result =
+      iele::IeleLocalVariable::Create(&Context, "ecpairing.result", CompilingFunction);
+    ReturnRegisters.push_back(Result);
+
+
+    llvm::SmallVector<iele::IeleValue *, 2> Lengths;
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      IeleRValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call "
+                "argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type;
+      TypePointer ParamType = function.parameterTypes()[i];
+      ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+
+      iele::IeleLocalVariable *Length =
+        iele::IeleLocalVariable::Create(&Context, std::string("ecpairing.g") + char('1'+i) + ".length",
+        CompilingFunction);
+      Lengths.push_back(Length);
+      iele::IeleInstruction::CreateLoad(
+        Length, ArgValue->getValue(), CompilingBlock);
+      iele::IeleLocalVariable *NextFree = appendMemorySpill();
+      llvm::SmallVector<IeleRValue *, 1> Args;
+      Args.push_back(ArgValue);
+      TypePointers types;
+      types.push_back(ParamType);
+      iele::IeleValue *ByteWidth = encoding(Args, types, NextFree, false);
+      iele::IeleLocalVariable *EncodedVal = 
+        iele::IeleLocalVariable::Create(&Context, std::string("ecpairing.g") + char('1'+i), CompilingFunction);
+      iele::IeleInstruction::CreateLoad(
+        EncodedVal, NextFree,
+        iele::IeleIntConstant::getZero(&Context),
+        ByteWidth, CompilingBlock);
+      Arguments.push_back(EncodedVal);
+    }
+    solAssert(Lengths.size() == 2, "invalid number of arguments");
+    iele::IeleLocalVariable *Condition =
+      iele::IeleLocalVariable::Create(&Context, "have.invalid.lengths", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpNe, Condition, Lengths[0], Lengths[1],
+      CompilingBlock);
+    appendRevert(Condition);
+    Arguments.insert(Arguments.begin(), Lengths[0]);
+
+    IeleRValue *CalleeValue = compileExpression(functionCall.expression());
+    iele::IeleGlobalVariable *FunctionCalleeValue =
+      iele::IeleGlobalVariable::Create(&Context, "iele.ecpairing");
+    iele::IeleValue *AddressValue =
+      iele::IeleIntConstant::getOne(&Context);
+
+    iele::IeleLocalVariable *StatusValue =
+      CompilingFunctionStatus;
+
+    iele::IeleValue *GasValue;
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasLeft =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasLeft, EmptyArguments,
+        CompilingBlock);
+      GasValue = GasLeft;
+    } else {
+      GasValue = CalleeValue->getValues()[0];
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      true, StatusValue, ReturnRegisters, FunctionCalleeValue, AddressValue,
+      nullptr, GasValue, Arguments, CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+    break;
+  }
   case FunctionType::Kind::ECRecover: {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
