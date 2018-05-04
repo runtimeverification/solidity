@@ -61,7 +61,6 @@ detect_linux_distro() {
     else
         DISTRO=''
     fi
-    DISTRO=Fedora
     echo $DISTRO
 }
 
@@ -366,11 +365,12 @@ case $(uname -s) in
             CentOS)
                 read -p "This script will heavily modify your system in order to allow for compilation of Solidity. Are you sure? [Y/N]" -n 1 -r
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    sudo yum -y install wget
                     # Make Sure we have the EPEL repos
                     sudo yum -y install epel-release
                     # Get g++ 4.8
                     sudo rpm --import http://linuxsoft.cern.ch/cern/slc6X/i386/RPM-GPG-KEY-cern
-                    wget -O /etc/yum.repos.d/slc6-devtoolset.repo http://linuxsoft.cern.ch/cern/devtoolset/slc6-devtoolset.repo
+                    sudo wget -O /etc/yum.repos.d/slc6-devtoolset.repo http://linuxsoft.cern.ch/cern/devtoolset/slc6-devtoolset.repo
                     sudo yum -y install devtoolset-2-gcc devtoolset-2-gcc-c++ devtoolset-2-binutils
 
                     # Enable the devtoolset2 usage so global gcc/g++ become the 4.8 one.
@@ -384,8 +384,14 @@ case $(uname -s) in
                     sudo yum -y remove cmake
                     sudo yum -y install cmake3
                     sudo ln -s /usr/bin/cmake3 /usr/bin/cmake
-
-                    # Get latest boost thanks to this guy: http://vicendominguez.blogspot.de/2014/04/boost-c-library-rpm-packages-for-centos.html
+                    
+                    # get llvm
+                    sudo yum -y install llvm
+                    sudo yum -y install llvm-devel
+                    
+                    # get zlib                  
+                    sudo yum -y install zlib-devel
+# Get latest boost thanks to this guy: http://vicendominguez.blogspot.de/2014/04/boost-c-library-rpm-packages-for-centos.html
                     sudo yum -y remove boost-devel
                     sudo wget http://repo.enetres.net/enetres.repo -O /etc/yum.repos.d/enetres.repo
                     sudo yum install boost-devel
