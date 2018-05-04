@@ -139,7 +139,7 @@ bytes IeleContract::toBinary() const {
 
 #if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 6
   // #error LLVM 6 found!
-  const StringRef *redirects[] = {Optional::create(&input), Optional::create(&output), Optional::create(nullptr)};  
+  const llvm::ArrayRef<llvm::Optional<llvm::StringRef>> redirects = {Optional<StringRef>::create(&input), Optional<StringRef>::create(&output), Optional<StringRef>::create(nullptr)};  
 #endif
 
   int exit = ExecuteAndWait(program, args, nullptr, redirects);
