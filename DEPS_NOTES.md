@@ -15,19 +15,7 @@ It works!
 
 ## Fedora
 
-* Vagrant box: https://app.vagrantup.com/generic/boxes/fedora27
-* Package to be installed seems to be https://copr.fedorainfracloud.org/coprs/alonid/llvm-5.0.0/ (shared with CentOS)
-
-Looks like `install_deps.sh` fails to recognise the distro:
-
-```
-ERROR - Unsupported or unidentified Linux distro.
-See http://solidity.readthedocs.io/en/latest/installing-solidity.html for manual instructions.
-If you would like to get your distro working, that would be fantastic.
-Drop us a message at https://gitter.im/ethereum/solidity-dev.
-```
-
-(this is also true for everything else apart from Ubuntu, Debian and Darwin)
+It works!
 
 ## CentOS
 
