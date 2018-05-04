@@ -2328,34 +2328,24 @@ void IeleCompiler::doEncode(
   }
   case Type::Category::Struct: {
     const StructType &structType = dynamic_cast<const StructType &>(*type);
-    for (auto decl : structType.structDefinition().members()) {
-      // First compute the offset from the start of the struct.
-      bigint offset;
-      switch (structType.location()) {
-      case DataLocation::Storage: {
-        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
-        offset = offsets.first;
-        break;
-      }
-      case DataLocation::Memory: {
-        offset = structType.memoryOffsetOfMember(decl->name());
-        break;
-      case DataLocation::CallData: 
-        solAssert(false, "Call data not supported in IELE");
-      }
-      }
 
-      iele::IeleLocalVariable *Member =
-        iele::IeleLocalVariable::Create(&Context, "encode.address", CompilingFunction);
-      iele::IeleValue *OffsetValue =
-        iele::IeleIntConstant::Create(&Context, offset);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, Member, ArgValue->getValue(), OffsetValue,
-        CompilingBlock);
-
-      TypePointer memberType = ReferenceType::copyForLocationIfReference(structType.location(), decl->type());
-      doEncode(NextFree, CrntPos, makeLValue(Member, memberType, structType.location()), ArgTypeSize, ArgLen, memberType, appendWidths, bigEndian);
+    if (structType.recursive()) {
+      // Call the recursive encoder.
+      iele::IeleFunction *Encoder =
+        getRecursiveStructEncoder(structType, appendWidths, bigEndian);
+      llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, CrntPos);
+      llvm::SmallVector<iele::IeleValue *, 3> Arguments;
+      Arguments.push_back(ArgValue->getValue());
+      Arguments.push_back(NextFree);
+      Arguments.push_back(CrntPos);
+      iele::IeleInstruction::CreateInternalCall(
+          Results, Encoder, Arguments, CompilingBlock);
+      break;
     }
+
+    appendStructEncode(
+        structType, ArgValue->getValue(), ArgTypeSize, ArgLen, NextFree,
+        CrntPos, appendWidths, bigEndian);
     break;
   }
   case Type::Category::Function: {
@@ -2407,6 +2397,114 @@ void IeleCompiler::doEncode(
   }
   default:
       solAssert(false, "IeleCompiler: invalid type for encoding");
+  }
+}
+
+iele::IeleFunction *IeleCompiler::getRecursiveStructEncoder(
+    const StructType &type, bool appendWidths, bool bigEndian) {
+  solAssert(type.recursive(),
+            "IeleCompiler: attempted to construct recursive destructor "
+            "for non-recursive struct type");
+
+  std::string typeID = type.richIdentifier();
+
+  // Lookup encoder in the cache.
+  auto It = RecursiveStructEncoders.find(typeID);
+  if (It != RecursiveStructEncoders.end()) {
+    auto ItAppendWidths = It->second.find(appendWidths);
+    if (ItAppendWidths != It->second.end()) {
+      auto ItBigEndian = ItAppendWidths->second.find(bigEndian);
+      if (ItBigEndian != ItAppendWidths->second.end())
+        return ItBigEndian->second;
+    }
+  }
+
+  // Generate a recursive function to encode a struct of the specific type.
+  iele::IeleFunction *Encoder =
+    iele::IeleFunction::Create(
+        &Context, false,
+        "ielert.encode." + typeID + ".W" + (char)appendWidths +
+        ".B" + (char)bigEndian,
+        CompilingContract);
+
+  // Register encoder function.
+  RecursiveStructEncoders[typeID][appendWidths][bigEndian] = Encoder;
+
+  // Add the address argument.
+  iele::IeleArgument *Address =
+    iele::IeleArgument::Create(&Context, "encode.addr", Encoder);
+
+  // Add the next free argument.
+  iele::IeleArgument *NextFree =
+    iele::IeleArgument::Create(&Context, "encode.next.free", Encoder);
+
+  // Add the current position argument.
+  iele::IeleArgument *CrntPos =
+    iele::IeleArgument::Create(&Context, "encode.crnt.pos", Encoder);
+
+  // Add the address type size local variable.
+  iele::IeleLocalVariable *AddrTypeSize =
+    iele::IeleLocalVariable::Create(&Context, "encode.addr.type.size",
+                                    CompilingFunction);
+
+  // Add the address length local variable.
+  iele::IeleLocalVariable *AddrLen =
+    iele::IeleLocalVariable::Create(&Context, "encode.addr.len",
+                                    CompilingFunction);
+
+  // Add the first block.
+  iele::IeleBlock *EncoderBlock =
+    iele::IeleBlock::Create(&Context, "entry", Encoder);
+
+  // Append the code for encoding the struct members and returning the current
+  // position.
+  std::swap(CompilingFunction, Encoder);
+  std::swap(CompilingBlock, EncoderBlock);
+  appendStructEncode(type, Address, AddrTypeSize, AddrLen, NextFree, CrntPos,
+                     appendWidths, bigEndian);
+  llvm::SmallVector<iele::IeleValue *, 1> Results(1, CrntPos);
+  iele::IeleInstruction::CreateRet(Results, CompilingBlock);
+  std::swap(CompilingFunction, Encoder);
+  std::swap(CompilingBlock, EncoderBlock);
+
+  return Encoder;
+}
+
+void IeleCompiler::appendStructEncode(
+    const StructType &type, iele::IeleValue *Address,
+    iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
+    iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
+    bool appendWidths, bool bigEndian) {
+  // For each member of the struct, generate code that deletes that member.
+  for (auto decl : type.structDefinition().members()) {
+    // First compute the offset from the start of the struct.
+    bigint offset;
+    switch (type.location()) {
+    case DataLocation::Storage: {
+      const auto& offsets = type.storageOffsetsOfMember(decl->name());
+      offset = offsets.first;
+      break;
+    }
+    case DataLocation::Memory: {
+      offset = type.memoryOffsetOfMember(decl->name());
+      break;
+    case DataLocation::CallData:
+      solAssert(false, "Call data not supported in IELE");
+    }
+    }
+
+    iele::IeleLocalVariable *Member =
+      iele::IeleLocalVariable::Create(&Context, "encode.address",
+                                      CompilingFunction);
+    iele::IeleValue *OffsetValue =
+      iele::IeleIntConstant::Create(&Context, offset);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, Member, Address, OffsetValue, CompilingBlock);
+
+    TypePointer memberType =
+      ReferenceType::copyForLocationIfReference(type.location(), decl->type());
+    doEncode(NextFree, CrntPos, makeLValue(Member, memberType, type.location()),
+             AddrTypeSize, AddrLen, memberType, appendWidths, bigEndian);
   }
 }
 
@@ -2647,33 +2745,21 @@ void IeleCompiler::doDecode(
       AllocedValue = StoreAt->read(CompilingBlock)->getValue();
     }
 
-    for (auto decl : structType.structDefinition().members()) {
-      // First compute the offset from the start of the struct.
-      bigint offset;
-      switch (structType.location()) {
-      case DataLocation::Storage: {
-        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
-        offset = offsets.first;
-        break;
-      }
-      case DataLocation::Memory: {
-        offset = structType.memoryOffsetOfMember(decl->name());
-        break;
-      case DataLocation::CallData: 
-        solAssert(false, "Call data not supported in IELE");
-      }
-      }
-
-      iele::IeleLocalVariable *Member =
-        iele::IeleLocalVariable::Create(&Context, "encode.address", CompilingFunction);
-      iele::IeleValue *OffsetValue =
-        iele::IeleIntConstant::Create(&Context, offset);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, Member, AllocedValue, OffsetValue,
-        CompilingBlock);
-
-      doDecode(NextFree, CrntPos, makeLValue(Member, decl->type(), DataLocation::Memory), ArgTypeSize, ArgLen, decl->type());
+    if (structType.recursive()) {
+      // Call the recursive decoder.
+      iele::IeleFunction *Decoder = getRecursiveStructDecoder(structType);
+      llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, CrntPos);
+      llvm::SmallVector<iele::IeleValue *, 3> Arguments;
+      Arguments.push_back(AllocedValue);
+      Arguments.push_back(NextFree);
+      Arguments.push_back(CrntPos);
+      iele::IeleInstruction::CreateInternalCall(
+          Results, Decoder, Arguments, CompilingBlock);
+      break;
     }
+
+    appendStructDecode(structType, AllocedValue, ArgTypeSize, ArgLen, NextFree,
+                       CrntPos);
     break;
   }
   case Type::Category::Function: {
@@ -2735,6 +2821,103 @@ void IeleCompiler::doDecode(
   default: 
     solAssert(false, "invalid reference type");
     break;
+  }
+}
+
+iele::IeleFunction *IeleCompiler::getRecursiveStructDecoder(
+    const StructType &type) {
+  solAssert(type.recursive(),
+            "IeleCompiler: attempted to construct recursive destructor "
+            "for non-recursive struct type");
+
+  std::string typeID = type.richIdentifier();
+
+  // Lookup decoder in the cache.
+  auto It = RecursiveStructDecoders.find(typeID);
+  if (It != RecursiveStructDecoders.end())
+    return It->second;
+
+  // Generate a recursive function to decode a struct of the specific type.
+  iele::IeleFunction *Decoder =
+    iele::IeleFunction::Create(
+        &Context, false, "ielert.decode." + typeID, CompilingContract);
+
+  // Register decoder function.
+  RecursiveStructDecoders[typeID] = Decoder;
+
+  // Add the address argument.
+  iele::IeleArgument *Address =
+    iele::IeleArgument::Create(&Context, "decode.addr", Decoder);
+
+  // Add the next free argument.
+  iele::IeleArgument *NextFree =
+    iele::IeleArgument::Create(&Context, "decode.next.free", Decoder);
+
+  // Add the current position argument.
+  iele::IeleArgument *CrntPos =
+    iele::IeleArgument::Create(&Context, "decode.crnt.pos", Decoder);
+
+  // Add the address type size local variable.
+  iele::IeleLocalVariable *AddrTypeSize =
+    iele::IeleLocalVariable::Create(&Context, "decode.addr.type.size",
+                                    CompilingFunction);
+
+  // Add the address length local variable.
+  iele::IeleLocalVariable *AddrLen =
+    iele::IeleLocalVariable::Create(&Context, "decode.addr.len",
+                                    CompilingFunction);
+
+  // Add the first block.
+  iele::IeleBlock *DecoderBlock =
+    iele::IeleBlock::Create(&Context, "entry", Decoder);
+
+  // Append the code for decoding the struct members and returning the current
+  // position.
+  std::swap(CompilingFunction, Decoder);
+  std::swap(CompilingBlock, DecoderBlock);
+  appendStructDecode(type, Address, AddrTypeSize, AddrLen, NextFree, CrntPos);
+  llvm::SmallVector<iele::IeleValue *, 1> Results(1, CrntPos);
+  iele::IeleInstruction::CreateRet(Results, CompilingBlock);
+  std::swap(CompilingFunction, Decoder);
+  std::swap(CompilingBlock, DecoderBlock);
+
+  return Decoder;
+}
+
+void IeleCompiler::appendStructDecode(
+    const StructType &type, iele::IeleValue *Address,
+    iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
+    iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos) {
+  for (auto decl : type.structDefinition().members()) {
+    // First compute the offset from the start of the struct.
+    bigint offset;
+    switch (type.location()) {
+    case DataLocation::Storage: {
+      const auto& offsets = type.storageOffsetsOfMember(decl->name());
+      offset = offsets.first;
+      break;
+    }
+    case DataLocation::Memory: {
+      offset = type.memoryOffsetOfMember(decl->name());
+      break;
+    case DataLocation::CallData:
+      solAssert(false, "Call data not supported in IELE");
+    }
+    }
+
+    iele::IeleLocalVariable *Member =
+      iele::IeleLocalVariable::Create(&Context, "encode.address",
+                                      CompilingFunction);
+    iele::IeleValue *OffsetValue =
+      iele::IeleIntConstant::Create(&Context, offset);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, Member, Address, OffsetValue,
+      CompilingBlock);
+
+    doDecode(
+        NextFree, CrntPos,
+        makeLValue(Member, decl->type(), DataLocation::Memory), AddrTypeSize,
+        AddrLen, decl->type());
   }
 }
 

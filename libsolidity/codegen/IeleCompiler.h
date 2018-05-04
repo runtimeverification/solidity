@@ -349,12 +349,31 @@ private:
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, IeleLValue *ArgValue,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, bool appendWidths, bool BigEndian);
+    TypePointer type, bool appendWidths, bool bigEndian);
   void doDecode(
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, IeleLValue *StoreAt,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
     TypePointer type);
+
+  // Infrastructure for encoding/decoding recursive structs.
+  std::map<std::string, std::map<bool, std::map<bool, iele::IeleFunction *>>>
+    RecursiveStructEncoders;
+  iele::IeleFunction *getRecursiveStructEncoder(
+      const StructType &type, bool appendWidths, bool bigEndian);
+  std::map<std::string, iele::IeleFunction *> RecursiveStructDecoders;
+  iele::IeleFunction *getRecursiveStructDecoder(const StructType &type);
+
+  // Helper functions that append code for encoding/decoding a struct.
+  void appendStructEncode(
+      const StructType &type, iele::IeleValue *Address,
+      iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
+      iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
+      bool appendWidths, bool bigEndian);
+  void appendStructDecode(
+      const StructType &type, iele::IeleValue *Address,
+      iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
+      iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos);
 
   void appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value);
 };
