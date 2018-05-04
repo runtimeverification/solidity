@@ -11204,14 +11204,13 @@ BOOST_AUTO_TEST_CASE(address_overload_resolution)
 	BOOST_CHECK(callContractFunction("g()") == encodeArgs(u256(5)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(snark, 1)
 BOOST_AUTO_TEST_CASE(snark)
 {
 	char const* sourceCode = R"(
 	library Pairing {
 		struct G1Point {
-			uint X;
-			uint Y;
+			uint256 X;
+			uint256 Y;
 		}
 		// Encoding of field elements is: X[0] * z + X[1]
 		struct G2Point {
@@ -11237,7 +11236,7 @@ BOOST_AUTO_TEST_CASE(snark)
 		/// @return the negation of p, i.e. p.add(p.negate()) should be zero.
 		function negate(G1Point p) internal returns (G1Point) {
 			// The prime q in the base field F_q for G1
-			uint q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+			uint256 q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 			if (p.X == 0 && p.Y == 0)
 				return G1Point(0, 0);
 			return G1Point(p.X, q - (p.Y % q));
@@ -11245,34 +11244,26 @@ BOOST_AUTO_TEST_CASE(snark)
 
 		/// @return the sum of two points of G1
 		function add(G1Point p1, G1Point p2) internal returns (G1Point r) {
-			uint[4] memory input;
-			input[0] = p1.X;
-			input[1] = p1.Y;
-			input[2] = p2.X;
-			input[3] = p2.Y;
-			bool success;
-			assembly {
-				success := call(sub(gas, 2000), 6, 0, input, 0xc0, r, 0x60)
-				// Use "invalid" to make gas estimation work
-				switch success case 0 { invalid() }
-			}
-			require(success);
+			uint256[2] memory g1;
+			uint256[2] memory g2;
+			g1[0] = p1.X;
+			g1[1] = p1.Y;
+			g2[0] = p2.X;
+			g2[1] = p2.Y;
+			uint256[2] memory r0 = ecadd(g1, g2);
+			r.X = r0[0];
+			r.Y = r0[1];
 		}
 
 		/// @return the product of a point on G1 and a scalar, i.e.
 		/// p == p.mul(1) and p.add(p) == p.mul(2) for all points p.
-		function mul(G1Point p, uint s) internal returns (G1Point r) {
-			uint[3] memory input;
-			input[0] = p.X;
-			input[1] = p.Y;
-			input[2] = s;
-			bool success;
-			assembly {
-				success := call(sub(gas, 2000), 7, 0, input, 0x80, r, 0x60)
-				// Use "invalid" to make gas estimation work
-				switch success case 0 { invalid() }
-			}
-			require(success);
+		function mul(G1Point p, uint256 s) internal returns (G1Point r) {
+			uint256[2] memory g1;
+			g1[0] = p.X;
+			g1[1] = p.Y;
+			uint256[2] memory r0 = ecmul(g1, s);
+			r.X = r0[0];
+			r.Y = r0[1];
 		}
 
 		/// @return the result of computing the pairing check
@@ -11282,26 +11273,18 @@ BOOST_AUTO_TEST_CASE(snark)
 		function pairing(G1Point[] p1, G2Point[] p2) internal returns (bool) {
 			require(p1.length == p2.length);
 			uint elements = p1.length;
-			uint inputSize = p1.length * 6;
-			uint[] memory input = new uint[](inputSize);
+			uint256[2][] memory g1 = new uint256[2][](elements);
+			uint256[4][] memory g2 = new uint256[4][](elements);
 			for (uint i = 0; i < elements; i++)
 			{
-				input[i * 6 + 0] = p1[i].X;
-				input[i * 6 + 1] = p1[i].Y;
-				input[i * 6 + 2] = p2[i].X[0];
-				input[i * 6 + 3] = p2[i].X[1];
-				input[i * 6 + 4] = p2[i].Y[0];
-				input[i * 6 + 5] = p2[i].Y[1];
+				g1[i][0] = p1[i].X;
+				g1[i][1] = p1[i].Y;
+				g2[i][0] = p2[i].X[0];
+				g2[i][1] = p2[i].X[1];
+				g2[i][2] = p2[i].Y[0];
+				g2[i][3] = p2[i].Y[1];
 			}
-			uint[1] memory out;
-			bool success;
-			assembly {
-				success := call(sub(gas, 2000), 8, 0, add(input, 0x20), mul(inputSize, 0x20), out, 0x20)
-				// Use "invalid" to make gas estimation work
-				switch success case 0 { invalid() }
-			}
-			require(success);
-			return out[0] != 0;
+			return ecpairing(g1, g2);
 		}
 		function pairingProd2(G1Point a1, G2Point a2, G1Point b1, G2Point b2) internal returns (bool) {
 			G1Point[] memory p1 = new G1Point[](2);
@@ -11400,7 +11383,7 @@ BOOST_AUTO_TEST_CASE(snark)
 				[11631839690097995216017572651900167465857396346217730511548857041925508482915, 21508930868448350162258892668132814424284302804699005394342512102884055673846]
 			);
 			// The prime p in the base field F_p for G1
-			uint p = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+			uint256 p = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 			Pairing.G1Point[] memory g1points = new Pairing.G1Point[](2);
 			Pairing.G2Point[] memory g2points = new Pairing.G2Point[](2);
 			// check e(5 P1, P2)e(-P1, 5 P2) == 1
@@ -11440,7 +11423,7 @@ BOOST_AUTO_TEST_CASE(snark)
 			vk.IC[8] = Pairing.G1Point(0x0a6de0e2240aa253f46ce0da883b61976e3588146e01c9d8976548c145fe6e4a, 0x04fbaa3a4aed4bb77f30ebb07a3ec1c7d77a7f2edd75636babfeff97b1ea686e);
 			vk.IC[9] = Pairing.G1Point(0x111e2e2a5f8828f80ddad08f9f74db56dac1cc16c1cb278036f79a84cf7a116f, 0x1d7d62e192b219b9808faa906c5ced871788f6339e8d91b83ac1343e20a16b30);
 		}
-		function verify(uint[] input, Proof proof) internal returns (uint) {
+		function verify(uint256[] input, Proof proof) internal returns (uint) {
 			VerifyingKey memory vk = verifyingKey();
 			require(input.length + 1 == vk.IC.length);
 			// Compute the linear combination vk_x
@@ -11465,7 +11448,7 @@ BOOST_AUTO_TEST_CASE(snark)
 		}
 		event Verified(string);
 		function verifyTx() returns (bool) {
-			uint[] memory input = new uint[](9);
+			uint256[] memory input = new uint256[](9);
 			Proof memory proof;
 			proof.A = Pairing.G1Point(12873740738727497448187997291915224677121726020054032516825496230827252793177, 21804419174137094775122804775419507726154084057848719988004616848382402162497);
 			proof.A_p = Pairing.G1Point(7742452358972543465462254569134860944739929848367563713587808717088650354556, 7324522103398787664095385319014038380128814213034709026832529060148225837366);
