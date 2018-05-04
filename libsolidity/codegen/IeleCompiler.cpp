@@ -5918,7 +5918,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
       // Sign extend if necessary.
       if (issigned) {
         iele::IeleValue *NBytesValue =
-          iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
+          iele::IeleIntConstant::Create(&Context, bigint(nbytes));
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::SExt, Result, NBytesValue, Result,
           CompilingBlock);
@@ -5945,7 +5945,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
       // Sign extend if necessary.
       if (issigned) {
         iele::IeleValue *NBytesValue =
-          iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
+          iele::IeleIntConstant::Create(&Context, bigint(nbytes));
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::SExt, Result, NBytesValue, Result,
           CompilingBlock);
@@ -6219,8 +6219,6 @@ void IeleCompiler::appendMask(iele::IeleLocalVariable *Result, iele::IeleValue *
     iele::IeleInstruction::Twos, Result, NBytesValue, Value,
     CompilingBlock);
   if (issigned) {
-    NBytesValue =
-      iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::SExt, Result, NBytesValue, Result,
       CompilingBlock);
