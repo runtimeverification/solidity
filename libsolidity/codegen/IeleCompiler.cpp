@@ -2298,7 +2298,8 @@ void IeleCompiler::doDecode(
         if (intType.isSigned()) {
           break;
         } else {
-          // fall through
+          // Falls through
+	  [[fallthrough]]; // since above comment is not always recognized
 	}
       }
       case Type::Category::Contract:
@@ -5340,6 +5341,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
       RightOperand, CompilingBlock);
     RightOperand = ShiftValue;
     // fall through
+    [[fallthrough]];
   }
   case Token::SHL: {
     BinOpcode = iele::IeleInstruction::Shift; 
