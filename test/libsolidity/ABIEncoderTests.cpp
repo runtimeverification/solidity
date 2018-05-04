@@ -57,7 +57,6 @@ BOOST_AUTO_TEST_CASE(both_encoders_macro)
 	BOOST_CHECK_EQUAL(runs, 2);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(value_types, 1)
 BOOST_AUTO_TEST_CASE(value_types)
 {
 	string sourceCode = R"(
@@ -65,10 +64,8 @@ BOOST_AUTO_TEST_CASE(value_types)
 			event E(uint a, uint16 b, uint24 c, int24 d, bytes3 x, bool, C);
 			function f() public {
 				bytes6 x = hex"1bababababa2";
-				bool b;
-				assembly { b := 7 }
-				C c;
-				assembly { c := sub(0, 5) }
+				bool b = true;
+				C c = C(-5);
 				E(10, uint16(uint256(-2)), uint24(0x12121212), int24(int256(-1)), bytes3(x), b, c);
 			}
 		}
@@ -77,7 +74,7 @@ BOOST_AUTO_TEST_CASE(value_types)
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
 		REQUIRE_LOG_DATA(encodeLogs(
-			10, u256(65534), u256(0x121212), u256(-1), string("\x1b\xab\xab"), true, u160(u256(-5))
+			bigint(10), int16_t(65534), fromHex("121212"), fromHex("ffffff"), string("\x1b\xab\xab"), true, u160(u256(-5))
 		));
 	)
 }
@@ -103,38 +100,39 @@ BOOST_AUTO_TEST_CASE(string_literal)
 }
 
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(enum_type_cleanup, 1)
 BOOST_AUTO_TEST_CASE(enum_type_cleanup)
 {
 	string sourceCode = R"(
 		contract C {
 			enum E { A, B }
 			function f(uint x) public returns (E en) {
-				assembly { en := x }
+				en = E(x);
 			}
 		}
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		BOOST_CHECK(callContractFunction("f(uint256)", 0) == encodeArgs(0));
-		BOOST_CHECK(callContractFunction("f(uint256)", 1) == encodeArgs(1));
-		BOOST_CHECK(callContractFunction("f(uint256)", 2) == encodeArgs());
+		BOOST_CHECK(callContractFunction("f(uint)", 0) == encodeArgs(0));
+		BOOST_CHECK(callContractFunction("f(uint)", 1) == encodeArgs(1));
+		BOOST_CHECK(callContractFunction("f(uint)", 2) == encodeArgs());
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(conversion, 1)
 BOOST_AUTO_TEST_CASE(conversion)
 {
 	string sourceCode = R"(
 		contract C {
 			event E(bytes4, bytes4, uint16, uint8, int16, int8);
 			function f() public {
-				bytes2 x; assembly { x := 0xf1f2f3f400000000000000000000000000000000000000000000000000000000 }
+                                bytes4 x0 = 0xf1f2f3f4;
+				bytes2 x = bytes2(x0);
 				uint8 a;
 				uint16 b = 0x1ff;
 				int8 c;
 				int16 d;
-				assembly { a := sub(0, 1) c := 0x0101ff d := 0xff01 }
+                                a = uint8(0 - 1);
+                                c = int8(0x0101ff);
+                                d = int16(0xff01);
 				E(10, x, a, uint8(b), c, int8(d));
 			}
 		}
@@ -143,13 +141,12 @@ BOOST_AUTO_TEST_CASE(conversion)
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
 		REQUIRE_LOG_DATA(encodeLogs(
-			string(3, 0) + string("\x0a"), string("\xf1\xf2"),
-			0xff, 0xff, u256(-1), u256(1)
+			string(3, 0) + string("\x0a"), string("\xf1\xf2") + string(2, 0),
+			int16_t(0xff), int8_t(0xff), int16_t(-1), 1
 		));
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(memory_array_one_dim, 1)
 BOOST_AUTO_TEST_CASE(memory_array_one_dim)
 {
 	string sourceCode = R"(
@@ -157,10 +154,8 @@ BOOST_AUTO_TEST_CASE(memory_array_one_dim)
 			event E(uint a, int16[] b, uint c);
 			function f() public {
 				int16[] memory x = new int16[](3);
-				assembly {
-					for { let i := 0 } lt(i, 3) { i := add(i, 1) } {
-						mstore(add(x, mul(add(i, 1), 0x20)), add(0xfffffffe, i))
-					}
+				for (uint i = 0; i < 3; i++) {
+					x[i] = int16(0xfffffffe + i);
 				}
 				E(10, x, 11);
 			}
@@ -170,11 +165,11 @@ BOOST_AUTO_TEST_CASE(memory_array_one_dim)
 	compileAndRun(sourceCode);
 	callContractFunction("f()");
 	// The old encoder does not clean array elements.
-	REQUIRE_LOG_DATA(encodeLogs(10, 0x60, 11, 3, u256("0xfffffffe"), u256("0xffffffff"), u256("0x100000000")));
+	REQUIRE_LOG_DATA(encodeLogs(bigint(10), 1, 3, int16_t(-2), int16_t(-1), int16_t(0), bigint(11)));
 
 	compileAndRun(NewEncoderPragma + sourceCode);
 	callContractFunction("f()");
-	REQUIRE_LOG_DATA(encodeLogs(10, 0x60, 11, 3, u256(-2), u256(-1), u256(0)));
+	REQUIRE_LOG_DATA(encodeLogs(bigint(10), 1, 3, int16_t(-2), int16_t(-1), int16_t(0), bigint(11)));
 }
 
 BOOST_AUTO_TEST_CASE(memory_array_two_dim)
@@ -251,7 +246,6 @@ BOOST_AUTO_TEST_CASE(storage_byte_array)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(storage_array, 1)
 BOOST_AUTO_TEST_CASE(storage_array)
 {
 	string sourceCode = R"(
@@ -259,11 +253,9 @@ BOOST_AUTO_TEST_CASE(storage_array)
 			address[3] addr;
 			event E(address[3] a);
 			function f() public {
-				assembly {
-					sstore(0, sub(0, 1))
-					sstore(1, sub(0, 2))
-					sstore(2, sub(0, 3))
-				}
+				addr[0] = address(-1);
+				addr[1] = address(-2);
+				addr[2] = address(-3);
 				E(addr);
 			}
 		}
