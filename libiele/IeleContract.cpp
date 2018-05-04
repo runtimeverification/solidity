@@ -8,6 +8,7 @@
 
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Program.h"
+#include <llvm/Config/llvm-config.h>
 
 #include <cstdio>
 #include <fstream>
@@ -131,6 +132,15 @@ bytes IeleContract::toBinary() const {
   const StringRef input = tempin_str;
   const StringRef output = tempout_str;
   const StringRef *redirects[] = {&input, &output, nullptr};
+
+#if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 5
+  #error LLVM 5 found!
+#endif
+
+#if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 6
+  #error LLVM 6 found!
+#endif
+
   int exit = ExecuteAndWait(program, args, nullptr, redirects);
   solAssert(exit == 0, "Iele assembler failed to execute on " + tempin_str);
 
