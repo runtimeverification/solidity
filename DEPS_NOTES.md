@@ -19,9 +19,11 @@ It works!
 
 ## CentOS
 
+This was already kind of broken. I added missing packages (which should be the same as Fedora) 
+but it is not working. Needs more work! 
+
 * Vagrant box: https://app.vagrantup.com/centos/boxes/7
 * Same package as Fedora: https://copr.fedorainfracloud.org/coprs/alonid/llvm-5.0.0/
-* Same issue, distro not recognised by script
 
 ## Alpine Linux
 
