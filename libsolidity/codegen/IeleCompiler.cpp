@@ -2968,6 +2968,35 @@ void IeleCompiler::appendStructDecode(
   }
 }
 
+bigint log2(bigint op) {
+  bigint result = 0;
+  while (op > 1) {
+    op >>= 1;
+    result += 1;
+  }
+  return result; 
+}
+
+void IeleCompiler::appendMul(iele::IeleLocalVariable *LValue, iele::IeleValue *LeftOperand, bigint RightOperand) {
+  if (RightOperand == 0) {
+    iele::IeleInstruction::CreateAssign(
+      LValue, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  } else if (RightOperand == 1) {
+    iele::IeleInstruction::CreateAssign(
+      LValue, LeftOperand, CompilingBlock);
+  } else if ((RightOperand & (RightOperand - 1)) == 0) {
+    // is a power of two
+    bigint bits = log2(RightOperand);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Shift,
+      LValue, LeftOperand, iele::IeleIntConstant::Create(&Context, bits), CompilingBlock);
+  } else {
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Mul,
+      LValue, LeftOperand, iele::IeleIntConstant::Create(&Context, RightOperand), CompilingBlock);
+  }
+}
+
 bool IeleCompiler::visit(const FunctionCall &functionCall) {
   // Not supported yet cases.
   if (functionCall.annotation().kind == FunctionCallKind::TypeConversion) {
@@ -3725,15 +3754,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       solAssert(false, "not supported by IELE.");
     }
  
-    iele::IeleValue *ElementSizeValue =
-      iele::IeleIntConstant::Create(&Context, elementSize);
- 
     iele::IeleLocalVariable *AddressValue =
       iele::IeleLocalVariable::Create(&Context, "array.last.element", CompilingFunction);
     // compute the data offset of the last element
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Mul, AddressValue, SizeValue, ElementSizeValue,
-      CompilingBlock);
+    appendMul(AddressValue, SizeValue, elementSize);
     // add one for the length slot
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Add, AddressValue, AddressValue,
@@ -4355,14 +4379,10 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
     solAssert(false, "not supported by IELE.");
   }
   // First compute the offset from the start of the array.
-  iele::IeleValue *ElementSizeValue =
-    iele::IeleIntConstant::Create(&Context, elementSize);
   iele::IeleLocalVariable *OffsetValue =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
   if (!type.isByteArray()) {
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, OffsetValue, IndexValue,
-        ElementSizeValue, CompilingBlock);
+    appendMul(OffsetValue, IndexValue, elementSize);
   }
   if (type.isDynamicallySized() && !type.isByteArray()) {
     // Add 1 to skip the first slot that holds the size.
@@ -4443,11 +4463,7 @@ IeleLValue *IeleCompiler::appendMappingAccess(const MappingType &type, iele::Iel
         CompilingBlock);
   } else {
     // In this case AddressValue = ExprValue + IndexValue * ValueTypeSize
-    iele::IeleValue *ValueTypeSize =
-      iele::IeleIntConstant::Create(&Context, valueType->storageSize());
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, AddressValue, IndexValue,
-        ValueTypeSize, CompilingBlock);
+    appendMul(AddressValue, IndexValue, valueType->storageSize());
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
         CompilingBlock);
@@ -5256,10 +5272,7 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
         solAssert(false, "not supported by IELE.");
       }
  
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, SizeVariable, SizeValue, 
-        iele::IeleIntConstant::Create(&Context, elementSize),
-        CompilingBlock);
+      appendMul(SizeVariable, SizeValue, elementSize);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, SizeVariable, SizeValue,
         iele::IeleIntConstant::getOne(&Context),
@@ -5313,11 +5326,9 @@ iele::IeleLocalVariable *IeleCompiler::appendArrayAllocation(
 
     SizeValue =
       iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul,
+    appendMul(
         llvm::cast<iele::IeleLocalVariable>(SizeValue),
-        iele::IeleIntConstant::Create(&Context, elementSize),
-        NumElemsValue, CompilingBlock);
+        NumElemsValue, elementSize);
     // Onr extra slot for storing length.
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add,
@@ -5541,9 +5552,7 @@ void IeleCompiler::appendCopy(
     if (!elementType->isDynamicallyEncoded() && *elementType == *toElementType) {
       iele::IeleLocalVariable *CopySize =
         iele::IeleLocalVariable::Create(&Context, "copy.size", CompilingFunction);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, CopySize, SizeVariableFrom, FromElementSizeValue,
-        CompilingBlock);
+      appendMul(CopySize, SizeVariableFrom, elementSize);
       appendIeleRuntimeCopy(ElementFrom, ElementTo, CopySize, FromLoc, ToLoc);
 
       FillLoc = iele::IeleLocalVariable::Create(&Context, "fill.address", CompilingFunction);
@@ -5552,9 +5561,7 @@ void IeleCompiler::appendCopy(
         CompilingBlock);
 
       FillSize = iele::IeleLocalVariable::Create(&Context, "fill.size", CompilingFunction);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, FillSize, SizeVariableTo, ToElementSizeValue,
-        CompilingBlock);
+      appendMul(FillSize, SizeVariableTo, toElementSize);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Sub, FillSize, FillSize, CopySize,
         CompilingBlock);
@@ -5597,8 +5604,7 @@ void IeleCompiler::appendCopy(
 
       FillLoc = ElementTo;
       FillSize = SizeVariableTo;
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, SizeVariableTo, SizeVariableTo, ToElementSizeValue);
+      appendMul(SizeVariableTo, SizeVariableTo, toElementSize);
     }
 
     iele::IeleLocalVariable *CondValue =
@@ -5834,12 +5840,7 @@ void IeleCompiler::appendArrayLengthResize(
   
     iele::IeleLocalVariable *NewEnd =
       iele::IeleLocalVariable::Create(&Context, "new.end.of.array", CompilingFunction);
-    iele::IeleIntConstant *ElementSize =
-      iele::IeleIntConstant::Create(&Context, elementSize);
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Mul, NewEnd, NewLength, 
-      ElementSize,
-      CompilingBlock);
+    appendMul(NewEnd, NewLength, elementSize);
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Add, NewEnd, NewEnd,
       LValue, CompilingBlock);

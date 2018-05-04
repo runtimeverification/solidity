@@ -217,6 +217,8 @@ private:
   IeleLValue *appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc);
   IeleLValue *appendStructAccess(const StructType &type, iele::IeleValue *ExprValue, std::string member, DataLocation Loc);
 
+  void appendMul(iele::IeleLocalVariable *LValue, iele::IeleValue *LeftOperand, bigint RightOperand);
+
   iele::IeleValue *getReferenceTypeSize(
     const Type &type, iele::IeleValue *AddressValue);
 

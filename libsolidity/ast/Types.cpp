@@ -40,7 +40,7 @@
 
 #include <limits>
 
-#define MAX_ARRAY_SIZE (bigint(1) << 256)
+#define MAX_ARRAY_SIZE ((bigint(1) << 256) - 1)
 
 using namespace std;
 using namespace dev;
