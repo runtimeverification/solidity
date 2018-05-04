@@ -4379,6 +4379,17 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleInstruction::Balance, BalanceValue, Arguments,
         CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create({BalanceValue}));
+    } else if (member == "codesize") {
+      ExprValue = appendTypeConversion(ExprValue,
+        memberAccess.expression().annotation().type,
+        Address);
+      llvm::SmallVector<iele::IeleValue *, 0> Arguments(1, ExprValue->getValue());
+      iele::IeleLocalVariable *CodeSizeValue =
+        iele::IeleLocalVariable::Create(&Context, "codesize", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Extcodesize, CodeSizeValue, Arguments,
+        CompilingBlock);
+      CompilingExpressionResult.push_back(IeleRValue::Create({CodeSizeValue}));
     } else
       solAssert(false, "IeleCompiler: invalid member for integer value");
     break;
