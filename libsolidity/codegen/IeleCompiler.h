@@ -278,6 +278,11 @@ private:
   // Helper function that appends code for deleting a struct.
   void appendStructDelete(const StructType &type, iele::IeleValue *Address);
 
+  // Helper function that appends a loop for deleting array elements.
+  void appendArrayDeleteLoop(
+      const ArrayType &type, iele::IeleLocalVariable *ElementAddressVariable,
+      iele::IeleLocalVariable *NumElementsVariable);
+
   void appendArrayLengthResize(iele::IeleValue *LValue, iele::IeleValue *NewLength);
 
   iele::IeleLocalVariable *appendBinaryOperator(

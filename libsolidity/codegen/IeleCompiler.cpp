@@ -1824,7 +1824,6 @@ void IeleCompiler::appendLValueDelete(IeleLValue *LValue, TypePointer type) {
           SizeVariable, Address,
           CompilingBlock) ;
 
-      // copy the size field
       arrayType.location() == DataLocation::Storage ?
         iele::IeleInstruction::CreateSStore(
           iele::IeleIntConstant::getZero(&Context), Address,
@@ -1845,52 +1844,7 @@ void IeleCompiler::appendLValueDelete(IeleLValue *LValue, TypePointer type) {
         Element, Address, CompilingBlock);
     }
 
-    iele::IeleBlock *LoopBodyBlock =
-      iele::IeleBlock::Create(&Context, "delete.loop", CompilingFunction);
-    CompilingBlock = LoopBodyBlock;
-
-    iele::IeleBlock *LoopExitBlock =
-      iele::IeleBlock::Create(&Context, "delete.loop.end");
-
-    iele::IeleLocalVariable *DoneValue =
-      iele::IeleLocalVariable::Create(&Context, "done", CompilingFunction);
-    iele::IeleInstruction::CreateIsZero(
-      DoneValue, SizeVariable, CompilingBlock);
-    connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
-
-    bigint elementSize;
-    switch (arrayType.location()) {
-    case DataLocation::Storage: {
-      elementSize = elementType.storageSize();
-      break;
-    }
-    case DataLocation::Memory: {
-      elementSize = elementType.memorySize();
-      break;
-    }
-    case DataLocation::CallData:
-      solAssert(false, "not supported by IELE.");
-    }
-
-    appendLValueDelete(
-        makeLValue(Element, arrayType.baseType(), arrayType.location()),
-        arrayType.baseType());
-
-    iele::IeleValue *ElementSizeValue =
-        iele::IeleIntConstant::Create(&Context, elementSize);
-
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, Element, Element,
-        ElementSizeValue,
-        CompilingBlock);
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Sub, SizeVariable, SizeVariable,
-        iele::IeleIntConstant::getOne(&Context),
-        CompilingBlock);
-
-    connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
-    LoopExitBlock->insertInto(CompilingFunction);
-    CompilingBlock = LoopExitBlock;
+    appendArrayDeleteLoop(arrayType, Element, SizeVariable);
     break;
   }
   case Type::Category::Mapping:
@@ -1974,6 +1928,57 @@ void IeleCompiler::appendStructDelete(
     appendLValueDelete(makeLValue(Member, member.type, type.location()),
                        member.type);
   }
+}
+
+void IeleCompiler::appendArrayDeleteLoop(
+    const ArrayType &type, iele::IeleLocalVariable *ElementAddressVariable,
+    iele::IeleLocalVariable *NumElementsVariable) {
+  TypePointer elementType = type.baseType();
+
+  iele::IeleBlock *LoopBodyBlock =
+    iele::IeleBlock::Create(&Context, "delete.loop", CompilingFunction);
+  CompilingBlock = LoopBodyBlock;
+
+  iele::IeleBlock *LoopExitBlock =
+    iele::IeleBlock::Create(&Context, "delete.loop.end");
+
+  iele::IeleLocalVariable *DoneValue =
+    iele::IeleLocalVariable::Create(&Context, "done", CompilingFunction);
+  iele::IeleInstruction::CreateIsZero(
+    DoneValue, NumElementsVariable, CompilingBlock);
+  connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
+
+  bigint elementSize;
+  switch (type.location()) {
+  case DataLocation::Storage: {
+    elementSize = elementType->storageSize();
+    break;
+  }
+  case DataLocation::Memory: {
+    elementSize = elementType->memorySize();
+    break;
+  }
+  case DataLocation::CallData:
+    solAssert(false, "not supported by IELE.");
+  }
+
+  appendLValueDelete(
+      makeLValue(ElementAddressVariable, type.baseType(), type.location()),
+      elementType);
+
+  iele::IeleValue *ElementSizeValue =
+      iele::IeleIntConstant::Create(&Context, elementSize);
+
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, ElementAddressVariable,
+      ElementAddressVariable, ElementSizeValue, CompilingBlock);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Sub, NumElementsVariable, NumElementsVariable,
+      iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+
+  connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
+  LoopExitBlock->insertInto(CompilingFunction);
+  CompilingBlock = LoopExitBlock;
 }
 
 bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
@@ -5792,18 +5797,12 @@ void IeleCompiler::appendArrayLengthResize(
       iele::IeleInstruction::Add, NewEnd, NewEnd,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
-    iele::IeleLocalVariable *DeleteSize =
-      iele::IeleLocalVariable::Create(&Context, "size.to.delete", CompilingFunction);
+    iele::IeleLocalVariable *DeleteLength =
+      iele::IeleLocalVariable::Create(&Context, "length.to.delete", CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Sub, DeleteSize, OldLength, NewLength,
+      iele::IeleInstruction::Sub, DeleteLength, OldLength, NewLength,
       CompilingBlock);
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Mul, DeleteSize, DeleteSize, 
-      ElementSize, CompilingBlock); 
-    appendIeleRuntimeFill(
-      NewEnd, DeleteSize,
-      iele::IeleIntConstant::getZero(&Context),
-      DataLocation::Storage);
+    appendArrayDeleteLoop(*CompilingLValueArrayType, NewEnd, DeleteLength);
   }
 
   JoinBlock->insertInto(CompilingFunction);
