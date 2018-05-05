@@ -317,7 +317,7 @@ private:
 
   iele::IeleLocalVariable *appendMemorySpill();
 
-  bool shouldCopyStorageToStorage(const IeleLValue *To, const Type &From) const;
+  bool shouldCopyStorageToStorage(const Type &ToType, const IeleLValue *To, const Type &From) const;
   bool shouldCopyMemoryToStorage(const Type &ToType, const IeleLValue *To, const Type &FromType) const;
   bool shouldCopyMemoryToMemory(const Type &ToType, const IeleLValue *To, const Type &FromType) const;
   bool shouldCopyStorageToMemory(const Type &ToType, const Type &FromType) const;

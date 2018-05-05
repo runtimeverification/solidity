@@ -1481,7 +1481,7 @@ bool IeleCompiler::visit(const Assignment &assignment) {
     // Check if we need to do a memory/storage to storage copy. Only happens when
     // assigning to a state variable of refernece type.
     RHSComponentType = RHSComponentType->mobileType();
-    if (shouldCopyStorageToStorage(LHSValue, *RHSComponentType))
+    if (shouldCopyStorageToStorage(*LHSComponentType, LHSValue, *RHSComponentType))
       appendCopyFromStorageToStorage(LHSValue, LHSComponentType, RHSValue, RHSComponentType);
     else if (shouldCopyMemoryToStorage(*LHSComponentType, LHSValue, *RHSComponentType))
       appendCopyFromMemoryToStorage(LHSValue, LHSComponentType, RHSValue, RHSComponentType);
@@ -1529,24 +1529,34 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
       TypePointer componentType = Components[i]->annotation().type;
       InitValue = appendTypeConversion(InitValue, componentType, elementType);
 
-      // Address in the new array in which we should copy the argument value.
+      // Compute lvalue in the new array in which we should assign the component
+      // value.
       iele::IeleLocalVariable *AddressValue =
         iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
       iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, AddressValue, ArrayValue,
           iele::IeleIntConstant::Create(&Context, offset), CompilingBlock);
+      IeleLValue *ElementLValue =
+        makeLValue(AddressValue, elementType, DataLocation::Memory);
 
-      // Do the copy.
-      solAssert(!elementType->dataStoredIn(DataLocation::Storage),
-                "IeleCompiler: found init value for inline array element in "
-                "storage after type conversion");
-      if (elementType->dataStoredIn(DataLocation::Memory)) {
-        appendIeleRuntimeCopy(
-            InitValue->getValue(), AddressValue,
-            iele::IeleIntConstant::Create(&Context, elementSize),
-            DataLocation::Memory, DataLocation::Memory);
+      // Do the assignment.
+      componentType = componentType->mobileType();
+      solAssert(!shouldCopyStorageToStorage(
+                    *elementType, ElementLValue, *componentType),
+                "IeleCompiler: storage to storage copy needed in "
+                "initialization of inline array.");
+      solAssert(!shouldCopyMemoryToStorage(
+                    *elementType, ElementLValue, *componentType),
+                "IeleCompiler: memory to storage copy needed in "
+                "initialization of inline array.");
+      if (shouldCopyMemoryToMemory(
+              *elementType, ElementLValue, *componentType)) {
+        appendCopyFromMemoryToMemory(
+            ElementLValue, elementType, InitValue, componentType);
       } else {
-        IeleLValue *lvalue = AddressLValue::Create(this, AddressValue, DataLocation::Memory, "loaded", elementType->sizeInRegisters());
+        IeleLValue *lvalue =
+           AddressLValue::Create(this, AddressValue, DataLocation::Memory,
+                                 "loaded", elementType->sizeInRegisters());
         lvalue->write(InitValue, CompilingBlock);
       }
 
@@ -2998,31 +3008,35 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       TypePointer memberType = functionType->parameterTypes()[i];
       InitValue = appendTypeConversion(InitValue, argType, memberType);
 
-      // Address in the new struct in which we should copy the argument value.
+      // Compute lvalue in the new struct in which we should assign the argument
+      // value.
       iele::IeleLocalVariable *AddressValue =
         iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
       iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, AddressValue, StructValue,
           iele::IeleIntConstant::Create(&Context, offset), CompilingBlock);
+      IeleLValue *MemberLValue =
+        makeLValue(AddressValue, memberType, DataLocation::Memory);
 
-      // Size of copy.
-      bigint memberSize = memberType->memorySize();
-      iele::IeleValue *SizeValue =
-        iele::IeleIntConstant::Create(&Context, memberSize);
-
-      // Do the copy.
-      solAssert(!memberType->dataStoredIn(DataLocation::Storage),
-                "IeleCompiler: found init value for struct member in storage "
-                "after type conversion");
-      if (memberType->dataStoredIn(DataLocation::Memory)) {
-        appendIeleRuntimeCopy(InitValue->getValue(), AddressValue, SizeValue,
-                              DataLocation::Memory, DataLocation::Memory);
+      // Do the assignment.
+      argType = argType->mobileType();
+      solAssert(!shouldCopyStorageToStorage(*memberType, MemberLValue, *argType),
+                "IeleCompiler: storage to storage copy needed in "
+                "initialization of dynamically allocated struct.");
+      solAssert(!shouldCopyMemoryToStorage(*memberType, MemberLValue, *argType),
+                "IeleCompiler: memory to storage copy needed in "
+                "initialization of dynamically allocated struct.");
+      if (shouldCopyMemoryToMemory(*memberType, MemberLValue, *argType)) {
+        appendCopyFromMemoryToMemory(
+            MemberLValue, memberType, InitValue, argType);
       } else {
-        IeleLValue *lvalue = AddressLValue::Create(this, AddressValue, DataLocation::Memory, "loaded", memberType->sizeInRegisters());
+        IeleLValue *lvalue =
+          AddressLValue::Create(this, AddressValue, DataLocation::Memory,
+                                "loaded", memberType->sizeInRegisters());
         lvalue->write(InitValue, CompilingBlock);
       }
 
-      offset += memberSize;
+      offset += memberType->memorySize();
     }
 
     // Return pointer to allocated struct.
@@ -3676,7 +3690,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       CompilingBlock);
 
     IeleLValue *ElementLValue = makeLValue(AddressValue, elementType, CompilingLValueArrayType->location());
-    if (shouldCopyStorageToStorage(ElementLValue, *RHSType))
+    if (shouldCopyStorageToStorage(*elementType, ElementLValue, *RHSType))
       appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
     else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))
       appendCopyFromMemoryToStorage(ElementLValue, elementType, PushedValue, RHSType);
@@ -5103,7 +5117,7 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
                type->category() == Type::Category::Struct) {
       // Add code for copy in constructor's body.
       rhsType = rhsType->mobileType();
-      if (shouldCopyStorageToStorage(LHSValue, *rhsType))
+      if (shouldCopyStorageToStorage(*type, LHSValue, *rhsType))
         appendCopyFromStorageToStorage(LHSValue, type, InitValue, rhsType);
       else if (shouldCopyMemoryToStorage(*type, LHSValue, *rhsType))
         appendCopyFromMemoryToStorage(LHSValue, type, InitValue, rhsType);
@@ -6212,10 +6226,11 @@ iele::IeleLocalVariable *IeleCompiler::appendMemorySpill() {
   return NextFree;
 }
 
-bool IeleCompiler::shouldCopyStorageToStorage(const IeleLValue *To,
+bool IeleCompiler::shouldCopyStorageToStorage(const Type &ToType, const IeleLValue *To,
                                               const Type &From) const {
   return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         From.dataStoredIn(DataLocation::Storage);
+         From.dataStoredIn(DataLocation::Storage) &&
+         ToType.dataStoredIn(DataLocation::Storage);
 }
 
 bool IeleCompiler::shouldCopyMemoryToStorage(const Type &ToType, const IeleLValue *To,
