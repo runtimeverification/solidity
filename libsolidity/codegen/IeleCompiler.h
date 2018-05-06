@@ -110,6 +110,7 @@ private:
   iele::IeleBlock *RevertBlock;
   iele::IeleBlock *RevertStatusBlock;
   iele::IeleBlock *AssertFailBlock;
+
   struct Value {
   private:
     bool isLValue;

@@ -181,6 +181,39 @@ static void transitiveClosure(std::set<const ContractDefinition *> &dependencies
   }
 }
 
+
+namespace {
+
+class RecursiveStructLocator : public ASTConstVisitor {
+public:
+  RecursiveStructLocator() : RecursiveStructFound(false) { }
+
+  virtual bool visit(const StructDefinition &structDefinition) override {
+    TypePointer type = structDefinition.type();
+    solAssert(type->category() == Type::Category::TypeType, "");
+    const TypeType &typeType = dynamic_cast<const TypeType &>(*type);
+    type = typeType.actualType();
+    solAssert(type->category() == Type::Category::Struct, "");
+    const StructType &structType = dynamic_cast<const StructType &>(*type);
+    if (structType.recursive())
+      RecursiveStructFound = true;
+    return true;
+  }
+
+  bool recursiveStructFound() const { return RecursiveStructFound; }
+
+private:
+  bool RecursiveStructFound;
+};
+
+static bool checkForRecursiveStructs(const ContractDefinition &contract) {
+  RecursiveStructLocator Locator;
+  contract.accept(Locator);
+  return Locator.recursiveStructFound();
+}
+
+} // end anonymous namespace
+
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
     const std::map<const ContractDefinition *, iele::IeleContract *> &contracts) {
@@ -190,6 +223,11 @@ void IeleCompiler::compileContract(
 
   // Create IeleContract.
   CompilingContract = iele::IeleContract::Create(&Context, getIeleNameForContract(&contract));
+
+  // Check for recursive structs. Their presence will affect how we allocate
+  // storage for the contract.
+  bool recursiveStructsFound = checkForRecursiveStructs(contract);
+  MappingType::setInfiniteKeyspaceMappingsSuppression(recursiveStructsFound);
 
   // Add IELE global variables and functions to contract's symbol table by
   // iterating over state variables and functions of this contract and its base

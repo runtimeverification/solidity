@@ -3228,14 +3228,16 @@ bigint MappingType::storageSize() const {
   }
 }
 
+bool MappingType::m_suppressedInfiniteKeyspace = false;
+
 bool MappingType::containsInfiniteMapping() const {
   return hasInfiniteKeyspace();
 }
 
 bool MappingType::hasInfiniteKeyspace() const {
-  // for now, we disable infinite keyspaces
-  //return !keyType()->getFixedBitwidth() && !valueType()->containsInfiniteMapping();
-  return false;
+  if (m_suppressedInfiniteKeyspace)
+    return false;
+  return !keyType()->getFixedBitwidth() && !valueType()->containsInfiniteMapping();
 }
 
 bool MappingType::hasHashedKeyspace() const {
