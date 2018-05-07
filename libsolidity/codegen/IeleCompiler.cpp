@@ -5554,7 +5554,8 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     RightOperand = ShiftValue;
   }
   BOOST_FALLTHROUGH; // Darwin
-  // fall through    // Fedora (NB: this NEEDS to be immediately before "case")
+  // Fedora (NB: this NEEDS to be immediately before "case")
+  // fall through    
   case Token::SHL: {
     BinOpcode = iele::IeleInstruction::Shift; 
     bigint min = 0;
@@ -5743,6 +5744,8 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       return nullptr;
     }
   }
+  BOOST_FALLTHROUGH;
+  // falls through 
   case Type::Category::Bool: {
     solAssert(*SourceType == *TargetType, "Invalid conversion for bool.");
     return Value;
