@@ -206,6 +206,7 @@ private:
   void appendInvalid(iele::IeleValue *Condition = nullptr);
   void appendRangeCheck(iele::IeleValue *Value, bigint *min, bigint *max);
   void appendRangeCheck(IeleRValue *Value, const Type &Type);
+  void appendGasLeft(void);
 
   void appendRevertBlocks(void);
 

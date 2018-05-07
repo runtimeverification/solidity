@@ -3432,6 +3432,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     CompilingExpressionResult.push_back(IeleRValue::Create(values));
     break;
   }
+  case FunctionType::Kind::GasLeft: {
+    appendGasLeft();
+    break;
+  }
   case FunctionType::Kind::External: {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
@@ -4101,6 +4105,17 @@ bool IeleCompiler::visit(const NewExpression &newExpression) {
   return false;
 }
 
+void IeleCompiler::appendGasLeft() {
+  llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+  iele::IeleLocalVariable *GasValue =
+    iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+  iele::IeleInstruction::CreateIntrinsicCall(
+    iele::IeleInstruction::Gas, GasValue, EmptyArguments,
+    CompilingBlock);
+  CompilingExpressionResult.push_back(IeleRValue::Create({GasValue}));
+}
+
+
 bool IeleCompiler::visit(const MemberAccess &memberAccess) {
    const std::string& member = memberAccess.memberName();
 
@@ -4321,13 +4336,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create({OriginValue}));
     } else if (member == "gas") {
-      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
-      iele::IeleLocalVariable *GasValue =
-        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
-      iele::IeleInstruction::CreateIntrinsicCall(
-        iele::IeleInstruction::Gas, GasValue, EmptyArguments,
-        CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({GasValue}));
+      appendGasLeft();
     } else if (member == "gasprice") {
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
       iele::IeleLocalVariable *GaspriceValue =
