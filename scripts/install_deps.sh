@@ -163,6 +163,7 @@ case $(uname -s) in
 		# see https://wiki.alpinelinux.org/wiki/Alpine_Linux_package_management#.22apk-tools_is_old.22
 		sudo apk add --upgrade apk-tools@edge
                 sudo apk update
+		# llvm5 only available in Alpine 3.7 (latest)
                 sudo apk add llvm5 llvm5-dev boost-dev build-base cmake
 
                 ;;
