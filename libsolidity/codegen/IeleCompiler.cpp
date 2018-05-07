@@ -2298,9 +2298,9 @@ void IeleCompiler::doDecode(
         if (intType.isSigned()) {
           break;
         } else {
-	}
+        }
       }
-	BOOST_FALLTHROUGH;
+      BOOST_FALLTHROUGH;
       // Falls through
       case Type::Category::Contract:
       case Type::Category::FixedBytes:
@@ -4530,7 +4530,6 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
 
             if (arguments) {
               if (arguments->size() > 0) {
-                //const FunctionType &function = FunctionType(*auxParamDest->constructor());
                 llvm::SmallVector<iele::IeleValue *, 4> AuxArguments;
 
                 // Cache ModifierDepth
@@ -5340,9 +5339,8 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
       RightOperand, CompilingBlock);
     RightOperand = ShiftValue;
   }
-  BOOST_FALLTHROUGH; // This is required on Darwin
-  // This required on Fedora (NB: needs to be IMMEDIATELY before "case" to have an effect)
-  // fall through 
+  BOOST_FALLTHROUGH; // Darwin
+  // fall through    // Fedora (NB: this NEEDS to be immediately before "case")
   case Token::SHL: {
     BinOpcode = iele::IeleInstruction::Shift; 
     bigint min = 0;

@@ -1,8 +1,7 @@
 #include "IeleIntConstant.h"
 
 
-// https://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
-
+// See: https://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
 #ifdef _WIN64
 //define something for Windows (64-bit)
 #elif _WIN32
@@ -16,12 +15,6 @@
 #elif __posix
 // POSIX
 #endif
-
-
-// On Linux:
-//#include "/usr/include/boost/format.hpp"
-// On Darwin (OSX) use this instead
-//#include "/usr/local/Cellar/boost/1.67.0_1/include/boost/format.hpp"
 
 #include "IeleContext.h"
 #include "llvm/Support/raw_ostream.h"

@@ -99,7 +99,7 @@ case $(uname -s) in
         brew update
         brew install boost
         brew install cmake
-	brew install llvm
+        brew install llvm
         if [ "$CI" = true ]; then
             brew upgrade cmake
             brew tap ethereum/ethereum
@@ -146,7 +146,7 @@ case $(uname -s) in
                     boost \
                     cmake \
                     git \
-		            llvm \
+                    llvm \
                     ethereum-git \
                 ;;
 
@@ -155,18 +155,17 @@ case $(uname -s) in
 #------------------------------------------------------------------------------
 
             "Alpine Linux")
-                #Alpine
+                #Alpine (NB: llvm5 only available in 3.7)! 
                 echo "Installing solidity dependencies on Alpine Linux."
 
+                # apk-tools may need updating
+                # See https://wiki.alpinelinux.org/wiki/Alpine_Linux_package_management#.22apk-tools_is_old.22
+                sudo apk add --upgrade apk-tools@edge
+                
                 # All our dependencies can be found in the Alpine Linux official repositories.
                 # See https://pkgs.alpinelinux.org/
-
-		# see https://wiki.alpinelinux.org/wiki/Alpine_Linux_package_management#.22apk-tools_is_old.22
-		sudo apk add --upgrade apk-tools@edge
                 sudo apk update
-		# llvm5 only available in Alpine 3.7 (latest)
                 sudo apk add llvm5 llvm5-dev boost-dev build-base cmake
-
                 ;;
 
 #------------------------------------------------------------------------------
@@ -196,7 +195,7 @@ case $(uname -s) in
                         #stretch
                         echo "Installing solidity dependencies on Debian Stretch (9.x)."
                         install_z3="libz3-dev"
-			echo "deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-5.0 main" | sudo tee /etc/apt/sources.list.d/stretch-llvm-5.0.list
+                        echo "deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-5.0 main" | sudo tee /etc/apt/sources.list.d/stretch-llvm-5.0.list
                         ;;
                     10)
                         #buster
@@ -227,7 +226,7 @@ case $(uname -s) in
                     libboost-all-dev \
                     unzip \
                     llvm-5.0\
-		            zlib1g-dev\
+                    zlib1g-dev\
                     "$install_z3"
 
 
@@ -253,10 +252,9 @@ case $(uname -s) in
                     gcc-c++ \
                     git \
                     libtool \
-		            llvm \
-		            llvm-devel \
-		            zlib-devel
-
+                    llvm \
+                    llvm-devel \
+                    zlib-devel
                 ;;
 
 #------------------------------------------------------------------------------
@@ -406,10 +404,6 @@ case $(uname -s) in
                 fi
 
                 ;;
-
-
-
-
             *)
 
 #------------------------------------------------------------------------------
