@@ -1758,7 +1758,6 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     solAssert(LValues.size() == 1, "not implemented yet");
     TypePointer type = unaryOperation.subExpression().annotation().type;
     appendLValueDelete(LValues[0], type);
-    // TODO: What is the correct expression result value for delete? 0?
     break;
   }
   default:
