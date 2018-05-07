@@ -2300,6 +2300,7 @@ void IeleCompiler::doDecode(
         } else {
 	}
       }
+	BOOST_FALLTHROUGH;
       // Falls through
       case Type::Category::Contract:
       case Type::Category::FixedBytes:
@@ -4529,8 +4530,7 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
 
             if (arguments) {
               if (arguments->size() > 0) {
-                const FunctionType &function = 
-                  FunctionType(*auxParamDest->constructor());
+                //const FunctionType &function = FunctionType(*auxParamDest->constructor());
                 llvm::SmallVector<iele::IeleValue *, 4> AuxArguments;
 
                 // Cache ModifierDepth
@@ -5342,6 +5342,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   }
   // Looks like "fallthrough comments" must be immediately before "case"
   // fall through
+    BOOST_FALLTHROUGH;
   case Token::SHL: {
     BinOpcode = iele::IeleInstruction::Shift; 
     bigint min = 0;

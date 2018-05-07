@@ -99,6 +99,7 @@ case $(uname -s) in
         brew update
         brew install boost
         brew install cmake
+	brew install llvm
         if [ "$CI" = true ]; then
             brew upgrade cmake
             brew tap ethereum/ethereum

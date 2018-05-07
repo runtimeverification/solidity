@@ -1,15 +1,28 @@
 # Working 
+
+* Darwin (caveat: needs manual intervention, see below)
 * Ubuntu
 * Arch Linux
 * Debian 
 * Fedora
 
 # Not working 
-* Darwin
 * CentOS
 * Alpine Linux
 
-# Notes
+# Caveats
+
+## Darwin
+
+After running `install_deps.sh`, the following manual steps are needed in order to build correctly
+   * in IeleIntConstant.h, replace `#include "/usr/include/boost/format.hpp"` with 
+     `#include "/usr/local/Cellar/boost/1.67.0_1/include/boost/format.hpp`
+        * TODO: can we automate this? 
+   * Use `cmake -DCMAKE_PREFIX_PATH=/usr/local/opt/llvm ..`
+        * The path to be used is obtained with `$(brew --prefix llvm)`
+        * Also see: https://embeddedartistry.com/blog/2017/2/20/installing-clangllvm-on-osx
+
+## Not working....?
 
 ## Alpine
 

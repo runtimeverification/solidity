@@ -1,5 +1,11 @@
 #include "IeleIntConstant.h"
+
+// On Linux:
 #include "/usr/include/boost/format.hpp"
+
+// On Darwin (OSX) use this instead
+//#include "/usr/local/Cellar/boost/1.67.0_1/include/boost/format.hpp"
+
 #include "IeleContext.h"
 #include "llvm/Support/raw_ostream.h"
 
