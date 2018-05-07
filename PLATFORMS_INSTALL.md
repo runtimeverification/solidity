@@ -46,7 +46,7 @@ Tried both 3.6 and 3.7 (currenly latest)
 
 ### Alpine 3.7
 
-* `lvm5` available here
+* `llvm5` available here
 * Still requires manually changing `llvm` to `llvm5` in `/usr/lib/cmake/llvm5/LLVMConfig.cmake` for `Cmake` to succeed
 * Cmake still fails  
     * ```CMake Error at /usr/lib/cmake/llvm5/LLVMExports.cmake:975 (message):
