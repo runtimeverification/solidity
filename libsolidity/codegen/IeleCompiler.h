@@ -45,7 +45,8 @@ public:
   // Compiles a contract.
   void compileContract(
       const ContractDefinition &contract,
-      const std::map<const ContractDefinition *, iele::IeleContract *> &contracts);
+      const std::map<const ContractDefinition *, iele::IeleContract *> &contracts,
+      const bytes &metadata);
 
   // Returns the compiled IeleContract.
   iele::IeleContract &assembly() const { return *CompiledContract; }

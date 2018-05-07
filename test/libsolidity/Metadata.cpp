@@ -34,7 +34,6 @@ namespace test
 
 BOOST_AUTO_TEST_SUITE(Metadata)
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(metadata_stamp, 1)
 BOOST_AUTO_TEST_CASE(metadata_stamp)
 {
 	// Check that the metadata stamp is at the end of the runtime bytecode.
@@ -62,7 +61,6 @@ BOOST_AUTO_TEST_CASE(metadata_stamp)
 	BOOST_CHECK(std::equal(expectation.begin(), expectation.end(), bytecode.end() - metadataCBORSize - 2));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(metadata_stamp_experimental, 1)
 BOOST_AUTO_TEST_CASE(metadata_stamp_experimental)
 {
 	// Check that the metadata stamp is at the end of the runtime bytecode.
