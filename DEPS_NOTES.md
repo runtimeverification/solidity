@@ -26,6 +26,12 @@ Tried both 3.6 and 3.7 (currenly latest)
 * After that, still have several compilation issues 
    * `/home/vagrant/solidity/libiele/IeleValue.h:3:34: fatal error: llvm/Support/Casting.h: No such file or directory
  #include "llvm/Support/Casting.h"`
+   * This can be bypassed by replacing with `llvm4/llvm/Support/Casting.h`
+   * however next error is 
+   ```
+   /usr/include/llvm4/llvm/Support/Casting.h:18:35: fatal error: llvm/Support/Compiler.h: No such file or directory
+     #include "llvm/Support/Compiler.h"
+   ```
 
 ### Alpine 3.7
 
