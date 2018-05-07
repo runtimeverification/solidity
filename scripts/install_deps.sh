@@ -211,10 +211,6 @@ case $(uname -s) in
                         ;;
                 esac
 
-		# Add package source for llvm-5.0
-				
-				
-
                 # Install "normal packages"
                 sudo apt-get -y update
                 sudo apt-get -y --allow-unauthenticated install \
