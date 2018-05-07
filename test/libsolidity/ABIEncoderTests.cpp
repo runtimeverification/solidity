@@ -324,7 +324,6 @@ BOOST_AUTO_TEST_CASE(storage_array_compact)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(external_function, 1)
 BOOST_AUTO_TEST_CASE(external_function)
 {
 	string sourceCode = R"(
@@ -339,9 +338,8 @@ BOOST_AUTO_TEST_CASE(external_function)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-		callContractFunction("f(uint256)", u256(0));
-		string functionIdF = asString(m_contractAddress.ref()) + asString(FixedHash<4>(dev::keccak256("f(uint256)")).ref());
-		REQUIRE_LOG_DATA(encodeLogs(functionIdF, functionIdF));
+		callContractFunction("f(uint)", u256(0));
+		REQUIRE_LOG_DATA(encodeLogs(m_contractAddress, int16_t(1), m_contractAddress, int16_t(1)));
 	)
 }
 

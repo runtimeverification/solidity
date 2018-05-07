@@ -2683,7 +2683,7 @@ bigint FunctionType::getFixedBitwidth() const
 bigint FunctionType::storageSize() const
 {
 	if (m_kind == Kind::External || m_kind == Kind::Internal)
-		return 1;
+		return sizeInRegisters();
 	else
 		solAssert(false, "Storage size of non-storable function type requested.");
 }
@@ -2735,6 +2735,122 @@ unsigned FunctionType::sizeOnStack() const
 	if (bound())
 		size += m_parameterTypes.front()->sizeOnStack();
 	return size;
+}
+
+unsigned FunctionType::sizeInRegisters() const
+{
+	Kind kind;
+	if (m_kind == Kind::SetGas || m_kind == Kind::SetValue)
+	{
+		solAssert(m_returnParameterTypes.size() == 1, "");
+		kind = dynamic_cast<FunctionType const&>(*m_returnParameterTypes.front()).m_kind;
+	} else {
+		kind = m_kind;
+	}
+
+	unsigned size = 0;
+
+	switch(kind)
+	{
+	case Kind::External:
+	case Kind::CallCode:
+		size = 2;
+		break;
+	case Kind::BareCall:
+	case Kind::BareCallCode:
+	case Kind::BareDelegateCall:
+	case Kind::Internal:
+	case Kind::DelegateCall:
+	case Kind::ArrayPush:
+	case Kind::ByteArrayPush:
+		size = 1;
+		break;
+	default:
+		break;
+	}
+
+	if (m_gasSet)
+		size++;
+	if (m_valueSet)
+		size++;
+	if (bound())
+		size += m_parameterTypes.front()->sizeInRegisters();
+	return size;
+}
+
+unsigned FunctionType::gasIndex() const
+{	
+	Kind kind;
+	if (m_kind == Kind::SetGas || m_kind == Kind::SetValue)
+	{
+		solAssert(m_returnParameterTypes.size() == 1, "");
+		kind = dynamic_cast<FunctionType const&>(*m_returnParameterTypes.front()).m_kind;
+	} else {
+		kind = m_kind;
+	}
+
+	unsigned index = 0;
+
+	switch(kind)
+	{
+	case Kind::External:
+	case Kind::CallCode:
+		index = 2;
+		break;
+	case Kind::BareCall:
+	case Kind::BareCallCode:
+	case Kind::BareDelegateCall:
+	case Kind::Internal:
+	case Kind::DelegateCall:
+	case Kind::ArrayPush:
+	case Kind::ByteArrayPush:
+        case Kind::Creation:
+		index = 1;
+		break;
+	default:
+		break;
+	}
+
+        return index;
+}
+
+unsigned FunctionType::valueIndex() const
+{
+	Kind kind;
+	if (m_kind == Kind::SetGas || m_kind == Kind::SetValue)
+	{
+		solAssert(m_returnParameterTypes.size() == 1, "");
+		kind = dynamic_cast<FunctionType const&>(*m_returnParameterTypes.front()).m_kind;
+	} else {
+		kind = m_kind;
+	}
+
+	unsigned index = 0;
+
+	switch(kind)
+	{
+	case Kind::External:
+	case Kind::CallCode:
+		index = 2;
+		break;
+	case Kind::BareCall:
+	case Kind::BareCallCode:
+	case Kind::BareDelegateCall:
+	case Kind::Internal:
+	case Kind::DelegateCall:
+	case Kind::ArrayPush:
+	case Kind::ByteArrayPush:
+        case Kind::Creation:
+		index = 1;
+		break;
+	default:
+		break;
+	}
+
+	if (m_gasSet)
+		index++;
+
+        return index;
 }
 
 FunctionTypePointer FunctionType::interfaceFunctionType() const
