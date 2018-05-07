@@ -1,8 +1,24 @@
 #include "IeleIntConstant.h"
 
-// On Linux:
-#include "/usr/include/boost/format.hpp"
 
+
+#ifdef _WIN64
+//define something for Windows (64-bit)
+#elif _WIN32
+//define something for Windows (32-bit)
+#elif __APPLE__
+  #include "/usr/local/Cellar/boost/1.67.0_1/include/boost/format.hpp"
+#elif __linux
+  #include "/usr/include/boost/format.hpp"
+#elif __unix // all unices not caught above
+// Unix
+#elif __posix
+// POSIX
+#endif
+
+
+// On Linux:
+//#include "/usr/include/boost/format.hpp"
 // On Darwin (OSX) use this instead
 //#include "/usr/local/Cellar/boost/1.67.0_1/include/boost/format.hpp"
 
