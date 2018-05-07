@@ -1,6 +1,7 @@
 #include "IeleIntConstant.h"
 
 
+// https://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
 
 #ifdef _WIN64
 //define something for Windows (64-bit)
