@@ -190,6 +190,7 @@ case $(uname -s) in
                     8)
                         #jessie
                         echo "Installing solidity dependencies on Debian Jesse (8.x)."
+                        echo "deb http://apt.llvm.org/jessie/ llvm-toolchain-stretch-5.0 main" | sudo tee /etc/apt/sources.list.d/jessie-llvm-5.0.list
                         ;;
                     9)
                         #stretch
@@ -201,6 +202,7 @@ case $(uname -s) in
                         #buster
                         echo "Installing solidity dependencies on Debian Buster (10.x)."
                         install_z3="libz3-dev"
+                        # llvm5 not available here??
                         ;;
                     *)
                         #other Debian
@@ -208,6 +210,7 @@ case $(uname -s) in
                         echo "ERROR - This might not work, but we are trying anyway."
                         echo "Drop us a message at https://gitter.im/ethereum/solidity-dev"
                         install_z3="libz3-dev"
+                        # llvm5 not available here??
                         ;;
                 esac
 
