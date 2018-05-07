@@ -1174,7 +1174,6 @@ BOOST_AUTO_TEST_CASE(multi_level_mapping)
 	testContractAgainstCpp("f(uint,uint,uint)", f, u256(5), u256(4), u256(0));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(structs, 1)
 BOOST_AUTO_TEST_CASE(structs)
 {
 	char const* sourceCode = R"(
@@ -1214,7 +1213,6 @@ BOOST_AUTO_TEST_CASE(structs)
 	ABI_CHECK(callContractFunction("check()"), encodeArgs(true));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_reference, 1)
 BOOST_AUTO_TEST_CASE(struct_reference)
 {
 	char const* sourceCode = R"(
@@ -4101,7 +4099,6 @@ BOOST_AUTO_TEST_CASE(bytes_length_member)
 	ABI_CHECK(callContractFunction("getLength()"), encodeArgs(4+32+32));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_copy, 1)
 BOOST_AUTO_TEST_CASE(struct_copy)
 {
 	char const* sourceCode = R"(
@@ -10532,7 +10529,6 @@ BOOST_AUTO_TEST_CASE(include_creation_bytecode_only_once)
 	);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(recursive_structs, 1)
 BOOST_AUTO_TEST_CASE(recursive_structs)
 {
 	char const* sourceCode = R"(
@@ -10553,6 +10549,27 @@ BOOST_AUTO_TEST_CASE(recursive_structs)
 	)";
 	compileAndRun(sourceCode, 0, "C");
 	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(1)));
+}
+
+BOOST_AUTO_TEST_CASE(recursive_struct_copy)
+{
+	char const* sourceCode = R"(
+		contract C {
+			struct S {
+				S[] x;
+			}
+			S sstorage;
+			function f() returns (uint) {
+				S memory s;
+				s.x = new S[](10);
+                s.x[5] = S(new S[](100));
+				sstorage = s;
+				return s.x[5].x.length;
+			}
+		}
+	)";
+	compileAndRun(sourceCode, 0, "C");
+	ABI_CHECK(callContractFunction("f()"), encodeArgs(u256(100)));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(invalid_instruction, 1)

@@ -220,6 +220,7 @@ public:
 	/// @returns the number of memory slots required to hold this value in memory.
 	virtual bigint memorySize() const { return storageSize(); }
 	/// @returns true if the type contains a mapping with inifinite keyspace as a subtype.
+	/// Should not be called on a recursive struct type.
 	virtual bool containsInfiniteMapping() const { return false; }
 	/// Multiple small types can be packed into a single storage slot. If such a packing is possible
 	/// this function @returns the size in bytes smaller than 32. Data is moved to the next slot if
@@ -1152,8 +1153,22 @@ public:
 	virtual bigint getFixedBitwidth() const override;
 	virtual bigint storageSize() const override;
 	virtual bool containsInfiniteMapping() const override;
+
+	/// The following methods query the cardinality of the mapping's keyspace.
+	/// They cannot both return true for the same mapping. If they both return
+	/// false, the cardinality is finite and key hashing is required.
+
+	/// @returns true if the mapping has an infite keyspace and key hashing is not
+	/// required.
 	bool hasInfiniteKeyspace() const;
+	/// @returns true if the mapping has an infite keyspace and key hashing is
+	/// required.
 	bool hasHashedKeyspace() const;
+
+	/// The following method suppresses any mapping's keyspace to be hashed in
+	/// case it is infinite.
+	static void setInfiniteKeyspaceMappingsSuppression(bool suppress) { m_suppressedInfiniteKeyspace = suppress; }
+
 	/// Cannot be stored in memory, but just in case.
 	virtual bool hasSimpleZeroValueInMemory() const override { solAssert(false, ""); }
 
@@ -1163,6 +1178,7 @@ public:
 private:
 	TypePointer m_keyType;
 	TypePointer m_valueType;
+	static bool m_suppressedInfiniteKeyspace;
 };
 
 /**

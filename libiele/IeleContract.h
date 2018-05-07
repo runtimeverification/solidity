@@ -49,6 +49,8 @@ private:
 
   // IELE runtime related.
   bool IncludeMemoryRuntime;
+  bool IncludeStorageRuntime;
+  bigint NextFreePtrAddress;
   void printRuntime(llvm::raw_ostream &OS, unsigned indent = 0) const;
 
   // IeleContract ctor - If the (optional) IeleContract argument is specified,
@@ -72,6 +74,14 @@ public:
   bool getIncludeMemoryRuntime() const { return IncludeMemoryRuntime; }
   void setIncludeMemoryRuntime(bool includeMemoryRuntime) {
     IncludeMemoryRuntime = includeMemoryRuntime;
+  }
+
+  bool getIncludeStorageRuntime() const { return IncludeStorageRuntime; }
+  void setIncludeStorageRuntime(bool includeStorageRuntime) {
+    IncludeStorageRuntime = includeStorageRuntime;
+  }
+  void setStorageRuntimeNextFreePtrAddress(bigint nextFreePtrAddress) {
+    NextFreePtrAddress = nextFreePtrAddress;
   }
 
   // Get the underlying elements of the IeleContract.
