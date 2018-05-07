@@ -4,7 +4,7 @@
 * Debian 
 * Fedora
 
-# Not woring 
+# Not working 
 * Darwin
 * CentOS
 * Alpine Linux
@@ -34,6 +34,6 @@ Tried both 3.6 and 3.7 (currenly latest)
 * Cmake still fails  
     * ```CMake Error at /usr/lib/cmake/llvm5/LLVMExports.cmake:975 (message):
          The imported target "LLVMDemangle" references the file "/usr/lib/llvm5/lib/libLLVMDemangle.a"
-         but this file does not exist.  Possible reasons include... ```
+         but this file does not exist. Possible reasons include... ``` (broken package etc.) 
     * Looked for it in file system but does not exist
     * No info online
