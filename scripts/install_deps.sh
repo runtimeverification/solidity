@@ -163,7 +163,7 @@ case $(uname -s) in
 		# see https://wiki.alpinelinux.org/wiki/Alpine_Linux_package_management#.22apk-tools_is_old.22
 		sudo apk add --upgrade apk-tools@edge
                 sudo apk update
-                sudo apk add llvm llvm-dev boost-dev build-base cmake
+                sudo apk add llvm5 llvm5-dev boost-dev build-base cmake
 
                 ;;
 
