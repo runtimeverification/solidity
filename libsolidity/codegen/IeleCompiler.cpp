@@ -5340,9 +5340,9 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
       RightOperand, CompilingBlock);
     RightOperand = ShiftValue;
   }
-  // Looks like "fallthrough comments" must be immediately before "case"
-  // fall through
-    BOOST_FALLTHROUGH;
+  BOOST_FALLTHROUGH; // This is required on Darwin
+  // This required on Fedora (NB: needs to be IMMEDIATELY before "case" to have an effect)
+  // fall through 
   case Token::SHL: {
     BinOpcode = iele::IeleInstruction::Shift; 
     bigint min = 0;
