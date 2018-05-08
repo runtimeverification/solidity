@@ -58,7 +58,8 @@ if (NOT LLVM_FOUND)
 endif()
 
 if (NOT LLVM_FOUND) 
-	find_package(LLVM 4.0.0 REQUIRED CONFIG)	
+	find_package(LLVM 4.0.0 REQUIRED CONFIG)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I /usr/include/llvm4")	
 endif()
 
 eth_show_dependency(LLVM LLVM)
