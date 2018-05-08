@@ -189,19 +189,18 @@ case $(uname -s) in
                     8)
                         #jessie
                         echo "Installing solidity dependencies on Debian Jesse (8.x)."
-                        echo "deb http://apt.llvm.org/jessie/ llvm-toolchain-stretch-5.0 main" | sudo tee /etc/apt/sources.list.d/jessie-llvm-5.0.list
+                        echo "deb http://ftp.debian.org/debian jessie-backports main" | sudo tee /etc/apt/sources.list.d/jessie-backports.list
                         ;;
                     9)
                         #stretch
                         echo "Installing solidity dependencies on Debian Stretch (9.x)."
                         install_z3="libz3-dev"
-                        echo "deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-5.0 main" | sudo tee /etc/apt/sources.list.d/stretch-llvm-5.0.list
+                        echo "deb http://ftp.debian.org/debian stretch-backports main" | sudo tee /etc/apt/sources.list.d/stretch-backports.list
                         ;;
                     10)
                         #buster
                         echo "Installing solidity dependencies on Debian Buster (10.x)."
                         install_z3="libz3-dev"
-                        # llvm5 not available here??
                         ;;
                     *)
                         #other Debian
@@ -215,7 +214,7 @@ case $(uname -s) in
 
                 # Install "normal packages"
                 sudo apt-get -y update
-                sudo apt-get -y --allow-unauthenticated install \
+                sudo apt-get -y install \
                     build-essential \
                     cmake \
                     g++ \
