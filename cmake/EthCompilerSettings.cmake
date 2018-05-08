@@ -27,7 +27,11 @@ if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MA
 
 	# Use ISO C++11 standard language.
 	set(CMAKE_CXX_FLAGS -std=c++11)
-
+	
+	# NOTE: this turned out to be necessary in only one case, Alpine Linux 3.6. 
+	#       Not sure whether this is the right place for this?
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I /usr/include/llvm4")
+	
 	# Enables all the warnings about constructions that some users consider questionable,
 	# and that are easy to avoid.  Also enable some extra warning flags that are not
 	# enabled by -Wall.   Finally, treat at warnings-as-errors, which forces developers

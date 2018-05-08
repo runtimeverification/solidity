@@ -154,8 +154,7 @@ case $(uname -s) in
 # Alpine Linux
 #------------------------------------------------------------------------------
 
-            "Alpine Linux")
-                #Alpine (NB: llvm5 only available in 3.7)! 
+            "Alpine Linux") 
                 echo "Installing solidity dependencies on Alpine Linux."
 
                 # apk-tools may need updating
@@ -165,7 +164,7 @@ case $(uname -s) in
                 # All our dependencies can be found in the Alpine Linux official repositories.
                 # See https://pkgs.alpinelinux.org/
                 sudo apk update
-                sudo apk add llvm5 llvm5-dev boost-dev build-base cmake
+                sudo apk add llvm llvm-dev zlib zlib-dev boost-dev build-base cmake
                 ;;
 
 #------------------------------------------------------------------------------

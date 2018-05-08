@@ -43,6 +43,7 @@ find_package(Boost 1.54.0 QUIET REQUIRED COMPONENTS regex filesystem unit_test_f
 eth_show_dependency(Boost boost)
 
 ## we use some of LLVM's libraries for the IELE backend
+## TODO: this should not just require version 5; instead, 4, 5 or 5 should be allowed!
 find_package(LLVM 5.0.0 QUIET REQUIRED CONFIG)
 
 eth_show_dependency(LLVM LLVM)

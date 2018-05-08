@@ -145,7 +145,7 @@ bytes IeleContract::toBinary() const {
   const StringRef input = tempin_str;
   const StringRef output = tempout_str;
 
-#if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 5
+#if defined(LLVM_VERSION_MAJOR) && ((LLVM_VERSION_MAJOR == 4) || (LLVM_VERSION_MAJOR == 5))
   const StringRef *redirects[] = {&input, &output, nullptr};
 #endif
 
