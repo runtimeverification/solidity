@@ -44,8 +44,8 @@ eth_show_dependency(Boost boost)
 
 ## If different version present, take the biggest
 ## See https://stackoverflow.com/a/44970744
-SET(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
-SET(CMAKE_FIND_PACKAGE_SORT_DIRECTION DEC)
+set(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
+
 
 ## we use some of LLVM's libraries for the IELE backend
 find_package(LLVM QUIET REQUIRED CONFIG)
