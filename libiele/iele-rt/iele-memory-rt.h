@@ -5,7 +5,7 @@ entry:
   // note that the address 1 of memory is reserved for a pointer to
   // one less than last allocated memory location
   %last.allocd = load 1
-  %ptr = add %last.allocd, 2
+  %next.free.ptr = add %last.allocd, 2
 
   // compute new last allocd address
   %last.allocd = add %last.allocd, %size
@@ -13,8 +13,8 @@ entry:
   // allocate
   store %last.allocd, 1
 
-  // return the address of the header
-  ret %ptr
+  // return the address of the first slot of newly allocated memory
+  ret %next.free.ptr
 }
 
 define @ielert.memory.fill(%to, %size, %data) {

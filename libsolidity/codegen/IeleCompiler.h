@@ -95,6 +95,7 @@ public:
   friend class AddressLValue;
   friend class ByteArrayLValue;
   friend class ArrayLengthLValue;
+  friend class RecursiveStructLValue;
 
 private:
   iele::IeleContract *CompiledContract;
@@ -109,6 +110,7 @@ private:
   iele::IeleBlock *RevertBlock;
   iele::IeleBlock *RevertStatusBlock;
   iele::IeleBlock *AssertFailBlock;
+
   struct Value {
   private:
     bool isLValue;
@@ -227,6 +229,10 @@ private:
   // Helper function for memory struct allocation.
   iele::IeleLocalVariable *appendStructAllocation(const StructType &type);
 
+  // Helper function for a recursive struct allocation in storage.
+  iele::IeleLocalVariable *appendRecursiveStructAllocation(
+      const StructType &type);
+
   // Helper functions for copying a reference type to a storage location.
   void appendCopyFromStorageToStorage(
       IeleLValue *To, TypePointer ToType, IeleRValue *From, TypePointer FromType);
@@ -242,7 +248,20 @@ private:
     TypePointer ToType, IeleRValue *From, TypePointer FromType);
 
   void appendCopy(
-      IeleLValue *To, TypePointer ToType, IeleRValue *From, TypePointer FromType, DataLocation ToLoc, DataLocation FromLoc);
+      IeleLValue *To, TypePointer ToType, IeleRValue *From,
+      TypePointer FromType, DataLocation ToLoc, DataLocation FromLoc);
+
+  // Infrastructure for copying recursive structs.
+  std::map<std::string, std::map<std::string, iele::IeleFunction *>>
+    RecursiveStructCopiers;
+  iele::IeleFunction *getRecursiveStructCopier(
+      const StructType &type, DataLocation FromLoc,
+      const StructType &toType, DataLocation ToLoc);
+
+  // Helper function that appends code for copying a struct.
+  void appendStructCopy(
+      const StructType &type, iele::IeleValue *Address, DataLocation FromLoc,
+      const StructType &toType, iele::IeleValue *ToAddress, DataLocation ToLoc);
 
   void appendAccessorFunction(const VariableDeclaration *stateVariable);
 
@@ -252,6 +271,19 @@ private:
   IeleLValue *makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc, iele::IeleValue *Offset = nullptr);
 
   void appendLValueDelete(IeleLValue *LValue, TypePointer Type);
+
+  // Infrastructure for deleting recursive structs.
+  std::map<std::string, iele::IeleFunction *> RecursiveStructDestructors;
+  iele::IeleFunction *getRecursiveStructDestructor(const StructType &type);
+
+  // Helper function that appends code for deleting a struct.
+  void appendStructDelete(const StructType &type, iele::IeleValue *Address);
+
+  // Helper function that appends a loop for deleting array elements.
+  void appendArrayDeleteLoop(
+      const ArrayType &type, iele::IeleLocalVariable *ElementAddressVariable,
+      iele::IeleLocalVariable *NumElementsVariable);
+
   void appendArrayLengthResize(iele::IeleValue *LValue, iele::IeleValue *NewLength);
 
   iele::IeleLocalVariable *appendBinaryOperator(
@@ -291,7 +323,7 @@ private:
 
   iele::IeleLocalVariable *appendMemorySpill();
 
-  bool shouldCopyStorageToStorage(const IeleLValue *To, const Type &From) const;
+  bool shouldCopyStorageToStorage(const Type &ToType, const IeleLValue *To, const Type &From) const;
   bool shouldCopyMemoryToStorage(const Type &ToType, const IeleLValue *To, const Type &FromType) const;
   bool shouldCopyMemoryToMemory(const Type &ToType, const IeleLValue *To, const Type &FromType) const;
   bool shouldCopyStorageToMemory(const Type &ToType, const Type &FromType) const;
@@ -307,6 +339,8 @@ private:
   // management runtime and indicate that the runtime should be included as part
   // of the compiling contract.
   iele::IeleLocalVariable *appendIeleRuntimeAllocateMemory(
+      iele::IeleValue *NumSlots);
+  iele::IeleLocalVariable *appendIeleRuntimeAllocateStorage(
       iele::IeleValue *NumSlots);
   void appendIeleRuntimeFill(
       iele::IeleValue *To, iele::IeleValue *NumSlots, iele::IeleValue *Value,
@@ -334,12 +368,31 @@ private:
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, IeleLValue *ArgValue,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, bool appendWidths, bool BigEndian);
+    TypePointer type, bool appendWidths, bool bigEndian);
   void doDecode(
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, IeleLValue *StoreAt,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
     TypePointer type);
+
+  // Infrastructure for encoding/decoding recursive structs.
+  std::map<std::string, std::map<bool, std::map<bool, iele::IeleFunction *>>>
+    RecursiveStructEncoders;
+  iele::IeleFunction *getRecursiveStructEncoder(
+      const StructType &type, bool appendWidths, bool bigEndian);
+  std::map<std::string, iele::IeleFunction *> RecursiveStructDecoders;
+  iele::IeleFunction *getRecursiveStructDecoder(const StructType &type);
+
+  // Helper functions that append code for encoding/decoding a struct.
+  void appendStructEncode(
+      const StructType &type, iele::IeleValue *Address,
+      iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
+      iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
+      bool appendWidths, bool bigEndian);
+  void appendStructDecode(
+      const StructType &type, iele::IeleValue *Address,
+      iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
+      iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos);
 
   void appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value);
 };

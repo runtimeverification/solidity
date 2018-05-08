@@ -181,6 +181,39 @@ static void transitiveClosure(std::set<const ContractDefinition *> &dependencies
   }
 }
 
+
+namespace {
+
+class RecursiveStructLocator : public ASTConstVisitor {
+public:
+  RecursiveStructLocator() : RecursiveStructFound(false) { }
+
+  virtual bool visit(const StructDefinition &structDefinition) override {
+    TypePointer type = structDefinition.type();
+    solAssert(type->category() == Type::Category::TypeType, "");
+    const TypeType &typeType = dynamic_cast<const TypeType &>(*type);
+    type = typeType.actualType();
+    solAssert(type->category() == Type::Category::Struct, "");
+    const StructType &structType = dynamic_cast<const StructType &>(*type);
+    if (structType.recursive())
+      RecursiveStructFound = true;
+    return true;
+  }
+
+  bool recursiveStructFound() const { return RecursiveStructFound; }
+
+private:
+  bool RecursiveStructFound;
+};
+
+static bool checkForRecursiveStructs(const ContractDefinition &contract) {
+  RecursiveStructLocator Locator;
+  contract.accept(Locator);
+  return Locator.recursiveStructFound();
+}
+
+} // end anonymous namespace
+
 void IeleCompiler::compileContract(
     const ContractDefinition &contract,
     const std::map<const ContractDefinition *, iele::IeleContract *> &contracts) {
@@ -190,6 +223,11 @@ void IeleCompiler::compileContract(
 
   // Create IeleContract.
   CompilingContract = iele::IeleContract::Create(&Context, getIeleNameForContract(&contract));
+
+  // Check for recursive structs. Their presence will affect how we allocate
+  // storage for the contract.
+  bool recursiveStructsFound = checkForRecursiveStructs(contract);
+  MappingType::setInfiniteKeyspaceMappingsSuppression(recursiveStructsFound);
 
   // Add IELE global variables and functions to contract's symbol table by
   // iterating over state variables and functions of this contract and its base
@@ -256,6 +294,7 @@ void IeleCompiler::compileContract(
     most_derived = false;
   }
 
+  // Add functions from imported libraries.
   std::set<ContractDefinition const*> dependencies = contract.annotation().contractDependencies;
   transitiveClosure(dependencies);
   for (auto dep : dependencies) {
@@ -371,6 +410,7 @@ void IeleCompiler::compileContract(
     CompilingFunction = nullptr;
   }
 
+  // Visit functions from imported libraries.
   for (auto dep : dependencies) {
     if (dep->isLibrary()) {
       for (const FunctionDefinition *function : dep->definedFunctions()) {
@@ -397,6 +437,27 @@ void IeleCompiler::compileContract(
       }
       appendAccessorFunction(stateVariable);
     }
+  }
+
+  // If we have to include the runtime storage, append code that initializes
+  // @ielert.storage.next.free global variable at the start of the constructor.
+  if (CompilingContract->getIncludeStorageRuntime()) {
+    CompilingContract->setStorageRuntimeNextFreePtrAddress(NextStorageAddress);
+    iele::IeleValueSymbolTable *ST =
+      CompilingContract->getIeleValueSymbolTable();
+    solAssert(ST,
+              "IeleCompiler: failed to access compiling contract's symbol "
+              "table.");
+    iele::IeleFunction *InitFunction =
+       llvm::dyn_cast<iele::IeleFunction>(ST->lookup("init"));
+    solAssert(InitFunction,
+              "IeleCompiler: failed to find init function in compiling "
+              "contract's symbol table");
+    iele::IeleGlobalVariable *NextFree =
+      iele::IeleGlobalVariable::Create(&Context, "ielert.storage.next.free");
+    iele::IeleInstruction::CreateSStore(
+        iele::IeleIntConstant::Create(&Context, NextStorageAddress + 1),
+        NextFree, &InitFunction->front().front());
   }
 
   // Store compilation result.
@@ -1458,7 +1519,7 @@ bool IeleCompiler::visit(const Assignment &assignment) {
     // Check if we need to do a memory/storage to storage copy. Only happens when
     // assigning to a state variable of refernece type.
     RHSComponentType = RHSComponentType->mobileType();
-    if (shouldCopyStorageToStorage(LHSValue, *RHSComponentType))
+    if (shouldCopyStorageToStorage(*LHSComponentType, LHSValue, *RHSComponentType))
       appendCopyFromStorageToStorage(LHSValue, LHSComponentType, RHSValue, RHSComponentType);
     else if (shouldCopyMemoryToStorage(*LHSComponentType, LHSValue, *RHSComponentType))
       appendCopyFromMemoryToStorage(LHSValue, LHSComponentType, RHSValue, RHSComponentType);
@@ -1506,24 +1567,34 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
       TypePointer componentType = Components[i]->annotation().type;
       InitValue = appendTypeConversion(InitValue, componentType, elementType);
 
-      // Address in the new array in which we should copy the argument value.
+      // Compute lvalue in the new array in which we should assign the component
+      // value.
       iele::IeleLocalVariable *AddressValue =
         iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
       iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, AddressValue, ArrayValue,
           iele::IeleIntConstant::Create(&Context, offset), CompilingBlock);
+      IeleLValue *ElementLValue =
+        makeLValue(AddressValue, elementType, DataLocation::Memory);
 
-      // Do the copy.
-      solAssert(!elementType->dataStoredIn(DataLocation::Storage),
-                "IeleCompiler: found init value for inline array element in "
-                "storage after type conversion");
-      if (elementType->dataStoredIn(DataLocation::Memory)) {
-        appendIeleRuntimeCopy(
-            InitValue->getValue(), AddressValue,
-            iele::IeleIntConstant::Create(&Context, elementSize),
-            DataLocation::Memory, DataLocation::Memory);
+      // Do the assignment.
+      componentType = componentType->mobileType();
+      solAssert(!shouldCopyStorageToStorage(
+                    *elementType, ElementLValue, *componentType),
+                "IeleCompiler: storage to storage copy needed in "
+                "initialization of inline array.");
+      solAssert(!shouldCopyMemoryToStorage(
+                    *elementType, ElementLValue, *componentType),
+                "IeleCompiler: memory to storage copy needed in "
+                "initialization of inline array.");
+      if (shouldCopyMemoryToMemory(
+              *elementType, ElementLValue, *componentType)) {
+        appendCopyFromMemoryToMemory(
+            ElementLValue, elementType, InitValue, componentType);
       } else {
-        IeleLValue *lvalue = AddressLValue::Create(this, AddressValue, DataLocation::Memory, "loaded", elementType->sizeInRegisters());
+        IeleLValue *lvalue =
+           AddressLValue::Create(this, AddressValue, DataLocation::Memory,
+                                 "loaded", elementType->sizeInRegisters());
         lvalue->write(InitValue, CompilingBlock);
       }
 
@@ -1697,18 +1768,34 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
   return false;
 }
 
-IeleLValue *IeleCompiler::makeLValue(iele::IeleValue *Address, TypePointer type, DataLocation Loc, iele::IeleValue *Offset) {
+IeleLValue *IeleCompiler::makeLValue(
+    iele::IeleValue *Address, TypePointer type, DataLocation Loc,
+    iele::IeleValue *Offset) {
   if (Offset) {
     return ByteArrayLValue::Create(this, Address, Offset, Loc);
   }
-  if (type->isValueType() || (type->isDynamicallySized() && Loc == DataLocation::Memory)) {
+
+  if (type->isValueType() ||
+      (type->isDynamicallySized() && Loc == DataLocation::Memory)) {
     if (auto arrayType = dynamic_cast<const ArrayType *>(type.get())) {
       if (arrayType->isByteArray()) {
         return ReadOnlyLValue::Create(IeleRValue::Create({Address}));
       }
     }
-    return AddressLValue::Create(this, Address, Loc, "loaded", type->sizeInRegisters());
+    return AddressLValue::Create(this, Address, Loc, "loaded",
+                                 type->sizeInRegisters());
   }
+
+  if (!llvm::isa<iele::IeleGlobalVariable>(Address) &&
+      type->category() == Type::Category::Struct &&
+      Loc == DataLocation::Storage) {
+    const StructType &structType = dynamic_cast<const StructType &>(*type);
+    if (structType.recursive()) {
+      return RecursiveStructLValue::Create(
+                 IeleRValue::Create({Address}), structType, this);
+    }
+  }
+
   return ReadOnlyLValue::Create(IeleRValue::Create({Address}));
 }
 
@@ -1735,33 +1822,19 @@ void IeleCompiler::appendLValueDelete(IeleLValue *LValue, TypePointer type) {
   switch (type->category()) {
   case Type::Category::Struct: {
     const StructType &structType = dynamic_cast<const StructType &>(*type);
-    for (const auto &member : structType.members(nullptr)) {
-      // First compute the offset from the start of the struct.
-      bigint offset;
-      switch (structType.location()) {
-      case DataLocation::Storage: {
-        const auto& offsets = structType.storageOffsetsOfMember(member.name);
-        offset = offsets.first;
-        break;
-      }
-      case DataLocation::Memory: {
-        offset = structType.memoryOffsetOfMember(member.name);
-        break;
-      case DataLocation::CallData: 
-        solAssert(false, "Call data not supported in IELE");
-      }
-      }
 
-      iele::IeleLocalVariable *Member =
-        iele::IeleLocalVariable::Create(&Context, "fill.address", CompilingFunction);
-      iele::IeleValue *OffsetValue =
-        iele::IeleIntConstant::Create(&Context, offset);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, Member, Address, OffsetValue,
-        CompilingBlock);
-
-      appendLValueDelete(makeLValue(Member, member.type, structType.location()), member.type);
+    if (structType.recursive()) {
+      // Call the recursive destructor.
+      iele::IeleFunction *Destructor = getRecursiveStructDestructor(structType);
+      llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
+      llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, Address);
+      iele::IeleInstruction::CreateInternalCall(
+          EmptyResults, Destructor, Arguments, CompilingBlock);
+      break;
     }
+
+    // Append the code for deleting the struct members.
+    appendStructDelete(structType, Address);
     break;
   }
   case Type::Category::Array: {
@@ -1788,7 +1861,6 @@ void IeleCompiler::appendLValueDelete(IeleLValue *LValue, TypePointer type) {
           SizeVariable, Address,
           CompilingBlock) ;
 
-      // copy the size field
       arrayType.location() == DataLocation::Storage ?
         iele::IeleInstruction::CreateSStore(
           iele::IeleIntConstant::getZero(&Context), Address,
@@ -1809,50 +1881,7 @@ void IeleCompiler::appendLValueDelete(IeleLValue *LValue, TypePointer type) {
         Element, Address, CompilingBlock);
     }
 
-    iele::IeleBlock *LoopBodyBlock =
-      iele::IeleBlock::Create(&Context, "delete.loop", CompilingFunction);
-    CompilingBlock = LoopBodyBlock;
-
-    iele::IeleBlock *LoopExitBlock =
-      iele::IeleBlock::Create(&Context, "delete.loop.end");
-
-    iele::IeleLocalVariable *DoneValue =
-      iele::IeleLocalVariable::Create(&Context, "done", CompilingFunction);
-    iele::IeleInstruction::CreateIsZero(
-      DoneValue, SizeVariable, CompilingBlock);
-    connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
-
-    bigint elementSize;
-    switch (arrayType.location()) {
-    case DataLocation::Storage: {
-      elementSize = elementType.storageSize();
-      break;
-    }
-    case DataLocation::Memory: {
-      elementSize = elementType.memorySize();
-      break;
-    }
-    case DataLocation::CallData:
-      solAssert(false, "not supported by IELE.");
-    }
-
-    appendLValueDelete(makeLValue(Element, arrayType.baseType(), arrayType.location()), arrayType.baseType());
-
-    iele::IeleValue *ElementSizeValue =
-        iele::IeleIntConstant::Create(&Context, elementSize);
-
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, Element, Element,
-        ElementSizeValue,
-        CompilingBlock);
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Sub, SizeVariable, SizeVariable,
-        iele::IeleIntConstant::getOne(&Context),
-        CompilingBlock);
-
-    connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
-    LoopExitBlock->insertInto(CompilingFunction);
-    CompilingBlock = LoopExitBlock;
+    appendArrayDeleteLoop(arrayType, Element, SizeVariable);
     break;
   }
   case Type::Category::Mapping:
@@ -1861,6 +1890,132 @@ void IeleCompiler::appendLValueDelete(IeleLValue *LValue, TypePointer type) {
   default:
     solAssert(false, "not implemented yet");
   }
+}
+
+iele::IeleFunction *IeleCompiler::getRecursiveStructDestructor(
+    const StructType &type) {
+  solAssert(type.recursive(),
+            "IeleCompiler: attempted to construct recursive destructor "
+            "for non-recursive struct type");
+
+  std::string typeID = type.richIdentifier();
+
+  // Lookup destructor in the cache.
+  auto It = RecursiveStructDestructors.find(typeID);
+  if (It != RecursiveStructDestructors.end())
+    return It->second;
+
+  // Generate a recursive function to delete a struct of the specific type.
+  iele::IeleFunction *Destructor =
+    iele::IeleFunction::Create(&Context, false, "ielert.delete." + typeID,
+                               CompilingContract);
+
+  // Register destructor function.
+  RecursiveStructDestructors[typeID] = Destructor;
+
+  // Add the address argument.
+  iele::IeleArgument *Address =
+    iele::IeleArgument::Create(&Context, "delete.addr", Destructor);
+
+  // Add the first block.
+  iele::IeleBlock *DestructorBlock =
+    iele::IeleBlock::Create(&Context, "entry", Destructor);
+
+  // Append the code for deleting the struct members and returning.
+  std::swap(CompilingFunction, Destructor);
+  std::swap(CompilingBlock, DestructorBlock);
+  appendStructDelete(type, Address);
+  iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+  std::swap(CompilingFunction, Destructor);
+  std::swap(CompilingBlock, DestructorBlock);
+
+  return Destructor;
+}
+
+void IeleCompiler::appendStructDelete(
+    const StructType &type, iele::IeleValue *Address) {
+  // For each member of the struct, generate code that deletes that member.
+  for (const auto &member : type.members(nullptr)) {
+    // First compute the offset from the start of the struct.
+    bigint offset;
+    switch (type.location()) {
+    case DataLocation::Storage: {
+      const auto& offsets = type.storageOffsetsOfMember(member.name);
+      offset = offsets.first;
+      break;
+    }
+    case DataLocation::Memory: {
+      offset = type.memoryOffsetOfMember(member.name);
+      break;
+    case DataLocation::CallData:
+      solAssert(false, "Call data not supported in IELE");
+    }
+    }
+
+    iele::IeleLocalVariable *Member =
+      iele::IeleLocalVariable::Create(&Context, "fill.address",
+                                      CompilingFunction);
+    iele::IeleValue *OffsetValue =
+      iele::IeleIntConstant::Create(&Context, offset);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, Member, Address, OffsetValue,
+      CompilingBlock);
+
+    // Then delete member at that offset.
+    appendLValueDelete(makeLValue(Member, member.type, type.location()),
+                       member.type);
+  }
+}
+
+void IeleCompiler::appendArrayDeleteLoop(
+    const ArrayType &type, iele::IeleLocalVariable *ElementAddressVariable,
+    iele::IeleLocalVariable *NumElementsVariable) {
+  TypePointer elementType = type.baseType();
+
+  iele::IeleBlock *LoopBodyBlock =
+    iele::IeleBlock::Create(&Context, "delete.loop", CompilingFunction);
+  CompilingBlock = LoopBodyBlock;
+
+  iele::IeleBlock *LoopExitBlock =
+    iele::IeleBlock::Create(&Context, "delete.loop.end");
+
+  iele::IeleLocalVariable *DoneValue =
+    iele::IeleLocalVariable::Create(&Context, "done", CompilingFunction);
+  iele::IeleInstruction::CreateIsZero(
+    DoneValue, NumElementsVariable, CompilingBlock);
+  connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
+
+  bigint elementSize;
+  switch (type.location()) {
+  case DataLocation::Storage: {
+    elementSize = elementType->storageSize();
+    break;
+  }
+  case DataLocation::Memory: {
+    elementSize = elementType->memorySize();
+    break;
+  }
+  case DataLocation::CallData:
+    solAssert(false, "not supported by IELE.");
+  }
+
+  appendLValueDelete(
+      makeLValue(ElementAddressVariable, type.baseType(), type.location()),
+      elementType);
+
+  iele::IeleValue *ElementSizeValue =
+      iele::IeleIntConstant::Create(&Context, elementSize);
+
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, ElementAddressVariable,
+      ElementAddressVariable, ElementSizeValue, CompilingBlock);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Sub, NumElementsVariable, NumElementsVariable,
+      iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+
+  connectWithUnconditionalJump(CompilingBlock, LoopBodyBlock);
+  LoopExitBlock->insertInto(CompilingFunction);
+  CompilingBlock = LoopExitBlock;
 }
 
 bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
@@ -2226,34 +2381,24 @@ void IeleCompiler::doEncode(
   }
   case Type::Category::Struct: {
     const StructType &structType = dynamic_cast<const StructType &>(*type);
-    for (auto decl : structType.structDefinition().members()) {
-      // First compute the offset from the start of the struct.
-      bigint offset;
-      switch (structType.location()) {
-      case DataLocation::Storage: {
-        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
-        offset = offsets.first;
-        break;
-      }
-      case DataLocation::Memory: {
-        offset = structType.memoryOffsetOfMember(decl->name());
-        break;
-      case DataLocation::CallData: 
-        solAssert(false, "Call data not supported in IELE");
-      }
-      }
 
-      iele::IeleLocalVariable *Member =
-        iele::IeleLocalVariable::Create(&Context, "encode.address", CompilingFunction);
-      iele::IeleValue *OffsetValue =
-        iele::IeleIntConstant::Create(&Context, offset);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, Member, ArgValue->getValue(), OffsetValue,
-        CompilingBlock);
-
-      TypePointer memberType = ReferenceType::copyForLocationIfReference(structType.location(), decl->type());
-      doEncode(NextFree, CrntPos, makeLValue(Member, memberType, structType.location()), ArgTypeSize, ArgLen, memberType, appendWidths, bigEndian);
+    if (structType.recursive()) {
+      // Call the recursive encoder.
+      iele::IeleFunction *Encoder =
+        getRecursiveStructEncoder(structType, appendWidths, bigEndian);
+      llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, CrntPos);
+      llvm::SmallVector<iele::IeleValue *, 3> Arguments;
+      Arguments.push_back(ArgValue->getValue());
+      Arguments.push_back(NextFree);
+      Arguments.push_back(CrntPos);
+      iele::IeleInstruction::CreateInternalCall(
+          Results, Encoder, Arguments, CompilingBlock);
+      break;
     }
+
+    appendStructEncode(
+        structType, ArgValue->getValue(), ArgTypeSize, ArgLen, NextFree,
+        CrntPos, appendWidths, bigEndian);
     break;
   }
   case Type::Category::Function: {
@@ -2305,6 +2450,114 @@ void IeleCompiler::doEncode(
   }
   default:
       solAssert(false, "IeleCompiler: invalid type for encoding");
+  }
+}
+
+iele::IeleFunction *IeleCompiler::getRecursiveStructEncoder(
+    const StructType &type, bool appendWidths, bool bigEndian) {
+  solAssert(type.recursive(),
+            "IeleCompiler: attempted to construct recursive destructor "
+            "for non-recursive struct type");
+
+  std::string typeID = type.richIdentifier();
+
+  // Lookup encoder in the cache.
+  auto It = RecursiveStructEncoders.find(typeID);
+  if (It != RecursiveStructEncoders.end()) {
+    auto ItAppendWidths = It->second.find(appendWidths);
+    if (ItAppendWidths != It->second.end()) {
+      auto ItBigEndian = ItAppendWidths->second.find(bigEndian);
+      if (ItBigEndian != ItAppendWidths->second.end())
+        return ItBigEndian->second;
+    }
+  }
+
+  // Generate a recursive function to encode a struct of the specific type.
+  iele::IeleFunction *Encoder =
+    iele::IeleFunction::Create(
+        &Context, false,
+        "ielert.encode." + typeID + ".W" + (char)appendWidths +
+        ".B" + (char)bigEndian,
+        CompilingContract);
+
+  // Register encoder function.
+  RecursiveStructEncoders[typeID][appendWidths][bigEndian] = Encoder;
+
+  // Add the address argument.
+  iele::IeleArgument *Address =
+    iele::IeleArgument::Create(&Context, "encode.addr", Encoder);
+
+  // Add the next free argument.
+  iele::IeleArgument *NextFree =
+    iele::IeleArgument::Create(&Context, "encode.next.free", Encoder);
+
+  // Add the current position argument.
+  iele::IeleArgument *CrntPos =
+    iele::IeleArgument::Create(&Context, "encode.crnt.pos", Encoder);
+
+  // Add the address type size local variable.
+  iele::IeleLocalVariable *AddrTypeSize =
+    iele::IeleLocalVariable::Create(&Context, "encode.addr.type.size",
+                                    CompilingFunction);
+
+  // Add the address length local variable.
+  iele::IeleLocalVariable *AddrLen =
+    iele::IeleLocalVariable::Create(&Context, "encode.addr.len",
+                                    CompilingFunction);
+
+  // Add the first block.
+  iele::IeleBlock *EncoderBlock =
+    iele::IeleBlock::Create(&Context, "entry", Encoder);
+
+  // Append the code for encoding the struct members and returning the current
+  // position.
+  std::swap(CompilingFunction, Encoder);
+  std::swap(CompilingBlock, EncoderBlock);
+  appendStructEncode(type, Address, AddrTypeSize, AddrLen, NextFree, CrntPos,
+                     appendWidths, bigEndian);
+  llvm::SmallVector<iele::IeleValue *, 1> Results(1, CrntPos);
+  iele::IeleInstruction::CreateRet(Results, CompilingBlock);
+  std::swap(CompilingFunction, Encoder);
+  std::swap(CompilingBlock, EncoderBlock);
+
+  return Encoder;
+}
+
+void IeleCompiler::appendStructEncode(
+    const StructType &type, iele::IeleValue *Address,
+    iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
+    iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
+    bool appendWidths, bool bigEndian) {
+  // For each member of the struct, generate code that deletes that member.
+  for (auto decl : type.structDefinition().members()) {
+    // First compute the offset from the start of the struct.
+    bigint offset;
+    switch (type.location()) {
+    case DataLocation::Storage: {
+      const auto& offsets = type.storageOffsetsOfMember(decl->name());
+      offset = offsets.first;
+      break;
+    }
+    case DataLocation::Memory: {
+      offset = type.memoryOffsetOfMember(decl->name());
+      break;
+    case DataLocation::CallData:
+      solAssert(false, "Call data not supported in IELE");
+    }
+    }
+
+    iele::IeleLocalVariable *Member =
+      iele::IeleLocalVariable::Create(&Context, "encode.address",
+                                      CompilingFunction);
+    iele::IeleValue *OffsetValue =
+      iele::IeleIntConstant::Create(&Context, offset);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, Member, Address, OffsetValue, CompilingBlock);
+
+    TypePointer memberType =
+      ReferenceType::copyForLocationIfReference(type.location(), decl->type());
+    doEncode(NextFree, CrntPos, makeLValue(Member, memberType, type.location()),
+             AddrTypeSize, AddrLen, memberType, appendWidths, bigEndian);
   }
 }
 
@@ -2546,33 +2799,21 @@ void IeleCompiler::doDecode(
       AllocedValue = StoreAt->read(CompilingBlock)->getValue();
     }
 
-    for (auto decl : structType.structDefinition().members()) {
-      // First compute the offset from the start of the struct.
-      bigint offset;
-      switch (structType.location()) {
-      case DataLocation::Storage: {
-        const auto& offsets = structType.storageOffsetsOfMember(decl->name());
-        offset = offsets.first;
-        break;
-      }
-      case DataLocation::Memory: {
-        offset = structType.memoryOffsetOfMember(decl->name());
-        break;
-      case DataLocation::CallData: 
-        solAssert(false, "Call data not supported in IELE");
-      }
-      }
-
-      iele::IeleLocalVariable *Member =
-        iele::IeleLocalVariable::Create(&Context, "encode.address", CompilingFunction);
-      iele::IeleValue *OffsetValue =
-        iele::IeleIntConstant::Create(&Context, offset);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, Member, AllocedValue, OffsetValue,
-        CompilingBlock);
-
-      doDecode(NextFree, CrntPos, makeLValue(Member, decl->type(), DataLocation::Memory), ArgTypeSize, ArgLen, decl->type());
+    if (structType.recursive()) {
+      // Call the recursive decoder.
+      iele::IeleFunction *Decoder = getRecursiveStructDecoder(structType);
+      llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, CrntPos);
+      llvm::SmallVector<iele::IeleValue *, 3> Arguments;
+      Arguments.push_back(AllocedValue);
+      Arguments.push_back(NextFree);
+      Arguments.push_back(CrntPos);
+      iele::IeleInstruction::CreateInternalCall(
+          Results, Decoder, Arguments, CompilingBlock);
+      break;
     }
+
+    appendStructDecode(structType, AllocedValue, ArgTypeSize, ArgLen, NextFree,
+                       CrntPos);
     break;
   }
   case Type::Category::Function: {
@@ -2634,6 +2875,103 @@ void IeleCompiler::doDecode(
   default: 
     solAssert(false, "invalid reference type");
     break;
+  }
+}
+
+iele::IeleFunction *IeleCompiler::getRecursiveStructDecoder(
+    const StructType &type) {
+  solAssert(type.recursive(),
+            "IeleCompiler: attempted to construct recursive destructor "
+            "for non-recursive struct type");
+
+  std::string typeID = type.richIdentifier();
+
+  // Lookup decoder in the cache.
+  auto It = RecursiveStructDecoders.find(typeID);
+  if (It != RecursiveStructDecoders.end())
+    return It->second;
+
+  // Generate a recursive function to decode a struct of the specific type.
+  iele::IeleFunction *Decoder =
+    iele::IeleFunction::Create(
+        &Context, false, "ielert.decode." + typeID, CompilingContract);
+
+  // Register decoder function.
+  RecursiveStructDecoders[typeID] = Decoder;
+
+  // Add the address argument.
+  iele::IeleArgument *Address =
+    iele::IeleArgument::Create(&Context, "decode.addr", Decoder);
+
+  // Add the next free argument.
+  iele::IeleArgument *NextFree =
+    iele::IeleArgument::Create(&Context, "decode.next.free", Decoder);
+
+  // Add the current position argument.
+  iele::IeleArgument *CrntPos =
+    iele::IeleArgument::Create(&Context, "decode.crnt.pos", Decoder);
+
+  // Add the address type size local variable.
+  iele::IeleLocalVariable *AddrTypeSize =
+    iele::IeleLocalVariable::Create(&Context, "decode.addr.type.size",
+                                    CompilingFunction);
+
+  // Add the address length local variable.
+  iele::IeleLocalVariable *AddrLen =
+    iele::IeleLocalVariable::Create(&Context, "decode.addr.len",
+                                    CompilingFunction);
+
+  // Add the first block.
+  iele::IeleBlock *DecoderBlock =
+    iele::IeleBlock::Create(&Context, "entry", Decoder);
+
+  // Append the code for decoding the struct members and returning the current
+  // position.
+  std::swap(CompilingFunction, Decoder);
+  std::swap(CompilingBlock, DecoderBlock);
+  appendStructDecode(type, Address, AddrTypeSize, AddrLen, NextFree, CrntPos);
+  llvm::SmallVector<iele::IeleValue *, 1> Results(1, CrntPos);
+  iele::IeleInstruction::CreateRet(Results, CompilingBlock);
+  std::swap(CompilingFunction, Decoder);
+  std::swap(CompilingBlock, DecoderBlock);
+
+  return Decoder;
+}
+
+void IeleCompiler::appendStructDecode(
+    const StructType &type, iele::IeleValue *Address,
+    iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
+    iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos) {
+  for (auto decl : type.structDefinition().members()) {
+    // First compute the offset from the start of the struct.
+    bigint offset;
+    switch (type.location()) {
+    case DataLocation::Storage: {
+      const auto& offsets = type.storageOffsetsOfMember(decl->name());
+      offset = offsets.first;
+      break;
+    }
+    case DataLocation::Memory: {
+      offset = type.memoryOffsetOfMember(decl->name());
+      break;
+    case DataLocation::CallData:
+      solAssert(false, "Call data not supported in IELE");
+    }
+    }
+
+    iele::IeleLocalVariable *Member =
+      iele::IeleLocalVariable::Create(&Context, "encode.address",
+                                      CompilingFunction);
+    iele::IeleValue *OffsetValue =
+      iele::IeleIntConstant::Create(&Context, offset);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, Member, Address, OffsetValue,
+      CompilingBlock);
+
+    doDecode(
+        NextFree, CrntPos,
+        makeLValue(Member, decl->type(), DataLocation::Memory), AddrTypeSize,
+        AddrLen, decl->type());
   }
 }
 
@@ -2713,31 +3051,35 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       TypePointer memberType = functionType->parameterTypes()[i];
       InitValue = appendTypeConversion(InitValue, argType, memberType);
 
-      // Address in the new struct in which we should copy the argument value.
+      // Compute lvalue in the new struct in which we should assign the argument
+      // value.
       iele::IeleLocalVariable *AddressValue =
         iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
       iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add, AddressValue, StructValue,
           iele::IeleIntConstant::Create(&Context, offset), CompilingBlock);
+      IeleLValue *MemberLValue =
+        makeLValue(AddressValue, memberType, DataLocation::Memory);
 
-      // Size of copy.
-      bigint memberSize = memberType->memorySize();
-      iele::IeleValue *SizeValue =
-        iele::IeleIntConstant::Create(&Context, memberSize);
-
-      // Do the copy.
-      solAssert(!memberType->dataStoredIn(DataLocation::Storage),
-                "IeleCompiler: found init value for struct member in storage "
-                "after type conversion");
-      if (memberType->dataStoredIn(DataLocation::Memory)) {
-        appendIeleRuntimeCopy(InitValue->getValue(), AddressValue, SizeValue,
-                              DataLocation::Memory, DataLocation::Memory);
+      // Do the assignment.
+      argType = argType->mobileType();
+      solAssert(!shouldCopyStorageToStorage(*memberType, MemberLValue, *argType),
+                "IeleCompiler: storage to storage copy needed in "
+                "initialization of dynamically allocated struct.");
+      solAssert(!shouldCopyMemoryToStorage(*memberType, MemberLValue, *argType),
+                "IeleCompiler: memory to storage copy needed in "
+                "initialization of dynamically allocated struct.");
+      if (shouldCopyMemoryToMemory(*memberType, MemberLValue, *argType)) {
+        appendCopyFromMemoryToMemory(
+            MemberLValue, memberType, InitValue, argType);
       } else {
-        IeleLValue *lvalue = AddressLValue::Create(this, AddressValue, DataLocation::Memory, "loaded", memberType->sizeInRegisters());
+        IeleLValue *lvalue =
+          AddressLValue::Create(this, AddressValue, DataLocation::Memory,
+                                "loaded", memberType->sizeInRegisters());
         lvalue->write(InitValue, CompilingBlock);
       }
 
-      offset += memberSize;
+      offset += memberType->memorySize();
     }
 
     // Return pointer to allocated struct.
@@ -3391,7 +3733,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       CompilingBlock);
 
     IeleLValue *ElementLValue = makeLValue(AddressValue, elementType, CompilingLValueArrayType->location());
-    if (shouldCopyStorageToStorage(ElementLValue, *RHSType))
+    if (shouldCopyStorageToStorage(*elementType, ElementLValue, *RHSType))
       appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
     else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))
       appendCopyFromMemoryToStorage(ElementLValue, elementType, PushedValue, RHSType);
@@ -4803,9 +5145,11 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
     solAssert(ST,
               "IeleCompiler: failed to access compiling contract's symbol "
               "table.");
-    IeleLValue *LHSValue = makeLValue(ST->lookup(getIeleNameForStateVariable(stateVariable)), type, DataLocation::Storage);
-    solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of state variable"
-                        " initialization");
+    iele::IeleValue *LHSIeleValue =
+      ST->lookup(getIeleNameForStateVariable(stateVariable));
+    solAssert(LHSIeleValue, "IeleCompiler: Failed to compile LHS of state "
+                            "variable initialization");
+    IeleLValue *LHSValue = makeLValue(LHSIeleValue, type, DataLocation::Storage);
 
     if (type->isValueType()) {
       // Add assignment in constructor's body.
@@ -4814,7 +5158,7 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
                type->category() == Type::Category::Struct) {
       // Add code for copy in constructor's body.
       rhsType = rhsType->mobileType();
-      if (shouldCopyStorageToStorage(LHSValue, *rhsType))
+      if (shouldCopyStorageToStorage(*type, LHSValue, *rhsType))
         appendCopyFromStorageToStorage(LHSValue, type, InitValue, rhsType);
       else if (shouldCopyMemoryToStorage(*type, LHSValue, *rhsType))
         appendCopyFromMemoryToStorage(LHSValue, type, InitValue, rhsType);
@@ -4994,6 +5338,19 @@ iele::IeleLocalVariable *IeleCompiler::appendStructAllocation(const StructType &
   return StructAllocValue;
 }
 
+iele::IeleLocalVariable *IeleCompiler::appendRecursiveStructAllocation(
+    const StructType &type) {
+  // Get allocation size in memory slots.
+  iele::IeleIntConstant *SizeValue =
+    iele::IeleIntConstant::Create(&Context, type.storageSize());
+
+  // Call runtime for storage allocation.
+  iele::IeleLocalVariable *RecStructAllocValue =
+    appendIeleRuntimeAllocateStorage(SizeValue);
+
+  return RecStructAllocValue;
+}
+
 void IeleCompiler::appendCopy(
     IeleLValue *To, TypePointer ToType,
     IeleRValue *From, TypePointer FromType,
@@ -5029,84 +5386,23 @@ void IeleCompiler::appendCopy(
     } else {
       AllocedValue = To->read(CompilingBlock)->getValue();
     }
-    // We loop over the members of the source struct type.
-    for (auto const &member : structType.members(nullptr)) {
-      // First find the types of the corresponding member in the source and
-      // destination struct types.
-      TypePointer memberFromType = member.type;
-      TypePointer memberToType;
-      for (auto const &toMember : toStructType.members(nullptr)) {
-        if (member.name == toMember.name) {
-          memberToType = toMember.type;
-          break;
-        }
-      }
 
-      // Ensure we are skipping mapping members when copying to memory.
-      solAssert(!memberToType ||
-                memberToType->category() != Type::Category::Mapping ||
-                ToLoc == DataLocation::Storage,
-                "IeleCompiler: found memory struct with mapping field");
-      solAssert(memberFromType->category() != Type::Category::Mapping ||
-                FromLoc == DataLocation::Storage,
-                "IeleCompiler: found memory struct with mapping field");
-      if (memberFromType->category() == Type::Category::Mapping &&
-          ToLoc == DataLocation::Memory) {
-        continue;
-      }
-
-      // Then compute the offset from the start of the struct for the current
-      // member. The offset may differ in the source and destination, due to
-      // skipping of mappings in memory copies of structs.
-      bigint fromOffset, toOffset;
-      switch (FromLoc) {
-      case DataLocation::Storage: {
-        const auto& offsets = structType.storageOffsetsOfMember(member.name);
-        fromOffset = offsets.first;
-        break;
-      }
-      case DataLocation::Memory: {
-        fromOffset = structType.memoryOffsetOfMember(member.name);
-        break;
-      case DataLocation::CallData:
-        solAssert(false, "Call data not supported in IELE");
-      }
-      }
-      switch (ToLoc) {
-      case DataLocation::Storage: {
-        const auto& offsets = toStructType.storageOffsetsOfMember(member.name);
-        toOffset = offsets.first;
-        break;
-      }
-      case DataLocation::Memory: {
-        toOffset = toStructType.memoryOffsetOfMember(member.name);
-        break;
-      case DataLocation::CallData: 
-        solAssert(false, "Call data not supported in IELE");
-      }
-      }
-
-      // Then compute the current member address in the source and destination
-      // struct objects.
-      iele::IeleLocalVariable *MemberFrom =
-        iele::IeleLocalVariable::Create(&Context, "copy.from.address", CompilingFunction);
-      iele::IeleValue *FromOffsetValue =
-        iele::IeleIntConstant::Create(&Context, fromOffset);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, MemberFrom, From->getValue(), FromOffsetValue,
-        CompilingBlock);
-
-      iele::IeleLocalVariable *MemberTo =
-        iele::IeleLocalVariable::Create(&Context, "copy.to.address", CompilingFunction);
-      iele::IeleValue *ToOffsetValue =
-        iele::IeleIntConstant::Create(&Context, toOffset);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, MemberTo, AllocedValue, ToOffsetValue,
-        CompilingBlock);
-
-      // Finally do the copy of the member value from source to destination.
-      appendCopy(makeLValue(MemberTo, memberToType, ToLoc), memberToType, makeLValue(MemberFrom, memberFromType, FromLoc)->read(CompilingBlock), memberFromType, ToLoc, FromLoc);
+    if (structType.recursive()) {
+      // Call the recursive copier.
+      iele::IeleFunction *Copier =
+        getRecursiveStructCopier(structType, FromLoc, toStructType, ToLoc);
+      llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyResults;
+      llvm::SmallVector<iele::IeleValue *, 2> Arguments;
+      Arguments.push_back(From->getValue());
+      Arguments.push_back(AllocedValue);
+      iele::IeleInstruction::CreateInternalCall(
+          EmptyResults, Copier, Arguments, CompilingBlock);
+      break;
     }
+
+    // Append the code for copying the struct members.
+    appendStructCopy(structType, From->getValue(), FromLoc,
+                     toStructType, AllocedValue, ToLoc);
     break;
   }
   case Type::Category::Array: {
@@ -5322,6 +5618,149 @@ void IeleCompiler::appendCopy(
   }
 }
 
+iele::IeleFunction *IeleCompiler::getRecursiveStructCopier(
+    const StructType &type, DataLocation FromLoc,
+    const StructType &toType, DataLocation ToLoc) {
+  solAssert(type.recursive(),
+            "IeleCompiler: attempted to construct recursive copier "
+            "for non-recursive source struct type");
+  solAssert(toType.recursive(),
+            "IeleCompiler: attempted to construct recursive copier "
+            "for non-recursive target struct type");
+
+  std::string typeID = type.richIdentifier();
+  std::string toTypeID = toType.richIdentifier();
+
+  // Lookup copier in the cache.
+  auto It = RecursiveStructCopiers.find(typeID);
+  if (It != RecursiveStructCopiers.end()) {
+    auto ItTo = It->second.find(toTypeID);
+    if (ItTo != It->second.end())
+      return ItTo->second;
+  }
+
+  // Generate a recursive function to copy a struct of the specific type.
+  iele::IeleFunction *Copier =
+    iele::IeleFunction::Create(
+        &Context, false, "ielert.copy." + typeID + ".to." + toTypeID,
+        CompilingContract);
+
+  // Register copier function.
+  RecursiveStructCopiers[typeID][toTypeID] = Copier;
+
+  // Add the from/to address arguments.
+  iele::IeleArgument *Address =
+    iele::IeleArgument::Create(&Context, "from.addr", Copier);
+
+  iele::IeleArgument *ToAddress =
+    iele::IeleArgument::Create(&Context, "to.addr", Copier);
+
+  // Add the first block.
+  iele::IeleBlock *CopierBlock =
+    iele::IeleBlock::Create(&Context, "entry", Copier);
+
+  // Append the code for copying the struct members and returning.
+  std::swap(CompilingFunction, Copier);
+  std::swap(CompilingBlock, CopierBlock);
+  appendStructCopy(type, Address, FromLoc, toType, ToAddress, ToLoc);
+  iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+  std::swap(CompilingFunction, Copier);
+  std::swap(CompilingBlock, CopierBlock);
+
+  return Copier;
+}
+
+void IeleCompiler::appendStructCopy(
+    const StructType &type, iele::IeleValue *Address, DataLocation FromLoc,
+    const StructType &toType, iele::IeleValue *ToAddress, DataLocation ToLoc) {
+  // We loop over the members of the source struct type.
+  for (auto const &member : type.members(nullptr)) {
+    // First find the types of the corresponding member in the source and
+    // destination struct types.
+    TypePointer memberFromType = member.type;
+    TypePointer memberToType;
+    for (auto const &toMember : toType.members(nullptr)) {
+      if (member.name == toMember.name) {
+        memberToType = toMember.type;
+        break;
+      }
+    }
+
+    // Ensure we are skipping mapping members when copying to memory.
+    solAssert(!memberToType ||
+              memberToType->category() != Type::Category::Mapping ||
+              ToLoc == DataLocation::Storage,
+              "IeleCompiler: found memory struct with mapping field");
+    solAssert(memberFromType->category() != Type::Category::Mapping ||
+              FromLoc == DataLocation::Storage,
+              "IeleCompiler: found memory struct with mapping field");
+    if (memberFromType->category() == Type::Category::Mapping &&
+        ToLoc == DataLocation::Memory) {
+      continue;
+    }
+
+    solAssert(memberToType, "IeleCompiler: could not find corresponding "
+                            "non-mapping member in copy target struct type");
+
+    // Then compute the offset from the start of the struct for the current
+    // member. The offset may differ in the source and destination, due to
+    // skipping of mappings in memory copies of structs.
+    bigint fromOffset, toOffset;
+    switch (FromLoc) {
+    case DataLocation::Storage: {
+      const auto& offsets = type.storageOffsetsOfMember(member.name);
+      fromOffset = offsets.first;
+      break;
+    }
+    case DataLocation::Memory: {
+      fromOffset = type.memoryOffsetOfMember(member.name);
+      break;
+    case DataLocation::CallData:
+      solAssert(false, "Call data not supported in IELE");
+    }
+    }
+    switch (ToLoc) {
+    case DataLocation::Storage: {
+      const auto& offsets = toType.storageOffsetsOfMember(member.name);
+      toOffset = offsets.first;
+      break;
+    }
+    case DataLocation::Memory: {
+      toOffset = toType.memoryOffsetOfMember(member.name);
+      break;
+    case DataLocation::CallData:
+      solAssert(false, "Call data not supported in IELE");
+    }
+    }
+
+    // Then compute the current member address in the source and destination
+    // struct objects.
+    iele::IeleLocalVariable *MemberFrom =
+      iele::IeleLocalVariable::Create(&Context, "copy.from.address",
+                                      CompilingFunction);
+    iele::IeleValue *FromOffsetValue =
+      iele::IeleIntConstant::Create(&Context, fromOffset);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, MemberFrom, Address, FromOffsetValue,
+      CompilingBlock);
+
+    iele::IeleLocalVariable *MemberTo =
+      iele::IeleLocalVariable::Create(&Context, "copy.to.address",
+                                      CompilingFunction);
+    iele::IeleValue *ToOffsetValue =
+      iele::IeleIntConstant::Create(&Context, toOffset);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, MemberTo, ToAddress, ToOffsetValue,
+      CompilingBlock);
+
+    // Finally do the copy of the member value from source to destination.
+    appendCopy(
+        makeLValue(MemberTo, memberToType, ToLoc), memberToType,
+        makeLValue(MemberFrom, memberFromType, FromLoc)->read(CompilingBlock),
+        memberFromType, ToLoc, FromLoc);
+  }
+}
+
 void IeleCompiler::appendCopyFromStorageToStorage(
     IeleLValue *To, TypePointer ToType, IeleRValue *From, TypePointer FromType) {
   appendCopy(To, ToType, From, FromType, DataLocation::Storage, DataLocation::Storage);
@@ -5394,18 +5833,12 @@ void IeleCompiler::appendArrayLengthResize(
       iele::IeleInstruction::Add, NewEnd, NewEnd,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
-    iele::IeleLocalVariable *DeleteSize =
-      iele::IeleLocalVariable::Create(&Context, "size.to.delete", CompilingFunction);
+    iele::IeleLocalVariable *DeleteLength =
+      iele::IeleLocalVariable::Create(&Context, "length.to.delete", CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Sub, DeleteSize, OldLength, NewLength,
+      iele::IeleInstruction::Sub, DeleteLength, OldLength, NewLength,
       CompilingBlock);
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Mul, DeleteSize, DeleteSize, 
-      ElementSize, CompilingBlock); 
-    appendIeleRuntimeFill(
-      NewEnd, DeleteSize,
-      iele::IeleIntConstant::getZero(&Context),
-      DataLocation::Storage);
+    appendArrayDeleteLoop(*CompilingLValueArrayType, NewEnd, DeleteLength);
   }
 
   JoinBlock->insertInto(CompilingFunction);
@@ -5832,10 +6265,11 @@ iele::IeleLocalVariable *IeleCompiler::appendMemorySpill() {
   return NextFree;
 }
 
-bool IeleCompiler::shouldCopyStorageToStorage(const IeleLValue *To,
+bool IeleCompiler::shouldCopyStorageToStorage(const Type &ToType, const IeleLValue *To,
                                               const Type &From) const {
   return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         From.dataStoredIn(DataLocation::Storage);
+         From.dataStoredIn(DataLocation::Storage) &&
+         ToType.dataStoredIn(DataLocation::Storage);
 }
 
 bool IeleCompiler::shouldCopyMemoryToStorage(const Type &ToType, const IeleLValue *To,
@@ -5892,6 +6326,20 @@ iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateMemory(
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
   iele::IeleGlobalVariable *Callee =
     iele::IeleGlobalVariable::Create(&Context, "ielert.memory.allocate");
+  llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
+  llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, NumSlots);
+  iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
+                                            CompilingBlock);
+  return Result;
+}
+
+iele::IeleLocalVariable *IeleCompiler::appendIeleRuntimeAllocateStorage(
+     iele::IeleValue *NumSlots) {
+  CompilingContract->setIncludeStorageRuntime(true);
+  iele::IeleLocalVariable *Result =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  iele::IeleGlobalVariable *Callee =
+    iele::IeleGlobalVariable::Create(&Context, "ielert.storage.allocate");
   llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, Result);
   llvm::SmallVector<iele::IeleValue *, 1> Arguments(1, NumSlots);
   iele::IeleInstruction::CreateInternalCall(Results, Callee, Arguments,
