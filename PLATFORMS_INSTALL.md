@@ -1,6 +1,6 @@
 # Working 
 
-* Darwin (caveat: needs manual intervention, see below)
+* Darwin (needs manual intervention, see below)
 * Ubuntu
 * Arch Linux
 * Debian 
@@ -9,7 +9,6 @@
 
 # Not working 
 * CentOS
-* Alpine Linux
 
 # Caveats
 
