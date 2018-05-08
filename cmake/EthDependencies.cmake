@@ -49,7 +49,6 @@ set(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
 
 
 ## we use some of LLVM's libraries for the IELE backend
-## find_package(LLVM QUIET REQUIRED CONFIG)
-find_package(LLVM REQUIRED)
+find_package(LLVM QUIET REQUIRED CONFIG)
 
 eth_show_dependency(LLVM LLVM)
