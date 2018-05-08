@@ -165,8 +165,5 @@ bytes IeleContract::toBinary() const {
   std::remove(tempin_str.c_str());
   std::remove(tempout_str.c_str());
 
-  bytes Binary = fromHex(hex, WhenError::Throw);
-  Binary.push_back((byte)107);
-  Binary += AuxiliaryData;
-  return Binary;
+  return fromHex(hex, WhenError::Throw) + AuxiliaryData;
 }
