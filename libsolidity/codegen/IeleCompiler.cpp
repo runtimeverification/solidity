@@ -2616,29 +2616,15 @@ void IeleCompiler::doDecode(
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, 
         ArgTypeSize, CompilingBlock);
-      switch(type->category()) {
-      case Type::Category::Integer: {
+      if (type->category() == Type::Category::Integer) {
         IntegerType const& intType = dynamic_cast<const IntegerType &>(*type);
         if (intType.isSigned()) {
-          break;
-        } else {
-          // fall through
+          iele::IeleInstruction::CreateBinOp(
+            iele::IeleInstruction::SExt,
+            llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), ArgTypeSize, AllocedValue,
+            CompilingBlock);
 	}
       }
-      case Type::Category::Contract:
-      case Type::Category::FixedBytes:
-      case Type::Category::Enum:
-        iele::IeleInstruction::CreateBinOp(
-          iele::IeleInstruction::Twos,
-          llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), ArgTypeSize, AllocedValue,
-          CompilingBlock);
-        break;
-      case Type::Category::Bool:
-       break;
-      default:
-        solAssert(false, "invalid type");
-      }
-     
     }
     else { // Arbitrary precision
       bigint argLenWidth = bigint(8); // Store length using 8 bytes 
@@ -2652,6 +2638,10 @@ void IeleCompiler::doDecode(
         ArgTypeSize, CompilingBlock);
       iele::IeleInstruction::CreateLoad(
         llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), NextFree, CrntPos, ArgLen, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::SExt,
+        llvm::dyn_cast<iele::IeleLocalVariable>(AllocedValue), ArgLen, AllocedValue,
+        CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
     }
@@ -3613,10 +3603,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
         iele::IeleLocalVariable::Create(&Context, "encoded.val", CompilingFunction);
       iele::IeleInstruction::CreateLoad(
         ArgValue, NextFree, iele::IeleIntConstant::getZero(&Context), ByteWidth, CompilingBlock);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Twos,
-        ArgValue, ByteWidth, ArgValue,
-        CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::BSwap,
         ArgValue, ByteWidth, ArgValue,
@@ -5932,7 +5918,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
       // Sign extend if necessary.
       if (issigned) {
         iele::IeleValue *NBytesValue =
-          iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
+          iele::IeleIntConstant::Create(&Context, bigint(nbytes));
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::SExt, Result, NBytesValue, Result,
           CompilingBlock);
@@ -5959,7 +5945,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
       // Sign extend if necessary.
       if (issigned) {
         iele::IeleValue *NBytesValue =
-          iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
+          iele::IeleIntConstant::Create(&Context, bigint(nbytes));
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::SExt, Result, NBytesValue, Result,
           CompilingBlock);
@@ -6233,8 +6219,6 @@ void IeleCompiler::appendMask(iele::IeleLocalVariable *Result, iele::IeleValue *
     iele::IeleInstruction::Twos, Result, NBytesValue, Value,
     CompilingBlock);
   if (issigned) {
-    NBytesValue =
-      iele::IeleIntConstant::Create(&Context, bigint(nbytes-1));
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::SExt, Result, NBytesValue, Result,
       CompilingBlock);
