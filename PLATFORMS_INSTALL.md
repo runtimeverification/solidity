@@ -12,9 +12,11 @@
 
 # Caveats
 
-## Alpine Linux
+## Alpine Linux 3.6
 
-When running `cmake`, you may get the following error: (possibly twice)
+Alpine 3.6 currently comes with `llvm4`. 
+
+When running `cmake`, you may get the following error:
 
 ```
 CMake Error at /usr/lib/cmake/llvm4/LLVMConfig.cmake:182 (include):
