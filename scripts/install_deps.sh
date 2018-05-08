@@ -189,7 +189,10 @@ case $(uname -s) in
                     8)
                         #jessie
                         echo "Installing solidity dependencies on Debian Jesse (8.x)."
-                        echo "deb http://ftp.debian.org/debian jessie-backports main" | sudo tee /etc/apt/sources.list.d/jessie-backports.list
+                        echo "deb http://apt.llvm.org/jessie/ llvm-toolchain-jessie-5.0 main" | sudo tee /etc/apt/sources.list.d/jessie-llvm-5.list
+           
+                        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+                        # Fingerprint: 6084 F3CF 814B 57C1 CF12 EFD5 15CF 4D18 AF4F 7421
                         ;;
                     9)
                         #stretch
