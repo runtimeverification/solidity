@@ -61,13 +61,12 @@ find_package(LLVM 6.0.0 QUIET CONFIG)
 
 if (NOT LLVM_FOUND) 
 	find_package(LLVM 5.0.0 CONFIG)	
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I /usr/include/llvm5")	
 endif()
 
 if (NOT LLVM_FOUND) 
 	find_package(LLVM 4.0.0 REQUIRED CONFIG)
-	## This should be here rather then in EthCompilerSettings.cmake
-	## however it doesn't work if we leave it here...
-	## set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I /usr/include/llvm4")	
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I /usr/include/llvm4")	
 endif()
 
 eth_show_dependency(LLVM LLVM)
