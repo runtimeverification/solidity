@@ -42,8 +42,12 @@ find_package(Boost 1.54.0 QUIET REQUIRED COMPONENTS regex filesystem unit_test_f
 
 eth_show_dependency(Boost boost)
 
+## If different version present, take the biggest
+## See https://stackoverflow.com/a/44970744
+SET(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
+SET(CMAKE_FIND_PACKAGE_SORT_DIRECTION DEC)
+
 ## we use some of LLVM's libraries for the IELE backend
-## TODO: this should not just require version 5; instead, 4, 5 or 6 should all be allowed!
-find_package(LLVM 5.0.0 QUIET REQUIRED CONFIG)
+find_package(LLVM QUIET REQUIRED CONFIG)
 
 eth_show_dependency(LLVM LLVM)
