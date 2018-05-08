@@ -42,12 +42,14 @@ find_package(Boost 1.54.0 QUIET REQUIRED COMPONENTS regex filesystem unit_test_f
 
 eth_show_dependency(Boost boost)
 
-## If different version present, take the biggest
+## If different version present, take the biggest. It does not work apparently!
 ## See https://stackoverflow.com/a/44970744
+## See: https://cmake.org/cmake/help/v3.9/variable/CMAKE_FIND_PACKAGE_SORT_ORDER.html#variable:CMAKE_FIND_PACKAGE_SORT_ORDER
 set(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
 
 
 ## we use some of LLVM's libraries for the IELE backend
-find_package(LLVM QUIET REQUIRED CONFIG)
+## find_package(LLVM QUIET REQUIRED CONFIG)
+find_package(LLVM REQUIRED)
 
 eth_show_dependency(LLVM LLVM)
