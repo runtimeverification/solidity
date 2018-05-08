@@ -5,12 +5,44 @@
 * Arch Linux
 * Debian 
 * Fedora
+* Alpine Linux (see below)
 
 # Not working 
 * CentOS
 * Alpine Linux
 
 # Caveats
+
+## Alpine Linux
+
+When running `cmake`, you may get the following error
+
+```
+CMake Error at /usr/lib/cmake/llvm4/LLVMConfig.cmake:182 (include):
+  include could not find load file:
+
+    /usr/lib/cmake/llvm/LLVMExports.cmake
+Call Stack (most recent call first):
+  cmake/EthDependencies.cmake:47 (find_package)
+  CMakeLists.txt:22 (include)
+
+
+CMake Error at /usr/lib/cmake/llvm4/LLVMConfig.cmake:186 (include):
+  include could not find load file:
+
+    /usr/lib/cmake/llvm/LLVM-Config.cmake
+Call Stack (most recent call first):
+  cmake/EthDependencies.cmake:47 (find_package)
+  CMakeLists.txt:22 (include)
+```
+
+In order to fix this, 
+
+* open `/usr/lib/cmake/llvm4/LLVMConfig.cmake` (may need to use `sudo`)
+* look for a line that looks like `set(LLVM_CMAKE_DIR "${LLVM_INSTALL_PREFIX}/lib/cmake/llvm")`    
+* change the path so that it uses `llvm4` i.e. `set(LLVM_CMAKE_DIR "${LLVM_INSTALL_PREFIX}/lib/cmake/llvm4")` 
+
+If you now run `cmake` again, it should work just fine. 
 
 ## Darwin
 
