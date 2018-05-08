@@ -1,6 +1,6 @@
 # Working 
 
-* Darwin (needs manual intervention, see below)
+* Darwin
 * Ubuntu
 * Arch Linux
 * Debian 
@@ -35,14 +35,6 @@ In order to fix it:
 * change the path so that it uses `llvm4` i.e. `set(LLVM_CMAKE_DIR "${LLVM_INSTALL_PREFIX}/lib/cmake/llvm4")` 
 
 If you now run `cmake` again, it should work just fine. 
-
-## Darwin
-
-The standard installation steps apply, with this single exception:
-
-* Use `cmake -DCMAKE_PREFIX_PATH=/usr/local/opt/llvm ..`
-    * The path to be used is obtained with `$(brew --prefix llvm)`
-    * Also see: https://embeddedartistry.com/blog/2017/2/20/installing-clangllvm-on-osx
 
 # Notes about not-working platforms:
 

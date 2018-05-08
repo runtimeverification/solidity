@@ -30,6 +30,12 @@ if (DEFINED MSVC)
 	set (CMAKE_PREFIX_PATH ${ETH_DEPENDENCY_INSTALL_DIR} ${CMAKE_PREFIX_PATH})
 endif()
 
+if (DEFINED APPLE)
+	# CMAKE_PREFIX_PATH needs to be set to /usr/local/opt/llvm in order to pick up the homebrew installation of llvm instead of the system llvm, which
+        # does not support cmake.
+	set (CMAKE_PREFIX_PATH "/usr/local/opt/llvm" ${CMAKE_PREFIX_PATH})
+endif()
+
 # custom cmake scripts
 set(ETH_CMAKE_DIR ${CMAKE_CURRENT_LIST_DIR})
 set(ETH_SCRIPTS_DIR ${ETH_CMAKE_DIR}/scripts)
