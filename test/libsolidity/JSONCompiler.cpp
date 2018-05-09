@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
 	BOOST_CHECK(contract["bytecode"].isString());
 	BOOST_CHECK_EQUAL(
 		dev::test::bytecodeSansMetadata(contract["bytecode"].asString()),
-		"63006700000000660000f60000"
+		"0000000d63006700000000660000f60000"
 	);
 	BOOST_CHECK(contract["functionHashes"].isObject());
 	BOOST_CHECK(contract["gasEstimates"].isObject());
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE(single_compilation)
 	BOOST_CHECK(contract["bytecode"].isString());
 	BOOST_CHECK_EQUAL(
 		dev::test::bytecodeSansMetadata(contract["bytecode"].asString()),
-		"63006700000000660000f60000"
+		"0000000d63006700000000660000f60000"
 	);
 	BOOST_CHECK(contract["functionHashes"].isObject());
 	BOOST_CHECK(contract["gasEstimates"].isObject());
