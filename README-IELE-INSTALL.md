@@ -5,9 +5,8 @@ These instructions will help you to install the solidity compiler with the IELE 
 First step is to [install IELE](https://github.com/runtimeverification/iele-semantics/blob/master/INSTALL.md).
 
 ```
-# install dependencies (this should be removed once `scripts/install_deps.sh` is fully updated)
-sudo apt-get update
-sudo apt-get install make gcc cmake build-essential libboost-all-dev llvm-5.0 libz3-dev zlib1g-dev
+# install dependencies
+sudo ./scripts/install_deps.sh
 
 # build compiler, it is important to build into a subdir named "build" as
 # suggested in order to run the test scripts correctly
