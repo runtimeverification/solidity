@@ -245,6 +245,7 @@ case $(uname -s) in
                 sudo dnf install \
                     autoconf \
                     automake \
+                    make \
                     boost-devel \
                     boost-static \
                     cmake \
