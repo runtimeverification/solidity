@@ -43,6 +43,7 @@ private:
   IeleFunctionListType IeleFunctionList;
   IeleGlobalVariableListType IeleGlobalVariableList;
   IeleContractListType IeleContractList;
+  bytes AuxiliaryData;
   std::unique_ptr<IeleValueSymbolTable> SymTab;
 
   friend class SymbolTableListTraits<IeleContract>;
@@ -83,6 +84,8 @@ public:
   void setStorageRuntimeNextFreePtrAddress(bigint nextFreePtrAddress) {
     NextFreePtrAddress = nextFreePtrAddress;
   }
+
+  void appendAuxiliaryDataToEnd(const bytes &data) { AuxiliaryData += data; }
 
   // Get the underlying elements of the IeleContract.
   //

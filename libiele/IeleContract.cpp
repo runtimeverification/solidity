@@ -164,6 +164,6 @@ bytes IeleContract::toBinary() const {
 
   std::remove(tempin_str.c_str());
   std::remove(tempout_str.c_str());
-  
-  return fromHex(hex, WhenError::Throw);
+
+  return fromHex(hex, WhenError::Throw) + AuxiliaryData;
 }

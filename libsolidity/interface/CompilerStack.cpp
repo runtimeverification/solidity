@@ -726,7 +726,7 @@ void CompilerStack::compileContract(
 	solAssert(cborEncodedMetadata.size() <= 0xffff, "Metadata too large");
 	// 16-bit big endian length
 	cborEncodedMetadata += toCompactBigEndian(cborEncodedMetadata.size(), 2);
-	compiler->compileContract(_contract, _compiledContracts);
+	compiler->compileContract(_contract, _compiledContracts, cborEncodedMetadata);
 	compiledContract.compiler = compiler;
 
 	try
