@@ -5354,8 +5354,6 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
 
             if (arguments) {
               if (arguments->size() > 0) {
-                const FunctionType &function = 
-                  FunctionType(*auxParamDest->constructor());
                 llvm::SmallVector<iele::IeleValue *, 4> AuxArguments;
 
                 // Cache ModifierDepth
@@ -6240,8 +6238,10 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
       iele::IeleIntConstant::getZero(&Context),
       RightOperand, CompilingBlock);
     RightOperand = ShiftValue;
-    // fall through
   }
+  BOOST_FALLTHROUGH; // Darwin
+  // Fedora (NB: this NEEDS to be immediately before "case")
+  // fall through    
   case Token::SHL: {
     BinOpcode = iele::IeleInstruction::Shift; 
     bigint min = 0;
@@ -6430,6 +6430,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       return nullptr;
     }
   }
+  /* Falls through. */
   case Type::Category::Bool: {
     solAssert(*SourceType == *TargetType, "Invalid conversion for bool.");
     return Value;

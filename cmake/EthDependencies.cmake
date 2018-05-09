@@ -30,6 +30,12 @@ if (DEFINED MSVC)
 	set (CMAKE_PREFIX_PATH ${ETH_DEPENDENCY_INSTALL_DIR} ${CMAKE_PREFIX_PATH})
 endif()
 
+if (DEFINED APPLE)
+	# CMAKE_PREFIX_PATH needs to be set to /usr/local/opt/llvm in order to pick up the homebrew installation of llvm instead of the system llvm, which
+        # does not support cmake.
+	set (CMAKE_PREFIX_PATH "/usr/local/opt/llvm" ${CMAKE_PREFIX_PATH})
+endif()
+
 # custom cmake scripts
 set(ETH_CMAKE_DIR ${CMAKE_CURRENT_LIST_DIR})
 set(ETH_SCRIPTS_DIR ${ETH_CMAKE_DIR}/scripts)
@@ -42,7 +48,25 @@ find_package(Boost 1.54.0 QUIET REQUIRED COMPONENTS regex filesystem unit_test_f
 
 eth_show_dependency(Boost boost)
 
-## we use some of LLVM's libraries for the IELE backend
-find_package(LLVM 5.0.0 QUIET REQUIRED CONFIG)
+## We use some of LLVM's libraries for the IELE backend
+## Ideally, we look for version 6. 
+## If now found, let's look for version 5, otherwise 4.
+
+## NB: From cmake version >= 3.7 there's a better way: 
+## See https://stackoverflow.com/a/44970744
+## See: https://cmake.org/cmake/help/v3.9/variable/CMAKE_FIND_PACKAGE_SORT_ORDER.html#variable:CMAKE_FIND_PACKAGE_SORT_ORDER
+## set(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
+
+find_package(LLVM 6.0.0 QUIET CONFIG)
+
+if (NOT LLVM_FOUND) 
+	find_package(LLVM 5.0.0 CONFIG)	
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I /usr/include/llvm5")	
+endif()
+
+if (NOT LLVM_FOUND) 
+	find_package(LLVM 4.0.0 REQUIRED CONFIG)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I /usr/include/llvm4")	
+endif()
 
 eth_show_dependency(LLVM LLVM)

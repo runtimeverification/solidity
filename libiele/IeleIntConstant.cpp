@@ -1,6 +1,7 @@
 #include "IeleIntConstant.h"
-
+#include <boost/format.hpp>
 #include "IeleContext.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace dev;
 using namespace dev::iele;

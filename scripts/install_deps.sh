@@ -55,7 +55,7 @@ detect_linux_distro() {
         DISTRO=$(lsb_release -is)
     elif [ -f /etc/os-release ]; then
         # extract 'foo' from NAME=foo, only on the line with NAME=foo
-        DISTRO=$(sed -n -e 's/^NAME="\(.*\)\"/\1/p' /etc/os-release)
+        DISTRO=$(sed -n -e 's/^NAME=\"\?\([^"]*\)\"\?/\1/p' /etc/os-release)
     elif [ -f /etc/centos-release ]; then
         DISTRO=CentOS
     else
@@ -99,6 +99,7 @@ case $(uname -s) in
         brew update
         brew install boost
         brew install cmake
+        brew install llvm
         if [ "$CI" = true ]; then
             brew upgrade cmake
             brew tap ethereum/ethereum
@@ -145,6 +146,7 @@ case $(uname -s) in
                     boost \
                     cmake \
                     git \
+                    llvm \
                     ethereum-git \
                 ;;
 
@@ -152,16 +154,13 @@ case $(uname -s) in
 # Alpine Linux
 #------------------------------------------------------------------------------
 
-            "Alpine Linux")
-                #Alpine
+            "Alpine Linux") 
                 echo "Installing solidity dependencies on Alpine Linux."
 
                 # All our dependencies can be found in the Alpine Linux official repositories.
                 # See https://pkgs.alpinelinux.org/
-
-                apk update
-                apk add boost-dev build-base cmake
-
+                sudo apk update
+                sudo apk add llvm llvm-dev llvm-static zlib zlib-dev boost-dev build-base cmake
                 ;;
 
 #------------------------------------------------------------------------------
@@ -186,11 +185,16 @@ case $(uname -s) in
                     8)
                         #jessie
                         echo "Installing solidity dependencies on Debian Jesse (8.x)."
+                        echo "deb http://apt.llvm.org/jessie/ llvm-toolchain-jessie-5.0 main" | sudo tee /etc/apt/sources.list.d/jessie-llvm-5.list
+           
+                        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+                        # Fingerprint: 6084 F3CF 814B 57C1 CF12 EFD5 15CF 4D18 AF4F 7421
                         ;;
                     9)
                         #stretch
                         echo "Installing solidity dependencies on Debian Stretch (9.x)."
                         install_z3="libz3-dev"
+                        echo "deb http://ftp.debian.org/debian stretch-backports main" | sudo tee /etc/apt/sources.list.d/stretch-backports.list
                         ;;
                     10)
                         #buster
@@ -203,6 +207,7 @@ case $(uname -s) in
                         echo "ERROR - This might not work, but we are trying anyway."
                         echo "Drop us a message at https://gitter.im/ethereum/solidity-dev"
                         install_z3="libz3-dev"
+                        # llvm5 not available here??
                         ;;
                 esac
 
@@ -216,6 +221,8 @@ case $(uname -s) in
                     git \
                     libboost-all-dev \
                     unzip \
+                    llvm-5.0\
+                    zlib1g-dev\
                     "$install_z3"
 
 
@@ -231,17 +238,20 @@ case $(uname -s) in
 
                 # Install "normal packages"
                 # See https://fedoraproject.org/wiki/Package_management_system.
-                dnf install \
+                sudo dnf install \
                     autoconf \
                     automake \
+                    make \
                     boost-devel \
                     boost-static \
                     cmake \
                     gcc \
                     gcc-c++ \
                     git \
-                    libtool
-
+                    libtool \
+                    llvm \
+                    llvm-devel \
+                    zlib-devel
                 ;;
 
 #------------------------------------------------------------------------------
@@ -326,6 +336,7 @@ case $(uname -s) in
                     cmake \
                     git \
                     libboost-all-dev \
+                    llvm-5.0\
                     "$install_z3"
                 if [ "$CI" = true ]; then
                     # install Z3 from PPA if the distribution does not provide it
@@ -353,11 +364,12 @@ case $(uname -s) in
             CentOS)
                 read -p "This script will heavily modify your system in order to allow for compilation of Solidity. Are you sure? [Y/N]" -n 1 -r
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    sudo yum -y install wget
                     # Make Sure we have the EPEL repos
                     sudo yum -y install epel-release
                     # Get g++ 4.8
                     sudo rpm --import http://linuxsoft.cern.ch/cern/slc6X/i386/RPM-GPG-KEY-cern
-                    wget -O /etc/yum.repos.d/slc6-devtoolset.repo http://linuxsoft.cern.ch/cern/devtoolset/slc6-devtoolset.repo
+                    sudo wget -O /etc/yum.repos.d/slc6-devtoolset.repo http://linuxsoft.cern.ch/cern/devtoolset/slc6-devtoolset.repo
                     sudo yum -y install devtoolset-2-gcc devtoolset-2-gcc-c++ devtoolset-2-binutils
 
                     # Enable the devtoolset2 usage so global gcc/g++ become the 4.8 one.
@@ -371,7 +383,14 @@ case $(uname -s) in
                     sudo yum -y remove cmake
                     sudo yum -y install cmake3
                     sudo ln -s /usr/bin/cmake3 /usr/bin/cmake
-
+                    
+                    # get llvm
+                    sudo yum -y install llvm
+                    sudo yum -y install llvm-devel
+                    
+                    # get zlib                  
+                    sudo yum -y install zlib-devel
+                    
                     # Get latest boost thanks to this guy: http://vicendominguez.blogspot.de/2014/04/boost-c-library-rpm-packages-for-centos.html
                     sudo yum -y remove boost-devel
                     sudo wget http://repo.enetres.net/enetres.repo -O /etc/yum.repos.d/enetres.repo
@@ -382,10 +401,6 @@ case $(uname -s) in
                 fi
 
                 ;;
-
-
-
-
             *)
 
 #------------------------------------------------------------------------------
