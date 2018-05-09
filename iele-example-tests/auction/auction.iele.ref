@@ -1,14 +1,14 @@
 contract "iele-example-tests/auction/auction.sol:SimpleAuction" {
 
-@"beneficiary" = 0
+@"beneficiary" = 1
 
-@"auctionEnd" = 1
+@"auctionEnd" = 2
 
-@"highestBidder" = 2
+@"highestBidder" = 3
 
-@"highestBid" = 3
+@"highestBid" = 4
 
-@"ended" = 4
+@"ended" = 5
 
 define public @"beneficiary()"() {
 entry:

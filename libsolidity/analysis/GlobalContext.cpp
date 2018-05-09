@@ -33,6 +33,9 @@ namespace dev
 namespace solidity
 {
 
+TypePointer g1 = make_shared<ArrayType>(DataLocation::Memory, make_shared<IntegerType>(256), 2);
+TypePointer g2 = make_shared<ArrayType>(DataLocation::Memory, make_shared<IntegerType>(256), 4);
+
 GlobalContext::GlobalContext():
 m_magicVariables(vector<shared_ptr<MagicVariableDeclaration const>>{
 	make_shared<MagicVariableDeclaration>("abi", make_shared<MagicType>(MagicType::Kind::ABI)),
@@ -41,6 +44,9 @@ m_magicVariables(vector<shared_ptr<MagicVariableDeclaration const>>{
 	make_shared<MagicVariableDeclaration>("block", make_shared<MagicType>(MagicType::Kind::Block)),
 	make_shared<MagicVariableDeclaration>("blockhash", make_shared<FunctionType>(strings{"uint256"}, strings{"bytes32"}, FunctionType::Kind::BlockHash, false, StateMutability::View)),
 	make_shared<MagicVariableDeclaration>("ecrecover", make_shared<FunctionType>(strings{"bytes32", "uint8", "bytes32", "bytes32"}, strings{"address"}, FunctionType::Kind::ECRecover, false, StateMutability::Pure)),
+        make_shared<MagicVariableDeclaration>("ecadd", make_shared<FunctionType>(TypePointers{g1, g1}, TypePointers{g1}, strings{}, strings{}, FunctionType::Kind::ECAdd, false, StateMutability::Pure)),
+        make_shared<MagicVariableDeclaration>("ecmul", make_shared<FunctionType>(TypePointers{g1, make_shared<IntegerType>(256)}, TypePointers{g1}, strings{}, strings{}, FunctionType::Kind::ECMul, false, StateMutability::Pure)),
+        make_shared<MagicVariableDeclaration>("ecpairing", make_shared<FunctionType>(TypePointers{make_shared<ArrayType>(DataLocation::Memory, g1), make_shared<ArrayType>(DataLocation::Memory, g2)}, TypePointers{make_shared<BoolType>()}, strings{}, strings{}, FunctionType::Kind::ECPairing, false, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("gasleft", make_shared<FunctionType>(strings(), strings{"uint256"}, FunctionType::Kind::GasLeft, false, StateMutability::View)),
 	make_shared<MagicVariableDeclaration>("keccak256", make_shared<FunctionType>(strings(), strings{"bytes32"}, FunctionType::Kind::SHA3, true, StateMutability::Pure)),
 	make_shared<MagicVariableDeclaration>("log0", make_shared<FunctionType>(strings{"bytes32"}, strings{}, FunctionType::Kind::Log0)),

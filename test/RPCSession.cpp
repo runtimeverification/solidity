@@ -119,16 +119,17 @@ string IPCSocket::sendRequest(string const& _req)
 		BOOST_FAIL("Writing on IPC failed.");
 
 	auto start = chrono::steady_clock::now();
-	ssize_t ret;
+	ssize_t ret, bytesread = 0;
 	do
 	{
-		ret = recv(m_socket, m_readBuf, sizeof(m_readBuf), 0);
+		ret = recv(m_socket, m_readBuf + bytesread, sizeof(m_readBuf) - bytesread, 0);
 		// Also consider closed socket an error.
 		if (ret < 0)
 			BOOST_FAIL("Reading on IPC failed.");
+		bytesread += ret;
 	}
 	while (
-		ret == 0 &&
+		(ret == 0 || (bytesread > 0 && m_readBuf[bytesread - 1] != '}')) &&
 		chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now() - start).count() < m_readTimeOutMS
 	);
 

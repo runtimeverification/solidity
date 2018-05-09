@@ -926,6 +926,9 @@ public:
 		Selfdestruct, ///< SELFDESTRUCT
 		Revert, ///< REVERT
 		ECRecover, ///< CALL to special contract for ecrecover
+                ECAdd,
+                ECMul,
+                ECPairing,
 		SHA256, ///< CALL to special contract for sha256
 		RIPEMD160, ///< CALL to special contract for ripemd160
 		Log0,

@@ -76,37 +76,33 @@ BOOST_AUTO_TEST_CASE(value_types)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(enums, 1)
 BOOST_AUTO_TEST_CASE(enums)
 {
 	string sourceCode = R"(
 		contract C {
 			enum E { A, B }
 			function f(E e) public pure returns (uint x) {
-				assembly { x := e }
+				x = uint(e);
 			}
 		}
 	)";
-	bool newDecoder = false;
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		ABI_CHECK(callContractFunction("f(uint8)", 0), encodeArgs(u256(0)));
 		ABI_CHECK(callContractFunction("f(uint8)", 1), encodeArgs(u256(1)));
 		// The old decoder was not as strict about enums
-		ABI_CHECK(callContractFunction("f(uint8)", 2), (newDecoder ? encodeArgs() : encodeArgs(2)));
-		ABI_CHECK(callContractFunction("f(uint8)", u256(-1)), (newDecoder? encodeArgs() : encodeArgs(u256(0xff))));
-		newDecoder = true;
+		ABI_CHECK(callContractFunction("f(uint8)", 2), encodeArgs());
+		ABI_CHECK(callContractFunction("f(uint8)", -1), encodeArgs());
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(cleanup, 1)
 BOOST_AUTO_TEST_CASE(cleanup)
 {
 	string sourceCode = R"(
 		contract C {
 			function f(uint16 a, int16 b, address c, bytes3 d, bool e)
 					public pure returns (uint v, uint w, uint x, uint y, uint z) {
-				assembly { v := a  w := b x := c y := d z := e}
+				v = a; w = uint256(b); x = uint256(c); y = uint256(d); z = e ? 1 : 0;
 			}
 		}
 	)";
@@ -120,6 +116,12 @@ BOOST_AUTO_TEST_CASE(cleanup)
 			callContractFunction(
 				"f(uint16,int16,address,bytes3,bool)",
 				u256(0xffffff), u256(0x1ffff), u256(-1), string("abcd"), u256(4)
+			),
+			encodeArgs());
+		ABI_CHECK(
+			callContractFunction(
+				"f(uint16,int16,address,bytes3,bool)",
+				u256(0xffff), -1, u160(-1), string("abc"), u256(1)
 			),
 			encodeArgs(u256(0xffff), u256(-1), (u256(1) << 160) - 1, string("abc"), true)
 		);
@@ -502,28 +504,25 @@ BOOST_AUTO_TEST_CASE(short_input_bytes)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(cleanup_int_inside_arrays, 1)
 BOOST_AUTO_TEST_CASE(cleanup_int_inside_arrays)
 {
 	string sourceCode = R"(
 		contract C {
 			enum E { A, B }
-			function f(uint16[] a) public pure returns (uint r) { assembly { r := mload(add(a, 0x20)) } }
-			function g(int16[] a) public pure returns (uint r) { assembly { r := mload(add(a, 0x20)) } }
-			function h(E[] a) public pure returns (uint r) { assembly { r := mload(add(a, 0x20)) } }
+			function f(uint16[] a) public pure returns (uint r) { r = a[0]; }
+			function g(int16[] a) public pure returns (uint256 r) { r = uint256(a[0]); }
+			function h(E[] a) public pure returns (uint r) { r = uint(a[0]); }
 		}
 	)";
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
-		ABI_CHECK(callContractFunction("f(uint16[])", 0x20, 1, 7), encodeArgs(7));
-		ABI_CHECK(callContractFunction("g(int16[])", 0x20, 1, 7), encodeArgs(7));
-		ABI_CHECK(callContractFunction("f(uint16[])", 0x20, 1, u256("0xffff")), encodeArgs(u256("0xffff")));
-		ABI_CHECK(callContractFunction("g(int16[])", 0x20, 1, u256("0xffff")), encodeArgs(u256(-1)));
-		ABI_CHECK(callContractFunction("f(uint16[])", 0x20, 1, u256("0x1ffff")), encodeArgs(u256("0xffff")));
-		ABI_CHECK(callContractFunction("g(int16[])", 0x20, 1, u256("0x10fff")), encodeArgs(u256("0x0fff")));
-		ABI_CHECK(callContractFunction("h(uint8[])", 0x20, 1, 0), encodeArgs(u256(0)));
-		ABI_CHECK(callContractFunction("h(uint8[])", 0x20, 1, 1), encodeArgs(u256(1)));
-		ABI_CHECK(callContractFunction("h(uint8[])", 0x20, 1, 2), encodeArgs());
+		ABI_CHECK(callContractFunction("f(uint16[])", encodeRefArgs(1, 1, 7)), encodeArgs(7));
+		ABI_CHECK(callContractFunction("g(int16[])", encodeRefArgs(1, 1, 7)), encodeArgs(7));
+		ABI_CHECK(callContractFunction("f(uint16[])", encodeRefArgs(1, 1, int16_t(0xffff), 0)), encodeArgs(u256("0xffff")));
+		ABI_CHECK(callContractFunction("g(int16[])", encodeRefArgs(1, 1, int16_t(0xffff), 0)), encodeArgs(u256(-1)));
+		ABI_CHECK(callContractFunction("h(uint8[])", encodeRefArgs(1, 1, 0)), encodeArgs(u256(0)));
+		ABI_CHECK(callContractFunction("h(uint8[])", encodeRefArgs(1, 1, 1)), encodeArgs(u256(1)));
+		ABI_CHECK(callContractFunction("h(uint8[])", encodeRefArgs(1, 1, 2)), encodeArgs());
 	)
 }
 
@@ -580,25 +579,22 @@ BOOST_AUTO_TEST_CASE(struct_simple)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(struct_cleanup, 1)
 BOOST_AUTO_TEST_CASE(struct_cleanup)
 {
 	string sourceCode = R"(
 		contract C {
 			struct S { int16 a; uint8 b; bytes2 c; }
-			function f(S s) public pure returns (uint a, uint b, uint c) {
-				assembly {
-					a := mload(s)
-					b := mload(add(s, 0x20))
-					c := mload(add(s, 0x40))
-				}
+			function f(S s) public pure returns (uint256 a, uint b, uint c) {
+				a = uint256(s.a);
+				b = s.b;
+				c = uint256(s.c);
 			}
 		}
 	)";
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
 		ABI_CHECK(
-			callContractFunction("f((int16,uint8,bytes2))", 0xff010, 0xff0002, "abcd"),
+			callContractFunction("f((int16,uint8,bytes2))", encodeRefArgs(int16_t(0xf010), 0x02, "ab")),
 			encodeArgs(u256("0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff010"), 2, "ab")
 		);
 	)
@@ -651,14 +647,13 @@ BOOST_AUTO_TEST_CASE(struct_function)
 	)
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(empty_struct, 1)
 BOOST_AUTO_TEST_CASE(empty_struct)
 {
 	string sourceCode = R"(
 		contract C {
 			struct S { }
 			function f(uint a, S s, uint b) public pure returns (uint x, uint y) {
-				assembly { x := a y := b }
+				x = a; y = b;
 			}
 			function g() public returns (uint, uint) {
 				return this.f(7, S(), 8);
@@ -667,7 +662,7 @@ BOOST_AUTO_TEST_CASE(empty_struct)
 	)";
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
-		ABI_CHECK(callContractFunction("f(uint,(),uint)", 7, 8), encodeArgs(7, 8));
+		ABI_CHECK(callContractFunction("f(uint,(),uint)", 7, encodeRefArgs(), 8), encodeArgs(7, 8));
 		ABI_CHECK(callContractFunction("g()"), encodeArgs(7, 8));
 	)
 }

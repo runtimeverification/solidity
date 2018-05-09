@@ -303,6 +303,8 @@ void ViewPureChecker::endVisit(MemberAccess const& _memberAccess)
 	case Type::Category::Integer:
 		if (member == "balance" && !_memberAccess.annotation().referencedDeclaration)
 			mutability = StateMutability::View;
+		if (member == "codesize" && !_memberAccess.annotation().referencedDeclaration)
+			mutability = StateMutability::View;
 		break;
 	case Type::Category::Magic:
 	{
