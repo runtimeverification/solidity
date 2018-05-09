@@ -6430,6 +6430,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       return nullptr;
     }
   }
+  /* Falls through. */
   case Type::Category::Bool: {
     solAssert(*SourceType == *TargetType, "Invalid conversion for bool.");
     return Value;
