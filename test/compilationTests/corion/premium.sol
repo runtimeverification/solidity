@@ -313,9 +313,7 @@ contract premium is module, safeMath {
             @success    Is the address crontact or not
         */
         uint256 _codeLength;
-        assembly {
-            _codeLength := extcodesize(addr)
-        }
+        _codeLength = addr.codesize;
         return _codeLength > 0;
     }
     

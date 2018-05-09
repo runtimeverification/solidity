@@ -604,7 +604,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     CompilingBlock =
       iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
  
-    if (!function.isPayable()) {
+    if (!function.isPayable() && isMostDerived(&function)) {
       appendPayableCheck();
     }
 
@@ -726,7 +726,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   }
 
   if (function.isPublic() && !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) && !contractFor(&function)->isLibrary()) {
-    if (!function.isPayable()) {
+    if (!function.isPayable() && isMostDerived(&function)) {
       appendPayableCheck();
     }
     for (unsigned i = 0; i < function.parameters().size(); i++) {
@@ -2677,6 +2677,10 @@ void IeleCompiler::doDecode(
       iele::IeleInstruction::CreateLoad(
         StringValue, NextFree, CrntPos, ArgLen, CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Twos,
+        StringValue, ArgLen, StringValue,
+        CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::BSwap, 
         StringValue, ArgLen, StringValue,
         CompilingBlock);
@@ -2964,6 +2968,35 @@ void IeleCompiler::appendStructDecode(
   }
 }
 
+bigint log2(bigint op) {
+  bigint result = 0;
+  while (op > 1) {
+    op >>= 1;
+    result += 1;
+  }
+  return result; 
+}
+
+void IeleCompiler::appendMul(iele::IeleLocalVariable *LValue, iele::IeleValue *LeftOperand, bigint RightOperand) {
+  if (RightOperand == 0) {
+    iele::IeleInstruction::CreateAssign(
+      LValue, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  } else if (RightOperand == 1) {
+    iele::IeleInstruction::CreateAssign(
+      LValue, LeftOperand, CompilingBlock);
+  } else if ((RightOperand & (RightOperand - 1)) == 0) {
+    // is a power of two
+    bigint bits = log2(RightOperand);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Shift,
+      LValue, LeftOperand, iele::IeleIntConstant::Create(&Context, bits), CompilingBlock);
+  } else {
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Mul,
+      LValue, LeftOperand, iele::IeleIntConstant::Create(&Context, RightOperand), CompilingBlock);
+  }
+}
+
 bool IeleCompiler::visit(const FunctionCall &functionCall) {
   // Not supported yet cases.
   if (functionCall.annotation().kind == FunctionCallKind::TypeConversion) {
@@ -3026,7 +3059,6 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     solAssert(arguments.size() == functionType->parameterTypes().size(),
               "IeleCompiler: struct constructor called with wrong number "
               "of arguments");
-    solAssert(arguments.size() > 0, "IeleCompiler: empty struct found");
 
     // Allocate memory for the struct.
     iele::IeleValue *StructValue = appendStructAllocation(structType);
@@ -3131,11 +3163,23 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     break;
   }
   case FunctionType::Kind::Revert: {
-      iele::IeleValue *Message = nullptr;
-      if (arguments.size() > 1) {
-        Message = compileExpression(*arguments[0])->getValue();
+      iele::IeleValue *MessageValue = nullptr;
+      if (arguments.size() > 0) {
+        IeleRValue *Message = compileExpression(*arguments[0]);
+        TypePointer ArgType = arguments[0]->annotation().type;
+        auto ParamType = function.parameterTypes()[0];
+        Message = appendTypeConversion(Message, ArgType, ParamType);
+
+        iele::IeleLocalVariable *NextFree = appendMemorySpill();
+        llvm::SmallVector<IeleRValue *, 1> args;
+        args.push_back(Message);
+        TypePointers types;
+        types.push_back(ParamType);
+        encoding(args, types, NextFree, false);
+        iele::IeleInstruction::CreateLoad(CompilingFunctionStatus, NextFree, CompilingBlock);
+        MessageValue = CompilingFunctionStatus;
       }
-      appendRevert(nullptr, Message);
+      appendRevert(nullptr, MessageValue);
       break;
   }
   case FunctionType::Kind::Assert:
@@ -3157,11 +3201,23 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     if (function.kind() == FunctionType::Kind::Assert)
       appendInvalid(InvConditionValue);
     else {
-      iele::IeleValue *Message = nullptr;
+      iele::IeleValue *MessageValue = nullptr;
       if (arguments.size() > 1) {
-        Message = compileExpression(*arguments[1])->getValue();
+        IeleRValue *Message = compileExpression(*arguments[1]);
+        TypePointer ArgType = arguments[1]->annotation().type;
+        auto ParamType = function.parameterTypes()[1];
+        Message = appendTypeConversion(Message, ArgType, ParamType);
+
+        iele::IeleLocalVariable *NextFree = appendMemorySpill();
+        llvm::SmallVector<IeleRValue *, 1> args;
+        args.push_back(Message);
+        TypePointers types;
+        types.push_back(ParamType);
+        encoding(args, types, NextFree, false);
+        iele::IeleInstruction::CreateLoad(CompilingFunctionStatus, NextFree, CompilingBlock);
+        MessageValue = CompilingFunctionStatus;
       }
-      appendRevert(InvConditionValue, Message);
+      appendRevert(InvConditionValue, MessageValue);
     }
     break;
   }
@@ -3376,6 +3432,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     CompilingExpressionResult.push_back(IeleRValue::Create(values));
     break;
   }
+  case FunctionType::Kind::GasLeft: {
+    appendGasLeft();
+    break;
+  }
   case FunctionType::Kind::External: {
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
@@ -3508,6 +3568,226 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
                                      NextFree,
                                      CompilingBlock);
 
+    break;
+  }
+  case FunctionType::Kind::ECAdd: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 2> ReturnRegisters;
+    iele::IeleLocalVariable *ResultX =
+      iele::IeleLocalVariable::Create(&Context, "ecadd.x", CompilingFunction);
+    iele::IeleLocalVariable *ResultY =
+      iele::IeleLocalVariable::Create(&Context, "ecadd.y", CompilingFunction);
+    ReturnRegisters.push_back(ResultX);
+    ReturnRegisters.push_back(ResultY);
+
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      IeleRValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call "
+                "argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type;
+      TypePointer ParamType = function.parameterTypes()[i];
+      auto arrayType = dynamic_cast<const ArrayType *>(ParamType.get());
+      ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+      iele::IeleValue *x = appendArrayAccess(*arrayType, iele::IeleIntConstant::getZero(&Context),
+          ArgValue->getValue(), arrayType->location())->read(CompilingBlock)->getValue();
+      iele::IeleValue *y = appendArrayAccess(*arrayType, iele::IeleIntConstant::getOne(&Context),
+          ArgValue->getValue(), arrayType->location())->read(CompilingBlock)->getValue();
+      Arguments.push_back(x);
+      Arguments.push_back(y);
+    }
+
+    IeleRValue *CalleeValue = compileExpression(functionCall.expression());
+    iele::IeleGlobalVariable *FunctionCalleeValue =
+      iele::IeleGlobalVariable::Create(&Context, "iele.ecadd");
+    iele::IeleValue *AddressValue =
+      iele::IeleIntConstant::getOne(&Context);
+
+    iele::IeleLocalVariable *StatusValue =
+      CompilingFunctionStatus;
+
+    iele::IeleValue *GasValue;
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasLeft =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasLeft, EmptyArguments,
+        CompilingBlock);
+      GasValue = GasLeft;
+    } else {
+      GasValue = CalleeValue->getValues()[0];
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      true, StatusValue, ReturnRegisters, FunctionCalleeValue, AddressValue,
+      nullptr, GasValue, Arguments, CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    auto returnType = dynamic_cast<const ArrayType *>(function.returnParameterTypes()[0].get());
+    iele::IeleValue *Return = appendArrayAllocation(*returnType);
+    appendArrayAccess(*returnType, iele::IeleIntConstant::getZero(&Context),
+      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[0]}), CompilingBlock);
+    appendArrayAccess(*returnType, iele::IeleIntConstant::getOne(&Context),
+      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[1]}), CompilingBlock);
+    CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
+    break;
+  }
+  case FunctionType::Kind::ECMul: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 3> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 2> ReturnRegisters;
+    iele::IeleLocalVariable *ResultX =
+      iele::IeleLocalVariable::Create(&Context, "ecmul.x", CompilingFunction);
+    iele::IeleLocalVariable *ResultY =
+      iele::IeleLocalVariable::Create(&Context, "ecmul.y", CompilingFunction);
+    ReturnRegisters.push_back(ResultX);
+    ReturnRegisters.push_back(ResultY);
+
+    IeleRValue *ArgValue = compileExpression(*arguments[0]);
+    solAssert(ArgValue,
+              "IeleCompiler: Failed to compile internal function call "
+              "argument");
+    // Check if we need to do a memory to/from storage copy.
+    TypePointer ArgType = arguments[0]->annotation().type;
+    TypePointer ParamType = function.parameterTypes()[0];
+    auto arrayType = dynamic_cast<const ArrayType *>(ParamType.get());
+    ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+    iele::IeleValue *x = appendArrayAccess(*arrayType, iele::IeleIntConstant::getZero(&Context),
+        ArgValue->getValue(), arrayType->location())->read(CompilingBlock)->getValue();
+    iele::IeleValue *y = appendArrayAccess(*arrayType, iele::IeleIntConstant::getOne(&Context),
+        ArgValue->getValue(), arrayType->location())->read(CompilingBlock)->getValue();
+    Arguments.push_back(x);
+    Arguments.push_back(y);
+
+    ArgValue = compileExpression(*arguments[1]);
+    solAssert(ArgValue,
+              "IeleCompiler: Failed to compile internal function call "
+              "argument");
+    // Check if we need to do a memory to/from storage copy.
+    ArgType = arguments[1]->annotation().type;
+    ParamType = function.parameterTypes()[1];
+    ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+    Arguments.push_back(ArgValue->getValue());
+
+    IeleRValue *CalleeValue = compileExpression(functionCall.expression());
+    iele::IeleGlobalVariable *FunctionCalleeValue =
+      iele::IeleGlobalVariable::Create(&Context, "iele.ecmul");
+    iele::IeleValue *AddressValue =
+      iele::IeleIntConstant::getOne(&Context);
+
+    iele::IeleLocalVariable *StatusValue =
+      CompilingFunctionStatus;
+
+    iele::IeleValue *GasValue;
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasLeft =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasLeft, EmptyArguments,
+        CompilingBlock);
+      GasValue = GasLeft;
+    } else {
+      GasValue = CalleeValue->getValues()[0];
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      true, StatusValue, ReturnRegisters, FunctionCalleeValue, AddressValue,
+      nullptr, GasValue, Arguments, CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    auto returnType = dynamic_cast<const ArrayType *>(function.returnParameterTypes()[0].get());
+    iele::IeleValue *Return = appendArrayAllocation(*returnType);
+    appendArrayAccess(*returnType, iele::IeleIntConstant::getZero(&Context),
+      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[0]}), CompilingBlock);
+    appendArrayAccess(*returnType, iele::IeleIntConstant::getOne(&Context),
+      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[1]}), CompilingBlock);
+    CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
+    break;
+  }
+  case FunctionType::Kind::ECPairing: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 2> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 1> ReturnRegisters;
+    iele::IeleLocalVariable *Result =
+      iele::IeleLocalVariable::Create(&Context, "ecpairing.result", CompilingFunction);
+    ReturnRegisters.push_back(Result);
+
+
+    llvm::SmallVector<iele::IeleValue *, 2> Lengths;
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      IeleRValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call "
+                "argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type;
+      TypePointer ParamType = function.parameterTypes()[i];
+      ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+
+      iele::IeleLocalVariable *Length =
+        iele::IeleLocalVariable::Create(&Context, std::string("ecpairing.g") + char('1'+i) + ".length",
+        CompilingFunction);
+      Lengths.push_back(Length);
+      iele::IeleInstruction::CreateLoad(
+        Length, ArgValue->getValue(), CompilingBlock);
+      iele::IeleLocalVariable *NextFree = appendMemorySpill();
+      llvm::SmallVector<IeleRValue *, 1> Args;
+      Args.push_back(ArgValue);
+      TypePointers types;
+      types.push_back(ParamType);
+      iele::IeleValue *ByteWidth = encoding(Args, types, NextFree, false);
+      iele::IeleLocalVariable *EncodedVal = 
+        iele::IeleLocalVariable::Create(&Context, std::string("ecpairing.g") + char('1'+i), CompilingFunction);
+      iele::IeleInstruction::CreateLoad(
+        EncodedVal, NextFree,
+        iele::IeleIntConstant::getZero(&Context),
+        ByteWidth, CompilingBlock);
+      Arguments.push_back(EncodedVal);
+    }
+    solAssert(Lengths.size() == 2, "invalid number of arguments");
+    iele::IeleLocalVariable *Condition =
+      iele::IeleLocalVariable::Create(&Context, "have.invalid.lengths", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpNe, Condition, Lengths[0], Lengths[1],
+      CompilingBlock);
+    appendRevert(Condition);
+    Arguments.insert(Arguments.begin(), Lengths[0]);
+
+    IeleRValue *CalleeValue = compileExpression(functionCall.expression());
+    iele::IeleGlobalVariable *FunctionCalleeValue =
+      iele::IeleGlobalVariable::Create(&Context, "iele.ecpairing");
+    iele::IeleValue *AddressValue =
+      iele::IeleIntConstant::getOne(&Context);
+
+    iele::IeleLocalVariable *StatusValue =
+      CompilingFunctionStatus;
+
+    iele::IeleValue *GasValue;
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasLeft =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasLeft, EmptyArguments,
+        CompilingBlock);
+      GasValue = GasLeft;
+    } else {
+      GasValue = CalleeValue->getValues()[0];
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      true, StatusValue, ReturnRegisters, FunctionCalleeValue, AddressValue,
+      nullptr, GasValue, Arguments, CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
     break;
   }
   case FunctionType::Kind::ECRecover: {
@@ -3698,15 +3978,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       solAssert(false, "not supported by IELE.");
     }
  
-    iele::IeleValue *ElementSizeValue =
-      iele::IeleIntConstant::Create(&Context, elementSize);
- 
     iele::IeleLocalVariable *AddressValue =
       iele::IeleLocalVariable::Create(&Context, "array.last.element", CompilingFunction);
     // compute the data offset of the last element
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Mul, AddressValue, SizeValue, ElementSizeValue,
-      CompilingBlock);
+    appendMul(AddressValue, SizeValue, elementSize);
     // add one for the length slot
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Add, AddressValue, AddressValue,
@@ -3829,6 +4104,17 @@ bool IeleCompiler::visit(const NewExpression &newExpression) {
   CompilingExpressionResult.push_back(IeleRValue::Create({Contract}));
   return false;
 }
+
+void IeleCompiler::appendGasLeft() {
+  llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+  iele::IeleLocalVariable *GasValue =
+    iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+  iele::IeleInstruction::CreateIntrinsicCall(
+    iele::IeleInstruction::Gas, GasValue, EmptyArguments,
+    CompilingBlock);
+  CompilingExpressionResult.push_back(IeleRValue::Create({GasValue}));
+}
+
 
 bool IeleCompiler::visit(const MemberAccess &memberAccess) {
    const std::string& member = memberAccess.memberName();
@@ -4050,13 +4336,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create({OriginValue}));
     } else if (member == "gas") {
-      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
-      iele::IeleLocalVariable *GasValue =
-        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
-      iele::IeleInstruction::CreateIntrinsicCall(
-        iele::IeleInstruction::Gas, GasValue, EmptyArguments,
-        CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({GasValue}));
+      appendGasLeft();
     } else if (member == "gasprice") {
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
       iele::IeleLocalVariable *GaspriceValue =
@@ -4108,6 +4388,17 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleInstruction::Balance, BalanceValue, Arguments,
         CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create({BalanceValue}));
+    } else if (member == "codesize") {
+      ExprValue = appendTypeConversion(ExprValue,
+        memberAccess.expression().annotation().type,
+        Address);
+      llvm::SmallVector<iele::IeleValue *, 0> Arguments(1, ExprValue->getValue());
+      iele::IeleLocalVariable *CodeSizeValue =
+        iele::IeleLocalVariable::Create(&Context, "codesize", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Extcodesize, CodeSizeValue, Arguments,
+        CompilingBlock);
+      CompilingExpressionResult.push_back(IeleRValue::Create({CodeSizeValue}));
     } else
       solAssert(false, "IeleCompiler: invalid member for integer value");
     break;
@@ -4328,14 +4619,10 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
     solAssert(false, "not supported by IELE.");
   }
   // First compute the offset from the start of the array.
-  iele::IeleValue *ElementSizeValue =
-    iele::IeleIntConstant::Create(&Context, elementSize);
   iele::IeleLocalVariable *OffsetValue =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
   if (!type.isByteArray()) {
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, OffsetValue, IndexValue,
-        ElementSizeValue, CompilingBlock);
+    appendMul(OffsetValue, IndexValue, elementSize);
   }
   if (type.isDynamicallySized() && !type.isByteArray()) {
     // Add 1 to skip the first slot that holds the size.
@@ -4416,11 +4703,7 @@ IeleLValue *IeleCompiler::appendMappingAccess(const MappingType &type, iele::Iel
         CompilingBlock);
   } else {
     // In this case AddressValue = ExprValue + IndexValue * ValueTypeSize
-    iele::IeleValue *ValueTypeSize =
-      iele::IeleIntConstant::Create(&Context, valueType->storageSize());
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, AddressValue, IndexValue,
-        ValueTypeSize, CompilingBlock);
+    appendMul(AddressValue, IndexValue, valueType->storageSize());
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, AddressValue, ExprValue, AddressValue,
         CompilingBlock);
@@ -5229,10 +5512,7 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
         solAssert(false, "not supported by IELE.");
       }
  
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, SizeVariable, SizeValue, 
-        iele::IeleIntConstant::Create(&Context, elementSize),
-        CompilingBlock);
+      appendMul(SizeVariable, SizeValue, elementSize);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, SizeVariable, SizeValue,
         iele::IeleIntConstant::getOne(&Context),
@@ -5286,11 +5566,9 @@ iele::IeleLocalVariable *IeleCompiler::appendArrayAllocation(
 
     SizeValue =
       iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul,
+    appendMul(
         llvm::cast<iele::IeleLocalVariable>(SizeValue),
-        iele::IeleIntConstant::Create(&Context, elementSize),
-        NumElemsValue, CompilingBlock);
+        NumElemsValue, elementSize);
     // Onr extra slot for storing length.
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add,
@@ -5514,9 +5792,7 @@ void IeleCompiler::appendCopy(
     if (!elementType->isDynamicallyEncoded() && *elementType == *toElementType) {
       iele::IeleLocalVariable *CopySize =
         iele::IeleLocalVariable::Create(&Context, "copy.size", CompilingFunction);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, CopySize, SizeVariableFrom, FromElementSizeValue,
-        CompilingBlock);
+      appendMul(CopySize, SizeVariableFrom, elementSize);
       appendIeleRuntimeCopy(ElementFrom, ElementTo, CopySize, FromLoc, ToLoc);
 
       FillLoc = iele::IeleLocalVariable::Create(&Context, "fill.address", CompilingFunction);
@@ -5525,9 +5801,7 @@ void IeleCompiler::appendCopy(
         CompilingBlock);
 
       FillSize = iele::IeleLocalVariable::Create(&Context, "fill.size", CompilingFunction);
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, FillSize, SizeVariableTo, ToElementSizeValue,
-        CompilingBlock);
+      appendMul(FillSize, SizeVariableTo, toElementSize);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Sub, FillSize, FillSize, CopySize,
         CompilingBlock);
@@ -5570,8 +5844,7 @@ void IeleCompiler::appendCopy(
 
       FillLoc = ElementTo;
       FillSize = SizeVariableTo;
-      iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Mul, SizeVariableTo, SizeVariableTo, ToElementSizeValue);
+      appendMul(SizeVariableTo, SizeVariableTo, toElementSize);
     }
 
     iele::IeleLocalVariable *CondValue =
@@ -5807,12 +6080,7 @@ void IeleCompiler::appendArrayLengthResize(
   
     iele::IeleLocalVariable *NewEnd =
       iele::IeleLocalVariable::Create(&Context, "new.end.of.array", CompilingFunction);
-    iele::IeleIntConstant *ElementSize =
-      iele::IeleIntConstant::Create(&Context, elementSize);
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Mul, NewEnd, NewLength, 
-      ElementSize,
-      CompilingBlock);
+    appendMul(NewEnd, NewLength, elementSize);
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Add, NewEnd, NewEnd,
       LValue, CompilingBlock);

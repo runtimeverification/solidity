@@ -896,7 +896,8 @@ BOOST_AUTO_TEST_CASE(event)
 	char const* text = R"(
 		contract c {
 			event e();
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -905,7 +906,8 @@ BOOST_AUTO_TEST_CASE(event_arguments)
 	char const* text = R"(
 		contract c {
 			event e(uint a, bytes32 s);
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -914,7 +916,8 @@ BOOST_AUTO_TEST_CASE(event_arguments_indexed)
 	char const* text = R"(
 		contract c {
 			event e(uint a, bytes32 indexed s, bool indexed b);
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -940,7 +943,8 @@ BOOST_AUTO_TEST_CASE(visibility_specifiers)
 			function f_priv() private {}
 			function f_public() public {}
 			function f_internal() internal {}
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -949,12 +953,14 @@ BOOST_AUTO_TEST_CASE(multiple_visibility_specifiers)
 	char const* text = R"(
 		contract c {
 			uint private internal a;
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "Visibility already specified as \"private\".");
 	text = R"(
 		contract c {
 			function f() private external {}
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "Visibility already specified as \"private\".");
 }
 
@@ -963,32 +969,38 @@ BOOST_AUTO_TEST_CASE(multiple_statemutability_specifiers)
 	char const* text = R"(
 		contract c {
 			function f() payable payable {}
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "State mutability already specified as \"payable\".");
 	text = R"(
 		contract c {
 			function f() constant constant {}
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "State mutability already specified as \"view\".");
 	text = R"(
 		contract c {
 			function f() constant view {}
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "State mutability already specified as \"view\".");
 	text = R"(
 		contract c {
 			function f() payable constant {}
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "State mutability already specified as \"payable\".");
 	text = R"(
 		contract c {
 			function f() pure payable {}
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "State mutability already specified as \"pure\".");
 	text = R"(
 		contract c {
 			function f() pure constant {}
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "State mutability already specified as \"pure\".");
 }
 
@@ -1007,7 +1019,8 @@ BOOST_AUTO_TEST_CASE(literal_constants_with_ether_subdenominations)
 			uint256 b;
 			uint256 c;
 			uint256 d;
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -1020,7 +1033,8 @@ BOOST_AUTO_TEST_CASE(literal_constants_with_ether_subdenominations_in_expression
 				 a = 1 wei * 100 wei + 7 szabo - 3;
 			}
 			uint256 a;
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -1034,7 +1048,8 @@ BOOST_AUTO_TEST_CASE(enum_valid_declaration)
 				a = foo.Value3;
 			}
 			uint256 a;
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -1043,7 +1058,8 @@ BOOST_AUTO_TEST_CASE(empty_enum_declaration)
 	char const* text = R"(
 		contract c {
 			enum foo { }
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "enum with no members is not allowed");
 }
 
@@ -1052,7 +1068,8 @@ BOOST_AUTO_TEST_CASE(malformed_enum_declaration)
 	char const* text = R"(
 		contract c {
 			enum foo { WARNING,}
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "Expected Identifier after");
 }
 
@@ -1061,7 +1078,8 @@ BOOST_AUTO_TEST_CASE(external_function)
 	char const* text = R"(
 		contract c {
 			function x() external {}
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -1070,7 +1088,8 @@ BOOST_AUTO_TEST_CASE(external_variable)
 	char const* text = R"(
 		contract c {
 			uint external x;
-		})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "Expected identifier");
 }
 
@@ -1082,7 +1101,8 @@ BOOST_AUTO_TEST_CASE(arrays_in_storage)
 			uint[] a2;
 			struct x { uint[2**20] b; y[0] c; }
 			struct y { uint d; mapping(uint=>x)[] e; }
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -1091,7 +1111,8 @@ BOOST_AUTO_TEST_CASE(arrays_in_events)
 	char const* text = R"(
 		contract c {
 			event e(uint[10] a, bytes7[8] indexed b, c[3] x);
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -1100,7 +1121,8 @@ BOOST_AUTO_TEST_CASE(arrays_in_expressions)
 	char const* text = R"(
 		contract c {
 			function f() { c[10] a = 7; uint8[10 * 2] x; }
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -1109,7 +1131,8 @@ BOOST_AUTO_TEST_CASE(multi_arrays)
 	char const* text = R"(
 		contract c {
 			mapping(uint => mapping(uint => int8)[8][][9])[] x;
-		})";
+		}
+	)";
 	BOOST_CHECK(successParse(text));
 }
 
@@ -1118,7 +1141,8 @@ BOOST_AUTO_TEST_CASE(constant_is_keyword)
 	char const* text = R"(
 		contract Foo {
 			uint constant = 4;
-	})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "Expected identifier");
 }
 
@@ -1157,7 +1181,8 @@ BOOST_AUTO_TEST_CASE(var_array)
 	char const* text = R"(
 		contract Foo {
 			function f() { var[] a; }
-	})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "Expected identifier");
 }
 
@@ -1189,7 +1214,8 @@ BOOST_AUTO_TEST_CASE(location_specifiers_for_state)
 	char const* text = R"(
 		contract Foo {
 			uint[] memory x;
-	})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "Expected identifier");
 }
 
@@ -1198,7 +1224,8 @@ BOOST_AUTO_TEST_CASE(location_specifiers_with_var)
 	char const* text = R"(
 		contract Foo {
 			function f() { var memory x; }
-	})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "Location specifier needs explicit type name");
 }
 
@@ -1245,7 +1272,8 @@ BOOST_AUTO_TEST_CASE(local_const_variable)
 				uint constant local = 4;
 				return local;
 			}
-	})";
+		}
+	)";
 	CHECK_PARSE_ERROR(text, "Expected token Semicolon");
 }
 

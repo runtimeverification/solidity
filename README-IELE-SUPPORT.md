@@ -19,6 +19,7 @@ The Solidity features that will not be supported are listed below along with the
 | Inline EVM assembly | [doc link](https://solidity.readthedocs.io/en/v0.4.23/assembly.html#solidity-assembly) | SC NE |
 | `abi.encodeWithSignature` | [doc link](http://solidity.readthedocs.io/en/v0.4.23/units-and-global-variables.html#abi-encoding-functions) | NE |
 | `abi.encodeWithSelector` | [doc link](http://solidity.readthedocs.io/en/v0.4.23/units-and-global-variables.html#abi-encoding-functions) | NE |
+| Calling external library functions without the source of the contract | [doc link](http://solidity.readthedocs.io/en/v0.4.21/contracts.html#libraries) | SC NE |
 
 Finally, the `uint` and `int` Solidity types have been changed from syntactic sugar for `uint256` and `int256` respectively to unbounded integer types. As a consequence of that, we also do not guarantee that we will follow the documented [storage](https://solidity.readthedocs.io/en/v0.4.23/miscellaneous.html#layout-of-state-variables-in-storage) and [memory](https://solidity.readthedocs.io/en/v0.4.23/miscellaneous.html#layout-in-memory) layouts, since we have to accommodate these new unbounded types.
 
@@ -32,3 +33,11 @@ ease with which contracts can be written to be functionally correct and free of 
   rather than attempting to interpret its value modulo some fixed bit width.
 
 * The `ecrecover` function no longer returns zero on failure, as this can lead improperly written code to send funds to address zero, locking them permanently. Instead, the underlying iele primitive returns the exceptional value -1, and Solidity invocations of the higher level built-in function will check for this error case and throw an exception.
+
+* In order to remove the need for inline assembly, we have added a `codesize` member of type `uint16` to the address type which returns the size in bytes of the code deployed at that address (zero if no code has been deployed).
+
+* For the same reason, we have also added ecadd, ecmul, and ecpairing functions to implement zero-knowledge proof operations which were expressible in EVM but only expressible in solidity via inline assembly. The types of the functions are listed below:
+
+    * `function ecadd(uint256[2], uint256[2]) pure returns (uint256[2])`
+    * `function ecmul(uint256[2], uint256) pure returns (uint256[2])`
+    * `function ecpairing(uint256[2][], uint256[4][]) returns (bool)`

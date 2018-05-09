@@ -78,8 +78,13 @@ do
     [ $skipped -eq 0 ] && continue
     if [ "$dir" != "test/compilationTests/README.md" ]
     then
-        compileFull "$dir"/*.sol "$dir"/*/*.sol
-        failed=$?
+        if `ls "$dir"/*/*.sol > /dev/null 2>&1`; then
+            compileFull "$dir"/*.sol "$dir"/*/*.sol
+            failed=$?
+        else
+            compileFull "$dir"/*.sol
+            failed=$?
+        fi
         grep -q $dir test/failing-tests
         excluded=$?
         contracts=$((contracts+1))

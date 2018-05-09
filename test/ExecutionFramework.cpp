@@ -131,7 +131,7 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 	RPCSession::TransactionReceipt receipt(m_rpc.eth_getTransactionReceipt(txHash));
 
 	m_blockNumber = u256(receipt.blockNumber);
-	m_status = u256(receipt.status);
+	m_status = bigint(receipt.status);
 
 	if (_isCreation)
 	{

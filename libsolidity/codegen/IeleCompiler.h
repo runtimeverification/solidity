@@ -37,7 +37,7 @@ public:
     RevertStatusBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingLValue(false),
-    NextStorageAddress(0),
+    NextStorageAddress(1),
     CompilingContractASTNode(nullptr),
     CompilingFunctionASTNode(nullptr),
     ModifierDepth(-1) { }
@@ -206,6 +206,7 @@ private:
   void appendInvalid(iele::IeleValue *Condition = nullptr);
   void appendRangeCheck(iele::IeleValue *Value, bigint *min, bigint *max);
   void appendRangeCheck(IeleRValue *Value, const Type &Type);
+  void appendGasLeft(void);
 
   void appendRevertBlocks(void);
 
@@ -216,6 +217,8 @@ private:
   IeleLValue *appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue);
   IeleLValue *appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc);
   IeleLValue *appendStructAccess(const StructType &type, iele::IeleValue *ExprValue, std::string member, DataLocation Loc);
+
+  void appendMul(iele::IeleLocalVariable *LValue, iele::IeleValue *LeftOperand, bigint RightOperand);
 
   iele::IeleValue *getReferenceTypeSize(
     const Type &type, iele::IeleValue *AddressValue);
