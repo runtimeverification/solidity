@@ -160,7 +160,7 @@ case $(uname -s) in
                 # All our dependencies can be found in the Alpine Linux official repositories.
                 # See https://pkgs.alpinelinux.org/
                 sudo apk update
-                sudo apk add llvm llvm-dev zlib zlib-dev boost-dev build-base cmake
+                sudo apk add llvm llvm-dev llvm-static zlib zlib-dev boost-dev build-base cmake
                 ;;
 
 #------------------------------------------------------------------------------
