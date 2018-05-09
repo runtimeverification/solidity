@@ -157,10 +157,6 @@ case $(uname -s) in
             "Alpine Linux") 
                 echo "Installing solidity dependencies on Alpine Linux."
 
-                # apk-tools may need updating
-                # See https://wiki.alpinelinux.org/wiki/Alpine_Linux_package_management#.22apk-tools_is_old.22
-                sudo apk add --upgrade apk-tools@edge
-                
                 # All our dependencies can be found in the Alpine Linux official repositories.
                 # See https://pkgs.alpinelinux.org/
                 sudo apk update
