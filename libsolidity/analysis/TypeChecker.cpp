@@ -722,6 +722,8 @@ bool TypeChecker::visit(FunctionDefinition const& _function)
 		m_errorReporter.typeError(_function.location(), "Constructor must be implemented if declared.");
 	else if (isLibraryFunction && _function.visibility() <= FunctionDefinition::Visibility::Internal)
 		m_errorReporter.typeError(_function.location(), "Internal library function must be implemented if declared.");
+	else if (isLibraryFunction)
+		m_errorReporter.typeError(_function.location(), "External library functions without an implementation are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 	return false;
 }
 
@@ -1675,6 +1677,19 @@ bool TypeChecker::visit(FunctionCall const& _functionCall)
 			m_errorReporter.warning(_functionCall.location(), "Invoking events without \"emit\" prefix is deprecated.");
 	}
 
+	if (
+		functionType->kind() == FunctionType::Kind::BareCall ||
+		functionType->kind() == FunctionType::Kind::BareCallCode ||
+		functionType->kind() == FunctionType::Kind::BareDelegateCall
+	)
+		m_errorReporter.typeError(_functionCall.location(), "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+
+	if (functionType->kind() == FunctionType::Kind::ABIEncodeWithSelector)
+		m_errorReporter.typeError(_functionCall.location(), "abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+	if (functionType->kind() == FunctionType::Kind::ABIEncodeWithSignature)
+		m_errorReporter.typeError(_functionCall.location(), "abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+		
+
 	TypePointers parameterTypes = functionType->parameterTypes();
 
 	if (!functionType->padArguments())
@@ -2032,6 +2047,21 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 		if (tt->actualType()->category() == Type::Category::Enum)
 			annotation.isPure = true;
 
+	if (exprType->category() == Type::Category::Magic)
+	{
+		auto const& magicType(dynamic_cast<MagicType const&>(*exprType));
+		if (magicType.kind() == MagicType::Kind::Message)
+		{
+			if (memberName == "sig" || memberName == "data")
+				m_errorReporter.typeError(_memberAccess.location(), "msg." + memberName + " is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+		}
+	}
+
+	if (exprType->category() == Type::Category::Function)
+	{
+		if (memberName == "selector")
+			m_errorReporter.typeError(_memberAccess.location(), "Member \"" + memberName + "\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+	}
 	return false;
 }
 
