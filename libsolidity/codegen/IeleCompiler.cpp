@@ -4373,9 +4373,9 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     solAssert(ExprValue,
               "IeleCompiler: failed to compile base expression for member "
               "access.");
-    solAssert(!(std::set<std::string>{"call", "callcode", "delegatecall"}).count(member),
-              "IeleCompiler: member not supported in IELE");
-    if (member == "transfer" || member == "send") {
+    if (member == "call" || member == "callcode" || member == "delegatecall") {
+    // cannot be invoked in iele, so we don't need to create a result.
+    } else if (member == "transfer" || member == "send") {
       ExprValue = appendTypeConversion(ExprValue,
         memberAccess.expression().annotation().type,
         Address);
