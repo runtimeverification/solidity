@@ -895,6 +895,7 @@ void TypeChecker::endVisit(FunctionTypeName const& _funType)
 
 bool TypeChecker::visit(InlineAssembly const& _inlineAssembly)
 {
+/*
 	// External references have already been resolved in a prior stage and stored in the annotation.
 	// We run the resolve step again regardless.
 	julia::ExternalIdentifierAccess::Resolver identifierAccess = [&](
@@ -993,6 +994,8 @@ bool TypeChecker::visit(InlineAssembly const& _inlineAssembly)
 	if (!analyzer.analyze(_inlineAssembly.operations()))
 		return false;
 	return true;
+*/
+	return false;
 }
 
 bool TypeChecker::visit(IfStatement const& _ifStatement)

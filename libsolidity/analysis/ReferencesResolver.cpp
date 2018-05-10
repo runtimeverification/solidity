@@ -235,6 +235,7 @@ void ReferencesResolver::endVisit(ArrayTypeName const& _typeName)
 
 bool ReferencesResolver::visit(InlineAssembly const& _inlineAssembly)
 {
+/*
 	m_resolver.warnVariablesNamedLikeInstructions();
 
 	// Errors created in this stage are completely ignored because we do not yet know
@@ -280,6 +281,7 @@ bool ReferencesResolver::visit(InlineAssembly const& _inlineAssembly)
 	assembly::AsmAnalysisInfo analysisInfo;
 	boost::optional<Error::Type> errorTypeForLoose = m_experimental050Mode ? Error::Type::SyntaxError : Error::Type::Warning;
 	assembly::AsmAnalyzer(analysisInfo, errorsIgnored, EVMVersion(), errorTypeForLoose, assembly::AsmFlavour::Loose, resolver).analyze(_inlineAssembly.operations());
+*/
 	return false;
 }
 
