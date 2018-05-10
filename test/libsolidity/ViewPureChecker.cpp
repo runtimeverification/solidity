@@ -120,14 +120,15 @@ BOOST_AUTO_TEST_CASE(environment_access)
 		"tx.origin",
 		"tx.gasprice",
 		"this",
-		"address(1).balance"
+		"address(1).balance",
+		"address(1).codesize"
 	};
 	// ``block.blockhash`` and ``blockhash`` are tested seperately below because their usage will
 	// produce warnings that can't be handled in a generic way.
 	vector<string> pure{
-		"msg.data",
-		"msg.data[0]",
-		"msg.sig",
+	//	"msg.data",
+	//	"msg.data[0]",
+	//	"msg.sig",
 		"msg",
 		"block",
 		"tx"
@@ -298,16 +299,22 @@ BOOST_AUTO_TEST_CASE(builtin_functions)
 				address(this).transfer(1);
 				require(address(this).send(2));
 				selfdestruct(address(this));
-				require(address(this).delegatecall());
-				require(address(this).call());
+			//	require(address(this).delegatecall());
+			//	require(address(this).call());
 			}
 			function g() pure public {
 				bytes32 x = keccak256("abc");
 				bytes32 y = sha256("abc");
 				address z = ecrecover(1, 2, 3, 4);
+				uint256 val = 0;
+				uint256[2] memory a = ecadd([val, val], [val, val]);
+				uint256[2] memory b = ecmul([val, val], val);
+				uint256[2][] memory p1;
+				uint256[4][] memory p2;
+				bool c = ecpairing(p1, p2);
 				require(true);
 				assert(true);
-				x; y; z;
+				x; y; z; a; b; c;
 			}
 			function() payable public {}
 		}
@@ -356,7 +363,8 @@ BOOST_AUTO_TEST_CASE(selector)
 			}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	std::vector<string> msgs{"Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md", "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md"};
+	CHECK_ERROR_ALLOW_MULTI(text, TypeError, msgs);
 }
 
 BOOST_AUTO_TEST_CASE(selector_complex)
@@ -372,7 +380,7 @@ BOOST_AUTO_TEST_CASE(selector_complex)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "reads from the environment or state and thus requires \"view\"");
+	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 BOOST_AUTO_TEST_CASE(selector_complex2)
@@ -388,7 +396,7 @@ BOOST_AUTO_TEST_CASE(selector_complex2)
 			}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 BOOST_AUTO_TEST_CASE(creation)
@@ -429,7 +437,9 @@ BOOST_AUTO_TEST_CASE(assembly)
 			}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	std::vector<std::string> msgs{msg,msg,msg,msg,msg,msg};
+	CHECK_ERROR_ALLOW_MULTI(text, SyntaxError, msgs);
 }
 
 BOOST_AUTO_TEST_CASE(assembly_staticcall)
@@ -441,10 +451,8 @@ BOOST_AUTO_TEST_CASE(assembly_staticcall)
 			}
 		}
 	)";
-	if (!dev::test::Options::get().evmVersion().hasStaticCall())
-		CHECK_WARNING(text, "\"staticcall\" instruction is only available for Byzantium-compatible");
-	else
-		CHECK_SUCCESS_NO_WARNINGS(text);
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(assembly_jump)
@@ -456,7 +464,8 @@ BOOST_AUTO_TEST_CASE(assembly_jump)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "low-level EVM features");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(constant)
