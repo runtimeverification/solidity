@@ -129,7 +129,7 @@ string IPCSocket::sendRequest(string const& _req)
 		bytesread += ret;
 	}
 	while (
-		(ret == 0 || (bytesread > 0 && m_readBuf[bytesread - 1] != '}')) &&
+		(ret == 0 || (bytesread > 0 && m_readBuf[bytesread - 1] != '}' && m_readBuf[bytesread - 1] != '\n')) &&
 		chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now() - start).count() < m_readTimeOutMS
 	);
 
