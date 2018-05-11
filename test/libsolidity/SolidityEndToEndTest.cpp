@@ -315,7 +315,6 @@ BOOST_AUTO_TEST_CASE(conditional_expression_functions)
 	ABI_CHECK(callContractFunction("f(bool)", false), encodeArgs(u256(2)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(C99_scoping_activation, 4)
 BOOST_AUTO_TEST_CASE(C99_scoping_activation)
 {
 	char const* sourceCode = R"(

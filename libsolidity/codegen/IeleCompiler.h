@@ -150,6 +150,7 @@ private:
   std::string getIeleNameForFunction(const FunctionDefinition &function);
   std::string getIeleNameForStateVariable(const VariableDeclaration *stateVariable);
   std::string getIeleNameForAccessor(const VariableDeclaration *stateVariable);
+  std::string getIeleNameForLocalVariable(const VariableDeclaration *localVariable);
 
   std::set<ExperimentalFeature> ExperimentalFeatures;
 

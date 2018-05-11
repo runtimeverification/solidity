@@ -43,6 +43,20 @@ std::string IeleCompiler::getIeleNameForFunction(
   }
 }
 
+std::string IeleCompiler::getIeleNameForLocalVariable(
+    const VariableDeclaration *localVariable) {
+  solAssert(localVariable->isLocalVariable() &&
+            !localVariable->isReturnParameter(),
+            "IeleCompiler: requested unique local variable name for a "
+            "non-local variable.");
+  if (experimentalFeatureActive(ExperimentalFeature::V050))
+    return localVariable->name() + "." +
+           std::to_string(localVariable->location().start) + "." +
+           std::to_string(localVariable->location().end);
+  else
+    return localVariable->name();
+}
+
 std::string IeleCompiler::getIeleNameForStateVariable(
     const VariableDeclaration *stateVariable) {
   if (isMostDerived(stateVariable)) {
@@ -708,13 +722,14 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
 
   // Visit local variables.
   for (const VariableDeclaration *local: function.localVariables()) {
+    std::string localName = getIeleNameForLocalVariable(local);
     std::vector<iele::IeleLocalVariable *> param;
     for (unsigned i = 0; i < local->type()->sizeInRegisters(); i++) {
-      std::string genName = local->name() + getNextVarSuffix();
+      std::string genName = localName + getNextVarSuffix();
       param.push_back(iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction));
     }
     IeleLValue *lvalue = RegisterLValue::Create(param);
-    VarNameMap[NumOfModifiers][local->name()] = lvalue; 
+    VarNameMap[NumOfModifiers][localName] = lvalue; 
   }
 
   CompilingFunctionStatus =
@@ -750,14 +765,10 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     appendDefaultConstructor(CompilingContractASTNode);
 
   // Initialize local variables and return params.
-  iele::IeleValueSymbolTable *FunST =
-    CompilingFunction->getIeleValueSymbolTable();
-  solAssert(FunST,
-            "IeleCompiler: failed to access compiling function's symbol "
-            "table.");
   for (const VariableDeclaration *local: function.localVariables()) {
+    std::string localName = getIeleNameForLocalVariable(local);
     IeleLValue *Local =
-      VarNameMap[NumOfModifiers][local->name()];
+      VarNameMap[NumOfModifiers][localName];
     solAssert(Local, "IeleCompiler: missing local variable");
     appendLocalVariableInitialization(
       Local, local);
@@ -1006,15 +1017,16 @@ void IeleCompiler::appendModifierOrFunctionCode() {
 
       // Visit and initialize the modifier's local variables
       for (const VariableDeclaration *local: modifier->localVariables()) {
+        std::string localName = getIeleNameForLocalVariable(local);
         std::vector<iele::IeleLocalVariable *> param;
         for (unsigned i = 0; i < local->type()->sizeInRegisters(); i++) {
-          std::string genName = local->name() + getNextVarSuffix();
+          std::string genName = localName + getNextVarSuffix();
           iele::IeleLocalVariable *Local =
             iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
           param.push_back(Local);
         }
         IeleLValue *lvalue = RegisterLValue::Create(param);
-        VarNameMap[ModifierDepth][local->name()] = lvalue;
+        VarNameMap[ModifierDepth][localName] = lvalue;
         appendLocalVariableInitialization(lvalue, local);
       }
 
@@ -1046,7 +1058,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
         // Restore ModiferDepth to its original value
         ModifierDepth = ModifierDepthCache;
 
-        // Lookup LHS from symbol table
+        // Lookup LHS in compiling function's variable name map.
         IeleLValue *LHSValue = VarNameMap[ModifierDepth][var.name()];
         solAssert(LHSValue, "IeleCompiler: Failed to compile argument to modifier invocation");
 
@@ -1255,10 +1267,14 @@ bool IeleCompiler::visit(
     for (unsigned i = 0; i < assignments.size(); ++i) {
       const VariableDeclaration *varDecl = assignments[i];
       if (varDecl) {
-        // Visit LHS. We lookup the LHS name in the function's symbol table,
-        // where we should find it.
+        // Visit LHS. We lookup the LHS name in the compiling function's
+        // variable name map, where we should find it.
+        std::string varDeclName =
+          varDecl->isLocalVariable() && !varDecl->isReturnParameter() ?
+            getIeleNameForLocalVariable(varDecl) :
+            varDecl->name();
         IeleLValue *LHSValue =
-          VarNameMap[ModifierDepth][varDecl->name()];
+          VarNameMap[ModifierDepth][varDeclName];
         solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of variable "
                            "declaration statement");
         // Check if we need to do a storage to memory copy.
@@ -4145,11 +4161,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       solAssert(functionDef, "IeleCompiler: bound function does not have a definition");
       std::string name = getIeleNameForFunction(*functionDef); 
 
-      // Lookup identifier in the function's symbol table.
-      iele::IeleValueSymbolTable *ST = CompilingFunction->getIeleValueSymbolTable();
-      solAssert(ST,
-                "IeleCompiler: failed to access compiling function's symbol "
-                "table.");
+      // Lookup identifier in the compiling function's variable name map.
       if (IeleLValue *Identifier =
             VarNameMap[ModifierDepth][name]) {
         IeleRValue *RValue = Identifier->read(CompilingBlock);
@@ -4157,7 +4169,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         CompilingExpressionResult.push_back(IeleRValue::Create(Result));
         return false;
       }
-      ST = CompilingContract->getIeleValueSymbolTable();
+      iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
       solAssert(ST,
                "IeleCompiler: failed to access compiling contract's symbol "
                "table.");
@@ -4912,6 +4924,10 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     } else {
       name = getIeleNameForFunction(*resolveVirtualFunction(*functionDef)); 
     }
+  } else if (const VariableDeclaration *varDecl =
+               dynamic_cast<const VariableDeclaration *>(declaration)) {
+    if (varDecl->isLocalVariable() && !varDecl->isReturnParameter())
+      name = getIeleNameForLocalVariable(varDecl);
   }
 
   // Check if identifier is a reserved identifier.
@@ -4945,11 +4961,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     }
   }
 
-  // Lookup identifier in the function's symbol table.
-  iele::IeleValueSymbolTable *ST = CompilingFunction->getIeleValueSymbolTable();
-  solAssert(ST,
-            "IeleCompiler: failed to access compiling function's symbol "
-            "table.");
+  // Lookup identifier in the compiling function's variable name map.
   if (IeleLValue *Identifier =
         VarNameMap[ModifierDepth][name]) {
     CompilingExpressionResult.push_back(Identifier);
@@ -4971,7 +4983,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
       return;
     }
   }
-  ST = CompilingContract->getIeleValueSymbolTable();
+  iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
   solAssert(ST,
             "IeleCompiler: failed to access compiling contract's symbol "
             "table.");
