@@ -33,4 +33,7 @@ contract C {
     }
 }
 // ----
-// Warning: (1044-1121): Function state mutability can be restricted to pure
+// TypeError: (407-450): abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError: (521-567): abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError: (821-870): abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError: (936-988): abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

@@ -210,10 +210,10 @@ BOOST_AUTO_TEST_CASE(array_copy)
 		contract test {
 			bytes2[] data1;
 			bytes5[] data2;
-			function f(uint x) returns (uint l, uint y) {
-				data1.length = msg.data.length;
-				for (uint i = 0; i < msg.data.length; ++i)
-					data1[i] = msg.data[i];
+			function f(uint x, bytes data) returns (uint l, uint y) {
+				data1.length = data.length;
+				for (uint i = 0; i < data.length; ++i)
+					data1[i] = data[i];
 				data2 = data1;
 				l = data2.length;
 				y = uint(data2[x]);
@@ -221,9 +221,9 @@ BOOST_AUTO_TEST_CASE(array_copy)
 		}
 	)";
 	compileBothVersions(sourceCode);
-	compareVersions("f(uint)", 0);
-	compareVersions("f(uint)", 10);
-	compareVersions("f(uint)", 35);
+	compareVersions("f(uint,bytes)", 0, encodeDyn(string("1234012345678901234567890123456789ab")));
+	compareVersions("f(uint,bytes)", 10, encodeDyn(string("1234012345678901234567890123456789ab")));
+	compareVersions("f(uint,bytes)", 35, encodeDyn(string("1234012345678901234567890123456789ab")));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(function_calls, 1)
@@ -453,7 +453,7 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 
 	contract HexEncoding {
 		function hexEncodeTest(address addr) returns (bytes32 ret) {
-			uint x = uint(addr) / 2**32;
+			uint256 x = uint256(addr) / 2**32;
 
 			// Nibble interleave
 			x = x & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
@@ -464,16 +464,14 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 			x = (x | (x * 2** 4)) & 0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f;
 
 			// Hex encode
-			uint h = (x & 0x0808080808080808080808080808080808080808080808080808080808080808) / 8;
-			uint i = (x & 0x0404040404040404040404040404040404040404040404040404040404040404) / 4;
-			uint j = (x & 0x0202020202020202020202020202020202020202020202020202020202020202) / 2;
+			uint256 h = (x & 0x0808080808080808080808080808080808080808080808080808080808080808) / 8;
+			uint256 i = (x & 0x0404040404040404040404040404040404040404040404040404040404040404) / 4;
+			uint256 j = (x & 0x0202020202020202020202020202020202020202020202020202020202020202) / 2;
 			x = x + (h & (i | j)) * 0x27 + 0x3030303030303030303030303030303030303030303030303030303030303030;
 
-			// Store and load next batch
-			assembly {
-				mstore(0, x)
-			}
-			x = uint(addr) * 2**96;
+			uint256[2] memory arr;
+			arr[0] = x;
+			x = uint256(addr) * 2**96;
 
 			// Nibble interleave
 			x = x & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
@@ -490,10 +488,8 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 			x = x + (h & (i | j)) * 0x27 + 0x3030303030303030303030303030303030303030303030303030303030303030;
 
 			// Store and hash
-			assembly {
-				mstore(32, x)
-				ret := keccak256(0, 40)
-			}
+			arr[1] = x;
+			return keccak256(arr);
 		}
 	}
 	)";

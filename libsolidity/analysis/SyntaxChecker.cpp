@@ -210,6 +210,12 @@ bool SyntaxChecker::visit(PlaceholderStatement const&)
 	return true;
 }
 
+bool SyntaxChecker::visit(InlineAssembly const& _inlineAsm)
+{
+	m_errorReporter.syntaxError(_inlineAsm.location(), "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+	return false;
+}
+
 bool SyntaxChecker::visit(FunctionDefinition const& _function)
 {
 	bool const v050 = m_sourceUnit->annotation().experimentalFeatures.count(ExperimentalFeature::V050);

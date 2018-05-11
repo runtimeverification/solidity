@@ -48,11 +48,12 @@ public:
 		std::string const& _sourceCode,
 		u256 const& _value = 0,
 		std::string const& _contractName = "",
+		bool compileFail = false,
 		std::vector<bytes> const& _arguments = std::vector<bytes>(),
 		std::map<std::string, dev::test::Address> const& _libraryAddresses = std::map<std::string, dev::test::Address>()
 	) override
 	{
-		bytes const& bytecode = compileContract(_sourceCode, _contractName, _libraryAddresses);
+		bytes const& bytecode = compileContract(_sourceCode, _contractName, _libraryAddresses, compileFail);
 		sendMessage(_arguments, "", bytecode, true, _value);
 		m_output.clear();
                 m_output.push_back(bytecode);
@@ -62,7 +63,8 @@ public:
 	bytes compileContract(
 		std::string const& _sourceCode,
 		std::string const& _contractName = "",
-		std::map<std::string, dev::test::Address> const& _libraryAddresses = std::map<std::string, dev::test::Address>()
+		std::map<std::string, dev::test::Address> const& _libraryAddresses = std::map<std::string, dev::test::Address>(),
+		bool compileFail = false
 	)
 	{
 		// Silence compiler version warning
@@ -72,7 +74,7 @@ public:
 		m_compiler.setLibraries(_libraryAddresses);
 		m_compiler.setEVMVersion(m_evmVersion);
 		m_compiler.setOptimiserSettings(m_optimize, m_optimizeRuns);
-		if (!m_compiler.compile())
+		if (m_compiler.compile() == compileFail)
 		{
 			auto scannerFromSourceName = [&](std::string const& _sourceName) -> solidity::Scanner const& { return m_compiler.scanner(_sourceName); };
 			SourceReferenceFormatter formatter(std::cerr, scannerFromSourceName);

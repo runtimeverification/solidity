@@ -1696,8 +1696,8 @@ BOOST_AUTO_TEST_CASE(warn_var_from_zero)
 	}));
 	sourceCode = R"(
 		 contract test {
-			 function f() pure public {
-				 for (var i = 0; i < msg.data.length; i++) { }
+			 function f(bytes data) pure public {
+				 for (var i = 0; i < data.length; i++) { }
 			 }
 		 }
 	)";
@@ -3188,7 +3188,7 @@ BOOST_AUTO_TEST_CASE(call_to_library_function)
 {
 	char const* text = R"(
 		library Lib {
-			function min(uint, uint) public returns (uint);
+			function min(uint a, uint b) public returns (uint) { if (a < b) return a; return b; }
 		}
 		contract Test {
 			function f() public {
@@ -3198,6 +3198,22 @@ BOOST_AUTO_TEST_CASE(call_to_library_function)
 	)";
 	CHECK_SUCCESS(text);
 }
+
+BOOST_AUTO_TEST_CASE(call_to_library_function_undefined)
+{
+	char const* text = R"(
+		library Lib {
+			function min(uint a, uint b) public returns (uint);
+		}
+		contract Test {
+			function f() public {
+				uint t = Lib.min(12, 7);
+			}
+		}
+	)";
+	CHECK_ERROR(text, TypeError, "External library functions without an implementation are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+}
+
 
 BOOST_AUTO_TEST_CASE(creating_contract_within_the_contract)
 {
@@ -4877,7 +4893,7 @@ BOOST_AUTO_TEST_CASE(unused_return_value_call)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Return value of low-level calls not used");
+	CHECK_ERROR(text, TypeError, "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 BOOST_AUTO_TEST_CASE(unused_return_value_call_value)
@@ -4889,7 +4905,7 @@ BOOST_AUTO_TEST_CASE(unused_return_value_call_value)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Return value of low-level calls not used");
+	CHECK_ERROR(text, TypeError, "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 BOOST_AUTO_TEST_CASE(unused_return_value_callcode)
@@ -4901,10 +4917,7 @@ BOOST_AUTO_TEST_CASE(unused_return_value_callcode)
 			}
 		}
 	)";
-	CHECK_WARNING_ALLOW_MULTI(text, (std::vector<std::string>{
-		"Return value of low-level calls not used",
-		"\"callcode\" has been deprecated"
-	}));
+	CHECK_ERROR(text, TypeError, "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 BOOST_AUTO_TEST_CASE(unused_return_value_delegatecall)
@@ -4916,7 +4929,7 @@ BOOST_AUTO_TEST_CASE(unused_return_value_delegatecall)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Return value of low-level calls not used");
+	CHECK_ERROR(text, TypeError, "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 BOOST_AUTO_TEST_CASE(warn_about_callcode)
@@ -5180,7 +5193,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_unbalanced_positive_stack)
 			}
 		}
 	)";
-	CHECK_ERROR(text, DeclarationError, "Unbalanced stack at the end of a block: 1 surplus item(s).");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_unbalanced_negative_stack)
@@ -5194,7 +5208,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_unbalanced_negative_stack)
 			}
 		}
 	)";
-	CHECK_ERROR(text, DeclarationError, "Unbalanced stack at the end of a block: 1 missing item(s).");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_unbalanced_two_stack_load)
@@ -5208,7 +5223,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_unbalanced_two_stack_load)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Only local variables are supported. To access storage variables,");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_in_modifier)
@@ -5227,7 +5243,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_in_modifier)
 			}
 		}
 	)";
-	CHECK_SUCCESS(text);
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_storage)
@@ -5243,7 +5260,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_storage)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Only local variables are supported. To access storage variables,");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_storage_in_modifiers)
@@ -5262,7 +5280,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_storage_in_modifiers)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Only local variables are supported. To access storage variables,");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_constant_assign)
@@ -5278,7 +5297,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_constant_assign)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Constant variables not supported by inline assembly");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_constant_access)
@@ -5294,7 +5314,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_constant_access)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Constant variables not supported by inline assembly");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_local_variable_access_out_of_functions)
@@ -5310,7 +5331,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_local_variable_access_out_of_functions)
 			}
 		}
 	)";
-	CHECK_ERROR(text, DeclarationError, "Cannot access local Solidity variables from inside an inline assembly function.");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_local_variable_access_out_of_functions_storage_ptr)
@@ -5327,7 +5349,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_local_variable_access_out_of_functions_stor
 			}
 		}
 	)";
-	CHECK_ERROR(text, DeclarationError, "Cannot access local Solidity variables from inside an inline assembly function.");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_storage_variable_access_out_of_functions)
@@ -5343,7 +5366,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_storage_variable_access_out_of_functions)
 			}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_constant_variable_via_offset)
@@ -5358,7 +5382,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_constant_variable_via_offset)
 			}
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Constant variables not supported by inline assembly.");
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 /*
 BOOST_AUTO_TEST_CASE(inline_assembly_calldata_variables)
@@ -5388,10 +5413,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_050_literals_on_stack)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::SyntaxError, "are not supposed to return"},
-		{Error::Type::DeclarationError, "Unbalanced stack"},
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_literals_on_stack)
@@ -5405,10 +5428,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_literals_on_stack)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "are not supposed to return"},
-		{Error::Type::DeclarationError, "Unbalanced stack"},
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_050_bare_instructions)
@@ -5424,10 +5445,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_050_bare_instructions)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::SyntaxError, "The use of non-functional"},
-		{Error::Type::SyntaxError, "The use of non-functional"}
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_bare_instructions)
@@ -5442,10 +5461,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_bare_instructions)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "The use of non-functional"},
-		{Error::Type::Warning, "The use of non-functional"}
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_050_labels)
@@ -5460,10 +5477,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_050_labels)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::SyntaxError, "Jump instructions and labels are low-level"},
-		{Error::Type::SyntaxError, "The use of labels is deprecated"}
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_labels)
@@ -5477,10 +5492,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_labels)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "Jump instructions and labels are low-level"},
-		{Error::Type::Warning, "The use of labels is deprecated"}
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_050_jump)
@@ -5495,9 +5508,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_050_jump)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::SyntaxError, "Jump instructions and labels are low-level"}
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_jump)
@@ -5511,10 +5523,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_jump)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::TypeError, "Function declared as pure"},
-		{Error::Type::Warning, "Jump instructions and labels are low-level"}
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_050_leave_items_on_stack)
@@ -5529,10 +5539,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_050_leave_items_on_stack)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::SyntaxError, "are not supposed to return"},
-		{Error::Type::DeclarationError, "Unbalanced stack"},
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(inline_assembly_leave_items_on_stack)
@@ -5546,10 +5554,8 @@ BOOST_AUTO_TEST_CASE(inline_assembly_leave_items_on_stack)
 			}
 		}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "are not supposed to return"},
-		{Error::Type::DeclarationError, "Unbalanced stack"},
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(rational_with_uint_mobile_type)
@@ -5775,12 +5781,13 @@ BOOST_AUTO_TEST_CASE(address_methods)
 			function f() public {
 				address addr;
 				uint balance = addr.balance;
-				bool callRet = addr.call();
-				bool callcodeRet = addr.callcode();
-				bool delegatecallRet = addr.delegatecall();
+				uint16 size = addr.codesize;
+				//bool callRet = addr.call();
+				//bool callcodeRet = addr.callcode();
+				//bool delegatecallRet = addr.delegatecall();
 				bool sendRet = addr.send(1);
 				addr.transfer(1);
-				callRet; callcodeRet; delegatecallRet; sendRet;
+				sendRet;
 			}
 		}
 	)";
@@ -6226,7 +6233,8 @@ BOOST_AUTO_TEST_CASE(no_unused_inline_asm)
 			}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(shadowing_builtins_with_functions)
@@ -6484,14 +6492,8 @@ BOOST_AUTO_TEST_CASE(returndatasize_as_variable)
 	char const* text = R"(
 		contract c { function f() public { uint returndatasize; assembly { returndatasize }}}
 	)";
-	vector<pair<Error::Type, std::string>> expectations(vector<pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "Variable is shadowed in inline assembly by an instruction of the same name"},
-		{Error::Type::Warning, "The use of non-functional instructions is deprecated."},
-		{Error::Type::DeclarationError, "Unbalanced stack"}
-	});
-	if (!dev::test::Options::get().evmVersion().supportsReturndata())
-		expectations.emplace_back(make_pair(Error::Type::Warning, std::string("\"returndatasize\" instruction is only available for Byzantium-compatible")));
-	CHECK_ALLOW_MULTI(text, expectations);
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(create2_as_variable)
@@ -6499,12 +6501,8 @@ BOOST_AUTO_TEST_CASE(create2_as_variable)
 	char const* text = R"(
 		contract c { function f() public { uint create2; assembly { create2(0, 0, 0, 0) } }}
 	)";
-	CHECK_ALLOW_MULTI(text, (std::vector<std::pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "Variable is shadowed in inline assembly by an instruction of the same name"},
-		{Error::Type::Warning, "The \"create2\" instruction is not supported by the VM version"},
-		{Error::Type::DeclarationError, "Unbalanced stack"},
-		{Error::Type::Warning, "not supposed to return values"}
-	}));
+	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
+	CHECK_ERROR(text, SyntaxError, msg);
 }
 
 BOOST_AUTO_TEST_CASE(warn_unspecified_storage)
@@ -6692,7 +6690,7 @@ BOOST_AUTO_TEST_CASE(function_types_sig)
 			}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 	text = R"(
 		contract C {
 			function h() pure external {
@@ -6703,7 +6701,7 @@ BOOST_AUTO_TEST_CASE(function_types_sig)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Use of the \"var\" keyword is deprecated.");
+	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 	text = R"(
 		contract C {
 			function h() pure external {
@@ -6714,7 +6712,7 @@ BOOST_AUTO_TEST_CASE(function_types_sig)
 			}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 	text = R"(
 		contract C {
 			function h() pure external {
@@ -6726,7 +6724,7 @@ BOOST_AUTO_TEST_CASE(function_types_sig)
 			}
 		}
 	)";
-	CHECK_WARNING(text, "Use of the \"var\" keyword is deprecated.");
+	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 BOOST_AUTO_TEST_CASE(using_this_in_constructor)
@@ -6935,7 +6933,7 @@ BOOST_AUTO_TEST_CASE(library_function_without_implementation)
 			function f() public;
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
+	CHECK_ERROR(text, TypeError, "External library functions without an implementation are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 	text = R"(
 		library L {
 			function f() internal;

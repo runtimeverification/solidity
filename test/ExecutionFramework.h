@@ -60,6 +60,7 @@ public:
 		std::string const& _sourceCode,
 		u256 const& _value = 0,
 		std::string const& _contractName = "",
+		bool compileFail = false,
 		std::vector<bytes> const& _arguments = std::vector<bytes>(),
 		std::map<std::string, Address> const& _libraryAddresses = std::map<std::string, Address>()
 	) = 0;
@@ -72,7 +73,7 @@ public:
 		std::map<std::string, Address> const& _libraryAddresses = std::map<std::string, Address>()
 	)
 	{
-		bytes const& ret = compileAndRunWithoutCheck(_sourceCode, _value, _contractName, _arguments, _libraryAddresses);
+		bytes const& ret = compileAndRunWithoutCheck(_sourceCode, _value, _contractName, false, _arguments, _libraryAddresses);
 		BOOST_REQUIRE(ret.size() != 0);
 		BOOST_REQUIRE(m_status == 0);
 		return ret;

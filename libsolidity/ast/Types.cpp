@@ -2775,9 +2775,6 @@ unsigned FunctionType::sizeInRegisters() const
 	case Kind::CallCode:
 		size = 2;
 		break;
-	case Kind::BareCall:
-	case Kind::BareCallCode:
-	case Kind::BareDelegateCall:
 	case Kind::Internal:
 	case Kind::DelegateCall:
 	case Kind::ArrayPush:
