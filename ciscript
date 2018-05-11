@@ -5,7 +5,7 @@ rm -rf deps build test/failed iele-example-tests/auction/auction.iele
 # build
 mkdir build
 cd build
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Debug
 make -j`nproc`
 cd ..
 
@@ -32,4 +32,5 @@ sleep 3
 iconv -f iso-8859-1 -t utf-8 build/log.xml -o build/log-utf8.xml && mv -f build/log-utf8.xml build/log.xml
 xmllint --xpath "//TestCase[@assertions_failed!=@expected_failures]" build/report.xml && false
 xmllint --xpath '//TestCase[@result="skipped"]' build/report.xml && false
+cd build && gcovr -x -r .. -e ../test -o coverage.xml
 kill %1 %2

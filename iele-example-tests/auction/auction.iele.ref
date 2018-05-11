@@ -91,18 +91,25 @@ entry:
   %highestBidder.val = sload @"highestBidder"
   %tmp6 = cmp ne %highestBidder.val, 0
   %tmp7 = iszero %tmp6
-  br %tmp7, if.end
+  br %tmp7, if.end11
   %highestBidder.val8 = sload @"highestBidder"
   %highestBid.val9 = sload @"highestBid"
-  %gas = call @iele.gas()
-  %status = call @"deposit" at %highestBidder.val8 () send %highestBid.val9, gaslimit %gas
-  br %status, throw.status
+  br %highestBid.val9, if.true
+  %tmp10 = 2300
+  br if.end
+
+if.true:
+  %tmp10 = 0
 
 if.end:
+  %status = call @"deposit" at %highestBidder.val8 () send %highestBid.val9, gaslimit %tmp10
+  br %status, throw.status
+
+if.end11:
   %caller = call @iele.caller()
   sstore %caller, @"highestBidder"
-  %callvalue10 = call @iele.callvalue()
-  sstore %callvalue10, @"highestBid"
+  %callvalue12 = call @iele.callvalue()
+  sstore %callvalue12, @"highestBid"
 
 return:
   ret void
@@ -130,8 +137,15 @@ entry:
   sstore 1, @"ended"
   %beneficiary.val = sload @"beneficiary"
   %highestBid.val = sload @"highestBid"
-  %gas = call @iele.gas()
-  %status = call @"deposit" at %beneficiary.val () send %highestBid.val, gaslimit %gas
+  br %highestBid.val, if.true
+  %tmp4 = 2300
+  br if.end
+
+if.true:
+  %tmp4 = 0
+
+if.end:
+  %status = call @"deposit" at %beneficiary.val () send %highestBid.val, gaslimit %tmp4
   br %status, throw.status
   %highestBidder.val = sload @"highestBidder"
   %_2 = %highestBidder.val

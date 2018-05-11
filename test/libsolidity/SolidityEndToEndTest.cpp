@@ -9145,6 +9145,9 @@ BOOST_AUTO_TEST_CASE(mutex)
 				locked = false;
 			}
 		}
+		contract Payable {
+			function deposit() payable;
+		}
 		contract Fund is mutexed {
 			uint shares;
 			function Fund() payable { shares = msg.value; }
@@ -9152,7 +9155,7 @@ BOOST_AUTO_TEST_CASE(mutex)
 				// NOTE: It is very bad practice to write this function this way.
 				// Please refer to the documentation of how to do this properly.
 				if (amount > shares) throw;
-				if (!msg.sender.send(amount)) throw;
+				Payable(msg.sender).deposit.value(amount)();
 				shares -= amount;
 				return shares;
 			}
@@ -9160,12 +9163,12 @@ BOOST_AUTO_TEST_CASE(mutex)
 				// NOTE: It is very bad practice to write this function this way.
 				// Please refer to the documentation of how to do this properly.
 				if (amount > shares) throw;
-				if (!msg.sender.send(amount)) throw;
+				Payable(msg.sender).deposit.value(amount)();
 				shares -= amount;
 				return shares;
 			}
 		}
-		contract Attacker {
+		contract Attacker is Payable {
 			Fund public fund;
 			uint callDepth;
 			bool protected;
@@ -9181,7 +9184,7 @@ BOOST_AUTO_TEST_CASE(mutex)
 				else
 					return fund.withdrawUnprotected(10);
 			}
-			function() payable {
+			function deposit() payable {
 				callDepth++;
 				if (callDepth < 4)
 					attackInternal();
