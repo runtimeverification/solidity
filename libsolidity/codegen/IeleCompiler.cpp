@@ -3137,12 +3137,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
     llvm::SmallVector<iele::IeleLocalVariable *, 0> EmptyLValues;
 
-    // Create computation for gas
-    iele::IeleLocalVariable *GasValue =
-      iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
-    iele::IeleInstruction::CreateIntrinsicCall(
-       iele::IeleInstruction::Gas, GasValue, EmptyArguments,
-       CompilingBlock);
+    llvm::SmallVector<IeleLValue *, 4> Results;
+    appendConditional(TransferValue->getValue(), Results,
+      [this](llvm::SmallVectorImpl<IeleRValue *> &Results){
+        Results.push_back(IeleRValue::Create({iele::IeleIntConstant::getZero(&Context)}));
+      },
+      [this](llvm::SmallVectorImpl<IeleRValue *> &Results){
+        Results.push_back(IeleRValue::Create({iele::IeleIntConstant::Create(&Context, 2300)}));
+      });
+    iele::IeleValue *GasValue = Results[0]->read(CompilingBlock)->getValue();
 
     // Create call to deposit.
     iele::IeleGlobalVariable *Deposit =
