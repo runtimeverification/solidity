@@ -63,6 +63,16 @@ public:
     return {bytecode, std::map<size_t, std::string>()};
   }
 
+  // Update currently enabled set of experimental features.
+  void setExperimentalFeatures(const std::set<ExperimentalFeature> &features) {
+    ExperimentalFeatures = features;
+  }
+
+  // Returns true if the given feature is enabled.
+  bool experimentalFeatureActive(ExperimentalFeature feature) const {
+    return ExperimentalFeatures.count(feature);
+  }
+
   // Visitor interface.
   virtual bool visit(const FunctionDefinition &function) override;
   virtual bool visit(const IfStatement &ifStatement) override;
@@ -140,11 +150,14 @@ private:
   std::string getIeleNameForFunction(const FunctionDefinition &function);
   std::string getIeleNameForStateVariable(const VariableDeclaration *stateVariable);
   std::string getIeleNameForAccessor(const VariableDeclaration *stateVariable);
+  std::string getIeleNameForLocalVariable(const VariableDeclaration *localVariable);
+
+  std::set<ExperimentalFeature> ExperimentalFeatures;
 
   // Fills in the ctorAuxParams data structure i.e. for each constructor in the 
   // class hierarchy, it computes the needed extra parameters and the additional
   // information needed to correctly handle them. 
-  void computeCtorsAuxParams ();
+  void computeCtorsAuxParams();
   
   // Data structure to hold auxiliary constructor params
   // Ctor -> Dest -> (paramName, Source)

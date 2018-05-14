@@ -315,7 +315,6 @@ BOOST_AUTO_TEST_CASE(conditional_expression_functions)
 	ABI_CHECK(callContractFunction("f(bool)", false), encodeArgs(u256(2)));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(C99_scoping_activation, 4)
 BOOST_AUTO_TEST_CASE(C99_scoping_activation)
 {
 	char const* sourceCode = R"(
@@ -362,6 +361,25 @@ BOOST_AUTO_TEST_CASE(C99_scoping_activation)
 	ABI_CHECK(callContractFunction("g()"), encodeArgs(0));
 	ABI_CHECK(callContractFunction("h()"), encodeArgs(3, 3, 4));
 	ABI_CHECK(callContractFunction("i()"), encodeArgs(3, 3));
+}
+
+BOOST_AUTO_TEST_CASE(C99_scoping_activation_loops)
+{
+  char const* sourceCode = R"(
+    pragma experimental "v0.5.0";
+    contract test {
+      function f(uint n) pure public returns (uint x1, uint x2) {
+        for (uint i = 1; i <= n; i++) {
+          uint y;
+          x1 = x1 + y + i;
+          y = i;
+          x2 = x2 + y + i;
+        }
+      }
+    }
+  )";
+  compileAndRun(sourceCode);
+  ABI_CHECK(callContractFunction("f(uint)", encodeArgs(3)), encodeArgs(6, 12));
 }
 
 BOOST_AUTO_TEST_CASE(recursive_calls)

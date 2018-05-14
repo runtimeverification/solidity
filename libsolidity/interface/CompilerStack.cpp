@@ -705,6 +705,7 @@ void CompilerStack::compileContract(
 
 	shared_ptr<IeleCompiler> compiler = make_shared<IeleCompiler>();
 	Contract& compiledContract = m_contracts.at(_contract.fullyQualifiedName());
+	compiler->setExperimentalFeatures(_contract.sourceUnit().annotation().experimentalFeatures);
 	string metadata = createMetadata(compiledContract);
 	bytes cborEncodedHash =
 		// CBOR-encoding of the key "bzzr0"
