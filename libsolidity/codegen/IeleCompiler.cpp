@@ -1269,10 +1269,7 @@ bool IeleCompiler::visit(
       if (varDecl) {
         // Visit LHS. We lookup the LHS name in the compiling function's
         // variable name map, where we should find it.
-        std::string varDeclName =
-          varDecl->isLocalVariable() && !varDecl->isCallableParameter() ?
-            getIeleNameForLocalVariable(varDecl) :
-            varDecl->name();
+        std::string varDeclName = getIeleNameForLocalVariable(varDecl);
         IeleLValue *LHSValue =
           VarNameMap[ModifierDepth][varDeclName];
         solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of variable "
@@ -1287,7 +1284,25 @@ bool IeleCompiler::visit(
         LHSValue->write(RHSValue, CompilingBlock);
       }
     }
+  } else if (experimentalFeatureActive(ExperimentalFeature::V050)) {
+    // In this case we need to reassign zero to the local variable.
+    solAssert(variableDeclarationStatement.declarations().size() == 1,
+              "IeleCompiler: Tuple variable declaration statement without RHS "
+              "was found");
+    const VariableDeclaration &varDecl =
+      *variableDeclarationStatement.declarations()[0];
+    // We lookup the variable's name in the compiling function's
+    // variable name map, where we should find it.
+    std::string varDeclName = getIeleNameForLocalVariable(&varDecl);
+    IeleLValue *LHSValue =
+      VarNameMap[ModifierDepth][varDeclName];
+    solAssert(LHSValue, "IeleCompiler: Failed to compile LHS of variable "
+                       "declaration statement");
+    // Zero out the variable.
+    TypePointer LHSType = varDecl.annotation().type;
+    appendLValueDelete(LHSValue, LHSType);
   }
+
   return false;
 }
 
