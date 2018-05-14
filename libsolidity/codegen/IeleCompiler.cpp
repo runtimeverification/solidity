@@ -46,7 +46,7 @@ std::string IeleCompiler::getIeleNameForFunction(
 std::string IeleCompiler::getIeleNameForLocalVariable(
     const VariableDeclaration *localVariable) {
   solAssert(localVariable->isLocalVariable() &&
-            !localVariable->isReturnParameter(),
+            !localVariable->isCallableParameter(),
             "IeleCompiler: requested unique local variable name for a "
             "non-local variable.");
   if (experimentalFeatureActive(ExperimentalFeature::V050))
@@ -729,7 +729,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
       param.push_back(iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction));
     }
     IeleLValue *lvalue = RegisterLValue::Create(param);
-    VarNameMap[NumOfModifiers][localName] = lvalue; 
+    VarNameMap[NumOfModifiers][localName] = lvalue;
   }
 
   CompilingFunctionStatus =
@@ -1270,7 +1270,7 @@ bool IeleCompiler::visit(
         // Visit LHS. We lookup the LHS name in the compiling function's
         // variable name map, where we should find it.
         std::string varDeclName =
-          varDecl->isLocalVariable() && !varDecl->isReturnParameter() ?
+          varDecl->isLocalVariable() && !varDecl->isCallableParameter() ?
             getIeleNameForLocalVariable(varDecl) :
             varDecl->name();
         IeleLValue *LHSValue =
@@ -4926,7 +4926,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     }
   } else if (const VariableDeclaration *varDecl =
                dynamic_cast<const VariableDeclaration *>(declaration)) {
-    if (varDecl->isLocalVariable() && !varDecl->isReturnParameter())
+    if (varDecl->isLocalVariable() && !varDecl->isCallableParameter())
       name = getIeleNameForLocalVariable(varDecl);
   }
 
