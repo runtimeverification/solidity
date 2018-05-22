@@ -23,6 +23,6 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ -z $CI ]; then
-	echo "Installing solc and soltest"
-	install solc/solc /usr/local/bin && install test/soltest /usr/local/bin
+	echo "Installing isolc and soltest"
+	install solc/isolc /usr/local/bin && install test/soltest /usr/local/bin
 fi

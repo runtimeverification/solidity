@@ -28,20 +28,20 @@ else
 fi
 
 rm -rf .git
-docker build -t ethereum/solc:build -f scripts/Dockerfile .
-tmp_container=$(docker create ethereum/solc:build sh)
+docker build -t ethereum/isolc:build -f scripts/Dockerfile .
+tmp_container=$(docker create ethereum/isolc:build sh)
 if [ "$branch" = "develop" ]
 then
-    docker tag ethereum/solc:build ethereum/solc:nightly;
-    docker tag ethereum/solc:build ethereum/solc:nightly-"$version"-"$commithash"
-    docker push ethereum/solc:nightly-"$version"-"$commithash";
-    docker push ethereum/solc:nightly;
+    docker tag ethereum/isolc:build ethereum/isolc:nightly;
+    docker tag ethereum/isolc:build ethereum/isolc:nightly-"$version"-"$commithash"
+    docker push ethereum/isolc:nightly-"$version"-"$commithash";
+    docker push ethereum/isolc:nightly;
 elif [ "$branch" = v"$version" ]
 then
-    docker tag ethereum/solc:build ethereum/solc:stable;
-    docker tag ethereum/solc:build ethereum/solc:"$version";
-    docker push ethereum/solc:stable;
-    docker push ethereum/solc:"$version";
+    docker tag ethereum/isolc:build ethereum/isolc:stable;
+    docker tag ethereum/isolc:build ethereum/isolc:"$version";
+    docker push ethereum/isolc:stable;
+    docker push ethereum/isolc:"$version";
 else
     echo "Not publishing docker image from branch or tag $branch"
 fi

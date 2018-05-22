@@ -1,11 +1,13 @@
-name: solc
+name: isolc
 version: develop
 version-script: git describe --exact-match --tags 2> /dev/null || echo "develop"
 summary: The Solidity Contract-Oriented Programming Language
 description: |
   Solidity is a contract-oriented, high-level language whose syntax is similar
-  to that of JavaScript and it is designed to target the Ethereum Virtual
-  Machine (EVM).
+  to that of JavaScript and it was originally designed to target the Ethereum Virtual
+  Machine (EVM). 
+
+  This version of the compiler targets IELE. 
 
   Solidity is statically typed, supports inheritance, libraries and complex
   user-defined types among other features.
@@ -17,8 +19,8 @@ grade: stable
 confinement: strict
 
 apps:
-  solc:
-    command: solc
+  isolc:
+    command: isolc
     plugs: [home]
 
 parts:

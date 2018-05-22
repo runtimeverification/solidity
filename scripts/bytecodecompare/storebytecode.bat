@@ -25,7 +25,7 @@ set DIRECTORY=%2
 mkdir bytecode
 cd bytecode
 ..\scripts\isolate_tests.py ..\test\
-..\scripts\bytecodecompare\prepare_report.py ..\build\solc\%CONFIGURATION%\solc.exe
+..\scripts\bytecodecompare\prepare_report.py ..\build\solc\%CONFIGURATION%\isolc.exe
 
 REM Send to stdout instead of stderr to not confuse powershell
 git clone --depth 2 git@github.com:ethereum/solidity-test-bytecode.git 2>&1
