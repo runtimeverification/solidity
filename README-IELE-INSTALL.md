@@ -1,20 +1,25 @@
-## Installing IELE Backend for the Solidity Compiler
+# Installing the Solidity to IELE compiler
 
-These instructions will help you to install the solidity compiler with the IELE backend in an Ubuntu 16.04 machine:
+## Prerequisites
 
-First step is to [install IELE](https://github.com/runtimeverification/iele-semantics/blob/master/INSTALL.md).
+* [install IELE](https://github.com/runtimeverification/iele-semantics/blob/master/INSTALL.md).
+
+## Dependencies
+To easily install the required dependencies, run 
+```
+sudo ./scripts/install_deps.sh
+```
+
+## Build
 
 ```
-# install dependencies
-sudo ./scripts/install_deps.sh
-
-# build compiler, it is important to build into a subdir named "build" as
-# suggested in order to run the test scripts correctly
 mkdir build
 cd build
 cmake ..
 make
 ```
+
+## Usage
 
 Use the compiler like this:
 ```
