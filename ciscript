@@ -11,7 +11,7 @@ cd ..
 
 # run simple end-to-end test
 # needs iele-semantics installed and blockchaintest in the path
-./build/solc/solc --asm iele-example-tests/auction/auction.sol -o iele-example-tests/auction
+./build/solc/isolc --asm iele-example-tests/auction/auction.sol -o iele-example-tests/auction
 diff iele-example-tests/auction/SimpleAuction.iele iele-example-tests/auction/auction.iele.ref
 
 iele-vm 0 127.0.0.1 > port &

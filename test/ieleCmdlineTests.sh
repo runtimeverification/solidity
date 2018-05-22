@@ -6,7 +6,7 @@
 
 REPO_ROOT=$(cd $(dirname "$0")/.. && pwd)
 FAILED="$REPO_ROOT"/test/failed
-SOLC="$REPO_ROOT/build/solc/solc"
+SOLC="$REPO_ROOT/build/solc/isolc"
 
 FULLARGS="--asm"
 
