@@ -186,7 +186,7 @@ static set<string> const g_machineArgs
 static void version()
 {
 	cout <<
-		"solc, the solidity compiler commandline interface" <<
+		"isolc, the solidity to IELE compiler commandline interface" <<
 		endl <<
 		"Version: " <<
 		dev::solidity::VersionString <<
@@ -537,20 +537,20 @@ void CommandLineInterface::createJson(string const& _fileName, string const& _js
 bool CommandLineInterface::parseArguments(int _argc, char** _argv)
 {
 	// Declare the supported options.
-	po::options_description desc(R"(solc, the Solidity commandline compiler.
+	po::options_description desc(R"(isolc, the Solidity to IELE commandline compiler.
 
 This program comes with ABSOLUTELY NO WARRANTY. This is free software, and you
-are welcome to redistribute it under certain conditions. See 'solc --license'
+are welcome to redistribute it under certain conditions. See 'isolc --license'
 for details.
 
-Usage: solc [options] [input_file...]
+Usage: isolc [options] [input_file...]
 Compiles the given Solidity input files (or the standard input if none given or
 "-" is used as a file name) and outputs the components specified in the options
 at standard output or in files in the output directory, if specified.
 Imports are automatically read from the filesystem, but it is also possible to
 remap paths using the context:prefix=path syntax.
 Example:
-    solc --bin -o /tmp/solcoutput dapp-bin=/usr/local/lib/dapp-bin contract.sol
+    isolc --bin -o /tmp/solcoutput dapp-bin=/usr/local/lib/dapp-bin contract.sol
 
 Allowed options)",
 		po::options_description::m_default_line_length,
