@@ -23,7 +23,7 @@ make
 
 Use the compiler like this:
 ```
-./build/solc/solc --asm <solidity file>
+./build/solc/isolc --asm <solidity file>
 ```
 
 To run the compilation tests:
