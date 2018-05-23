@@ -53,5 +53,3 @@ Failed tests reported are stored in test/failed, clean them before rerunning:
 ```
 rm -rf test/failed
 ```
-
-The standard [Solidity documentation](https://solidity.readthedocs.io/en/latest/installing-solidity.html#building-from-source) contains build instructions relevant for both EVM and IELE backends.
