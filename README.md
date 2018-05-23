@@ -19,11 +19,20 @@ Solidity is still under development. So please do not hesitate and open an [issu
 
 ### Dependencies
 
-To easily install the required dependencies, run 
+To easily install the required dependencies on your system, run 
 
 ```
 sudo ./scripts/install_deps.sh
 ```
+
+We have successfully tested the script on the following operating systems:
+
+* Darwin
+* Ubuntu
+* Arch Linux
+* Debian 
+* Fedora
+* Alpine Linux
 
 ### Build the compiler
 
@@ -47,8 +56,7 @@ To run the compilation tests:
 ./test/ieleCmdlineTests.sh
 ```
 
-Failed tests reported are stored in test/failed, clean them before rerunning:
-
+Failed tests reported are stored in `test/failed`, clean them before rerunning:
 
 ```
 rm -rf test/failed
