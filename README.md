@@ -12,9 +12,5 @@ The changelog for this project can be found [here](https://github.com/ethereum/s
 Solidity is still under development. So please do not hesitate and open an [issue in GitHub](https://github.com/ethereum/solidity/issues) if you encounter anything strange.
 
 ## Building
-See the [Solidity documentation](https://solidity.readthedocs.io/en/latest/installing-solidity.html#building-from-source) for build instructions.
-
-## How to Contribute
-Please see our [contribution guidelines](https://solidity.readthedocs.io/en/latest/contributing.html) in the Solidity documentation.
-
-Any contributions are welcome!
+The standard [Solidity documentation](https://solidity.readthedocs.io/en/latest/installing-solidity.html#building-from-source) contains build instructions relevant for both EVM and IELE backends. 
+For a summary, and for any IELE-specific information which may be available in future, also see [README-IELE-INSTALL](README-IELE-INSTALL.md)
