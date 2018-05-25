@@ -52,7 +52,7 @@ fi
 
 keyid=703F83D0
 email=builds@ethereum.org
-packagename=solc
+packagename=isolc
 
 for distribution in trusty vivid xenial zesty artful bionic
 do
@@ -72,14 +72,14 @@ fi
 
 # Fetch source
 git clone --depth 2 --recursive https://github.com/ethereum/solidity.git -b "$branch"
-mv solidity solc
+mv solidity isolc
 
 # Fetch jsoncpp dependency
-mkdir -p ./solc/deps/downloads/ 2>/dev/null || true
-wget -O ./solc/deps/downloads/jsoncpp-1.7.7.tar.gz https://github.com/open-source-parsers/jsoncpp/archive/1.7.7.tar.gz
+mkdir -p ./isolc/deps/downloads/ 2>/dev/null || true
+wget -O ./isolc/deps/downloads/jsoncpp-1.7.7.tar.gz https://github.com/open-source-parsers/jsoncpp/archive/1.7.7.tar.gz
 
 # Determine version
-cd solc
+cd isolc
 version=$($(dirname "$0")/get_version.sh)
 commithash=$(git rev-parse --short=8 HEAD)
 committimestamp=$(git show --format=%ci HEAD | head -n 1)
@@ -108,7 +108,7 @@ cp /tmp/${packagename}_${debversion}.orig.tar.gz ../
 mkdir debian
 echo 9 > debian/compat
 cat <<EOF > debian/control
-Source: solc
+Source: isolc
 Section: science
 Priority: extra
 Maintainer: Christian (Buildserver key) <builds@ethereum.org>
@@ -126,7 +126,7 @@ Homepage: https://ethereum.org
 Vcs-Git: git://github.com/ethereum/solidity.git
 Vcs-Browser: https://github.com/ethereum/solidity
 
-Package: solc
+Package: isolc
 Architecture: any-i386 any-amd64
 Multi-Arch: same
 Depends: \${shlibs:Depends}, \${misc:Depends}

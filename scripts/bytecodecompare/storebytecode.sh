@@ -41,8 +41,8 @@ TMPDIR=$(mktemp -d)
     if [[ "$SOLC_EMSCRIPTEN" = "On" ]]
     then
         cp "$REPO_ROOT/build/libsolc/soljson.js" .
-        npm install solc
-        cat > solc <<EOF
+        npm install isolc
+        cat > isolc <<EOF
 #!/usr/bin/env node
 var process = require('process')
 var fs = require('fs')
@@ -74,10 +74,10 @@ for (var optimize of [false, true])
     }
 }
 EOF
-        chmod +x solc
-        ./solc *.sol > report.txt
+        chmod +x isolc
+        ./isolc *.sol > report.txt
     else
-        $REPO_ROOT/scripts/bytecodecompare/prepare_report.py $REPO_ROOT/build/solc/solc
+        $REPO_ROOT/scripts/bytecodecompare/prepare_report.py $REPO_ROOT/build/solc/isolc
     fi
 
     if [ "$TRAVIS_SECURE_ENV_VARS" = "true" ]
