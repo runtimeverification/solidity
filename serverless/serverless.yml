@@ -1,0 +1,23 @@
+service: solidity-2-iele-compiler-serverless
+provider:
+  name: aws
+  runtime: nodejs8.10
+  profile: serverless-admin
+  memorySize: 128
+  environment:
+    STAGE: ${self:provider.stage}
+
+functions:
+  compileSolidityToIele:
+    handler: handler.compileSolidityToIele
+    name: ${self:provider.stage}-compileSolidityToIele
+    description: Compile solidity to iele
+    events:
+      - http:
+          path: /api/compile
+          method: GET
+          cors: true
+
+package:
+  exclude:
+    - node_modules/aws-sdk/**
