@@ -24,7 +24,7 @@ $ docker build -t runtimeverification/sol2iele:latest .
 
 ## Start container as an HTTP server
 
-Run the following command to start the server:
+Run the following command to start the server at port `7777`:
 
 ```bash
 $ docker run -ti --rm -p 7777:8080 runtimeverification/sol2iele:latest
@@ -34,7 +34,7 @@ Then you can compile solidity code to iele by sending a `POST` request to the se
 
 ```bash
 # Assume the container is running from the previous step
-curl -X POST --data '{"method": "sol2iele_asm", "params": ["main.sol", {"main.sol":"code1...","./dir/dependency.sol":"code2..."}]}' localhost:7777
+$ curl -X POST --data '{"method": "sol2iele_asm", "params": ["main.sol", {"main.sol":"code1...","./dir/dependency.sol":"code2..."}]}' localhost:7777
 ```
 
 
