@@ -38,15 +38,15 @@ FROM ubuntu:16.04
 COPY --from=builder /root/.local/bin/ /root/.local/bin/
 
 # Copy Solidity
-COPY --from=builder /solidity/build/ /solidity/build/
+COPY --from=builder /solidity/build/solc/isolc /root/.local/bin/isolc
 
 # Set environment variable
-ENV PATH "$PATH:/root/.local/bin:/solidity/build/solc"
+ENV PATH "$PATH:/root/.local/bin"
 
 # Set up command server
 ## Install python and set up server
 RUN apt-get update
-RUN apt-get install python3 libllvm5.0 libz3-dev libgmp-dev curl -y
+RUN apt-get install python3 libllvm5.0 libz3-dev libgmp10 curl -y
 
 EXPOSE 8080
 # Copy file
