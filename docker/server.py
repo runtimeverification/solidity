@@ -64,7 +64,11 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
 def run():
     print('starting server...')
     HOST = '0.0.0.0' # '127.0.0.1'
-    PORT = 8080
+    PORT = os.environ.get("SERVER_PORT")
+    if PORT == None:
+        PORT = 8080
+    else:
+        PORT = int(PORT)
     # Server settings
     server_address = (HOST, PORT)
     httpd = HTTPServer(server_address, testHTTPServer_RequestHandler)

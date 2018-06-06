@@ -11,8 +11,6 @@ FROM ubuntu:16.04 as builder
 # Docker hub: https://hub.docker.com/r/runtimeverification/sol2iele/
 MAINTAINER runtimeverification "contact@runtimeverification.com"
 
-# TODO: Build IELE and Solidity to IELE Compiler.
-
 # 1. Build IELE
 RUN apt-get update 
 RUN apt-get install git -y
