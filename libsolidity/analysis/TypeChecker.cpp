@@ -1291,13 +1291,7 @@ void TypeChecker::endVisit(ExpressionStatement const& _statement)
 		if (auto callType = dynamic_cast<FunctionType const*>(type(call->expression()).get()))
 		{
 			auto kind = callType->kind();
-			if (
-				kind == FunctionType::Kind::BareCall ||
-				kind == FunctionType::Kind::BareCallCode ||
-				kind == FunctionType::Kind::BareDelegateCall
-			)
-				m_errorReporter.warning(_statement.location(), "Return value of low-level calls not used.");
-			else if (kind == FunctionType::Kind::Send)
+			if (kind == FunctionType::Kind::Send)
 				m_errorReporter.warning(_statement.location(), "Failure condition of 'send' ignored. Consider using 'transfer' instead.");
 		}
 	}
