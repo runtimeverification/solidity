@@ -44,7 +44,7 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
                 if error != None:
                     raise Exception(error)
                 else:
-                    response_json = json.dumps({"success":True, "data": result.decode('utf8')})
+                    response_json = json.dumps({"success":True, "data": {"result": result.decode('utf8'), "tmp_dir": dirpath}})
             else:
                 raise Exception("Invalid method %s" % (method))
 
