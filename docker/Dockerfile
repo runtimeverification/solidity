@@ -46,7 +46,7 @@ ENV PATH "$PATH:/root/.local/bin:/solidity/build/solc"
 # Set up command server
 ## Install python and set up server
 RUN apt-get update
-RUN apt-get install python3 libllvm5.0 libz3-dev libgmp-dev -y
+RUN apt-get install python3 libllvm5.0 libz3-dev libgmp-dev curl -y
 
 EXPOSE 8080
 # Copy file
