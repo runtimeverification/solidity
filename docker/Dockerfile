@@ -1,5 +1,5 @@
 # Use the official Ubuntu image 
-FROM ubuntu:16.04
+FROM ubuntu:16.04 as builder
 
 # Build image. eg:
 # $ docker build -t runtimeverification/sol2iele:0.0.3 .
@@ -32,12 +32,21 @@ RUN cd solidity && ./scripts/install_deps.sh
 RUN cd solidity && mkdir build
 RUN cd solidity && cd build && cmake .. && make
 
+FROM ubuntu:16.04 
+
+# Copy IELE 
+COPY --from=builder /root/.local/bin/ /root/.local/bin/
+
+# Copy Solidity
+COPY --from=builder /solidity/build/ /solidity/build/
+
 # Set environment variable
 ENV PATH "$PATH:/root/.local/bin:/solidity/build/solc"
 
 # Set up command server
 ## Install python and set up server
-RUN apt-get install python3 -y
+RUN apt-get update
+RUN apt-get install python3 libllvm5.0 libz3-dev libgmp-dev -y
 
 EXPOSE 8080
 # Copy file
