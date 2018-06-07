@@ -37,7 +37,9 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
                 filepath_code_map = params[1]
                 for filepath in filepath_code_map:
                     code = filepath_code_map[filepath]
-                    with open(os.path.join(dirpath, filepath), "w") as outfile:
+                    target_filename = os.path.join(dirpath, filepath)
+                    os.makedirs(os.path.dirname(target_filename), exist_ok=True) # create directory if not exists
+                    with open(target_filename, "w") as outfile:
                         outfile.write(code)
                 p = subprocess.Popen(["isolc", "--asm", os.path.join(dirpath, main_file_path)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 (result, error) = p.communicate()
