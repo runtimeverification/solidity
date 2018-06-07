@@ -141,16 +141,15 @@ bytes IeleContract::toBinary() const {
   write << assembly << endl;
   write.close();
   std::string program = findProgramByName("iele-assemble").get();
-  const char *args[] = {"iele-assemble", "-", nullptr};
-  const StringRef input = tempin_str;
+  const char *args[] = {"iele-assemble", tempin_str.c_str(), nullptr};
   const StringRef output = tempout_str;
 
 #if defined(LLVM_VERSION_MAJOR) && ((LLVM_VERSION_MAJOR == 4) || (LLVM_VERSION_MAJOR == 5))
-  const StringRef *redirects[] = {&input, &output, nullptr};
+  const StringRef *redirects[] = {nullptr, &output, nullptr};
 #endif
 
 #if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 6
-  const llvm::ArrayRef<llvm::Optional<llvm::StringRef>> redirects = {Optional<StringRef>::create(&input), Optional<StringRef>::create(&output), Optional<StringRef>::create(nullptr)};  
+  const Optional<StringRef> redirects[] = {None, Optional<StringRef>::create(&output), None};  
 #endif
 
   int exit = ExecuteAndWait(program, args, nullptr, redirects);
