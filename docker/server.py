@@ -47,6 +47,22 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
                     raise Exception(error)
                 else:
                     response_json = json.dumps({"success":True, "data": result.decode('utf8').replace(dirpath+'/', '')})
+            elif method == "iele_asm":
+                dirpath = tempfile.mkdtemp()
+                main_file_path = params[0]
+                filepath_code_map = params[1]
+                for filepath in filepath_code_map:
+                    code = filepath_code_map[filepath]
+                    target_filename = os.path.join(dirpath, filepath)
+                    os.makedirs(os.path.dirname(target_filename), exist_ok=True) # create directory if not exists
+                    with open(target_filename, "w") as outfile:
+                        outfile.write(code)
+                p = subprocess.Popen(["iele-assemble", os.path.join(dirpath, main_file_path)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                (result, error) = p.communicate()
+                if error != None:
+                    raise Exception(error)
+                else:
+                    response_json = json.dumps({"success":True, "data": result.decode('utf8').replace(dirpath+'/', '')})                
             else:
                 raise Exception("Invalid method %s" % (method))
 
