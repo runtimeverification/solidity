@@ -6,7 +6,7 @@
 <!-- code_chunk_output -->
 
 * [Build docker image](#build-docker-image)
-* [Start container as an HTTP server](#start-container-as-an-http-server)
+* [Start container as an HTTP JSON-RPC server](#start-container-as-an-http-json-rpc-server)
 * [Run container that mounts local directory](#run-container-that-mounts-local-directory)
 
 <!-- /code_chunk_output -->
@@ -22,7 +22,7 @@ $ docker pull runtimeverification/sol2iele:latest
 $ docker build -t runtimeverification/sol2iele:latest .
 ```
 
-## Start container as an HTTP server
+## Start container as an HTTP JSON-RPC server
 
 Run the following command to start the server at port `7777`:
 
@@ -34,7 +34,7 @@ Then you can compile solidity code to iele by sending a `POST` request to the se
 
 ```bash
 # Assume the container is running from the previous step
-$ curl -X POST --data '{"method": "sol2iele_asm", "params": ["main.sol", {"main.sol":"code1...","./dir/dependency.sol":"code2..."}]}' localhost:7777
+$ curl -X POST --data '{"jsonrpc":"2.0", "method": "sol2iele_asm", "params": ["main.sol", {"main.sol":"code1...","./dir/dependency.sol":"code2..."}], "id": 0}' localhost:7777
 ```
 
 
@@ -61,8 +61,10 @@ contract mortal is owned{
 then we can compile this two files like below:
 
 ```bash
-$ curl -X POST --data '{"method": "sol2iele_asm", "params": ["mortal.sol", {"owned.sol":"pragma solidity ^0.4.9;\ncontract owned {\n    function owned() { owner = msg.sender; }\n    address owner;\n}","mortal.sol":"pragma solidity ^0.4.9;\nimport \"./owned.sol\";\ncontract mortal is owned{\n    function kill() {\n        selfdestruct(owner);\n    }\n}"}]}' localhost:7777
+$ curl -X POST --data '{"jsonrpc": "2.0", "method": "sol2iele_asm", "params": ["mortal.sol", {"owned.sol":"pragma solidity ^0.4.9;\ncontract owned {\n    function owned() { owner = msg.sender; }\n    address owner;\n}","mortal.sol":"pragma solidity ^0.4.9;\nimport \"./owned.sol\";\ncontract mortal is owned{\n    function kill() {\n        selfdestruct(owner);\n    }\n}"}], "id": 1}' localhost:7777
 ```
+
+Similarly, we have `iele_asm` method that accepts exactly the same format of params that assembles `.iele` file to hex string.
 
 ## Run container that mounts local directory  
 
