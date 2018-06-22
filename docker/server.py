@@ -25,6 +25,7 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
     
     def do_POST(self):
         dirpath = None
+        id_ = None
         try:
             content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
             post_data = self.rfile.read(content_length).decode('utf8') # <--- Gets the data itself
@@ -35,17 +36,23 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
             id_ = post_json.get("id", None)
             if jsonrpc != "2.0": # Invalid jsonrpc 
                 response_json = json.dumps({"jsonrpc": "2.0", "id": id_, "error": {"code": "-32600", "message": "Invalid Request"}})
-            elif method == "sol2iele_asm":
+            elif method == "sol2iele_asm" or method == "sol2iele_abi":
                 dirpath = tempfile.mkdtemp()
                 main_file_path = params[0]
                 filepath_code_map = params[1]
                 for filepath in filepath_code_map:
+                    if filepath.startswith(".."): # prevent accessing parent level
+                        raise Exception("Invalid filepath " + filepath)
                     code = filepath_code_map[filepath]
                     target_filename = os.path.join(dirpath, filepath)
                     os.makedirs(os.path.dirname(target_filename), exist_ok=True) # create directory if not exists
                     with open(target_filename, "w") as outfile:
                         outfile.write(code)
-                p = subprocess.Popen(["isolc", "--asm", os.path.join(dirpath, main_file_path)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                if method == "sol2iele_asm":
+                    flag = "--asm"
+                else:
+                    flag = "--abi"
+                p = subprocess.Popen(["isolc", flag, main_file_path], cwd=dirpath, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 (result, error) = p.communicate()
                 if error != None:
                     raise Exception(error)
@@ -56,12 +63,14 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
                 main_file_path = params[0]
                 filepath_code_map = params[1]
                 for filepath in filepath_code_map:
+                    if filepath.startswith(".."): # prevent accessing parent level
+                        raise Exception("Invalid filepath " + filepath)
                     code = filepath_code_map[filepath]
                     target_filename = os.path.join(dirpath, filepath)
                     os.makedirs(os.path.dirname(target_filename), exist_ok=True) # create directory if not exists
                     with open(target_filename, "w") as outfile:
                         outfile.write(code)
-                p = subprocess.Popen(["iele-assemble", os.path.join(dirpath, main_file_path)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                p = subprocess.Popen(["iele-assemble", main_file_path], cwd=dirpath, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 (result, error) = p.communicate()
                 if error != None:
                     raise Exception(error)

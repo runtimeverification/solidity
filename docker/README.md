@@ -64,6 +64,8 @@ then we can compile this two files like below:
 $ curl -X POST --data '{"jsonrpc": "2.0", "method": "sol2iele_asm", "params": ["mortal.sol", {"owned.sol":"pragma solidity ^0.4.9;\ncontract owned {\n    function owned() { owner = msg.sender; }\n    address owner;\n}","mortal.sol":"pragma solidity ^0.4.9;\nimport \"./owned.sol\";\ncontract mortal is owned{\n    function kill() {\n        selfdestruct(owner);\n    }\n}"}], "id": 1}' localhost:7777
 ```
 
+We also have `sol2iele_abi` method that generates solidity abi.
+
 Similarly, we have `iele_asm` method that accepts exactly the same format of params that assembles `.iele` file to hex string.
 
 ## Run container that mounts local directory  
