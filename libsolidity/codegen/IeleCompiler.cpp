@@ -2143,12 +2143,41 @@ void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleVa
    // width_bytes(n) = ((log2(n) + 2) + 7) / 8
    //                = (log2(n) + 9) / 8
    //                = (log2(n) + 9) >> 3
-  llvm::SmallVector<IeleLValue *, 1> Results;
+   llvm::SmallVector<IeleLValue *, 1> Results;
    appendConditional(Value, Results,
     [&Value, this](llvm::SmallVectorImpl<IeleRValue *> &Results){
       iele::IeleLocalVariable *Result =
         iele::IeleLocalVariable::Create(&Context, "logarithm.base.2", CompilingFunction);
-      iele::IeleInstruction::CreateLog2(Result, Value, CompilingBlock); 
+
+      // Check for negative value.
+      iele::IeleLocalVariable *IsPositiveValue =
+        iele::IeleLocalVariable::Create(
+          &Context, "is.positive", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::CmpGt, IsPositiveValue, Value,
+        iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+
+      llvm::SmallVector<IeleLValue *, 1> PositiveResults;
+      appendConditional(IsPositiveValue, PositiveResults,
+       [&Value, this](llvm::SmallVectorImpl<IeleRValue *> &Results){
+        Results.push_back(IeleRValue::Create({Value}));
+       },
+       [&Value, this](llvm::SmallVectorImpl<IeleRValue *> &Results){
+         iele::IeleLocalVariable *PositiveResult =
+           iele::IeleLocalVariable::Create(
+             &Context, "positive.value", CompilingFunction);
+        iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Sub, PositiveResult,
+          iele::IeleIntConstant::getZero(&Context), Value, CompilingBlock);
+        Results.push_back(IeleRValue::Create({PositiveResult}));
+       });
+       solAssert(PositiveResults.size() == 1,
+                 "Invalid number of conditional results in appendByteWidth");
+
+      // Compute the log.
+      iele::IeleValue *PositiveValue =
+        PositiveResults[0]->read(CompilingBlock)->getValue();
+      iele::IeleInstruction::CreateLog2(Result, PositiveValue, CompilingBlock);
       Results.push_back(IeleRValue::Create({Result}));
     },
     [this](llvm::SmallVectorImpl<IeleRValue *> &Results){
