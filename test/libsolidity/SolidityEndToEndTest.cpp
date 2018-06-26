@@ -4123,6 +4123,27 @@ BOOST_AUTO_TEST_CASE(bytes_length_member)
 	ABI_CHECK(callContractFunction("getLength()"), encodeArgs(2));
 }
 
+BOOST_AUTO_TEST_CASE(bytes_length_member_2)
+{
+  char const* sourceCode = R"###(
+  contract C {
+    function set(bytes b) returns (bool) { data = b; return true; }
+    function getLength() returns (uint) { return data.length; }
+    bytes data;
+  }
+
+  contract Driver {
+    function test() returns (uint) {
+      C c = new C();
+      c.set(abi.encode(bytes4(keccak256("set()")), uint256(1), uint256(2), uint256(3)));
+      return c.getLength();
+    }
+  }
+  )###";
+  compileAndRun(sourceCode);
+  ABI_CHECK(callContractFunction("test()"), encodeArgs(4+32+32+32));
+}
+
 BOOST_AUTO_TEST_CASE(struct_copy)
 {
 	char const* sourceCode = R"(

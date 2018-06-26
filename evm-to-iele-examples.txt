@@ -1,0 +1,148 @@
+How to replace uses of msg.data and low-level call
+
+Solidity to EVM:
+
+  contract C {
+    function set() returns (bool) { data = msg.data; return true; }
+    function getLength() returns (uint) { return data.length; }
+    bytes data;
+  }
+
+  contract Driver {
+    function test() returns (uint) {
+      C c = new C();
+      c.call(bytes4(keccak256("set()")), 1, 2, 3);
+      return c.getLength();
+    }
+  }
+
+
+Solidity to IELE:
+
+  contract C {
+    function set(bytes b) returns (bool) { data = b; return true; }
+    function getLength() returns (uint) { return data.length; }
+    bytes data;
+  }
+
+  contract Driver {
+    function test() returns (uint) {
+      C c = new C();
+      c.set(abi.encode(bytes4(keccak256("set()")),
+                       uint256(1), uint256(2), uint256(3)));
+      return c.getLength();
+    }
+  }
+
+
+-------------------------------------------------------------------------------
+
+
+How to replace uses of delegatecall
+
+Solidity to EVM:
+
+  contract LibraryContract {
+    event emitAddressEvent(address from);
+    function emitAddress() returns (bool) {
+      emitAddressEvent(this);
+      return true;
+    }
+  }
+
+  contract C {
+    address lib;
+
+    constructor(address _lib) { lib = _lib; }
+
+    function myEmitAddress() {
+      lib.delegatecall(bytes4(keccak256("emitAddress()")));
+    }
+  }
+
+  contract Driver {
+    function test() {
+      LibraryContract lib = new LibraryContract();
+      C c = new C(lib);
+      c.myEmitAddress();
+    }
+  }
+
+
+Solidity to IELE:
+
+  contract LibraryContract {
+    event emitAddressEvent(address from);
+    function emitAddress() returns (bool) {
+      emitAddressEvent(this);
+      return true;
+    }
+  }
+
+  contract C is LibraryContract {
+    function myEmitAddress() {
+      emitAddress();
+    }
+  }
+
+  contract Driver {
+    function test() {
+      C c = new C();
+      c.myEmitAddress();
+    }
+  }
+
+
+-------------------------------------------------------------------------------
+
+
+How to replace inline assembly that calls ecadd:
+
+Solidity to EVM:
+
+  contract C {
+    struct Point {
+      uint256 X;
+      uint256 Y;
+    }
+
+    function add(Point p1, Point p2) internal returns (Point r) {
+       uint256[4] memory input;
+       input[0] = p1.X;
+       input[1] = p1.Y;
+       input[2] = p2.X;
+       input[3] = p2.Y;
+       bool success;
+       assembly {
+           // Note that address 6 contains the precompiled contract for ecadd
+           // in EVM
+           success := call(sub(gas, 2000), 6, 0, input, 0xc0, r, 0x60)
+           // Use "invalid" to make gas estimation work
+           switch success case 0 { invalid() }
+       }
+       require(success);
+    }
+
+  }
+        
+Solidity to IELE:
+
+  contract C {
+    struct Point {
+      uint256 X;
+      uint256 Y;
+    }
+
+    function add(Point p1, Point p2) internal returns (Point r) {
+        uint256[2] memory g1;
+        uint256[2] memory g2;
+        g1[0] = p1.X;
+        g1[1] = p1.Y;
+        g2[0] = p2.X;
+        g2[1] = p2.Y;
+        uint256[2] memory r0 = ecadd(g1, g2);
+        r.X = r0[0];
+        r.Y = r0[1];
+    }
+
+  }
