@@ -60,6 +60,25 @@ BOOST_AUTO_TEST_CASE(smoke_test)
 	testContractAgainstCppOnRange("f(uint)", [](u256 const& a) -> u256 { return a * 7; }, 0, 100);
 }
 
+BOOST_AUTO_TEST_CASE(encode_negative_int)
+{
+  char const* sourceCode = R"(
+    contract ReturnIntArray {
+      function returnIntArray() public pure returns (int[3]) {
+        int[3] memory x;
+        x[0] = -1;
+        x[1] = -255;
+        x[2] = -128;
+        return x;
+      }
+    }
+  )";
+  compileAndRun(sourceCode);
+  ABI_CHECK(callContractFunction("returnIntArray()"), vector<bytes>(1, encodeRefArgs(
+		bigint(-1), bigint(-255), bigint(-128) // element values
+	)));
+}
+
 BOOST_AUTO_TEST_CASE(empty_contract)
 {
 	char const* sourceCode = R"(
