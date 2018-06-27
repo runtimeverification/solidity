@@ -64,17 +64,18 @@ BOOST_AUTO_TEST_CASE(encode_negative_int)
 {
   char const* sourceCode = R"(
     contract ReturnIntArray {
-      function returnIntArray() public pure returns (int[2]) {
-        int[2] memory x;
+      function returnIntArray() public pure returns (int[3]) {
+        int[3] memory x;
         x[0] = -1;
         x[1] = -255;
+        x[2] = -128;
         return x;
       }
     }
   )";
   compileAndRun(sourceCode);
   ABI_CHECK(callContractFunction("returnIntArray()"), vector<bytes>(1, encodeRefArgs(
-		bigint(-1), bigint(-255) // element values
+		bigint(-1), bigint(-255), bigint(-128) // element values
 	)));
 }
 
