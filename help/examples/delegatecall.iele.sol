@@ -1,5 +1,9 @@
 pragma solidity ^0.4.0;
 
+// 1. IELE contracts can inherit from library contracts.
+// 2. Because library code is copied, what used to be
+//    `delegatecall` is now an ordinary internal call.
+
 contract LibraryContract {
   event libraryEvent(address from);
   
@@ -8,9 +12,9 @@ contract LibraryContract {
   }
 }
 
-contract Contract is LibraryContract {
+contract Contract is LibraryContract {    // <<<- 1
   function contractFunction() public {
-    libraryFunction();
+    libraryFunction();                    // <<<- 2
   }
 }
 

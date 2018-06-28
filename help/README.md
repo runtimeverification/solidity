@@ -17,7 +17,8 @@ Some code that the Ethereum compiler allows is invalid in this
 compiler, usually for security reasons. This section links error
 messages to advice about how to make them go away.
 
-* [Low-level calls are not supported in IELE](call.md)
+* [`address.call` is not supported in IELE](call.md)
+* [`address.delegatecall` is not supported in IELE](delegatecall.md)
 * [`msg.data` is not supported in IELE.](msg-data.md)
 
 

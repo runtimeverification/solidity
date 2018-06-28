@@ -1,5 +1,7 @@
 pragma solidity ^0.4.0;
 
+// 1. `delegatecall` is not allowed in IELE.
+
 contract LibraryContract {
   event libraryEvent(address from);
   
@@ -12,11 +14,11 @@ contract Contract {
   address lib;
 
   constructor() {
-    lib = new LibraryContract();
+    lib = new LibraryContract();       // <<<- 1
   }
 
   function contractFunction() public {
-    lib.delegatecall(bytes4(keccak256("libraryFunction()")));
+    lib.delegatecall(bytes4(keccak256("libraryFunction()")));  // <<<- 2
   }
 }
 
