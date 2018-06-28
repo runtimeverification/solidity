@@ -72,6 +72,6 @@ called like any other internal function:
 
 ## Examples
 
-Before: [examples/delegatecall.evm.sol](examples/delegatecall.evm.sol)
-After: [examples/delegatecall.iele.sol](examples/delegatecall.iele.sol)
+* Before: [examples/delegatecall.evm.sol](examples/delegatecall.evm.sol)
+* After: [examples/delegatecall.iele.sol](examples/delegatecall.iele.sol)
 

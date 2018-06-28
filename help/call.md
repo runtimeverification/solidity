@@ -63,5 +63,5 @@ cast the `uint` constants to `uint256` before encoding:
 
 ## Examples
 
-Before: [examples/call-and-msg-data.evm.sol](examples/call-and-msg-data.evm.sol)
-After: [examples/call-and-msg-data.iele.sol](examples/call-and-msg-data.iele.sol)
+* Before: [examples/call-and-msg-data.evm.sol](examples/call-and-msg-data.evm.sol)
+* After: [examples/call-and-msg-data.iele.sol](examples/call-and-msg-data.iele.sol)
