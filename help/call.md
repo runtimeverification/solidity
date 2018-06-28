@@ -15,7 +15,7 @@ New:
    
 If the called function is also being compiled, you'll likely need to 
 [fix its use of `msg.data`](./msg-data.md).
-   
+
 ## Discussion
 
 In EVM-Solidity, a contract has a `call` member that can be used
@@ -60,3 +60,8 @@ be wise to send exactly the same payload to it as EVM-Solidity would. So
 cast the `uint` constants to `uint256` before encoding:
 
     abi.encode(callee, uint256(1), uint256(2), uint256(3))
+
+## Examples
+
+Before: [examples/call-and-msg-data.evm.sol](examples/call-and-msg-data.evm.sol)
+After: [examples/call-and-msg-data.iele.sol](examples/call-and-msg-data.iele.sol)

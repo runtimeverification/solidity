@@ -68,3 +68,10 @@ called like any other internal function:
 **Question: is there anything to be said about library function arguments?**
 
 **Todo? Put the `uint` vs. `uint256` issue onto its own page?**
+
+
+## Examples
+
+Before: [examples/delegatecall.evm.sol](examples/delegatecall.evm.sol)
+After: [examples/delegatecall.iele.sol](examples/delegatecall.iele.sol)
+
