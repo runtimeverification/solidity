@@ -24,8 +24,13 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
         return
     
     def do_POST(self):
+        def validateTargetFilePath(filepath, dirpath):
+            realpath = os.path.realpath(filepath)
+            return realpath.startswith(dirpath)
+
         dirpath = None
         id_ = None
+        timeout = 15 # timeout in second to kill the process
         try:
             content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
             post_data = self.rfile.read(content_length).decode('utf8') # <--- Gets the data itself
@@ -38,40 +43,44 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
                 response_json = json.dumps({"jsonrpc": "2.0", "id": id_, "error": {"code": "-32600", "message": "Invalid Request"}})
             elif method == "sol2iele_asm" or method == "sol2iele_abi":
                 dirpath = tempfile.mkdtemp()
-                main_file_path = params[0]
+                main_filepath = params[0]
+                if not validateTargetFilePath(os.path.join(dirpath, main_filepath), dirpath):
+                    raise Exception("Invalid filepath " + main_filepath)
                 filepath_code_map = params[1]
                 for filepath in filepath_code_map:
-                    if filepath.startswith(".."): # prevent accessing parent level
-                        raise Exception("Invalid filepath " + filepath)
                     code = filepath_code_map[filepath]
-                    target_filename = os.path.join(dirpath, filepath)
-                    os.makedirs(os.path.dirname(target_filename), exist_ok=True) # create directory if not exists
-                    with open(target_filename, "w") as outfile:
+                    target_filepath = os.path.join(dirpath, filepath)
+                    if not validateTargetFilePath(target_filepath, dirpath):
+                        raise Exception("Invalid filepath " + filepath)
+                    os.makedirs(os.path.dirname(target_filepath), exist_ok=True) # create directory if not exists
+                    with open(target_filepath, "w") as outfile:
                         outfile.write(code)
                 if method == "sol2iele_asm":
                     flag = "--asm"
                 else:
                     flag = "--abi"
-                p = subprocess.Popen(["isolc", flag, main_file_path], cwd=dirpath, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                (result, error) = p.communicate()
+                p = subprocess.Popen(["isolc", flag, main_filepath], cwd=dirpath, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                (result, error) = p.communicate(timeout=timeout)
                 if error != None:
                     raise Exception(error)
                 else:
                     response_json = json.dumps({"jsonrpc": "2.0", "result": result.decode('utf8').replace(dirpath+'/', ''), "id": id_})
             elif method == "iele_asm":
                 dirpath = tempfile.mkdtemp()
-                main_file_path = params[0]
+                main_filepath = params[0]
+                if not validateTargetFilePath(os.path.join(dirpath, main_filepath), dirpath):
+                    raise Exception("Invalid filepath " + main_filepath)
                 filepath_code_map = params[1]
                 for filepath in filepath_code_map:
-                    if filepath.startswith(".."): # prevent accessing parent level
-                        raise Exception("Invalid filepath " + filepath)
                     code = filepath_code_map[filepath]
-                    target_filename = os.path.join(dirpath, filepath)
-                    os.makedirs(os.path.dirname(target_filename), exist_ok=True) # create directory if not exists
-                    with open(target_filename, "w") as outfile:
+                    target_filepath = os.path.join(dirpath, filepath)
+                    if not validateTargetFilePath(target_filepath, dirpath):
+                        raise Exception("Invalid filepath " + filepath)
+                    os.makedirs(os.path.dirname(target_filepath), exist_ok=True) # create directory if not exists
+                    with open(target_filepath, "w") as outfile:
                         outfile.write(code)
-                p = subprocess.Popen(["iele-assemble", main_file_path], cwd=dirpath, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                (result, error) = p.communicate()
+                p = subprocess.Popen(["iele-assemble", main_filepath], cwd=dirpath, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                (result, error) = p.communicate(timeout=timeout)
                 if error != None:
                     raise Exception(error)
                 else:
