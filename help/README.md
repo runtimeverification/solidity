@@ -5,6 +5,8 @@
 * **Consider the difference between `uint256` and `uint`.**
   
   [TBD]
+  
+* **TODO**: ecrecover
 
 * **Run the compiler and look for errors.**
 
@@ -25,6 +27,13 @@ messages to advice about how to make them go away.
   
 * [Inline assembly is not supported in IELE.](assembly.md)
 
+* Member "selector" is not supported in IELE.
+
+  Constructs like `this.myFunction.selector` are no longer
+  needed for low-level calls. See [`call.md`](call.md) for the
+  IELE mechanism that replaces `call`, `delegatecall` and
+  `callcode`. 
+
 * [`msg.data` is not supported in IELE.](msg-data.md)
 
 * `msg.sig` is not supported in IELE.
@@ -33,3 +42,4 @@ messages to advice about how to make them go away.
   In IELE, the name a function was called under is always that
   function's name.
 
+* **TODO**: abi.encodeWithSignature, abi.encodeWithSelector
