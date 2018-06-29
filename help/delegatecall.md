@@ -66,6 +66,15 @@ called like any other internal function:
         libraryFunction();
       }
     }
+    
+### If library source is unavailable
+
+**TODO** I suspect the following is wrong about construction time.
+
+If the source is unavailable at compile time, it will be copied from
+the library when a contract is constructed. Some information is still
+needed at compile time, and that can be supplied with an abstract
+contract matching the real contract. 
 
 **Question: is there anything to be said about library function arguments?**
 
