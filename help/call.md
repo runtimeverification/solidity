@@ -1,4 +1,6 @@
-# Error: Low-level calls are not supported in IELE
+# Error: `address.call` is not supported in IELE
+
+*Note: the error message is different in the current compiler.*
 
 ## Quick look
 
