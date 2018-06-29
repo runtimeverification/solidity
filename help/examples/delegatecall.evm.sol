@@ -13,7 +13,7 @@ contract LibraryContract {
 contract Contract {
   address lib;
 
-  constructor() {
+  constructor() public {
     lib = new LibraryContract();       // <<<- 1
   }
 

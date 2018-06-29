@@ -9,7 +9,7 @@ Old:
     contract Contract {
       address lib;
     
-      constructor() {
+      constructor() public {
         lib = new LibraryContract();
       }
     
@@ -46,7 +46,7 @@ In EVM-Solidity, library contracts are often used by calling them with
 
 `delegatecall` requires some verbose mechanism to set up, such as this:
 
-      constructor() {
+      constructor() public {
         lib = new LibraryContract();
       }
     
