@@ -1,6 +1,6 @@
 pragma solidity ^0.4.0;
 
-// 1. IELE contracts can inherit from library contracts.
+// 1. IELE-Solidity contracts can inherit from library contracts.
 // 2. Because library code is copied, what used to be
 //    `delegatecall` is now an ordinary internal call.
 

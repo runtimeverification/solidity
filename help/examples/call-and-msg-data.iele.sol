@@ -16,10 +16,10 @@ contract ByteStoreContract {
   }
 }
 
-// Note also the change from `1` to `uint256(1)`.
-// Constants in EVM are `uint256`. In IELE, they're `uint`
-// (a variable-sized type). The cast preserves the
-// meaning of the program. 
+// Note also the change from `1` to `uint256(1)`. Constants in
+// EVM-Solidity are `uint256`. In IELE-Solidity, they're `uint` (a
+// variable-sized type). The cast preserves the meaning of the
+// program.
 
 contract ClientContract {
   function test() public returns (uint) {
