@@ -1,45 +1,58 @@
-# Support for moving Solidity code from EVM to IELE
+# Moving Solidity code from EVM to IELE
+
+It would be simplest if the Solidity compiled to IELE bytecodes were
+exactly the same as the one compiled to EVM. There are some differences, though, for reasons of security or reliability. This page will help you convert existing contracts. 
 
 ## A checklist
 
 * **Consider the difference between `uint256` and `uint`.**
   
-  [TBD]
+  In EVM-Solidity, `uint` is just shorthand for `uint256`. 
+  In IELE-Solidity, `uint` is an integer that grows as long
+  as is needed (so there can't be overflow).
+  
+  [uint.md](uint.md) discusses some of the consequences for
+  your code. 
   
 * **TODO**: ecrecover
 
 * **Run the compiler and look for errors.**
 
   The compiler will tell you of remaining changes that need to be
-  made.  If you see errors, look for them in the following section.
+  made. The following section shows you how to fix various error
+  messages.
 
 ## Error messages
 
-Some code that the Ethereum compiler allows is invalid in this
-compiler, usually for security reasons. This section links error
-messages to advice about how to make them go away.
-
-* [`address.call` is not supported in IELE](call.md)
-
-* [`address.delegatecall` is not supported in IELE](delegatecall.md)
+* **`address.call` is not supported in IELE**    
+  **`abi.encodeWithSignature` is not supported in IELE**    
+  **`abi.encodeWithSelector` is not supported in IELE**   
+  **Member `selector"` is not supported in IELE.**
   
-  The solution given also applies to `address.callcode`.
+  These constructs are no longer needed for low-level calls. 
+  See [`call.md`](call.md) for the IELE mechanism. 
+
+* **`address.delegatecall` is not supported in IELE**    
+  **`address.callcode` is not supported in IELE**
+
+  In EVM-Solidity, these are frequently used to treat contracts as
+  libraries. See [`delegatecall.md`](delegatecall.md) for the
+  IELE-Solidity mechanism.
+
+* **`msg.data` is not supported in IELE.**
   
-* [Inline assembly is not supported in IELE.](assembly.md)
+  In EVM-Solidity, `msg.data` was used to receive low-level
+  calls. [msg-data.md](msg-data.md) describes how it's done in
+  IELE-Solidity.
 
-* Member "selector" is not supported in IELE.
+* **Inline assembly is not supported in IELE.**
 
-  Constructs like `this.myFunction.selector` are no longer
-  needed for low-level calls. See [`call.md`](call.md) for the
-  IELE mechanism that replaces `call`, `delegatecall` and
-  `callcode`. 
+  There are Solidity-level builtins for what
+  used to require assembly language. See 
+  [assembly.md](assembly.md). 
 
-* [`msg.data` is not supported in IELE.](msg-data.md)
-
-* `msg.sig` is not supported in IELE.
+* **`msg.sig` is not supported in IELE.**
   
   There's no way to fetch the function signature part of the `msg`.
   In IELE, the name a function was called under is always that
   function's name.
-
-* **TODO**: abi.encodeWithSignature, abi.encodeWithSelector
