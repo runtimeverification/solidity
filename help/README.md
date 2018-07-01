@@ -14,7 +14,14 @@ exactly the same as the one compiled to EVM. There are some differences, though,
   [uint.md](uint.md) discusses some of the consequences for
   your code. 
   
-* **TODO**: ecrecover
+* **Check uses of `ecrecover`**
+  
+  The `ecrecover` built-in function now throws an exception on
+  failure, instead of returning `0`. Code that didn't check for the
+  failure case could then send funds to address 0 -- and those funds
+  could never be gotten back.
+  
+  If you *did* check for failure, you can now remove that check.
 
 * **Run the compiler and look for errors.**
 
