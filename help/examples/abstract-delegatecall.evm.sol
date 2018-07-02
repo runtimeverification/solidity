@@ -1,11 +1,8 @@
 pragma solidity ^0.4.0;
 
-// IELE-Solidity requires source before will compile a call to a
-// library contract. So the use of the abstract contract below
+// IELE-Solidity requires source before it will compile a call to 
+// a library contract. So the use of the abstract contract below
 // cannot be converted to IELE.
-//
-// See delegatecall.iele.sol for the equivalent 
-// look like. 
 
 contract LibraryContract {
   function libraryFunction() public;

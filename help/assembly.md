@@ -9,6 +9,7 @@ The `ECADD`, `ECMUL`, and `ECPAIRING` bytecodes have corresponding
 built-in functions: `ecadd`, `ecmul`, and `ecpairing`.
 
 Old: 
+     
      assembly {
        let ecadd := 6 // precompiled contract
        success := call(sub(gas, 2000), ecadd, 0, temp, 0xc0, retval, 0x60)
@@ -45,4 +46,4 @@ Note that `codesize` will return `0` if no code has been deployed to the given a
 * Before: [examples/codesize.evm.sol](examples/codesize.evm.sol)
 * After: [examples/codesize.iele.sol](examples/codesize.iele.sol)
 
-### TODO: Anything else?
+### Reviewers: Anything else?

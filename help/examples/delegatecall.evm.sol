@@ -14,11 +14,11 @@ contract Contract {
   address lib;
 
   constructor() public {
-    lib = new LibraryContract();       // <<<- 1
+    lib = new LibraryContract();
   }
 
   function contractFunction() public {
-    lib.delegatecall(bytes4(keccak256("libraryFunction()")));  // <<<- 2
+    lib.delegatecall(bytes4(keccak256("libraryFunction()")));  // <<<- 1
   }
 }
 

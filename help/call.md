@@ -57,11 +57,13 @@ EVM-Solidity compiler would.
 
 You might not care. Perhaps you haven't written `ByteStoreContract` yet, so
 you're fine with arbitrarily large integers. 
-If you're working with a pre-existing contract, though, you'd probably
-be wise to send exactly the same payload to it as EVM-Solidity would. So 
-cast the `uint` constants to `uint256` before encoding:
+If you're working with a pre-existing contract, though, take care not to send
+`uint` values to a function that expects `uint256`. In such a case, explicitly cast
+the arguments:
 
     abi.encode(callee, uint256(1), uint256(2), uint256(3))
+    
+(Be aware that numbers too big to fit into `uint256` will be truncated.)
 
 ## Examples
 

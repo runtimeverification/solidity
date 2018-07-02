@@ -1,13 +1,13 @@
 pragma solidity ^0.4.0;
 
-// 1. `address.call` is replaced by an ordinary call
-// 2. `msg.data` is replaced by a function argument
+// 1. `msg.data` is replaced by a function argument
+// 2. `address.call` is replaced by an ordinary call
 
 contract ByteStoreContract {
   bytes data;
 
-  function set(bytes b) public returns (bool) {      // <<<- 2
-    data = b;                                        // <<<- 2
+  function set(bytes b) public returns (bool) {      // <<<- 1
+    data = b;                                        // <<<- 1
     return true;
   }
   
@@ -26,7 +26,7 @@ contract ClientContract {
     bytes4 callee = bytes4(keccak256("set()"));
     
     ByteStoreContract store = new ByteStoreContract();
-    store.set(abi.encode(callee, uint256(1), uint256(2), uint256(3)));   // <<<- 1
+    store.set(abi.encode(callee, uint256(1), uint256(2), uint256(3)));   // <<<- 2
     return store.getLength();
   }
 }

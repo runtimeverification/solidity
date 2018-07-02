@@ -1,13 +1,13 @@
 pragma solidity ^0.4.0;
 
-// 1. `address.call` is not supported.
-// 2. `msg.data` is not supported
+// 1. `msg.data` is not supported
+// 2. `address.call` is not supported.
 
 contract ByteStoreContract {
   bytes data;
 
   function set() public returns (bool) {
-    data = msg.data;                                    // <<<- 2
+    data = msg.data;                                    // <<<- 1
     return true;
   }
   
@@ -21,7 +21,7 @@ contract ClientContract {
     bytes4 callee = bytes4(keccak256("set()"));
     
     ByteStoreContract store = new ByteStoreContract();
-    store.call(callee, 1, 2, 3);                        // <<<- 1
+    store.call(callee, 1, 2, 3);                        // <<<- 2
     return store.getLength();
   }
 }

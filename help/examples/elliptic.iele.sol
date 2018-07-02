@@ -1,6 +1,6 @@
 pragma solidity ^0.4.0;
 
-// 1. inline assembly can be replace by built-in functions
+// 1. inline assembly can be replace by built-in functions.
 
 contract C {
   struct Point {

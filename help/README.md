@@ -51,17 +51,17 @@ them.
   IELE has a different mechanism for low-level calls, and the compiler
   doesn't accept `call`.  See [call.md](call.md).
 
-* **Provide source for the libraries you use**
+* **Provide source for libraries you use**
 
   There are two forms of library in Solidity: contracts that are
   invoked using an explicit `delegatecall` (formerly `callcode`), and
   the
   [library](http://solidity.readthedocs.io/en/v0.4.24/contracts.html#libraries)
-  construct, which hides the `delegatecall` from you. In both case,
-  the bytecodes for the library are stored once in the blockchain,
-  separately from your contract.
-
-  For security, IELE doesn't allow `delegatecall`. Instead, library
+  construct, which hides the `delegatecall` from you. In both cases,
+  you're calling someone else's bytecodes *and* (unlike with `call`)
+  giving them access to your context. That's a security risk.
+  
+  Therefore, IELE doesn't allow `delegatecall`. Instead, library
   source is compiled and the bytecodes are included in your compiled
   contract. (That means you're paying for increased security with the
   slightly higher gas price of bigger contracts.)
@@ -78,12 +78,12 @@ them.
         ...
       }
 
-  That code cannot be compiled until you tell the compiler where
+  Your contract can't be compiled until you tell the compiler where
   the source for `LibraryContract` is (by providing it inline
   or via `import`) The same must be done for the `library` construct.
   
   After doing it for a `library`, you needn't make any other changes
-  to your source. If you have an explicit `delegatecall`, you use
+  to your source. If you have an explicit `delegatecall`, you replace it with 
   inheritance. See 
   [`delegatecall.md`](delegatecall.md).
 
