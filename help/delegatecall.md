@@ -6,21 +6,21 @@
 
 Old: 
     
+    contract LibraryContract {
+      function libraryFunction() public;  // an abstract function and contract
+    }
+      
     contract Contract {
-      address lib;
-    
-      constructor() public {
-        lib = new LibraryContract();
-      }
-    
-      function contractFunction() public {
-        lib.delegatecall(bytes4(keccak256("libraryFunction()")));
-      }
+      ...
+      ... LibraryContract(0x3bBb367Afe5075E0461F535d6Ed2A640822EDb1C) ...
+      ...
     }
 
 New:
+    
+    import "/path/to/LibraryContract.sol"
 
-    contract Contract is LibraryContract {  <<<- Note the inheritance
+    contract Contract is LibraryContract {
       function contractFunction() public {
         libraryFunction();
       }
@@ -29,12 +29,10 @@ New:
    
 ## Discussion
 
-In EVM-Solidity, library contracts are often used by calling them with
-`delegatecall`, which transfers the calling context an instance of a 
-contract on the blockchain.
+The compiler needs the library's source, typically via an
+`import`. After that, the library contract is accessed via multiple
+inheritance:
 
-Since that isn't allowed in IELE-Solidity, a library function is
-accessed using multiple inheritance:
 
     contract Contract is LibraryContract {
 

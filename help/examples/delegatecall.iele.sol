@@ -4,6 +4,7 @@ pragma solidity ^0.4.0;
 // 2. Because library code is copied, what used to be
 //    `delegatecall` is now an ordinary internal call.
 
+// This would normally be provided via `import`.
 contract LibraryContract {
   event libraryEvent(address from);
   

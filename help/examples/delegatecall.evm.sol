@@ -1,6 +1,8 @@
 pragma solidity ^0.4.0;
 
-// 1. `delegatecall` is not allowed in IELE.
+// 1. `delegatecall` is not allowed in IELE. For simplicity, the
+//    library contract is included in this file, rather than
+//    found and resolved at link time.
 
 contract LibraryContract {
   event libraryEvent(address from);

@@ -20,11 +20,13 @@ them.
   where the integer is defined as `uint` or `int` and change them
   to `uint256` or `int256`. 
   
-  Otherwise, you'd be safe changing all `uint256` variables to `uint`
+  Otherwise, you'll be safe changing all `uint256` variables to `uint`
   and all `int256` variables to `int`. You could also leave them as
   they are. In that case, see [uint.md](uint.md).
   
-* In EVM-Solidity, you can cast any `int` type into `uint`, so
+* Check casts of `int` to `uint`
+
+  In EVM-Solidity, you can cast any integer type into `uint`, so
   the following is valid:
   
       function converter(int8 short) { 
@@ -32,14 +34,14 @@ them.
         ...
       }
   
-  ... even though, because of how fixed-length negative numbers are
-  stored, a small negative number will become a very large positive
-  number.
+  Negative values will become positive ones. In the above case, `-1`
+  will become `255`. If the input were an `int` rather than an `int8`,
+  it would become a very large number indeed.
     
-  In IELE-Solidity, converting a negative `intN` value to a `uint`
-  causes an exception. If you want to preserve EVM-Solidity behavior,
-  search for casts (`uint(`), then (1) cast the fixed-width `intN` to a
-  `uintN`, and (2) cast the result to `uint`:
+  In IELE-Solidity, converting a negative value to a `uint` causes a
+  runtime exception. If you want to preserve EVM-Solidity behavior,
+  search for casts (`uint(`), then (1) cast the fixed-width `intN` to
+  a `uintN`, and (2) cast the result to `uint`:
     
       function converter(int8 short) { 
         uint long = uint(uint8(short));
@@ -49,7 +51,7 @@ them.
 * **Change uses of `call`**
 
   IELE has a different mechanism for low-level calls, and the compiler
-  doesn't accept `call`.  See [call.md](call.md).
+  doesn't accept `address.call`.  See [call.md](call.md).
 
 * **Provide source for libraries you use**
 
@@ -61,53 +63,43 @@ them.
   you're calling someone else's bytecodes *and* (unlike with `call`)
   giving them access to your context. That's a security risk.
   
-  Therefore, IELE doesn't allow `delegatecall`. Instead, library
+  Therefore, IELE doesn't allow `delegatecall`. Instead, the library's
   source is compiled and the bytecodes are included in your compiled
   contract. (That means you're paying for increased security with the
-  slightly higher gas price of bigger contracts.)
-
-  The consequence to you is that you cannot have code like this:
+  slightly higher gas price for bigger contracts.)
   
-      contract LibraryContract {
-        function libraryFunction() public;  // an abstract function and contract
-      }
-      
-      contract Contract {
-        ...
-        ... LibraryContract(0x3bBb367Afe5075E0461F535d6Ed2A640822EDb1C) ...
-        ...
-      }
-
-  Your contract can't be compiled until you tell the compiler where
-  the source for `LibraryContract` is (by providing it inline
-  or via `import`) The same must be done for the `library` construct.
+  **Libraries**
   
-  After doing it for a `library`, you needn't make any other changes
-  to your source. If you have an explicit `delegatecall`, you replace it with 
-  inheritance. See 
+  The case for libraries defined with `library` is simplest.  All you
+  need to do is give the library's source to the compiler (with an
+  `import`).
+  
+  **Library contracts**
+  
+  Library contracts are more awkward. See
   [`delegatecall.md`](delegatecall.md).
 
 * **Change uses of `msg.data`**
 
-  In EVM-Solidity, `msg.data` was used to receive arguments given to low-level
-  calls. [msg-data.md](msg-data.md) describes how that's done in
+  In EVM-Solidity, `msg.data` is used to receive arguments given to low-level
+  calls. [msg-data.md](msg-data.md) describes how the equivalent is done in
   IELE-Solidity.
 
 * **Check uses of `ecrecover`**
   
   The `ecrecover` built-in function now throws an exception on
   failure, instead of returning `0`. The reason is that code that
-  didn't check the return value might then send funds to address `0` --
-  and those funds could never be gotten back.
+  didn't check the return value might then send funds to address `0`
+  - and those funds can never be gotten back.
   
-  If you *did* check the return value, you can now remove that check.
+  So if you *did* check the return value, you can now remove that check.
 
 * **Run the compiler and look for errors.**
 
   The compiler will tell you of remaining changes that need to be
   made. The following section shows you what to do in response to 
-  various error messages. It includes the error messages for any
-  low-level calls you might have overlooked.
+  various error messages. It includes the error messages you'll get
+  if you missed some low-level calls. 
 
 ## Error messages
 

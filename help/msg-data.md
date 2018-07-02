@@ -12,13 +12,12 @@ Old:
         ...
     
 New:
-    
       function set(bytes b) public {
         data = b;
         ...
         
 If the calling function is also being compiled, you'll likely need to 
-[fix its use of `call`](./low-level-calls.md).
+[fix its use of `call`](./call.md).
    
 ## Discussion
 
@@ -28,15 +27,10 @@ provided in an ordinary function argument of type `bytes`:
       function set(bytes b) public {
                    ^^^^^^^
                    
-The local variable can now replace uses of `msg.data`. For example, if
-the data is to be copied into blockchain storage under the name
-`data`, that would be done like this:
+The local variable can now replace uses of `msg.data`. 
 
-        data = b;
-
-Note: if `msg.data` is used in a function called from the `public`
-function, you'll need to pass it explicitly:
-
+Note: if `msg.data` isn't used in the top-level function (`set`, in
+this case), you'll need to pass it via arguments:
 
 Old: 
     

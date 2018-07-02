@@ -22,9 +22,9 @@ New:
 
 Here are the types of the three functions:
     
-    function ecadd(uint256[2], uint256[2]) pure    returns (uint256[2])
-    function ecmul(uint256[2], uint256) pure       returns (uint256[2])
-    function ecpairing(uint256[2][], uint256[4][]) returns (bool)
+    function ecadd    (uint256[2],   uint256[2])   pure  returns (uint256[2])
+    function ecmul    (uint256[2],   uint256)      pure  returns (uint256[2])
+    function ecpairing(uint256[2][], uint256[4][])       returns (bool)
     
     
 * Before: [examples/elliptic.evm.sol](examples/elliptic.evm.sol)
@@ -41,7 +41,7 @@ New:
      uint16 size = addr.codesize;
       
 
-Note that `codesize` will return `0` if no code has been deployed to the given address.      
+Note that `codesize` will still return `0` if no code has been deployed to the given address.
 
 * Before: [examples/codesize.evm.sol](examples/codesize.evm.sol)
 * After: [examples/codesize.iele.sol](examples/codesize.iele.sol)
