@@ -2143,16 +2143,61 @@ void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleVa
    // width_bytes(n) = ((log2(n) + 2) + 7) / 8
    //                = (log2(n) + 9) / 8
    //                = (log2(n) + 9) >> 3
-  llvm::SmallVector<IeleLValue *, 1> Results;
-   appendConditional(Value, Results,
+
+   // Check for positive value.
+   iele::IeleLocalVariable *IsPositive =
+     iele::IeleLocalVariable::Create(
+       &Context, "is.positive", CompilingFunction);
+   iele::IeleInstruction::CreateBinOp(
+     iele::IeleInstruction::CmpGt, IsPositive, Value,
+     iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+
+   llvm::SmallVector<IeleLValue *, 1> Results;
+   appendConditional(IsPositive, Results,
     [&Value, this](llvm::SmallVectorImpl<IeleRValue *> &Results){
+      // Compute the log.
       iele::IeleLocalVariable *Result =
-        iele::IeleLocalVariable::Create(&Context, "logarithm.base.2", CompilingFunction);
-      iele::IeleInstruction::CreateLog2(Result, Value, CompilingBlock); 
+        iele::IeleLocalVariable::Create(
+          &Context, "logarithm.base.2", CompilingFunction);
+      iele::IeleInstruction::CreateLog2(Result, Value, CompilingBlock);
       Results.push_back(IeleRValue::Create({Result}));
     },
-    [this](llvm::SmallVectorImpl<IeleRValue *> &Results){
-      Results.push_back(IeleRValue::Create({iele::IeleIntConstant::getZero(&Context)}));
+    [&Value, this](llvm::SmallVectorImpl<IeleRValue *> &Results){
+      // Check for 0 or -1 value.
+      iele::IeleLocalVariable *IsZeroOrMinusOne =
+        iele::IeleLocalVariable::Create(
+          &Context, "is.zero.or.minus.one", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::CmpGe, IsZeroOrMinusOne, Value,
+        iele::IeleIntConstant::getMinusOne(&Context), CompilingBlock);
+
+      llvm::SmallVector<IeleLValue *, 1> NonPositiveResults;
+      appendConditional(IsZeroOrMinusOne, NonPositiveResults,
+       [this](llvm::SmallVectorImpl<IeleRValue *> &Results){
+         // Return 0.
+         Results.push_back(
+           IeleRValue::Create({iele::IeleIntConstant::getZero(&Context)}));
+       },
+       [&Value, this](llvm::SmallVectorImpl<IeleRValue *> &Results){
+         // Compute the log of the negated number.
+         iele::IeleLocalVariable *PositiveValue =
+           iele::IeleLocalVariable::Create(
+             &Context, "positive.value", CompilingFunction);
+        iele::IeleInstruction::CreateNot(PositiveValue, Value, CompilingBlock);
+        iele::IeleLocalVariable *Result =
+          iele::IeleLocalVariable::Create(
+            &Context, "logarithm.base.2", CompilingFunction);
+        iele::IeleInstruction::CreateLog2(
+          Result, PositiveValue, CompilingBlock);
+        Results.push_back(IeleRValue::Create({Result}));
+       });
+       solAssert(NonPositiveResults.size() == 1,
+                 "Invalid number of conditional results in appendByteWidth");
+
+      // Forward the result.
+      iele::IeleValue *NonPositiveResult =
+        NonPositiveResults[0]->read(CompilingBlock)->getValue();
+      Results.push_back(IeleRValue::Create({NonPositiveResult}));
     });
    solAssert(Results.size() == 1, "Invalid number of conditional results in appendByteWidth");
    iele::IeleInstruction::CreateBinOp(
