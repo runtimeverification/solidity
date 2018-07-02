@@ -18,6 +18,14 @@ New:
 
      uint256[2] memory output = ecadd(input1, input2);
 
+
+Here are the types of the three functions:
+    
+    function ecadd(uint256[2], uint256[2]) pure    returns (uint256[2])
+    function ecmul(uint256[2], uint256) pure       returns (uint256[2])
+    function ecpairing(uint256[2][], uint256[4][]) returns (bool)
+    
+    
 * Before: [examples/elliptic.evm.sol](examples/elliptic.evm.sol)
 * After: [examples/elliptic.iele.sol](examples/elliptic.iele.sol)
 
