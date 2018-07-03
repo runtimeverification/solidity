@@ -22,7 +22,7 @@ New:
 
     contract Contract is LibraryContract {
       function contractFunction() public {
-        libraryFunction();
+        libraryFunction();                    // <<<-
       }
     }
    

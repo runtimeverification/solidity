@@ -31,19 +31,19 @@ assigned to a `uint256` local.
 
 There is an exception to this rule. Constant values (like `0x3`) are
 of type `uint`. But if they're small enough to fit into a `uint256`,
-they'll be coerced into one. Here's an example that takes a `uint256`
-as an argument:
+they can be coerced into one. This variant of `caller` compiles:
 
     
     function caller() internal {
       called(0x3);
     }
     
+    function called(uint256 u) internal {}
     
 Notes: 
 
-1. `uint256` isn't a special case. The above would work if the
-   parameter were declared as a `uint8`.
+1. `uint256` isn't a special case. The above would still work if the
+   `called` parameter were declared as a `uint8`.
 
 2. The compiler doesn't track sizes through assignments. The
    following, for example, will produce a compile error:

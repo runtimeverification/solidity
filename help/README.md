@@ -24,7 +24,7 @@ them.
   and all `int256` variables to `int`. You could also leave them as
   they are. In that case, see [uint.md](uint.md).
   
-* Check casts of `int` to `uint`
+* **Check casts of `int` to `uint`**
 
   In EVM-Solidity, you can cast any integer type into `uint`, so
   the following is valid:
@@ -40,8 +40,7 @@ them.
     
   In IELE-Solidity, converting a negative value to a `uint` causes a
   runtime exception. If you want to preserve EVM-Solidity behavior,
-  search for casts (`uint(`), then (1) cast the fixed-width `intN` to
-  a `uintN`, and (2) cast the result to `uint`:
+  search for casts to `uint` and add the code highlighted here:
     
       function converter(int8 short) { 
         uint long = uint(uint8(short));
@@ -64,7 +63,7 @@ them.
   giving them access to your context. That's a security risk.
   
   Therefore, IELE doesn't allow `delegatecall`. Instead, the library's
-  source is compiled and the bytecodes are included in your compiled
+  source is compiled and the resulting bytecodes are included in your compiled
   contract. (That means you're paying for increased security with the
   slightly higher gas price for bigger contracts.)
   
@@ -87,12 +86,12 @@ them.
 
 * **Check uses of `ecrecover`**
   
-  The `ecrecover` built-in function now throws an exception on
-  failure, instead of returning `0`. The reason is that code that
-  didn't check the return value might then send funds to address `0`
-  - and those funds can never be gotten back.
+  The EVM-Solidity version of `ecrecover` returns `0` in case of
+  error. Code that doesn't check for the error case might incorrectly
+  and irreveribly send funds to address `0`.
   
-  So if you *did* check the return value, you can now remove that check.
+  Therefore, the IELE-Solidity version throws an exception instead. So
+  if you *did* check the return value, you can now remove that check.
 
 * **Run the compiler and look for errors.**
 

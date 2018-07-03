@@ -12,6 +12,7 @@ Old:
         ...
     
 New:
+      
       function set(bytes b) public {
         data = b;
         ...
@@ -27,32 +28,33 @@ provided in an ordinary function argument of type `bytes`:
       function set(bytes b) public {
                    ^^^^^^^
                    
-The local variable can now replace uses of `msg.data`. 
+The argument can now replace uses of `msg.data`. 
 
-Note: if `msg.data` isn't used in the top-level function (`set`, in
-this case), you'll need to pass it via arguments:
+Note: if `msg.data` wasn't used in the top-level function (`set`, in
+this case), you'll need to pass the equivalent argument to where it's
+used:
 
 Old: 
     
     bytes data;
     
     function set() public 
-      helper()
+      helper();
       ...
      
     function helper() internal 
-      data = msg.data
+      data = msg.data;
       
 New:
     
     bytes data;
     
     function set(bytes b) public 
-      helper(b)
+      helper(b);
       ...
      
     function helper(bytes b) internal 
-      data = msg.data
+      data = msg.data;
       
 ## Examples
 
