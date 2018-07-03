@@ -32,29 +32,31 @@ The argument can now replace uses of `msg.data`.
 
 Note: if `msg.data` wasn't used in the top-level function (`set`, in
 this case), you'll need to pass the equivalent argument to where it's
-used:
+used.
 
 Old: 
     
     bytes data;
     
-    function set() public 
+    function set() public {
       helper();
       ...
      
-    function helper() internal 
+    function helper() internal {
       data = msg.data;
+      ...
       
 New:
     
     bytes data;
     
-    function set(bytes b) public 
+    function set(bytes b) public {
       helper(b);
       ...
      
-    function helper(bytes b) internal 
+    function helper(bytes b) internal {
       data = msg.data;
+      ...
       
 ## Examples
 
