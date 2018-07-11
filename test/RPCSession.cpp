@@ -229,7 +229,11 @@ void RPCSession::test_rewindToBlock(size_t _blockNr)
 
 void RPCSession::test_mineBlocks(int _number)
 {
+	auto start = chrono::system_clock::now();
 	BOOST_REQUIRE(rpcCall("test_mineBlocks", { to_string(_number) }, true) == true);
+	auto elapsed = chrono::system_clock::now() - start;
+	long long microseconds = chrono::duration_cast<chrono::microseconds>(elapsed).count();
+	BOOST_TEST_MESSAGE(string("Time: ") + string(boost::unit_test::framework::current_test_case().p_name) + " " + to_string(microseconds));
 }
 
 void RPCSession::test_modifyTimestamp(size_t _timestamp)
