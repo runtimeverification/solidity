@@ -140,7 +140,11 @@ bytes IeleContract::toBinary() const {
   std::ofstream write(tempin_str);
   write << assembly << endl;
   write.close();
-  std::string program = findProgramByName("iele-assemble").get();
+  ErrorOr<std::string> result = findProgramByName("iele-assemble");
+  if (error_code error = result.getError()) {
+    solAssert(false, error.message());
+  }
+  std::string program = result.get();
   const char *args[] = {"iele-assemble", tempin_str.c_str(), nullptr};
   const StringRef output = tempout_str;
 
