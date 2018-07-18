@@ -11,6 +11,7 @@
 #include <llvm/Config/llvm-config.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 
@@ -132,15 +133,16 @@ bytes IeleContract::toBinary() const {
   this->print(OS);
   OS.flush();
 
-  path tempin = temp_directory_path();
-  tempin /= unique_path();
-  const std::string tempin_str = tempin.native();
+  int fd;
+  char tempin[] = "/tmp/stdin-XXXXXX";
+  fd = mkstemp(tempin);
+  solAssert(fd != -1, "Cannot create temp file");
 
-  path tempout = temp_directory_path();
-  tempout /= unique_path();
-  const std::string tempout_str = tempout.native();
+  char tempout[] = "/tmp/stdout-XXXXXX";
+  fd = mkstemp(tempout);
+  solAssert(fd != -1, "Cannot create temp file");
 
-  std::ofstream write(tempin_str);
+  std::ofstream write(tempin);
   write << assembly << endl;
   write.close();
   ErrorOr<std::string> result = findProgramByName("iele-assemble");
@@ -148,8 +150,8 @@ bytes IeleContract::toBinary() const {
     solAssert(false, error.message());
   }
   std::string program = result.get();
-  const char *args[] = {"iele-assemble", tempin_str.c_str(), nullptr};
-  const StringRef output = tempout_str;
+  const char *args[] = {"iele-assemble", tempin, nullptr};
+  const StringRef output = tempout;
 
 #if defined(LLVM_VERSION_MAJOR) && ((LLVM_VERSION_MAJOR == 4) || (LLVM_VERSION_MAJOR == 5))
   const StringRef *redirects[] = {nullptr, &output, nullptr};
@@ -160,16 +162,16 @@ bytes IeleContract::toBinary() const {
 #endif
 
   int exit = ExecuteAndWait(program, args, nullptr, redirects);
-  solAssert(exit == 0, "Iele assembler failed to execute on " + tempin_str);
+  solAssert(exit == 0, "Iele assembler failed to execute on " + string(tempin));
 
-  std::ifstream read(tempout_str);
+  std::ifstream read(tempout);
   std::stringstream buffer;
   buffer << read.rdbuf();
   std::string hex = buffer.str();
   read.close();
 
-  std::remove(tempin_str.c_str());
-  std::remove(tempout_str.c_str());
+  std::remove(tempin);
+  std::remove(tempout);
 
   return fromHex(hex, WhenError::Throw) + AuxiliaryData;
 }
