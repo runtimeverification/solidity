@@ -132,9 +132,12 @@ bytes IeleContract::toBinary() const {
   this->print(OS);
   OS.flush();
 
-  path tempin = unique_path();
+  path tempin = temp_directory_path();
+  tempin /= unique_path();
   const std::string tempin_str = tempin.native();
-  path tempout = unique_path();
+
+  path tempout = temp_directory_path();
+  tempout /= unique_path();
   const std::string tempout_str = tempout.native();
 
   std::ofstream write(tempin_str);
