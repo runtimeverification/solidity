@@ -47,10 +47,10 @@ them.
                          ^^^^^
       }
 
-* **Change uses of `call`**
+* **Change uses of `call` and `msg.data` **
 
   IELE has a different mechanism for low-level calls, and the compiler
-  doesn't accept `address.call`.  See [call.md](call.md).
+  doesn't accept `address.call` or support `msg.data`.  See [call.md](call.md).
 
 * **Provide source for libraries you use**
 
@@ -77,12 +77,6 @@ them.
   
   Library contracts are more awkward. See
   [`delegatecall.md`](delegatecall.md).
-
-* **Change uses of `msg.data`**
-
-  In EVM-Solidity, `msg.data` is used to receive arguments given to low-level
-  calls. [msg-data.md](msg-data.md) describes how the equivalent is done in
-  IELE-Solidity.
 
 * **Check uses of `ecrecover`**
   
@@ -131,7 +125,7 @@ them.
 
 * **`msg.data` is not supported in IELE.**
   
-  In EVM-Solidity, `msg.data` was used to receive low-level
-  calls. [msg-data.md](msg-data.md) describes how it's done in
-  IELE-Solidity.
+  In EVM-Solidity, `msg.data` is used to receive arguments given to low-level
+  calls (`call` and `delegatecall`). Since those calls aren't supported
+  in IELE, `msg.data` isn't either. See [call.md](call.md).
 

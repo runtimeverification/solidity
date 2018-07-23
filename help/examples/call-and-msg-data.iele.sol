@@ -23,6 +23,10 @@ contract ByteStoreContract {
 
 contract ClientContract {
   function test() public returns (uint) {
+    // Note: the use of `set()` here is just to make the bytestring
+    // byte-for-byte identical with the EVM version. It actually
+    // has no effect on which function gets called. (That's determined
+    // solely by the `store.set` on the line marked `<<<- 2`.)
     bytes4 callee = bytes4(keccak256("set()"));
     
     ByteStoreContract store = new ByteStoreContract();
