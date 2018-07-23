@@ -22,7 +22,7 @@ attempt:
     bytes4 callee = bytes4(keccak256("set()")); -- same as above
     abi.encode(callee, 1, 2, 3)
 
-The reason the result isn't identical is that, in IELE, `uint` and `uint256`
+The reason the result isn't identical is that, in IELE-Solidity, `uint` and `uint256`
 are distinct types with different encodings. In EVM-Solidity,
 constants like `1` are of type `uint256`. In IELE-Solidity, they're of
 the non-overflowing `uint` type. To get a byte-for-byte identical
