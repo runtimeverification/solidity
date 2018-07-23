@@ -5,8 +5,9 @@ have Solidity-level replacements.
 
 ### Elliptic curve functions
 
-The `ECADD`, `ECMUL`, and `ECPAIRING` bytecodes have corresponding
-built-in functions: `ecadd`, `ecmul`, and `ecpairing`.
+EVM's `ECADD`, `ECMUL`, and `ECPAIRING` bytecodes are only available
+via assembly. In IELE, they have corresponding built-in functions:
+`ecadd`, `ecmul`, and `ecpairing`.
 
 Old: 
      
@@ -46,4 +47,3 @@ Note that `codesize` will still return `0` if no code has been deployed to the g
 * Before: [examples/codesize.evm.sol](examples/codesize.evm.sol)
 * After: [examples/codesize.iele.sol](examples/codesize.iele.sol)
 
-### Reviewers: Anything else?
