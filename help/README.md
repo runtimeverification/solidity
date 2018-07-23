@@ -47,7 +47,7 @@ them.
                          ^^^^^
       }
 
-* **Change uses of `call` and `msg.data` **
+* **Change uses of `call` and `msg.data`**
 
   IELE has a different mechanism for low-level calls, and the compiler
   doesn't accept `address.call` or support `msg.data`.  See [call.md](call.md).

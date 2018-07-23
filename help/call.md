@@ -33,7 +33,7 @@ bytestring, you must convert the `uint` values to `uint256`:
 Having done that, you can send the bytestring by passing it as an
 argument in the normal way:
 
-    store.set(abi.encode(uint256(1), uint256(2), uint256(3)));
+    store.set(abi.encode(callee, uint256(1), uint256(2), uint256(3)));
 
 The receiving function can't use `msg.data` to fetch the arguments,
 because `msg.data` also doesn't exist in IELE-Solidity. Instead, the
@@ -41,9 +41,9 @@ data is received in an argument of type `bytes`:
 
     function set(bytes b) ...
     
-When might you want to do this? Consider a trick used by some
-contracts, such as
-[this multi-signature wallet](https://github.com/ethereum/solidity/blob/v0.4.24/test/contracts/Wallet.cpp).
+When might you want to go through this process? Consider a trick used
+by some contracts, such as
+[this multi-signature wallet](https://github.com/ethereum/solidity/blob/v0.4.24/test/contracts/Wallet.cpp#L401).
 The contents of `msg.data` are hashed and returned so that other
 participants can use it to "cosign" the original function call.
 
