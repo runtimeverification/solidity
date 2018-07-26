@@ -871,10 +871,14 @@ static void printCall(llvm::raw_ostream &OS, const IeleInstruction *I) {
 
 static void printIntrinsic(llvm::raw_ostream &OS, const IeleInstruction *I) {
   // print lvalue
-  (*I->lvalue_begin())->printAsValue(OS);
+  if (!I->getIeleLValueList().empty()) {
+    (*I->lvalue_begin())->printAsValue(OS);
+    // print opcode
+    OS << " = call ";
+  } else {
+    OS << "call ";
+  }
 
-  // print opcode
-  OS << " = call ";
   printOpcode(OS, I);
 
   // print operands

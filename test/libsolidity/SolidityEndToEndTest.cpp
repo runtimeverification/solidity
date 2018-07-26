@@ -11968,6 +11968,21 @@ BOOST_AUTO_TEST_CASE(bitwise_shifting_constants_constantinople)
 	BOOST_CHECK(callContractFunction("shr_3()") == encodeArgs(u256(1)));
 }
 
+BOOST_AUTO_TEST_CASE(assert_and_require)
+{
+	char const* sourceCode = R"(
+		contract Test {
+			function foo() returns (int) {
+				require(true);
+				assert(false);
+			}
+		}	
+	)";
+	compileAndRun(sourceCode);
+	BOOST_CHECK(callContractFunction("foo()") == encodeArgs());
+        BOOST_CHECK(m_status == 4);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 }
