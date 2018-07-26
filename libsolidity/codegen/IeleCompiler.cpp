@@ -5259,6 +5259,10 @@ void IeleCompiler::appendInvalid(iele::IeleValue *Condition) {
   // Create the assert-fail block if it's not already created.
   if (!AssertFailBlock) {
     AssertFailBlock = iele::IeleBlock::Create(&Context, "invalid");
+    llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+    iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Invalid, nullptr,
+        EmptyArguments, AssertFailBlock);
   }
 
   if (Condition)
