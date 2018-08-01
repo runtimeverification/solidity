@@ -58,6 +58,10 @@ public:
     return ret;
   }
 
+  std::string assemblyJSON(const StringMap &_sourceCodes = StringMap()) const {
+    return assemblyString(_sourceCodes);
+  }
+
   eth::LinkerObject assembledObject() const {
     bytes bytecode = CompiledContract->toBinary();
     return {bytecode, std::map<size_t, std::string>()};

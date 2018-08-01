@@ -921,10 +921,8 @@ void CommandLineInterface::handleCombinedJSON()
 */
 		if (requests.count(g_strOpcodes))
 			contractData[g_strOpcodes] = solidity::disassemble(m_compiler->object(contractName).bytecode);
-/*
 		if (requests.count(g_strAsm))
 			contractData[g_strAsm] = m_compiler->assemblyJSON(contractName, m_sourceCodes);
-*/
 		if (requests.count(g_strSrcMap))
 		{
 			auto map = m_compiler->sourceMapping(contractName);
@@ -1219,11 +1217,9 @@ void CommandLineInterface::outputCompilationResults()
 		if (m_args.count(g_argAsm) || m_args.count(g_argAsmJson))
 		{
 			string ret;
-/*
 			if (m_args.count(g_argAsmJson))
 				ret = dev::jsonPrettyPrint(m_compiler->assemblyJSON(contract, m_sourceCodes));
 			else
-*/
 				ret = m_compiler->assemblyString(contract, m_sourceCodes);
 
 			if (m_args.count(g_argOutputDir))

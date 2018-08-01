@@ -402,7 +402,6 @@ string CompilerStack::assemblyString(string const& _contractName, StringMap _sou
 		return string();
 }
 
-/*
 /// FIXME: cache the JSON
 Json::Value CompilerStack::assemblyJSON(string const& _contractName, StringMap _sourceCodes) const
 {
@@ -412,7 +411,7 @@ Json::Value CompilerStack::assemblyJSON(string const& _contractName, StringMap _
 	else
 		return Json::Value();
 }
-*/
+
 vector<string> CompilerStack::sourceNames() const
 {
 	vector<string> names;
