@@ -58,8 +58,10 @@ public:
     return ret;
   }
 
-  std::string assemblyJSON(const StringMap &_sourceCodes = StringMap()) const {
-    return assemblyString(_sourceCodes);
+  Json::Value assemblyJSON(const StringMap &_sourceCodes = StringMap()) const {
+    Json::Value value;
+    value["code"] = assemblyString(_sourceCodes);
+    return value;
   }
 
   eth::LinkerObject assembledObject() const {
