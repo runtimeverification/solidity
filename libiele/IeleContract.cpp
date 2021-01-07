@@ -150,18 +150,19 @@ bytes IeleContract::toBinary() const {
     solAssert(false, error.message());
   }
   std::string program = result.get();
-  const char *args[] = {"iele-assemble", tempin, nullptr};
   const StringRef output = tempout;
 
 #if defined(LLVM_VERSION_MAJOR) && ((LLVM_VERSION_MAJOR == 4) || (LLVM_VERSION_MAJOR == 5))
+  const char *args[] = {"iele-assemble", tempin, nullptr};
   const StringRef *redirects[] = {nullptr, &output, nullptr};
 #endif
 
-#if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 6
+#if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 8
+  StringRef args[] = {"iele-assemble", tempin};
   const Optional<StringRef> redirects[] = {None, Optional<StringRef>::create(&output), None};  
 #endif
 
-  int exit = ExecuteAndWait(program, args, nullptr, redirects);
+  int exit = ExecuteAndWait(program, args, None, redirects);
   solAssert(exit == 0, "Iele assembler failed to execute on " + string(tempin));
 
   std::ifstream read(tempout);

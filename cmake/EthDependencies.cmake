@@ -57,7 +57,7 @@ eth_show_dependency(Boost boost)
 ## See: https://cmake.org/cmake/help/v3.9/variable/CMAKE_FIND_PACKAGE_SORT_ORDER.html#variable:CMAKE_FIND_PACKAGE_SORT_ORDER
 ## set(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
 
-find_package(LLVM 6.0.0 QUIET CONFIG)
+find_package(LLVM 8.0.0 QUIET CONFIG)
 
 if (NOT LLVM_FOUND) 
 	find_package(LLVM 5.0.0 CONFIG)	

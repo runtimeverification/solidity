@@ -23,6 +23,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/noncopyable.hpp>
 #include <boost/version.hpp>
 
 #include <functional>
