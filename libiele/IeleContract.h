@@ -1,6 +1,6 @@
 #pragma once
 
-#include "libdevcore/CommonData.h"
+#include "libsolutil/CommonData.h"
 #include "IeleFunction.h"
 #include "IeleGlobalVariable.h"
 #include "IeleValue.h"
@@ -9,7 +9,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Twine.h"
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleValueSymbolTable;
@@ -202,8 +202,8 @@ public:
     return V->getIeleValueID() == IeleValue::IeleContractVal;
   }
 
-  static std::string escapeIeleName(const std::string &str);
+  static std::string escapeIeleName(llvm::StringRef str);
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

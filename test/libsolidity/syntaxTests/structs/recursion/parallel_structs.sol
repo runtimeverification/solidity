@@ -1,4 +1,4 @@
-pragma experimental ABIEncoderV2;
+pragma abicoder               v2;
 
 contract TestContract
 {
@@ -9,7 +9,6 @@ contract TestContract
         SubStruct subStruct1;
         SubStruct subStruct2;
     }
-    function addTestStruct(TestStruct) public pure {}
+    function addTestStruct(TestStruct memory) public pure {}
 }
 // ----
-// Warning: (0-33): Experimental features are turned on. Do not use experimental features on live deployments.

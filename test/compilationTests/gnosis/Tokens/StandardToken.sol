@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Tokens/Token.sol";
 import "../Utils/Math.sol";
 
@@ -23,6 +23,7 @@ contract StandardToken is Token {
     /// @return Was transfer successful?
     function transfer(address to, uint256 value)
         public
+        override
         returns (bool)
     {
         if (   !balances[msg.sender].safeToSub(value)
@@ -30,7 +31,7 @@ contract StandardToken is Token {
             return false;
         balances[msg.sender] -= value;
         balances[to] += value;
-        Transfer(msg.sender, to, value);
+        emit Transfer(msg.sender, to, value);
         return true;
     }
 
@@ -41,6 +42,7 @@ contract StandardToken is Token {
     /// @return Was transfer successful?
     function transferFrom(address from, address to, uint256 value)
         public
+        override
         returns (bool)
     {
         if (   !balances[from].safeToSub(value)
@@ -50,7 +52,7 @@ contract StandardToken is Token {
         balances[from] -= value;
         allowances[from][msg.sender] -= value;
         balances[to] += value;
-        Transfer(from, to, value);
+        emit Transfer(from, to, value);
         return true;
     }
 
@@ -60,10 +62,11 @@ contract StandardToken is Token {
     /// @return Was approval successful?
     function approve(address spender, uint256 value)
         public
+        override
         returns (bool)
     {
         allowances[msg.sender][spender] = value;
-        Approval(msg.sender, spender, value);
+        emit Approval(msg.sender, spender, value);
         return true;
     }
 
@@ -73,7 +76,8 @@ contract StandardToken is Token {
     /// @return Remaining allowance for spender
     function allowance(address owner, address spender)
         public
-        constant
+        override
+        view
         returns (uint256)
     {
         return allowances[owner][spender];
@@ -84,7 +88,8 @@ contract StandardToken is Token {
     /// @return Balance of owner
     function balanceOf(address owner)
         public
-        constant
+        override
+        view
         returns (uint256)
     {
         return balances[owner];
@@ -94,7 +99,8 @@ contract StandardToken is Token {
     /// @return Total supply
     function totalSupply()
         public
-        constant
+        override
+        view
         returns (uint256)
     {
         return totalTokens;

@@ -5,7 +5,7 @@ REM Batch file for implementing release flow for solidity for Windows.
 REM
 REM The documentation for solidity is hosted at:
 REM
-REM     https://solidity.readthedocs.org
+REM     https://docs.soliditylang.org
 REM
 REM ---------------------------------------------------------------------------
 REM This file is part of solidity.
@@ -27,7 +27,17 @@ REM Copyright (c) 2016 solidity contributors.
 REM ---------------------------------------------------------------------------
 
 set CONFIGURATION=%1
+set VERSION=%2
+
+set "DLLS=MSVC_DLLS_NOT_FOUND"
+FOR /d %%d IN ("C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Redist\MSVC\*"
+    "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\*") DO set "DLLS=%%d\x86\Microsoft.VC141.CRT\msvc*.dll"
 
 7z a solidity-windows.zip ^
+<<<<<<< ours
     .\build\solc\%CONFIGURATION%\isolc.exe .\build\test\%CONFIGURATION%\soltest.exe ^
     "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x86\Microsoft.VC140.CRT\msvc*.dll"
+=======
+    .\build\solc\%CONFIGURATION%\solc.exe .\build\test\%CONFIGURATION%\soltest.exe ^
+    "%DLLS%"
+>>>>>>> theirs

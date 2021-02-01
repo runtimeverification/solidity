@@ -13,22 +13,22 @@ Withdrawal from Contracts
 The recommended method of sending funds after an effect
 is using the withdrawal pattern. Although the most intuitive
 method of sending Ether, as a result of an effect, is a
-direct ``send`` call, this is not recommended as it
+direct ``transfer`` call, this is not recommended as it
 introduces a potential security risk. You may read
 more about this on the :ref:`security_considerations` page.
 
-This is an example of the withdrawal pattern in practice in
+The following is an example of the withdrawal pattern in practice in
 a contract where the goal is to send the most money to the
 contract in order to become the "richest", inspired by
 `King of the Ether <https://www.kingoftheether.com/>`_.
 
-In the following contract, if you are usurped as the richest,
-you will receive the funds of the person who has gone on to
-become the new richest.
+In the following contract, if you are no longer the richest,
+you receive the funds of the person who is now the richest.
 
 ::
 
-    pragma solidity ^0.4.11;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >=0.7.0 <0.9.0;
 
     contract WithdrawalContract {
         address public richest;
@@ -36,20 +36,16 @@ become the new richest.
 
         mapping (address => uint) pendingWithdrawals;
 
-        function WithdrawalContract() public payable {
+        constructor() payable {
             richest = msg.sender;
             mostSent = msg.value;
         }
 
-        function becomeRichest() public payable returns (bool) {
-            if (msg.value > mostSent) {
-                pendingWithdrawals[richest] += msg.value;
-                richest = msg.sender;
-                mostSent = msg.value;
-                return true;
-            } else {
-                return false;
-            }
+        function becomeRichest() public payable {
+            require(msg.value > mostSent, "Not enough money sent.");
+            pendingWithdrawals[richest] += msg.value;
+            richest = msg.sender;
+            mostSent = msg.value;
         }
 
         function withdraw() public {
@@ -57,7 +53,7 @@ become the new richest.
             // Remember to zero the pending refund before
             // sending to prevent re-entrancy attacks
             pendingWithdrawals[msg.sender] = 0;
-            msg.sender.transfer(amount);
+            payable(msg.sender).transfer(amount);
         }
     }
 
@@ -65,35 +61,32 @@ This is as opposed to the more intuitive sending pattern:
 
 ::
 
-    pragma solidity ^0.4.11;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >=0.7.0 <0.9.0;
 
     contract SendContract {
-        address public richest;
+        address payable public richest;
         uint public mostSent;
 
-        function SendContract() public payable {
-            richest = msg.sender;
+        constructor() payable {
+            richest = payable(msg.sender);
             mostSent = msg.value;
         }
 
-        function becomeRichest() public payable returns (bool) {
-            if (msg.value > mostSent) {
-                // This line can cause problems (explained below).
-                richest.transfer(msg.value);
-                richest = msg.sender;
-                mostSent = msg.value;
-                return true;
-            } else {
-                return false;
-            }
+        function becomeRichest() public payable {
+            require(msg.value > mostSent, "Not enough money sent.");
+            // This line can cause problems (explained below).
+            richest.transfer(msg.value);
+            richest = payable(msg.sender);
+            mostSent = msg.value;
         }
     }
 
 Notice that, in this example, an attacker could trap the
 contract into an unusable state by causing ``richest`` to be
-the address of a contract that has a fallback function
+the address of a contract that has a receive or fallback function
 which fails (e.g. by using ``revert()`` or by just
-consuming more than the 2300 gas stipend). That way,
+consuming more than the 2300 gas stipend transferred to them). That way,
 whenever ``transfer`` is called to deliver funds to the
 "poisoned" contract, it will fail and thus also ``becomeRichest``
 will fail, with the contract being stuck forever.
@@ -117,7 +110,7 @@ to read the data, so will everyone else.
 
 You can restrict read access to your contract's state
 by **other contracts**. That is actually the default
-unless you declare make your state variables ``public``.
+unless you declare your state variables ``public``.
 
 Furthermore, you can restrict who can make modifications
 to your contract's state or call your contract's
@@ -130,14 +123,15 @@ restrictions highly readable.
 
 ::
 
-    pragma solidity ^0.4.22;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >=0.6.0 <0.9.0;
 
     contract AccessRestriction {
         // These will be assigned at the construction
         // phase, where `msg.sender` is the account
         // creating this contract.
         address public owner = msg.sender;
-        uint public creationTime = now;
+        uint public creationTime = block.timestamp;
 
         // Modifiers can be used to change
         // the body of a function.
@@ -168,7 +162,7 @@ restrictions highly readable.
 
         modifier onlyAfter(uint _time) {
             require(
-                now >= _time,
+                block.timestamp >= _time,
                 "Function called too early."
             );
             _;
@@ -198,7 +192,7 @@ restrictions highly readable.
             );
             _;
             if (msg.value > _amount)
-                msg.sender.send(msg.value - _amount);
+                payable(msg.sender).transfer(msg.value - _amount);
         }
 
         function forceOwnerChange(address _newOwner)
@@ -208,7 +202,7 @@ restrictions highly readable.
         {
             owner = _newOwner;
             // just some example condition
-            if (uint(owner) & 0 == 1)
+            if (uint160(owner) & 0 == 1)
                 // This did not refund for Solidity
                 // before version 0.4.0.
                 return;
@@ -282,7 +276,8 @@ function finishes.
 
 ::
 
-    pragma solidity ^0.4.22;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >=0.4.22 <0.9.0;
 
     contract StateMachine {
         enum Stages {
@@ -296,7 +291,7 @@ function finishes.
         // This is the current stage.
         Stages public stage = Stages.AcceptingBlindedBids;
 
-        uint public creationTime = now;
+        uint public creationTime = block.timestamp;
 
         modifier atStage(Stages _stage) {
             require(
@@ -315,10 +310,10 @@ function finishes.
         // will not take the new stage into account.
         modifier timedTransitions() {
             if (stage == Stages.AcceptingBlindedBids &&
-                        now >= creationTime + 10 days)
+                        block.timestamp >= creationTime + 10 days)
                 nextStage();
             if (stage == Stages.RevealBids &&
-                    now >= creationTime + 12 days)
+                    block.timestamp >= creationTime + 12 days)
                 nextStage();
             // The other stages transition by transaction
             _;

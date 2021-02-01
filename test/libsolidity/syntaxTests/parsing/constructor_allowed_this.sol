@@ -3,16 +3,16 @@ contract A {
     }
 }
 contract B {
-    constructor(address) public {
+    constructor(C) {
     }
-    function b(address) public returns (A) {
+    function b(C) public returns (A) {
         return new A();
     }
 }
 contract C {
     B m_b;
     C m_c;
-    constructor(C other_c) public {
+    constructor(C other_c) {
         m_c = other_c;
         m_b = new B(this);
         m_b.b(this).a();

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Markets/MarketFactory.sol";
 import "../Markets/StandardMarket.sol";
 
@@ -14,12 +14,13 @@ contract StandardMarketFactory is MarketFactory {
     /// @param eventContract Event contract
     /// @param marketMaker Market maker contract
     /// @param fee Market fee
-    /// @return Market contract
+    /// @return market Market contract
     function createMarket(Event eventContract, MarketMaker marketMaker, uint24 fee)
         public
+        override
         returns (Market market)
     {
         market = new StandardMarket(msg.sender, eventContract, marketMaker, fee);
-        MarketCreation(msg.sender, market, eventContract, marketMaker, fee);
+        emit MarketCreation(msg.sender, market, eventContract, marketMaker, fee);
     }
 }

@@ -13,7 +13,7 @@ class Twine;
 
 } // end namespace llvm
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleArgument;
@@ -90,69 +90,69 @@ public:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity
 
 namespace llvm {
 
 // isa - Provide some specializations of isa so that we don't have to include
 // the subtype header files to test to see if the value is a subclass...
 //
-template <> struct isa_impl<dev::iele::IeleArgument, dev::iele::IeleValue> {
-  static inline bool doit(const dev::iele::IeleValue &Val) {
-    return Val.getIeleValueID() == dev::iele::IeleValue::IeleArgumentVal;
+template <> struct isa_impl<solidity::iele::IeleArgument, solidity::iele::IeleValue> {
+  static inline bool doit(const solidity::iele::IeleValue &Val) {
+    return Val.getIeleValueID() == solidity::iele::IeleValue::IeleArgumentVal;
   }
 };
 
-template <> struct isa_impl<dev::iele::IeleBlock, dev::iele::IeleValue> {
-  static inline bool doit(const dev::iele::IeleValue &Val) {
-    return Val.getIeleValueID() == dev::iele::IeleValue::IeleBlockVal;
+template <> struct isa_impl<solidity::iele::IeleBlock, solidity::iele::IeleValue> {
+  static inline bool doit(const solidity::iele::IeleValue &Val) {
+    return Val.getIeleValueID() == solidity::iele::IeleValue::IeleBlockVal;
   }
 };
 
-template <> struct isa_impl<dev::iele::IeleContract, dev::iele::IeleValue> {
-  static inline bool doit(const dev::iele::IeleValue &Val) {
-    return Val.getIeleValueID() == dev::iele::IeleValue::IeleContractVal;
-  }
-};
-
-template <>
-struct isa_impl<dev::iele::IeleLocalVariable, dev::iele::IeleValue> {
-  static inline bool doit(const dev::iele::IeleValue &Val) {
-    return isa<dev::iele::IeleArgument>(Val) ||
-           Val.getIeleValueID() == dev::iele::IeleValue::IeleLocalVariableVal;
-  }
-};
-
-template <> struct isa_impl<dev::iele::IeleFunction, dev::iele::IeleValue> {
-  static inline bool doit(const dev::iele::IeleValue &Val) {
-    return Val.getIeleValueID() == dev::iele::IeleValue::IeleFunctionVal;
+template <> struct isa_impl<solidity::iele::IeleContract, solidity::iele::IeleValue> {
+  static inline bool doit(const solidity::iele::IeleValue &Val) {
+    return Val.getIeleValueID() == solidity::iele::IeleValue::IeleContractVal;
   }
 };
 
 template <>
-struct isa_impl<dev::iele::IeleGlobalVariable, dev::iele::IeleValue> {
-  static inline bool doit(const dev::iele::IeleValue &Val) {
-    return Val.getIeleValueID() == dev::iele::IeleValue::IeleGlobalVariableVal;
+struct isa_impl<solidity::iele::IeleLocalVariable, solidity::iele::IeleValue> {
+  static inline bool doit(const solidity::iele::IeleValue &Val) {
+    return isa<solidity::iele::IeleArgument>(Val) ||
+           Val.getIeleValueID() == solidity::iele::IeleValue::IeleLocalVariableVal;
   }
 };
 
-template <> struct isa_impl<dev::iele::IeleIntConstant, dev::iele::IeleValue> {
-  static inline bool doit(const dev::iele::IeleValue &Val) {
-    return Val.getIeleValueID() == dev::iele::IeleValue::IeleIntConstantVal;
+template <> struct isa_impl<solidity::iele::IeleFunction, solidity::iele::IeleValue> {
+  static inline bool doit(const solidity::iele::IeleValue &Val) {
+    return Val.getIeleValueID() == solidity::iele::IeleValue::IeleFunctionVal;
   }
 };
 
-template <> struct isa_impl<dev::iele::IeleGlobalValue, dev::iele::IeleValue> {
-  static inline bool doit(const dev::iele::IeleValue &Val) {
-    return isa<dev::iele::IeleGlobalVariable>(Val) ||
-           isa<dev::iele::IeleFunction>(Val);
+template <>
+struct isa_impl<solidity::iele::IeleGlobalVariable, solidity::iele::IeleValue> {
+  static inline bool doit(const solidity::iele::IeleValue &Val) {
+    return Val.getIeleValueID() == solidity::iele::IeleValue::IeleGlobalVariableVal;
   }
 };
 
-template <> struct isa_impl<dev::iele::IeleConstant, dev::iele::IeleValue> {
-  static inline bool doit(const dev::iele::IeleValue &Val) {
-    return isa<dev::iele::IeleGlobalValue>(Val) ||
-           isa<dev::iele::IeleIntConstant>(Val);
+template <> struct isa_impl<solidity::iele::IeleIntConstant, solidity::iele::IeleValue> {
+  static inline bool doit(const solidity::iele::IeleValue &Val) {
+    return Val.getIeleValueID() == solidity::iele::IeleValue::IeleIntConstantVal;
+  }
+};
+
+template <> struct isa_impl<solidity::iele::IeleGlobalValue, solidity::iele::IeleValue> {
+  static inline bool doit(const solidity::iele::IeleValue &Val) {
+    return isa<solidity::iele::IeleGlobalVariable>(Val) ||
+           isa<solidity::iele::IeleFunction>(Val);
+  }
+};
+
+template <> struct isa_impl<solidity::iele::IeleConstant, solidity::iele::IeleValue> {
+  static inline bool doit(const solidity::iele::IeleValue &Val) {
+    return isa<solidity::iele::IeleGlobalValue>(Val) ||
+           isa<solidity::iele::IeleIntConstant>(Val);
   }
 };
 

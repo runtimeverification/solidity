@@ -14,78 +14,48 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 
 #pragma once
 
 #include <test/libsolidity/AnalysisFramework.h>
-#include <test/libsolidity/FormattedScope.h>
-#include <libsolidity/interface/Exceptions.h>
-
-#include <boost/noncopyable.hpp>
-#include <boost/test/unit_test.hpp>
+#include <test/TestCase.h>
+#include <test/CommonSyntaxTest.h>
+#include <liblangutil/Exceptions.h>
+#include <libsolutil/AnsiColorized.h>
 
 #include <iosfwd>
 #include <string>
 #include <vector>
 #include <utility>
 
-namespace dev
-{
-namespace solidity
-{
-namespace test
+namespace solidity::frontend::test
 {
 
-struct SyntaxTestError
-{
-	std::string type;
-	std::string message;
-	int locationStart;
-	int locationEnd;
-	bool operator==(SyntaxTestError const& _rhs) const
-	{
-		return type == _rhs.type &&
-			message == _rhs.message &&
-			locationStart == _rhs.locationStart &&
-			locationEnd == _rhs.locationEnd;
-	}
-};
+using solidity::test::SyntaxTestError;
 
-
-class SyntaxTest: AnalysisFramework
+class SyntaxTest: public AnalysisFramework, public solidity::test::CommonSyntaxTest
 {
 public:
-	SyntaxTest(std::string const& _filename);
+	static std::unique_ptr<TestCase> create(Config const& _config)
+	{
+		return std::make_unique<SyntaxTest>(_config.filename, _config.evmVersion, false);
+	}
+	static std::unique_ptr<TestCase> createErrorRecovery(Config const& _config)
+	{
+		return std::make_unique<SyntaxTest>(_config.filename, _config.evmVersion, true);
+	}
+	SyntaxTest(std::string const& _filename, langutil::EVMVersion _evmVersion, bool _parserErrorRecovery = false);
 
-	bool run(std::ostream& _stream, std::string const& _linePrefix = "", bool const _formatted = false);
+	TestResult run(std::ostream& _stream, std::string const& _linePrefix = "", bool _formatted = false) override;
 
-	std::vector<SyntaxTestError> const& expectations() const { return m_expectations; }
-	std::string const& source() const { return m_source; }
-	std::vector<SyntaxTestError> const& errorList() const { return m_errorList; }
+protected:
+	void setupCompiler();
+	void parseAndAnalyze() override;
+	virtual void filterObtainedErrors();
 
-	static void printErrorList(
-		std::ostream& _stream,
-		std::vector<SyntaxTestError> const& _errors,
-		std::string const& _linePrefix,
-		bool const _formatted = false
-	);
-
-	static int registerTests(
-		boost::unit_test::test_suite& _suite,
-		boost::filesystem::path const& _basepath,
-		boost::filesystem::path const& _path
-	);
-	static bool isTestFilename(boost::filesystem::path const& _filename);
-	static std::string errorMessage(Exception const& _e);
-private:
-	static std::string parseSource(std::istream& _stream);
-	static std::vector<SyntaxTestError> parseExpectations(std::istream& _stream);
-
-	std::string m_source;
-	std::vector<SyntaxTestError> m_expectations;
-	std::vector<SyntaxTestError> m_errorList;
+	bool m_optimiseYul = true;
+	bool m_parserErrorRecovery = false;
 };
 
-}
-}
 }

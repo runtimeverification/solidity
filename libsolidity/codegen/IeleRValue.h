@@ -2,10 +2,8 @@
 
 #include "libiele/IeleIntConstant.h"
 
-namespace dev
-{
-namespace solidity
-{
+namespace solidity {
+namespace frontend {
 
 class IeleRValue
 {
@@ -31,6 +29,5 @@ public:
 
 };
 
-}
-
-}
+} // end namespace frontend
+} // end namespace solidity

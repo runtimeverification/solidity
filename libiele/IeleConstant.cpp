@@ -1,6 +1,6 @@
 #include "IeleConstant.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleConstant::~IeleConstant() { }

@@ -3,8 +3,8 @@
 #include "IeleContext.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleIntConstant::IeleIntConstant(IeleContext *Ctx, const bigint &V, bool H) :
   IeleConstant(Ctx, IeleValue::IeleIntConstantVal), Val(V), PrintAsHex(H) { }

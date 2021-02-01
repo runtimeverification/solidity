@@ -4,14 +4,20 @@ This is the Solidity to IELE compiler, a fork of the [Solidity compiler](https:/
 
 To learn more about the supported Solidity features and the main differences between the IELE and EVM compilers, see [README-IELE-SUPPORT](README-IELE-SUPPORT.md). 
 
-## Useful links
-To get started you can find an introduction to the language in the [Solidity documentation](https://solidity.readthedocs.org). In the documentation, you can find [code examples](https://solidity.readthedocs.io/en/latest/solidity-by-example.html) as well as [a reference](https://solidity.readthedocs.io/en/latest/solidity-in-depth.html) of the syntax and details on how to write smart contracts.
+Solidity is a statically typed, contract-oriented, high-level language for implementing smart contracts on the Ethereum platform.
 
-You can start using [Solidity in your browser](http://remix.ethereum.org) with no need to download or compile anything.
+## Table of Contents
 
-The changelog for this project can be found [here](https://github.com/ethereum/solidity/blob/develop/Changelog.md).
+- [Background](#background)
+- [Build and Install](#build-and-install)
+- [Example](#example)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Maintainers](#maintainers)
+- [License](#license)
+- [Security](#security)
 
-Solidity is still under development. So please do not hesitate and open an [issue in GitHub](https://github.com/ethereum/solidity/issues) if you encounter anything strange.
+## Background
 
 ## Building
 

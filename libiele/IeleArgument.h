@@ -2,7 +2,7 @@
 
 #include "IeleLocalVariable.h"
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleArgument :
@@ -36,4 +36,4 @@ public:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

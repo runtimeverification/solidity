@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Oracles/Oracle.sol";
 import "../Tokens/Token.sol";
 import "../Utils/Math.sol";
@@ -46,7 +46,7 @@ contract UltimateOracle is Oracle {
     /// @param _challengePeriod Time to challenge oracle outcome
     /// @param _challengeAmount Amount to challenge the outcome
     /// @param _frontRunnerPeriod Time to overbid the front-runner
-    function UltimateOracle(
+    constructor(
         Oracle _forwardedOracle,
         Token _collateralToken,
         uint8 _spreadMultiplier,
@@ -54,11 +54,10 @@ contract UltimateOracle is Oracle {
         uint256 _challengeAmount,
         uint256 _frontRunnerPeriod
     )
-        public
     {
         // Validate inputs
-        require(   address(_forwardedOracle) != 0
-                && address(_collateralToken) != 0
+        require(   address(_forwardedOracle) != address(0)
+                && address(_collateralToken) != address(0)
                 && _spreadMultiplier >= 2
                 && _challengePeriod > 0
                 && _challengeAmount > 0
@@ -80,8 +79,8 @@ contract UltimateOracle is Oracle {
                 && forwardedOutcomeSetTimestamp == 0
                 && forwardedOracle.isOutcomeSet());
         forwardedOutcome = forwardedOracle.getOutcome();
-        forwardedOutcomeSetTimestamp = now;
-        ForwardedOracleOutcomeAssignment(forwardedOutcome);
+        forwardedOutcomeSetTimestamp = block.timestamp;
+        emit ForwardedOracleOutcomeAssignment(forwardedOutcome);
     }
 
     /// @dev Allows to challenge the oracle outcome
@@ -92,13 +91,13 @@ contract UltimateOracle is Oracle {
         // There was no challenge yet or the challenge period expired
         require(   !isChallenged()
                 && !isChallengePeriodOver()
-                && collateralToken.transferFrom(msg.sender, this, challengeAmount));
+                && collateralToken.transferFrom(msg.sender, address(this), challengeAmount));
         outcomeAmounts[msg.sender][_outcome] = challengeAmount;
         totalOutcomeAmounts[_outcome] = challengeAmount;
         totalAmount = challengeAmount;
         frontRunner = _outcome;
-        frontRunnerSetTimestamp = now;
-        OutcomeChallenge(msg.sender, _outcome);
+        frontRunnerSetTimestamp = block.timestamp;
+        emit OutcomeChallenge(msg.sender, _outcome);
     }
 
     /// @dev Allows to challenge the oracle outcome
@@ -113,20 +112,20 @@ contract UltimateOracle is Oracle {
         // Outcome is challenged and front runner period is not over yet and tokens can be transferred
         require(   isChallenged()
                 && !isFrontRunnerPeriodOver()
-                && collateralToken.transferFrom(msg.sender, this, amount));
+                && collateralToken.transferFrom(msg.sender, address(this), amount));
         outcomeAmounts[msg.sender][_outcome] = outcomeAmounts[msg.sender][_outcome].add(amount);
         totalOutcomeAmounts[_outcome] = totalOutcomeAmounts[_outcome].add(amount);
         totalAmount = totalAmount.add(amount);
         if (_outcome != frontRunner && totalOutcomeAmounts[_outcome] > totalOutcomeAmounts[frontRunner])
         {
             frontRunner = _outcome;
-            frontRunnerSetTimestamp = now;
+            frontRunnerSetTimestamp = block.timestamp;
         }
-        OutcomeVote(msg.sender, _outcome, amount);
+        emit OutcomeVote(msg.sender, _outcome, amount);
     }
 
     /// @dev Withdraws winnings for user
-    /// @return Winnings
+    /// @return amount Winnings
     function withdraw()
         public
         returns (uint256 amount)
@@ -137,31 +136,34 @@ contract UltimateOracle is Oracle {
         outcomeAmounts[msg.sender][frontRunner] = 0;
         // Transfer earnings to contributor
         require(collateralToken.transfer(msg.sender, amount));
-        Withdrawal(msg.sender, amount);
+        emit Withdrawal(msg.sender, amount);
     }
 
     /// @dev Checks if time to challenge the outcome is over
     /// @return Is challenge period over?
     function isChallengePeriodOver()
         public
+        view
         returns (bool)
     {
-        return forwardedOutcomeSetTimestamp != 0 && now.sub(forwardedOutcomeSetTimestamp) > challengePeriod;
+        return forwardedOutcomeSetTimestamp != 0 && (block.timestamp).sub(forwardedOutcomeSetTimestamp) > challengePeriod;
     }
 
     /// @dev Checks if time to overbid the front runner is over
     /// @return Is front runner period over?
     function isFrontRunnerPeriodOver()
         public
+        view
         returns (bool)
     {
-        return frontRunnerSetTimestamp != 0 && now.sub(frontRunnerSetTimestamp) > frontRunnerPeriod;
+        return frontRunnerSetTimestamp != 0 && (block.timestamp).sub(frontRunnerSetTimestamp) > frontRunnerPeriod;
     }
 
     /// @dev Checks if outcome was challenged
     /// @return Is challenged?
     function isChallenged()
         public
+        view
         returns (bool)
     {
         return frontRunnerSetTimestamp != 0;
@@ -171,7 +173,8 @@ contract UltimateOracle is Oracle {
     /// @return Is outcome set?
     function isOutcomeSet()
         public
-        constant
+        override
+        view
         returns (bool)
     {
         return    isChallengePeriodOver() && !isChallenged()
@@ -182,7 +185,8 @@ contract UltimateOracle is Oracle {
     /// @return Outcome
     function getOutcome()
         public
-        constant
+        override
+        view
         returns (int256)
     {
         if (isFrontRunnerPeriodOver())

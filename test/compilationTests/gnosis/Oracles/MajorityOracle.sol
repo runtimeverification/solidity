@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Oracles/Oracle.sol";
 
 
@@ -16,22 +16,22 @@ contract MajorityOracle is Oracle {
      */
     /// @dev Allows to create an oracle for a majority vote based on other oracles
     /// @param _oracles List of oracles taking part in the majority vote
-    function MajorityOracle(Oracle[] _oracles)
-        public
+    constructor(Oracle[] memory _oracles)
     {
         // At least 2 oracles should be defined
         require(_oracles.length > 2);
         for (uint256 i = 0; i < _oracles.length; i++)
             // Oracle address cannot be null
-            require(address(_oracles[i]) != 0);
+            require(address(_oracles[i]) != address(0));
         oracles = _oracles;
     }
 
     /// @dev Allows to registers oracles for a majority vote
-    /// @return Is outcome set?
-    /// @return Outcome
+    /// @return outcomeSet Is outcome set?
+    /// @return outcome Outcome
     function getStatusAndOutcome()
         public
+        view
         returns (bool outcomeSet, int256 outcome)
     {
         uint256 i;
@@ -69,10 +69,11 @@ contract MajorityOracle is Oracle {
     /// @return Is outcome set?
     function isOutcomeSet()
         public
-        constant
+        override
+        view
         returns (bool)
     {
-        var (outcomeSet, ) = getStatusAndOutcome();
+        (bool outcomeSet, ) = getStatusAndOutcome();
         return outcomeSet;
     }
 
@@ -80,10 +81,11 @@ contract MajorityOracle is Oracle {
     /// @return Outcome
     function getOutcome()
         public
-        constant
+        override
+        view
         returns (int256)
     {
-        var (, winningOutcome) = getStatusAndOutcome();
+        (, int winningOutcome) = getStatusAndOutcome();
         return winningOutcome;
     }
 }

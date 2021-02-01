@@ -4,7 +4,7 @@
 
 #include "llvm/ADT/Twine.h"
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleGlobalVariable :
@@ -51,4 +51,4 @@ public:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

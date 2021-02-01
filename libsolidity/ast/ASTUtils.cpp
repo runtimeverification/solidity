@@ -14,35 +14,28 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
-/**
- * @author Christian <c@ethdev.com>
- * @date 2015
- * Utilities to work with the AST.
- */
+// SPDX-License-Identifier: GPL-3.0
 
+#include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ASTUtils.h>
 
-using namespace std;
-using namespace dev;
-using namespace dev::solidity;
-
-
-
-ASTNode const* LocationFinder::leastUpperBound()
+namespace solidity::frontend
 {
-	m_bestMatch = nullptr;
-	for (ASTNode const* rootNode: m_rootNodes)
-		rootNode->accept(*this);
 
-	return m_bestMatch;
+VariableDeclaration const* rootConstVariableDeclaration(VariableDeclaration const& _varDecl)
+{
+	solAssert(_varDecl.isConstant(), "Constant variable expected");
+
+	VariableDeclaration const* rootDecl = &_varDecl;
+	Identifier const* identifier;
+	while ((identifier = dynamic_cast<Identifier const*>(rootDecl->value().get())))
+	{
+		auto referencedVarDecl = dynamic_cast<VariableDeclaration const*>(identifier->annotation().referencedDeclaration);
+		if (!referencedVarDecl || !referencedVarDecl->isConstant())
+			return nullptr;
+		rootDecl = referencedVarDecl;
+	}
+	return rootDecl;
 }
 
-bool LocationFinder::visitNode(const ASTNode& _node)
-{
-	if (_node.location().contains(m_location))
-	{
-		m_bestMatch = &_node;
-		return true;
-	}
-	return false;
 }

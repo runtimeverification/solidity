@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * Framework for testing features from the analysis phase of compiler.
  */
@@ -28,37 +29,37 @@
 #include <string>
 #include <memory>
 
-namespace dev
+namespace solidity::frontend
 {
-namespace solidity
-{
-
 class Type;
 class FunctionType;
-using TypePointer = std::shared_ptr<Type const>;
-using FunctionTypePointer = std::shared_ptr<FunctionType const>;
+using TypePointer = Type const*;
+using FunctionTypePointer = FunctionType const*;
+}
 
-namespace test
+namespace solidity::frontend::test
 {
 
 class AnalysisFramework
 {
 
 protected:
-	virtual std::pair<SourceUnit const*, ErrorList>
+	virtual std::pair<SourceUnit const*, langutil::ErrorList>
 	parseAnalyseAndReturnError(
 		std::string const& _source,
 		bool _reportWarnings = false,
-		bool _insertVersionPragma = true,
-		bool _allowMultipleErrors = false
+		bool _insertLicenseAndVersionPragma = true,
+		bool _allowMultipleErrors = false,
+		bool _allowRecoveryErrors = false
 	);
+	virtual ~AnalysisFramework() = default;
 
 	SourceUnit const* parseAndAnalyse(std::string const& _source);
 	bool success(std::string const& _source);
-	ErrorList expectError(std::string const& _source, bool _warning = false, bool _allowMultiple = false);
+	langutil::ErrorList expectError(std::string const& _source, bool _warning = false, bool _allowMultiple = false);
 
 	std::string formatErrors() const;
-	std::string formatError(Error const& _error) const;
+	std::string formatError(langutil::Error const& _error) const;
 
 	static ContractDefinition const* retrieveContractByName(SourceUnit const& _source, std::string const& _name);
 	static FunctionTypePointer retrieveFunctionBySignature(
@@ -67,10 +68,29 @@ protected:
 	);
 
 	// filter out the warnings in m_warningsToFilter or all warnings if _includeWarnings is false
-	ErrorList filterErrors(ErrorList const& _errorList, bool _includeWarnings) const;
+	langutil::ErrorList filterErrors(langutil::ErrorList const& _errorList, bool _includeWarnings) const;
 
 	std::vector<std::string> m_warningsToFilter = {"This is a pre-release compiler version"};
-	dev::solidity::CompilerStack m_compiler;
+	std::vector<std::string> m_messagesToCut = {"Source file requires different compiler version (current compiler is"};
+
+	/// @returns reference to lazy-instanciated CompilerStack.
+	solidity::frontend::CompilerStack& compiler()
+	{
+		if (!m_compiler)
+			m_compiler = std::make_unique<solidity::frontend::CompilerStack>();
+		return *m_compiler;
+	}
+
+	/// @returns reference to lazy-instanciated CompilerStack.
+	solidity::frontend::CompilerStack const& compiler() const
+	{
+		if (!m_compiler)
+			m_compiler = std::make_unique<solidity::frontend::CompilerStack>();
+		return *m_compiler;
+	}
+
+private:
+	mutable std::unique_ptr<solidity::frontend::CompilerStack> m_compiler;
 };
 
 // Asserts that the compilation down to typechecking
@@ -133,6 +153,4 @@ do \
 } \
 while(0)
 
-}
-}
 }

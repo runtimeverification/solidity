@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @file CommonSubexpressionEliminator.h
  * @author Christian <c@ethdev.com>
@@ -28,15 +29,18 @@
 #include <set>
 #include <tuple>
 #include <ostream>
-#include <libdevcore/CommonIO.h>
-#include <libdevcore/Exceptions.h>
+#include <libsolutil/CommonIO.h>
+#include <libsolutil/Exceptions.h>
 #include <libevmasm/ExpressionClasses.h>
 #include <libevmasm/SemanticInformation.h>
 #include <libevmasm/KnownState.h>
 
-namespace dev
+namespace langutil
 {
-namespace eth
+struct SourceLocation;
+}
+
+namespace solidity::evmasm
 {
 
 class AssemblyItem;
@@ -66,8 +70,8 @@ public:
 	/// Feeds AssemblyItems into the eliminator and @returns the iterator pointing at the first
 	/// item that must be fed into a new instance of the eliminator.
 	/// @param _msizeImportant if false, do not consider modification of MSIZE a side-effect
-	template <class _AssemblyItemIterator>
-	_AssemblyItemIterator feedItems(_AssemblyItemIterator _iterator, _AssemblyItemIterator _end, bool _msizeImportant);
+	template <class AssemblyItemIterator>
+	AssemblyItemIterator feedItems(AssemblyItemIterator _iterator, AssemblyItemIterator _end, bool _msizeImportant);
 
 	/// @returns the resulting items after optimization.
 	AssemblyItems getOptimizedItems();
@@ -137,14 +141,14 @@ private:
 	bool removeStackTopIfPossible();
 
 	/// Appends a dup instruction to m_generatedItems to retrieve the element at the given stack position.
-	void appendDup(int _fromPosition, SourceLocation const& _location);
+	void appendDup(int _fromPosition, langutil::SourceLocation const& _location);
 	/// Appends a swap instruction to m_generatedItems to retrieve the element at the given stack position.
 	/// @note this might also remove the last item if it exactly the same swap instruction.
-	void appendOrRemoveSwap(int _fromPosition, SourceLocation const& _location);
+	void appendOrRemoveSwap(int _fromPosition, langutil::SourceLocation const& _location);
 	/// Appends the given assembly item.
 	void appendItem(AssemblyItem const& _item);
 
-	static const int c_invalidPosition = -0x7fffffff;
+	static int const c_invalidPosition = -0x7fffffff;
 
 	AssemblyItems m_generatedItems;
 	/// Current height of the stack relative to the start.
@@ -156,7 +160,7 @@ private:
 	/// Current positions of equivalence classes, equal to the empty set if already deleted.
 	std::map<Id, std::set<int>> m_classPositions;
 
-	/// The actual eqivalence class items and how to compute them.
+	/// The actual equivalence class items and how to compute them.
 	ExpressionClasses& m_expressionClasses;
 	/// Keeps information about which storage or memory slots were written to by which operations.
 	/// The operations are sorted ascendingly by sequence number.
@@ -166,10 +170,10 @@ private:
 	std::map<int, Id> m_targetStack;
 };
 
-template <class _AssemblyItemIterator>
-_AssemblyItemIterator CommonSubexpressionEliminator::feedItems(
-	_AssemblyItemIterator _iterator,
-	_AssemblyItemIterator _end,
+template <class AssemblyItemIterator>
+AssemblyItemIterator CommonSubexpressionEliminator::feedItems(
+	AssemblyItemIterator _iterator,
+	AssemblyItemIterator _end,
 	bool _msizeImportant
 )
 {
@@ -181,5 +185,4 @@ _AssemblyItemIterator CommonSubexpressionEliminator::feedItems(
 	return _iterator;
 }
 
-}
 }

@@ -14,41 +14,18 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
-/**
- * @author Christian <c@ethdev.com>
- * @date 2015
- * Utilities to work with the AST.
- */
+// SPDX-License-Identifier: GPL-3.0
 
 #pragma once
 
-#include <libevmasm/SourceLocation.h>
-#include <libsolidity/ast/ASTVisitor.h>
-
-namespace dev
-{
-namespace solidity
+namespace solidity::frontend
 {
 
-class LocationFinder: private ASTConstVisitor
-{
-public:
-	LocationFinder(SourceLocation const& _location, std::vector<ASTNode const*> _rootNodes):
-		m_rootNodes(_rootNodes), m_location(_location)
-	{
-	}
+class VariableDeclaration;
 
-	/// @returns the "closest" (in the sense of most-leafward) AST node which is a descendant of
-	/// _node and whose source location contains _location.
-	ASTNode const* leastUpperBound();
+/// Find the topmost referenced constant variable declaration when the given variable
+/// declaration value is an identifier. Works only for constant variable declarations.
+/// Returns nullptr if an identifier in the chain is not referencing a constant variable declaration.
+VariableDeclaration const* rootConstVariableDeclaration(VariableDeclaration const& _varDecl);
 
-private:
-	bool visitNode(ASTNode const& _node);
-
-	std::vector<ASTNode const*> m_rootNodes;
-	SourceLocation m_location;
-	ASTNode const* m_bestMatch = nullptr;
-};
-
-}
 }

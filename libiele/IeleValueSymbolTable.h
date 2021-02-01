@@ -11,7 +11,7 @@ class StringRef;
 
 } // end namespace llvm
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleInstruction;
@@ -86,4 +86,4 @@ private:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

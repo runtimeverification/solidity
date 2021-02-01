@@ -8,12 +8,12 @@
 #include "IeleLocalVariable.h"
 #include "IeleValueSymbolTable.h"
 
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
 
 #include "llvm/ADT/SmallString.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 static bool getSymTab(IeleValue *V, IeleValueSymbolTable *&ST) {
   ST = nullptr;
@@ -102,7 +102,8 @@ void IeleValue::setName(const llvm::Twine &Name) {
     destroyIeleName();
 
     // Create the new name.
-    setIeleName(IeleName::Create(NameRef));
+    llvm::MallocAllocator Allocator;
+    setIeleName(IeleName::Create(NameRef, Allocator));
     getIeleName()->setValue(this);
     return;
   }
@@ -124,8 +125,10 @@ void IeleValue::setName(const llvm::Twine &Name) {
 
 void IeleValue::destroyIeleName() {
   IeleName *Name = getIeleName();
-  if (Name)
-    Name->Destroy();
+  if (Name) {
+    llvm::MallocAllocator Allocator;
+    Name->Destroy(Allocator);
+  }
   setIeleName(nullptr);
 }
 

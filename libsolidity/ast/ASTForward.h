@@ -1,19 +1,20 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2014
@@ -22,22 +23,28 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
 
-// Forward-declare all AST node types
+// Forward-declare all AST node types and related enums.
 
-namespace dev
+namespace solidity::langutil
 {
-namespace solidity
+enum class Token : unsigned int;
+}
+
+namespace solidity::frontend
 {
 
 class ASTNode;
+class ScopeOpener;
 class SourceUnit;
 class PragmaDirective;
 class ImportDirective;
 class Declaration;
+class CallableDeclaration;
+class OverrideSpecifier;
 class ContractDefinition;
 class InheritanceSpecifier;
 class UsingForDirective;
@@ -62,6 +69,8 @@ class Statement;
 class Block;
 class PlaceholderStatement;
 class IfStatement;
+class TryCatchClause;
+class TryStatement;
 class BreakableStatement;
 class WhileStatement;
 class ForStatement;
@@ -86,6 +95,7 @@ class PrimaryExpression;
 class Identifier;
 class ElementaryTypeNameExpression;
 class Literal;
+class StructuredDocumentation;
 
 class VariableScope;
 
@@ -97,5 +107,4 @@ using ASTPointer = std::shared_ptr<T>;
 
 using ASTString = std::string;
 
-}
 }

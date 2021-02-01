@@ -3,8 +3,8 @@
 #include "IeleContract.h"
 #include "IeleValueSymbolTable.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleFunction::IeleFunction(IeleContext *Ctx, bool isPublic, bool isInit,
                            bool isDeposit, const llvm::Twine &Name,
@@ -13,7 +13,7 @@ IeleFunction::IeleFunction(IeleContext *Ctx, bool isPublic, bool isInit,
   IsPublic(isPublic),
   IsInit(isInit),
   IsDeposit(isDeposit) {
-  SymTab = llvm::make_unique<IeleValueSymbolTable>();
+  SymTab = std::make_unique<IeleValueSymbolTable>();
 
   if (C) {
     C->getIeleFunctionList().push_back(this);

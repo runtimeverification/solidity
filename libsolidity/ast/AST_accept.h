@@ -1,19 +1,20 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2014
@@ -26,9 +27,7 @@
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/ASTVisitor.h>
 
-namespace dev
-{
-namespace solidity
+namespace solidity::frontend
 {
 
 void SourceUnit::accept(ASTVisitor& _visitor)
@@ -69,10 +68,24 @@ void ImportDirective::accept(ASTConstVisitor& _visitor) const
 	_visitor.endVisit(*this);
 }
 
+void StructuredDocumentation::accept(ASTVisitor& _visitor)
+{
+	_visitor.visit(*this);
+	_visitor.endVisit(*this);
+}
+
+void StructuredDocumentation::accept(ASTConstVisitor& _visitor) const
+{
+	_visitor.visit(*this);
+	_visitor.endVisit(*this);
+}
+
 void ContractDefinition::accept(ASTVisitor& _visitor)
 {
 	if (_visitor.visit(*this))
 	{
+		if (m_documentation)
+			m_documentation->accept(_visitor);
 		listAccept(m_baseContracts, _visitor);
 		listAccept(m_subNodes, _visitor);
 	}
@@ -83,9 +96,23 @@ void ContractDefinition::accept(ASTConstVisitor& _visitor) const
 {
 	if (_visitor.visit(*this))
 	{
+		if (m_documentation)
+			m_documentation->accept(_visitor);
 		listAccept(m_baseContracts, _visitor);
 		listAccept(m_subNodes, _visitor);
 	}
+	_visitor.endVisit(*this);
+}
+
+void IdentifierPath::accept(ASTVisitor& _visitor)
+{
+	_visitor.visit(*this);
+	_visitor.endVisit(*this);
+}
+
+void IdentifierPath::accept(ASTConstVisitor& _visitor) const
+{
+	_visitor.visit(*this);
 	_visitor.endVisit(*this);
 }
 
@@ -187,10 +214,28 @@ void ParameterList::accept(ASTConstVisitor& _visitor) const
 	_visitor.endVisit(*this);
 }
 
+void OverrideSpecifier::accept(ASTVisitor& _visitor)
+{
+	if (_visitor.visit(*this))
+		listAccept(m_overrides, _visitor);
+	_visitor.endVisit(*this);
+}
+
+void OverrideSpecifier::accept(ASTConstVisitor& _visitor) const
+{
+	if (_visitor.visit(*this))
+		listAccept(m_overrides, _visitor);
+	_visitor.endVisit(*this);
+}
+
 void FunctionDefinition::accept(ASTVisitor& _visitor)
 {
 	if (_visitor.visit(*this))
 	{
+		if (m_documentation)
+			m_documentation->accept(_visitor);
+		if (m_overrides)
+			m_overrides->accept(_visitor);
 		m_parameters->accept(_visitor);
 		if (m_returnParameters)
 			m_returnParameters->accept(_visitor);
@@ -205,6 +250,10 @@ void FunctionDefinition::accept(ASTConstVisitor& _visitor) const
 {
 	if (_visitor.visit(*this))
 	{
+		if (m_documentation)
+			m_documentation->accept(_visitor);
+		if (m_overrides)
+			m_overrides->accept(_visitor);
 		m_parameters->accept(_visitor);
 		if (m_returnParameters)
 			m_returnParameters->accept(_visitor);
@@ -221,6 +270,8 @@ void VariableDeclaration::accept(ASTVisitor& _visitor)
 	{
 		if (m_typeName)
 			m_typeName->accept(_visitor);
+		if (m_overrides)
+			m_overrides->accept(_visitor);
 		if (m_value)
 			m_value->accept(_visitor);
 	}
@@ -233,6 +284,8 @@ void VariableDeclaration::accept(ASTConstVisitor& _visitor) const
 	{
 		if (m_typeName)
 			m_typeName->accept(_visitor);
+		if (m_overrides)
+			m_overrides->accept(_visitor);
 		if (m_value)
 			m_value->accept(_visitor);
 	}
@@ -243,8 +296,13 @@ void ModifierDefinition::accept(ASTVisitor& _visitor)
 {
 	if (_visitor.visit(*this))
 	{
+		if (m_documentation)
+			m_documentation->accept(_visitor);
 		m_parameters->accept(_visitor);
-		m_body->accept(_visitor);
+		if (m_overrides)
+			m_overrides->accept(_visitor);
+		if (m_body)
+			m_body->accept(_visitor);
 	}
 	_visitor.endVisit(*this);
 }
@@ -253,8 +311,13 @@ void ModifierDefinition::accept(ASTConstVisitor& _visitor) const
 {
 	if (_visitor.visit(*this))
 	{
+		if (m_documentation)
+			m_documentation->accept(_visitor);
 		m_parameters->accept(_visitor);
-		m_body->accept(_visitor);
+		if (m_overrides)
+			m_overrides->accept(_visitor);
+		if (m_body)
+			m_body->accept(_visitor);
 	}
 	_visitor.endVisit(*this);
 }
@@ -284,14 +347,22 @@ void ModifierInvocation::accept(ASTConstVisitor& _visitor) const
 void EventDefinition::accept(ASTVisitor& _visitor)
 {
 	if (_visitor.visit(*this))
+	{
+		if (m_documentation)
+			m_documentation->accept(_visitor);
 		m_parameters->accept(_visitor);
+	}
 	_visitor.endVisit(*this);
 }
 
 void EventDefinition::accept(ASTConstVisitor& _visitor) const
 {
 	if (_visitor.visit(*this))
+	{
+		if (m_documentation)
+			m_documentation->accept(_visitor);
 		m_parameters->accept(_visitor);
+	}
 	_visitor.endVisit(*this);
 }
 
@@ -309,13 +380,15 @@ void ElementaryTypeName::accept(ASTConstVisitor& _visitor) const
 
 void UserDefinedTypeName::accept(ASTVisitor& _visitor)
 {
-	_visitor.visit(*this);
+	if (_visitor.visit(*this))
+		this->pathNode().accept(_visitor);
 	_visitor.endVisit(*this);
 }
 
 void UserDefinedTypeName::accept(ASTConstVisitor& _visitor) const
 {
-	_visitor.visit(*this);
+	if (_visitor.visit(*this))
+		this->pathNode().accept(_visitor);
 	_visitor.endVisit(*this);
 }
 
@@ -439,6 +512,48 @@ void IfStatement::accept(ASTConstVisitor& _visitor) const
 		m_trueBody->accept(_visitor);
 		if (m_falseBody)
 			m_falseBody->accept(_visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
+void TryCatchClause::accept(ASTVisitor& _visitor)
+{
+	if (_visitor.visit(*this))
+	{
+		if (m_parameters)
+			m_parameters->accept(_visitor);
+		m_block->accept(_visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
+void TryCatchClause::accept(ASTConstVisitor& _visitor) const
+{
+	if (_visitor.visit(*this))
+	{
+		if (m_parameters)
+			m_parameters->accept(_visitor);
+		m_block->accept(_visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
+void TryStatement::accept(ASTVisitor& _visitor)
+{
+	if (_visitor.visit(*this))
+	{
+		m_externalCall->accept(_visitor);
+		listAccept(m_clauses, _visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
+void TryStatement::accept(ASTConstVisitor& _visitor) const
+{
+	if (_visitor.visit(*this))
+	{
+		m_externalCall->accept(_visitor);
+		listAccept(m_clauses, _visitor);
 	}
 	_visitor.endVisit(*this);
 }
@@ -715,6 +830,26 @@ void FunctionCall::accept(ASTConstVisitor& _visitor) const
 	_visitor.endVisit(*this);
 }
 
+void FunctionCallOptions::accept(ASTVisitor& _visitor)
+{
+	if (_visitor.visit(*this))
+	{
+		m_expression->accept(_visitor);
+		listAccept(m_options, _visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
+void FunctionCallOptions::accept(ASTConstVisitor& _visitor) const
+{
+	if (_visitor.visit(*this))
+	{
+		m_expression->accept(_visitor);
+		listAccept(m_options, _visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
 void NewExpression::accept(ASTVisitor& _visitor)
 {
 	if (_visitor.visit(*this))
@@ -765,6 +900,32 @@ void IndexAccess::accept(ASTConstVisitor& _visitor) const
 	_visitor.endVisit(*this);
 }
 
+void IndexRangeAccess::accept(ASTVisitor& _visitor)
+{
+	if (_visitor.visit(*this))
+	{
+		m_base->accept(_visitor);
+		if (m_start)
+			m_start->accept(_visitor);
+		if (m_end)
+			m_end->accept(_visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
+void IndexRangeAccess::accept(ASTConstVisitor& _visitor) const
+{
+	if (_visitor.visit(*this))
+	{
+		m_base->accept(_visitor);
+		if (m_start)
+			m_start->accept(_visitor);
+		if (m_end)
+			m_end->accept(_visitor);
+	}
+	_visitor.endVisit(*this);
+}
+
 void Identifier::accept(ASTVisitor& _visitor)
 {
 	_visitor.visit(*this);
@@ -801,5 +962,4 @@ void Literal::accept(ASTConstVisitor& _visitor) const
 	_visitor.endVisit(*this);
 }
 
-}
 }

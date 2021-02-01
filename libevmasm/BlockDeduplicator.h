@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @file BlockDeduplicator.h
  * @author Christian <c@ethdev.com>
@@ -23,16 +24,14 @@
 
 #pragma once
 
-#include <libdevcore/Common.h>
+#include <libsolutil/Common.h>
 
 #include <cstddef>
 #include <vector>
 #include <functional>
 #include <map>
 
-namespace dev
-{
-namespace eth
+namespace solidity::evmasm
 {
 
 class AssemblyItem;
@@ -89,5 +88,4 @@ private:
 	AssemblyItems& m_items;
 };
 
-}
 }

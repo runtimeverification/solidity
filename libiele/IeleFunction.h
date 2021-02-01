@@ -4,7 +4,7 @@
 #include "IeleBlock.h"
 #include "IeleGlobalValue.h"
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleFunction :
@@ -213,4 +213,4 @@ public:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

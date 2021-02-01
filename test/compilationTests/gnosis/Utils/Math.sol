@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 
 
 /// @title Math library - Allows calculation of logarithmic and exponential functions
@@ -22,7 +22,7 @@ library Math {
     /// @return e**x
     function exp(int256 x)
         public
-        constant
+        pure
         returns (uint256)
     {
         // revert if x is > MAX_POWER, where
@@ -94,12 +94,12 @@ library Math {
         zpow = zpow * z / ONE;
         result += 0x9c7 * zpow / ONE;
         if (shift >= 0) {
-            if (result >> (256-shift) > 0)
-                return (2**256-1);
-            return result << shift;
+            if (result >> uint(256 - shift) > 0)
+                return (2 ** 256 - 1);
+            return result << uint(shift);
         }
         else
-            return result >> (-shift);
+            return result >> uint(-shift);
     }
 
     /// @dev Returns natural logarithm value of given x
@@ -107,7 +107,7 @@ library Math {
     /// @return ln(x)
     function ln(uint256 x)
         public
-        constant
+        pure
         returns (int256)
     {
         require(x > 0);
@@ -154,10 +154,10 @@ library Math {
 
     /// @dev Returns base 2 logarithm value of given x
     /// @param x x
-    /// @return logarithmic value
+    /// @return lo logarithmic value
     function floorLog2(uint256 x)
         public
-        constant
+        pure
         returns (int256 lo)
     {
         lo = -64;
@@ -175,10 +175,10 @@ library Math {
 
     /// @dev Returns maximum of an array
     /// @param nums Numbers to look through
-    /// @return Maximum number
-    function max(int256[] nums)
+    /// @return max Maximum number
+    function max(int256[] memory nums)
         public
-        constant
+        pure
         returns (int256 max)
     {
         require(nums.length > 0);
@@ -194,7 +194,7 @@ library Math {
     /// @return Did no overflow occur?
     function safeToAdd(uint256 a, uint256 b)
         public
-        constant
+        pure
         returns (bool)
     {
         return a + b >= a;
@@ -206,7 +206,7 @@ library Math {
     /// @return Did no underflow occur?
     function safeToSub(uint256 a, uint256 b)
         public
-        constant
+        pure
         returns (bool)
     {
         return a >= b;
@@ -218,7 +218,7 @@ library Math {
     /// @return Did no overflow occur?
     function safeToMul(uint256 a, uint256 b)
         public
-        constant
+        pure
         returns (bool)
     {
         return b == 0 || a * b / b == a;
@@ -230,7 +230,7 @@ library Math {
     /// @return Sum
     function add(uint256 a, uint256 b)
         public
-        constant
+        pure
         returns (uint256)
     {
         require(safeToAdd(a, b));
@@ -243,7 +243,7 @@ library Math {
     /// @return Difference
     function sub(uint256 a, uint256 b)
         public
-        constant
+        pure
         returns (uint256)
     {
         require(safeToSub(a, b));
@@ -256,7 +256,7 @@ library Math {
     /// @return Product
     function mul(uint256 a, uint256 b)
         public
-        constant
+        pure
         returns (uint256)
     {
         require(safeToMul(a, b));
@@ -269,7 +269,7 @@ library Math {
     /// @return Did no overflow occur?
     function safeToAdd(int256 a, int256 b)
         public
-        constant
+        pure
         returns (bool)
     {
         return (b >= 0 && a + b >= a) || (b < 0 && a + b < a);
@@ -281,7 +281,7 @@ library Math {
     /// @return Did no underflow occur?
     function safeToSub(int256 a, int256 b)
         public
-        constant
+        pure
         returns (bool)
     {
         return (b >= 0 && a - b <= a) || (b < 0 && a - b > a);
@@ -293,7 +293,7 @@ library Math {
     /// @return Did no overflow occur?
     function safeToMul(int256 a, int256 b)
         public
-        constant
+        pure
         returns (bool)
     {
         return (b == 0) || (a * b / b == a);
@@ -305,7 +305,7 @@ library Math {
     /// @return Sum
     function add(int256 a, int256 b)
         public
-        constant
+        pure
         returns (int256)
     {
         require(safeToAdd(a, b));
@@ -318,7 +318,7 @@ library Math {
     /// @return Difference
     function sub(int256 a, int256 b)
         public
-        constant
+        pure
         returns (int256)
     {
         require(safeToSub(a, b));
@@ -331,7 +331,7 @@ library Math {
     /// @return Product
     function mul(int256 a, int256 b)
         public
-        constant
+        pure
         returns (int256)
     {
         require(safeToMul(a, b));

@@ -1,0 +1,106 @@
+Optimized IR:
+/*******************************************************
+ *                       WARNING                       *
+ *  Solidity to Yul compilation is still EXPERIMENTAL  *
+ *       It can result in LOSS OF FUNDS or worse       *
+ *                !USE AT YOUR OWN RISK!               *
+ *******************************************************/
+
+object "C_3" {
+    code {
+        {
+            mstore(64, 128)
+            if callvalue() { revert(0, 0) }
+            let _1 := datasize("C_3_deployed")
+            codecopy(0, dataoffset("C_3_deployed"), _1)
+            return(0, _1)
+        }
+    }
+    object "C_3_deployed" {
+        code {
+            {
+                mstore(64, 128)
+                revert(0, 0)
+            }
+        }
+    }
+}
+
+Optimized IR:
+/*******************************************************
+ *                       WARNING                       *
+ *  Solidity to Yul compilation is still EXPERIMENTAL  *
+ *       It can result in LOSS OF FUNDS or worse       *
+ *                !USE AT YOUR OWN RISK!               *
+ *******************************************************/
+
+object "D_16" {
+    code {
+        {
+            mstore(64, 128)
+            if callvalue() { revert(0, 0) }
+            let _1 := datasize("D_16_deployed")
+            codecopy(0, dataoffset("D_16_deployed"), _1)
+            return(0, _1)
+        }
+    }
+    object "D_16_deployed" {
+        code {
+            {
+                mstore(64, 128)
+                if iszero(lt(calldatasize(), 4))
+                {
+                    let _1 := 0
+                    if eq(0x26121ff0, shr(224, calldataload(_1)))
+                    {
+                        if callvalue() { revert(_1, _1) }
+                        if slt(add(calldatasize(), not(3)), _1) { revert(_1, _1) }
+                        let _2 := datasize("C_3")
+                        let _3 := add(128, _2)
+                        if or(gt(_3, 0xffffffffffffffff), lt(_3, 128)) { panic_error_0x41() }
+                        datacopy(128, dataoffset("C_3"), _2)
+                        if iszero(create(_1, 128, _2))
+                        {
+                            returndatacopy(_1, _1, returndatasize())
+                            revert(_1, returndatasize())
+                        }
+                        return(allocateMemory(_1), _1)
+                    }
+                }
+                revert(0, 0)
+            }
+            function allocateMemory(size) -> memPtr
+            {
+                memPtr := mload(64)
+                let newFreePtr := add(memPtr, size)
+                if or(gt(newFreePtr, 0xffffffffffffffff), lt(newFreePtr, memPtr)) { panic_error_0x41() }
+                mstore(64, newFreePtr)
+            }
+            function panic_error_0x41()
+            {
+                mstore(0, shl(224, 0x4e487b71))
+                mstore(4, 0x41)
+                revert(0, 0x24)
+            }
+        }
+        object "C_3" {
+            code {
+                {
+                    mstore(64, 128)
+                    if callvalue() { revert(0, 0) }
+                    let _1 := datasize("C_3_deployed")
+                    codecopy(0, dataoffset("C_3_deployed"), _1)
+                    return(0, _1)
+                }
+            }
+            object "C_3_deployed" {
+                code {
+                    {
+                        mstore(64, 128)
+                        revert(0, 0)
+                    }
+                }
+            }
+        }
+    }
+}

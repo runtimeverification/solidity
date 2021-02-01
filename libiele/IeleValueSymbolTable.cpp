@@ -1,11 +1,11 @@
 #include "IeleValueSymbolTable.h"
 
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
 
 #include "llvm/ADT/SmallString.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleValueSymbolTable::~IeleValueSymbolTable() { }
 
@@ -38,7 +38,8 @@ void IeleValueSymbolTable::reinsertIeleValue(IeleValue* V) {
   llvm::SmallString<256> UniqueName(V->getName().begin(), V->getName().end());
 
   // The name is also already used, just free it so we can allocate a new name.
-  V->getIeleName()->Destroy();
+  llvm::MallocAllocator Allocator;
+  V->getIeleName()->Destroy(Allocator);
 
   IeleName *VN = makeUniqueName(V, UniqueName);
   V->setIeleName(VN);

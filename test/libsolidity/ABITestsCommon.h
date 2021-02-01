@@ -14,30 +14,33 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 
 #include <string>
 
-namespace dev
+namespace solidity::frontend::test
 {
-namespace solidity
-{
-namespace test
-{
-
-static std::string const NewEncoderPragma = "pragma experimental ABIEncoderV2;\n";
 
 #define NEW_ENCODER(CODE) \
 { \
-	sourceCode = NewEncoderPragma + sourceCode; \
+	string sourceCodeTmp = sourceCode; \
+	sourceCode = "pragma abicoder v2;\n" + sourceCode; \
 	{ CODE } \
+	sourceCode = sourceCodeTmp; \
+}
+
+#define OLD_ENCODER(CODE) \
+{ \
+	string sourceCodeTmp = sourceCode; \
+	sourceCode = "pragma abicoder v1;\n" + sourceCode; \
+	{ CODE } \
+	sourceCode = sourceCodeTmp; \
 }
 
 #define BOTH_ENCODERS(CODE) \
 { \
-	{ CODE } \
+	OLD_ENCODER(CODE) \
 	NEW_ENCODER(CODE) \
 }
 
-}
-}
 } // end namespaces

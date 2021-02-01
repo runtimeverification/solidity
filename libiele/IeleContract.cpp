@@ -4,7 +4,7 @@
 #include "IeleIntConstant.h"
 #include "IeleValueSymbolTable.h"
 
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Program.h"
@@ -18,8 +18,9 @@
 #include <boost/filesystem.hpp>
 
 using namespace std;
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
+using namespace solidity::util;
 using namespace boost::filesystem;
 using namespace llvm;
 using namespace llvm::sys;
@@ -30,7 +31,7 @@ IeleContract::IeleContract(IeleContext *Ctx, const llvm::Twine &Name,
   IncludeMemoryRuntime(false),
   IncludeStorageRuntime(false),
   NextFreePtrAddress(bigint(0)) {
-  SymTab = llvm::make_unique<IeleValueSymbolTable>();
+  SymTab = std::make_unique<IeleValueSymbolTable>();
 
   if (C) {
     C->getIeleContractList().push_back(this);
@@ -74,7 +75,7 @@ void IeleContract::printRuntime(llvm::raw_ostream &OS, unsigned indent) const {
   }
 }
 
-std::string IeleContract::escapeIeleName(const std::string &str) {
+std::string IeleContract::escapeIeleName(llvm::StringRef str) {
   std::string result;
   for (char c : str) {
     if (c == '"' || c == '\\' || !isprint(c)) {
@@ -152,15 +153,8 @@ bytes IeleContract::toBinary() const {
   std::string program = result.get();
   const StringRef output = tempout;
 
-#if defined(LLVM_VERSION_MAJOR) && ((LLVM_VERSION_MAJOR == 4) || (LLVM_VERSION_MAJOR == 5))
-  const char *args[] = {"iele-assemble", tempin, nullptr};
-  const StringRef *redirects[] = {nullptr, &output, nullptr};
-#endif
-
-#if defined(LLVM_VERSION_MAJOR) && LLVM_VERSION_MAJOR == 8
   StringRef args[] = {"iele-assemble", tempin};
   const Optional<StringRef> redirects[] = {None, Optional<StringRef>::create(&output), None};  
-#endif
 
   int exit = ExecuteAndWait(program, args, None, redirects);
   solAssert(exit == 0, "Iele assembler failed to execute on " + string(tempin));

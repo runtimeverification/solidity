@@ -2,8 +2,8 @@
 
 #include "IeleIntConstant.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleContext::IeleContext() { }
 

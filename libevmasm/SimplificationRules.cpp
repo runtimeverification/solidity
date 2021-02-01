@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @file ExpressionClasses.cpp
  * @author Christian <c@ethdev.com>
@@ -21,21 +22,21 @@
  * Container for equivalence classes of expressions for use in common subexpression elimination.
  */
 
-#include <libevmasm/ExpressionClasses.h>
-#include <utility>
-#include <functional>
-#include <boost/range/adaptor/reversed.hpp>
-#include <boost/noncopyable.hpp>
-#include <libevmasm/Assembly.h>
-#include <libevmasm/CommonSubexpressionEliminator.h>
 #include <libevmasm/SimplificationRules.h>
 
+#include <libevmasm/ExpressionClasses.h>
+#include <libevmasm/Assembly.h>
+#include <libevmasm/CommonSubexpressionEliminator.h>
 #include <libevmasm/RuleList.h>
+#include <libsolutil/Assertions.h>
+
+#include <utility>
+#include <functional>
 
 using namespace std;
-using namespace dev;
-using namespace dev::eth;
-
+using namespace solidity;
+using namespace solidity::evmasm;
+using namespace solidity::langutil;
 
 SimplificationRule<Pattern> const* Rules::findFirstMatch(
 	Expression const& _expr,
@@ -45,13 +46,20 @@ SimplificationRule<Pattern> const* Rules::findFirstMatch(
 	resetMatchGroups();
 
 	assertThrow(_expr.item, OptimizerException, "");
-	for (auto const& rule: m_rules[byte(_expr.item->instruction())])
+	for (auto const& rule: m_rules[uint8_t(_expr.item->instruction())])
 	{
 		if (rule.pattern.matches(_expr, _classes))
-			return &rule;
+			if (!rule.feasible || rule.feasible())
+				return &rule;
+
 		resetMatchGroups();
 	}
 	return nullptr;
+}
+
+bool Rules::isInitialized() const
+{
+	return !m_rules[uint8_t(Instruction::ADD)].empty();
 }
 
 void Rules::addRules(std::vector<SimplificationRule<Pattern>> const& _rules)
@@ -62,29 +70,34 @@ void Rules::addRules(std::vector<SimplificationRule<Pattern>> const& _rules)
 
 void Rules::addRule(SimplificationRule<Pattern> const& _rule)
 {
-	m_rules[byte(_rule.pattern.instruction())].push_back(_rule);
+	m_rules[uint8_t(_rule.pattern.instruction())].push_back(_rule);
 }
 
 Rules::Rules()
 {
-	// Multiple occurences of one of these inside one rule must match the same equivalence class.
+	// Multiple occurrences of one of these inside one rule must match the same equivalence class.
 	// Constants.
 	Pattern A(Push);
 	Pattern B(Push);
 	Pattern C(Push);
 	// Anything.
+	Pattern W;
 	Pattern X;
 	Pattern Y;
+	Pattern Z;
 	A.setMatchGroup(1, m_matchGroups);
 	B.setMatchGroup(2, m_matchGroups);
 	C.setMatchGroup(3, m_matchGroups);
-	X.setMatchGroup(4, m_matchGroups);
-	Y.setMatchGroup(5, m_matchGroups);
+	W.setMatchGroup(4, m_matchGroups);
+	X.setMatchGroup(5, m_matchGroups);
+	Y.setMatchGroup(6, m_matchGroups);
+	Z.setMatchGroup(7, m_matchGroups);
 
-	addRules(simplificationRuleList(A, B, C, X, Y));
+	addRules(simplificationRuleList(nullopt, A, B, C, W, X, Y, Z));
+	assertThrow(isInitialized(), OptimizerException, "Rule list not properly initialized.");
 }
 
-Pattern::Pattern(Instruction _instruction, std::vector<Pattern> const& _arguments):
+Pattern::Pattern(Instruction _instruction, std::initializer_list<Pattern> _arguments):
 	m_type(Operation),
 	m_instruction(_instruction),
 	m_arguments(_arguments)
@@ -200,7 +213,7 @@ ExpressionTemplate::ExpressionTemplate(Pattern const& _pattern, SourceLocation c
 		item = _pattern.toAssemblyItem(_location);
 	}
 	for (auto const& arg: _pattern.arguments())
-		arguments.push_back(ExpressionTemplate(arg, _location));
+		arguments.emplace_back(arg, _location);
 }
 
 string ExpressionTemplate::toString() const

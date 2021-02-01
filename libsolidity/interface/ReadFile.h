@@ -14,17 +14,17 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 
 #pragma once
 
-#include <string>
-#include <functional>
+#include <liblangutil/Exceptions.h>
+
 #include <boost/noncopyable.hpp>
+#include <functional>
+#include <string>
 
-namespace dev
-{
-
-namespace solidity
+namespace solidity::frontend
 {
 
 class ReadCallback: boost::noncopyable
@@ -37,9 +37,27 @@ public:
 		std::string responseOrErrorMessage;
 	};
 
+	enum class Kind
+	{
+		ReadFile,
+		SMTQuery
+	};
+
+	static std::string kindString(Kind _kind)
+	{
+		switch (_kind)
+		{
+		case Kind::ReadFile:
+			return "source";
+		case Kind::SMTQuery:
+			return "smt-query";
+		default:
+			solAssert(false, "");
+		}
+	}
+
 	/// File reading or generic query callback.
-	using Callback = std::function<Result(std::string const&)>;
+	using Callback = std::function<Result(std::string const&, std::string const&)>;
 };
 
-}
 }

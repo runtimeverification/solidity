@@ -2,8 +2,8 @@
 
 #include "IeleFunction.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleArgument::IeleArgument(IeleContext *Ctx, const llvm::Twine &Name,
                            IeleFunction *F) :

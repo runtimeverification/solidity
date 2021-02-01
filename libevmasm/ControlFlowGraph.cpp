@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @file ControlFlowGraph.cpp
  * @author Christian <c@ethdev.com>
@@ -31,8 +32,8 @@
 #include <libevmasm/KnownState.h>
 
 using namespace std;
-using namespace dev;
-using namespace dev::eth;
+using namespace solidity;
+using namespace solidity::evmasm;
 
 BlockId::BlockId(u256 const& _id):
 	m_id(unsigned(_id))
@@ -78,19 +79,19 @@ void ControlFlowGraph::splitBlocks()
 		if (item.type() == Tag)
 		{
 			if (id)
-				m_blocks[id].end = index;
+				m_blocks[id].end = static_cast<unsigned>(index);
 			id = BlockId::invalid();
 		}
 		if (!id)
 		{
 			id = item.type() == Tag ? BlockId(item.data()) : generateNewId();
-			m_blocks[id].begin = index;
+			m_blocks[id].begin = static_cast<unsigned>(index);
 		}
 		if (item.type() == PushTag)
-			m_blocks[id].pushedTags.push_back(BlockId(item.data()));
+			m_blocks[id].pushedTags.emplace_back(item.data());
 		if (SemanticInformation::altersControlFlow(item))
 		{
-			m_blocks[id].end = index + 1;
+			m_blocks[id].end = static_cast<unsigned>(index + 1);
 			if (item == Instruction::JUMP)
 				m_blocks[id].endType = BasicBlock::EndType::JUMP;
 			else if (item == Instruction::JUMPI)
@@ -102,7 +103,7 @@ void ControlFlowGraph::splitBlocks()
 	}
 	if (id)
 	{
-		m_blocks[id].end = m_items.size();
+		m_blocks[id].end = static_cast<unsigned>(m_items.size());
 		if (m_blocks[id].endType == BasicBlock::EndType::HANDOVER)
 			m_blocks[id].endType = BasicBlock::EndType::STOP;
 	}
@@ -275,7 +276,7 @@ void ControlFlowGraph::gatherKnowledge()
 			//@todo in the case of JUMPI, add knowledge about the condition to the state
 			// (for both values of the condition)
 			set<u256> tags = state->tagsInExpression(
-				state->stackElement(state->stackHeight(), SourceLocation())
+				state->stackElement(state->stackHeight(), langutil::SourceLocation{})
 			);
 			state->feedItem(m_items.at(pc++));
 

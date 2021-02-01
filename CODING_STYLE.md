@@ -46,24 +46,33 @@ foo->bar(someLongVariableName,
 cout << "some very long string that contains completely irrelevant text that talks about this and that and contains the words \"lorem\" and \"ipsum\"" << endl;
 ```
 
+To set indentation and tab width settings uniformly, the repository contains an [EditorConfig](https://editorconfig.org/) [`.editorconfig`](https://github.com/ethereum/solidity/blob/develop/.editorconfig) file, which describes some of the styles used and which is recognized by many IDE's and editors.
+
 ## 1. Namespaces
 
 1. No `using namespace` declarations in header files.
-2. All symbols should be declared in a namespace except for final applications.
-3. Use anonymous namespaces for helpers whose scope is a cpp file only.
-4. Preprocessor symbols should be prefixed with the namespace in all-caps and an underscore.
+2. Use `using namespace std;` in cpp files, but avoid importing namespaces from boost and others.
+3. All symbols should be declared in a namespace except for final applications.
+4. Use anonymous namespaces for helpers whose scope is a cpp file only.
+5. Preprocessor symbols should be prefixed with the namespace in all-caps and an underscore.
 
-Yes:
+Only in the header:
 ```cpp
 #include <cassert>
+namespace myNamespace
+{
 std::tuple<float, float> meanAndSigma(std::vector<float> const& _v);
+}
 ```
 
-No:
+Only in the cpp file:
 ```cpp
 #include <cassert>
 using namespace std;
-tuple<float, float> meanAndSigma(vector<float> const& _v);
+tuple<float, float> myNamespace::meanAndSigma(vector<float> const& _v)
+{
+  // ...
+}
 ```
 
 ## 2. Preprocessor
@@ -110,7 +119,7 @@ Use `solAssert` and `solUnimplementedAssert` generously to check assumptions tha
 4. Favour declarations close to use; don't habitually declare at top of scope ala C.
 5. Pass non-trivial parameters as const reference, unless the data is to be copied into the function, then either pass by const reference or by value and use std::move.
 6. If a function returns multiple values, use std::tuple (std::pair acceptable) or better introduce a struct type. Do not use */& arguments.
-7. Use parameters of pointer type only if ``nullptr`` is a valid argument, use references otherwise. Often, ``boost::optional`` is better suited than a raw pointer.
+7. Use parameters of pointer type only if ``nullptr`` is a valid argument, use references otherwise. Often, ``std::optional`` is better suited than a raw pointer.
 8. Never use a macro where adequate non-preprocessor C++ can be written.
 9. Only use ``auto`` if the type is very long and rather irrelevant.
 10. Do not pass bools: prefer enumerations instead.
@@ -126,20 +135,20 @@ enum class Accuracy
 };
 struct MeanSigma
 {
-	float mean;
-	float standardDeviation;
+	float mean = 0.0f;
+	float standardDeviation = 1.0f;
 };
 double const d = 0;
-int i;
-int j;
-char* s;
+int i = 0;
+int j = 0;
+char* s = nullptr;
 MeanAndSigma ms meanAndSigma(std::vector<float> const& _v, Accuracy _a);
 Derived* x = dynamic_cast<Derived*>(base);
 for (auto i = x->begin(); i != x->end(); ++i) {}
 ```
 
 No:
-```cp
+```cpp
 const double d = 0;
 int i, j;
 char *s;
@@ -186,7 +195,7 @@ for (map<ComplexTypeOne, ComplexTypeTwo>::iterator i = l.begin(); i != l.end(); 
 2. Generally avoid shortening a standard form that already includes all important information:
    - e.g. stick to `shared_ptr<X>` rather than shortening to `ptr<X>`.
 3. Where there are exceptions to this (due to excessive use and clear meaning), note the change prominently and use it consistently:
-   - e.g. `using Guard = std::lock_guard<std::mutex>;` ///< Guard is used throughout the codebase since it is clear in meaning and used commonly. 
+   - e.g. `using Guard = std::lock_guard<std::mutex>;` ///< Guard is used throughout the codebase since it is clear in meaning and used commonly.
 4. In general expressions should be roughly as important/semantically meaningful as the space they occupy.
 5. Avoid introducing aliases for types unless they are very complicated. Consider the number of items a brain can keep track of at the same time.
 
@@ -202,7 +211,7 @@ for (map<ComplexTypeOne, ComplexTypeTwo>::iterator i = l.begin(); i != l.end(); 
 
 ## 12. Include Headers
 
-1. Includes should go in increasing order of generality (`libsolidity` -> `libevmasm` -> `libdevcore` -> `boost` -> `STL`).
+1. Includes should go in increasing order of generality (`libsolidity` -> `libevmasm` -> `libsolutil` -> `boost` -> `STL`).
 2. The corresponding `.h` file should be the first include in the respective `.cpp` file.
 3. Insert empty lines between blocks of include files.
 
@@ -217,8 +226,8 @@ Example:
 
 #include <libevmasm/GasMeter.h>
 
-#include <libdevcore/Common.h>
-#include <libdevcore/SHA3.h>
+#include <libsolutil/Common.h>
+#include <libsolutil/SHA3.h>
 
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -227,7 +236,7 @@ Example:
 #include <numeric>
 ```
 
-See [this issue](http://stackoverflow.com/questions/614302/c-header-order/614333#614333 "C header order") for the reason: this makes it easier to find missing includes in header files.
+See [this issue](https://stackoverflow.com/questions/614302/c-header-order/614333#614333 "C header order") for the reason: this makes it easier to find missing includes in header files.
 
 ## 13. Recommended reading
 

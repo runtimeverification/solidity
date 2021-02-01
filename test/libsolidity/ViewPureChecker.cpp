@@ -20,7 +20,7 @@
 
 #include <test/libsolidity/AnalysisFramework.h>
 
-#include <test/Options.h>
+#include <test/Common.h>
 
 #include <boost/test/unit_test.hpp>
 
@@ -28,102 +28,38 @@
 #include <tuple>
 
 using namespace std;
+using namespace solidity::langutil;
 
-namespace dev
-{
-namespace solidity
-{
-namespace test
+namespace solidity::frontend::test
 {
 
 BOOST_FIXTURE_TEST_SUITE(ViewPureChecker, AnalysisFramework)
-
-BOOST_AUTO_TEST_CASE(smoke_test)
-{
-	char const* text = R"(
-		contract C {
-			uint x;
-			function g() pure public {}
-			function f() view public returns (uint) { return now; }
-			function h() public { x = 2; }
-			function i() payable public { x = 2; }
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(call_internal_functions_success)
-{
-	char const* text = R"(
-		contract C {
-			function g() pure public { g(); }
-			function f() view public returns (uint) { f(); g(); }
-			function h() public { h(); g(); f(); }
-			function i() payable public { i(); h(); g(); f(); }
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(suggest_pure)
-{
-	char const* text = R"(
-		contract C {
-			function g() view public { }
-		}
-	)";
-	CHECK_WARNING(text, "can be restricted to pure");
-}
-
-BOOST_AUTO_TEST_CASE(suggest_view)
-{
-	char const* text = R"(
-		contract C {
-			uint x;
-			function g() public returns (uint) { return x; }
-		}
-	)";
-	CHECK_WARNING(text, "can be restricted to view");
-}
-
-BOOST_AUTO_TEST_CASE(call_internal_functions_fail)
-{
-	CHECK_ERROR(
-		"contract C{ function f() pure public { g(); } function g() view public {} }",
-		TypeError,
-		"Function declared as pure, but this expression (potentially) reads from the environment or state and thus requires \"view\""
-	);
-}
-
-BOOST_AUTO_TEST_CASE(write_storage_fail)
-{
-	CHECK_WARNING(
-		"contract C{ uint x; function f() view public { x = 2; } }",
-		"Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable."
-	);
-}
 
 BOOST_AUTO_TEST_CASE(environment_access)
 {
 	vector<string> view{
 		"block.coinbase",
 		"block.timestamp",
-		"block.blockhash(7)",
 		"block.difficulty",
 		"block.number",
 		"block.gaslimit",
 		"blockhash(7)",
 		"gasleft()",
-		"msg.gas",
 		"msg.value",
 		"msg.sender",
 		"tx.origin",
 		"tx.gasprice",
 		"this",
 		"address(1).balance",
+<<<<<<< ours
 		"address(1).codesize"
+=======
+>>>>>>> theirs
 	};
-	// ``block.blockhash`` and ``blockhash`` are tested seperately below because their usage will
+	if (solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
+		view.emplace_back("address(0x4242).staticcall(\"\")");
+
+	// ``block.blockhash`` and ``blockhash`` are tested separately below because their usage will
 	// produce warnings that can't be handled in a generic way.
 	vector<string> pure{
 	//	"msg.data",
@@ -156,21 +92,12 @@ BOOST_AUTO_TEST_CASE(environment_access)
 			"Statement has no effect."
 	}));
 
-	CHECK_WARNING_ALLOW_MULTI(
-		"contract C { function f() view public { block.blockhash; } }",
-		(std::vector<std::string>{
-			"Function state mutability can be restricted to pure",
-			"\"block.blockhash()\" has been deprecated in favor of \"blockhash()\""
-	}));
-}
-
-BOOST_AUTO_TEST_CASE(view_error_for_050)
-{
 	CHECK_ERROR(
-		"pragma experimental \"v0.5.0\"; contract C { uint x; function f() view public { x = 2; } }",
+		"contract C { function f() view public { block.blockhash; } }",
 		TypeError,
-		"Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable."
+		"\"block.blockhash()\" has been deprecated in favor of \"blockhash()\""
 	);
+<<<<<<< ours
 
 }
 
@@ -381,21 +308,21 @@ BOOST_AUTO_TEST_CASE(selector_complex)
 		}
 	)";
 	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+=======
+>>>>>>> theirs
 }
 
-BOOST_AUTO_TEST_CASE(selector_complex2)
+BOOST_AUTO_TEST_CASE(address_staticcall)
 {
 	string text = R"(
 		contract C {
-				function f() payable public returns (C) {
-				return this;
-			}
-			function g() pure public returns (bytes4) {
-				C x = C(0x123);
-				return x.f.selector;
+			function i() view public returns (bool) {
+				(bool success,) = address(0x4242).staticcall("");
+				return success;
 			}
 		}
 	)";
+<<<<<<< ours
 	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
@@ -441,16 +368,25 @@ BOOST_AUTO_TEST_CASE(assembly)
 	std::vector<std::string> msgs{msg,msg,msg,msg,msg,msg};
 	CHECK_ERROR_ALLOW_MULTI(text, SyntaxError, msgs);
 }
+=======
+	if (!solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
+		CHECK_ERROR(text, TypeError, "\"staticcall\" is not supported by the VM version.");
+	else
+		CHECK_SUCCESS_NO_WARNINGS(text);
+}
+
+>>>>>>> theirs
 
 BOOST_AUTO_TEST_CASE(assembly_staticcall)
 {
 	string text = R"(
 		contract C {
 			function i() view public {
-				assembly { pop(staticcall(gas, 1, 2, 3, 4, 5)) }
+				assembly { pop(staticcall(gas(), 1, 2, 3, 4, 5)) }
 			}
 		}
 	)";
+<<<<<<< ours
 	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
 	CHECK_ERROR(text, SyntaxError, msg);
 }
@@ -481,8 +417,12 @@ BOOST_AUTO_TEST_CASE(constant)
 	CHECK_SUCCESS_NO_WARNINGS(text);
 }
 
+=======
+	if (solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
+		CHECK_SUCCESS_NO_WARNINGS(text);
+}
+
+>>>>>>> theirs
 BOOST_AUTO_TEST_SUITE_END()
 
-}
-}
 }

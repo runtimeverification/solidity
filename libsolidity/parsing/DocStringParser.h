@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Lefteris <lefteris@ethdev.com>
  * @date 2014, 2015
@@ -22,22 +23,22 @@
 
 #pragma once
 
-#include <string>
 #include <libsolidity/ast/ASTAnnotations.h>
+#include <string>
 
-namespace dev
+namespace solidity::langutil
 {
-namespace solidity
-{
-
 class ErrorReporter;
+}
+
+namespace solidity::frontend
+{
 
 class DocStringParser
 {
 public:
 	/// Parse the given @a _docString and stores the parsed components internally.
-	/// @returns false on error and appends the error to @a _errors.
-	bool parse(std::string const& _docString, ErrorReporter& _errorReporter);
+	void parse(std::string const& _docString, langutil::ErrorReporter& _errorReporter);
 
 	std::multimap<std::string, DocTag> const& tags() const { return m_docTags; }
 
@@ -50,7 +51,6 @@ private:
 	iter parseDocTagParam(iter _pos, iter _end);
 	iter appendDocTagParam(iter _pos, iter _end);
 	void parseDocString(std::string const& _string);
-	iter appendDocTag(iter _pos, iter _end);
 	/// Parses the doc tag named @a _tag, adds it to m_docTags and returns the position
 	/// after the tag.
 	iter parseDocTag(iter _pos, iter _end, std::string const& _tag);
@@ -58,14 +58,10 @@ private:
 	/// Creates and inserts a new tag and adjusts m_lastTag.
 	void newTag(std::string const& _tagName);
 
-	void appendError(std::string const& _description);
-
 	/// Mapping tag name -> content.
 	std::multimap<std::string, DocTag> m_docTags;
 	DocTag* m_lastTag = nullptr;
-	ErrorReporter* m_errorReporter = nullptr;
-	bool m_errorsOccurred = false;
+	langutil::ErrorReporter* m_errorReporter = nullptr;
 };
 
-} //solidity NS
-} // dev NS
+}

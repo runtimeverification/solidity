@@ -6,3 +6,5 @@ contract test {
         a; b; c;
     }
 }
+// ----
+// TypeError 2271: (117-123): Operator % not compatible with types rational_const 1 / 2 and fixed128x18. Fractional literals not supported.

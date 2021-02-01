@@ -14,16 +14,17 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2014
  * Solidity commandline compiler.
  */
 
-#include "CommandLineInterface.h"
+#include <solc/CommandLineInterface.h>
+#include <boost/exception/all.hpp>
 #include <clocale>
 #include <iostream>
-#include <boost/exception/all.hpp>
 
 using namespace std;
 
@@ -53,7 +54,7 @@ static void setDefaultOrCLocale()
 int main(int argc, char** argv)
 {
 	setDefaultOrCLocale();
-	dev::solidity::CommandLineInterface cli;
+	solidity::frontend::CommandLineInterface cli;
 	if (!cli.parseArguments(argc, argv))
 		return 1;
 	if (!cli.processInput())

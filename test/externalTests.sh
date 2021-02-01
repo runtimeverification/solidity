@@ -35,26 +35,18 @@ then
 fi
 
 SOLJSON="$1"
+REPO_ROOT="$(dirname "$0")"
 
-function test_truffle
-{
-    name="$1"
-    repo="$2"
-    echo "Running $name tests..."
-    DIR=$(mktemp -d)
-    (
-      git clone --depth 1 "$repo" "$DIR"
-      cd "$DIR"
-      npm install
-      find . -name soljson.js -exec cp "$SOLJSON" {} \;
-      if [ "$name" == "Gnosis" ]; then
-        # Replace fixed-version pragmas in Gnosis (part of Consensys best practice)
-        find contracts test -name '*.sol' -type f -print0 | xargs -0 sed -i -e 's/pragma solidity 0/pragma solidity ^0/'
-      fi
-      npm run test
-    )
-    rm -rf "$DIR"
-}
+source scripts/common.sh
+source test/externalTests/common.sh
 
-test_truffle Gnosis https://github.com/gnosis/gnosis-contracts.git
-test_truffle Zeppelin https://github.com/OpenZeppelin/zeppelin-solidity.git
+printTask "Running external tests..."
+
+"$REPO_ROOT/externalTests/zeppelin.sh" "$SOLJSON"
+"$REPO_ROOT/externalTests/gnosis.sh" "$SOLJSON"
+"$REPO_ROOT/externalTests/gnosis-v2.sh" "$SOLJSON"
+"$REPO_ROOT/externalTests/colony.sh" "$SOLJSON"
+"$REPO_ROOT/externalTests/ens.sh" "$SOLJSON"
+
+# Disabled temporarily as it needs to be updated to latest Truffle first.
+#test_truffle Gnosis https://github.com/axic/pm-contracts.git solidity-050

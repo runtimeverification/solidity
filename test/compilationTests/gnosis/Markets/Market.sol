@@ -1,10 +1,10 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Events/Event.sol";
 import "../MarketMakers/MarketMaker.sol";
 
 
 /// @title Abstract market contract - Functions to be implemented by market contracts
-contract Market {
+abstract contract Market {
 
     /*
      *  Events
@@ -37,11 +37,11 @@ contract Market {
     /*
      *  Public functions
      */
-    function fund(uint256 _funding) public;
-    function close() public;
-    function withdrawFees() public returns (uint256);
-    function buy(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 maxCost) public returns (uint256);
-    function sell(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 minProfit) public returns (uint256);
-    function shortSell(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 minProfit) public returns (uint256);
-    function calcMarketFee(uint256 outcomeTokenCost) public constant returns (uint256);
+    function fund(uint256 _funding) virtual public;
+    function close() virtual public;
+    function withdrawFees() virtual public returns (uint256);
+    function buy(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 maxCost) virtual public returns (uint256);
+    function sell(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 minProfit) virtual public returns (uint256);
+    function shortSell(uint8 outcomeTokenIndex, uint256 outcomeTokenCount, uint256 minProfit) virtual public returns (uint256);
+    function calcMarketFee(uint256 outcomeTokenCost) virtual public view returns (uint256);
 }

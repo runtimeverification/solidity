@@ -11,16 +11,23 @@ Each contract can contain declarations of :ref:`structure-state-variables`, :ref
 :ref:`structure-function-modifiers`, :ref:`structure-events`, :ref:`structure-struct-types` and :ref:`structure-enum-types`.
 Furthermore, contracts can inherit from other contracts.
 
+There are also special kinds of contracts called :ref:`libraries<libraries>` and :ref:`interfaces<interfaces>`.
+
+The section about :ref:`contracts<contracts>` contains more details than this section,
+which serves to provide a quick overview.
+
 .. _structure-state-variables:
 
 State Variables
 ===============
 
-State variables are values which are permanently stored in contract storage.
+State variables are variables whose values are permanently stored in contract
+storage.
 
 ::
 
-    pragma solidity ^0.4.0;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >=0.4.0 <0.9.0;
 
     contract SimpleStorage {
         uint storedData; // State variable
@@ -36,11 +43,14 @@ visibility.
 Functions
 =========
 
-Functions are the executable units of code within a contract.
+Functions are the executable units of code. Functions are usually
+defined inside a contract, but they can also be defined outside of
+contracts.
 
 ::
 
-    pragma solidity ^0.4.0;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >0.7.0 <0.9.0;
 
     contract SimpleAuction {
         function bid() public payable { // Function
@@ -48,9 +58,15 @@ Functions are the executable units of code within a contract.
         }
     }
 
+    // Helper function defined outside of a contract
+    function helper(uint x) pure returns (uint) {
+        return x * 2;
+    }
+
 :ref:`function-calls` can happen internally or externally
-and have different levels of visibility (:ref:`visibility-and-getters`)
-towards other contracts.
+and have different levels of :ref:`visibility<visibility-and-getters>`
+towards other contracts. :ref:`Functions<functions>` accept :ref:`parameters and return variables<function-parameters-return-variables>` to pass parameters
+and values between them.
 
 .. _structure-function-modifiers:
 
@@ -58,11 +74,17 @@ Function Modifiers
 ==================
 
 Function modifiers can be used to amend the semantics of functions in a declarative way
-(see :ref:`modifiers` in contracts section).
+(see :ref:`modifiers` in the contracts section).
+
+Overloading, that is, having the same modifier name with different parameters,
+is not possible.
+
+Like functions, modifiers can be :ref:`overridden <modifier-overriding>`.
 
 ::
 
-    pragma solidity ^0.4.22;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >=0.4.22 <0.9.0;
 
     contract Purchase {
         address public seller;
@@ -75,7 +97,7 @@ Function modifiers can be used to amend the semantics of functions in a declarat
             _;
         }
 
-        function abort() public onlySeller { // Modifier usage
+        function abort() public view onlySeller { // Modifier usage
             // ...
         }
     }
@@ -89,7 +111,8 @@ Events are convenience interfaces with the EVM logging facilities.
 
 ::
 
-    pragma solidity ^0.4.21;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >=0.4.21 <0.9.0;
 
     contract SimpleAuction {
         event HighestBidIncreased(address bidder, uint amount); // Event
@@ -113,7 +136,8 @@ Structs are custom defined types that can group several variables (see
 
 ::
 
-    pragma solidity ^0.4.0;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >=0.4.0 <0.9.0;
 
     contract Ballot {
         struct Voter { // Struct
@@ -129,12 +153,13 @@ Structs are custom defined types that can group several variables (see
 Enum Types
 ==========
 
-Enums can be used to create custom types with a finite set of values (see
+Enums can be used to create custom types with a finite set of 'constant values' (see
 :ref:`enums` in types section).
 
 ::
 
-    pragma solidity ^0.4.0;
+    // SPDX-License-Identifier: GPL-3.0
+    pragma solidity >=0.4.0 <0.9.0;
 
     contract Purchase {
         enum State { Created, Locked, Inactive } // Enum

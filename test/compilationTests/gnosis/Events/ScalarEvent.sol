@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Events/Event.sol";
 
 
@@ -28,13 +28,12 @@ contract ScalarEvent is Event {
     /// @param _oracle Oracle contract used to resolve the event
     /// @param _lowerBound Lower bound for event outcome
     /// @param _upperBound Lower bound for event outcome
-    function ScalarEvent(
+    constructor(
         Token _collateralToken,
         Oracle _oracle,
         int256 _lowerBound,
         int256 _upperBound
     )
-        public
         Event(_collateralToken, _oracle, 2)
     {
         // Validate bounds
@@ -44,9 +43,10 @@ contract ScalarEvent is Event {
     }
 
     /// @dev Exchanges sender's winning outcome tokens for collateral tokens
-    /// @return Sender's winnings
+    /// @return winnings Sender's winnings
     function redeemWinnings()
         public
+        override
         returns (uint256 winnings)
     {
         // Winning outcome has to be set
@@ -61,7 +61,7 @@ contract ScalarEvent is Event {
             convertedWinningOutcome = OUTCOME_RANGE;
         // Map outcome to outcome range
         else
-            convertedWinningOutcome = uint24(OUTCOME_RANGE * (outcome - lowerBound) / (upperBound - lowerBound));
+            convertedWinningOutcome = uint24(uint256(OUTCOME_RANGE * (outcome - lowerBound) / (upperBound - lowerBound)));
         uint256 factorShort = OUTCOME_RANGE - convertedWinningOutcome;
         uint256 factorLong = OUTCOME_RANGE - factorShort;
         uint256 shortOutcomeTokenCount = outcomeTokens[SHORT].balanceOf(msg.sender);
@@ -72,16 +72,17 @@ contract ScalarEvent is Event {
         outcomeTokens[LONG].revoke(msg.sender, longOutcomeTokenCount);
         // Payout winnings to sender
         require(collateralToken.transfer(msg.sender, winnings));
-        WinningsRedemption(msg.sender, winnings);
+        emit WinningsRedemption(msg.sender, winnings);
     }
 
     /// @dev Calculates and returns event hash
     /// @return Event hash
     function getEventHash()
         public
-        constant
+        override
+        view
         returns (bytes32)
     {
-        return keccak256(collateralToken, oracle, lowerBound, upperBound);
+        return keccak256(abi.encodePacked(collateralToken, oracle, lowerBound, upperBound));
     }
 }

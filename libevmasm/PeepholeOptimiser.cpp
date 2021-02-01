@@ -14,19 +14,20 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @file PeepholeOptimiser.cpp
  * Performs local optimising code changes to assembly.
  */
 
-#include "PeepholeOptimiser.h"
+#include <libevmasm/PeepholeOptimiser.h>
 
 #include <libevmasm/AssemblyItem.h>
 #include <libevmasm/SemanticInformation.h>
 
 using namespace std;
-using namespace dev::eth;
-using namespace dev;
+using namespace solidity;
+using namespace solidity::evmasm;
 
 // TODO: Extend this to use the tools from ExpressionClasses.cpp
 
@@ -43,6 +44,14 @@ struct OptimiserState
 template <class Method, size_t Arguments>
 struct ApplyRule
 {
+};
+template <class Method>
+struct ApplyRule<Method, 4>
+{
+	static bool applyRule(AssemblyItems::const_iterator _in, std::back_insert_iterator<AssemblyItems> _out)
+	{
+		return Method::applySimple(_in[0], _in[1], _in[2], _in[3], _out);
+	}
 };
 template <class Method>
 struct ApplyRule<Method, 3>
@@ -76,7 +85,7 @@ struct SimplePeepholeOptimizerMethod
 	{
 		if (
 			_state.i + WindowSize <= _state.items.size() &&
-			ApplyRule<Method, WindowSize>::applyRule(_state.items.begin() + _state.i, _state.out)
+			ApplyRule<Method, WindowSize>::applyRule(_state.items.begin() + static_cast<ptrdiff_t>(_state.i), _state.out)
 		)
 		{
 			_state.i += WindowSize;
@@ -160,8 +169,7 @@ struct CommutativeSwap: SimplePeepholeOptimizerMethod<CommutativeSwap, 2>
 	{
 		// Remove SWAP1 if following instruction is commutative
 		if (
-			_swap.type() == Operation &&
-			_swap.instruction() == Instruction::SWAP1 &&
+			_swap == Instruction::SWAP1 &&
 			SemanticInformation::isCommutativeOperation(_op)
 		)
 		{
@@ -177,7 +185,7 @@ struct SwapComparison: SimplePeepholeOptimizerMethod<SwapComparison, 2>
 {
 	static bool applySimple(AssemblyItem const& _swap, AssemblyItem const& _op, std::back_insert_iterator<AssemblyItems> _out)
 	{
-		map<Instruction, Instruction> swappableOps{
+		static map<Instruction, Instruction> const swappableOps{
 			{ Instruction::LT, Instruction::GT },
 			{ Instruction::GT, Instruction::LT },
 			{ Instruction::SLT, Instruction::SGT },
@@ -185,13 +193,62 @@ struct SwapComparison: SimplePeepholeOptimizerMethod<SwapComparison, 2>
 		};
 
 		if (
-			_swap.type() == Operation &&
-			_swap.instruction() == Instruction::SWAP1 &&
+			_swap == Instruction::SWAP1 &&
 			_op.type() == Operation &&
 			swappableOps.count(_op.instruction())
 		)
 		{
 			*_out = swappableOps.at(_op.instruction());
+			return true;
+		}
+		else
+			return false;
+	}
+};
+
+/// Remove swapN after dupN
+struct DupSwap: SimplePeepholeOptimizerMethod<DupSwap, 2>
+{
+	static size_t applySimple(
+		AssemblyItem const& _dupN,
+		AssemblyItem const& _swapN,
+		std::back_insert_iterator<AssemblyItems> _out
+	)
+	{
+		if (
+			SemanticInformation::isDupInstruction(_dupN) &&
+			SemanticInformation::isSwapInstruction(_swapN) &&
+			getDupNumber(_dupN.instruction()) == getSwapNumber(_swapN.instruction())
+		)
+		{
+			*_out = _dupN;
+			return true;
+		}
+		else
+			return false;
+	}
+};
+
+
+struct IsZeroIsZeroJumpI: SimplePeepholeOptimizerMethod<IsZeroIsZeroJumpI, 4>
+{
+	static size_t applySimple(
+		AssemblyItem const& _iszero1,
+		AssemblyItem const& _iszero2,
+		AssemblyItem const& _pushTag,
+		AssemblyItem const& _jumpi,
+		std::back_insert_iterator<AssemblyItems> _out
+	)
+	{
+		if (
+			_iszero1 == Instruction::ISZERO &&
+			_iszero2 == Instruction::ISZERO &&
+			_pushTag.type() == PushTag &&
+			_jumpi == Instruction::JUMPI
+		)
+		{
+			*_out = _pushTag;
+			*_out = _jumpi;
 			return true;
 		}
 		else
@@ -234,9 +291,10 @@ struct TagConjunctions: SimplePeepholeOptimizerMethod<TagConjunctions, 3>
 		std::back_insert_iterator<AssemblyItems> _out
 	)
 	{
+		if (_and != Instruction::AND)
+			return false;
 		if (
 			_pushTag.type() == PushTag &&
-			_and == Instruction::AND &&
 			_pushConstant.type() == Push &&
 			(_pushConstant.data() & u256(0xFFFFFFFF)) == u256(0xFFFFFFFF)
 		)
@@ -244,8 +302,35 @@ struct TagConjunctions: SimplePeepholeOptimizerMethod<TagConjunctions, 3>
 			*_out = _pushTag;
 			return true;
 		}
+		else if (
+			// tag and constant are swapped
+			_pushConstant.type() == PushTag &&
+			_pushTag.type() == Push &&
+			(_pushTag.data() & u256(0xFFFFFFFF)) == u256(0xFFFFFFFF)
+		)
+		{
+			*_out = _pushConstant;
+			return true;
+		}
 		else
 			return false;
+	}
+};
+
+struct TruthyAnd: SimplePeepholeOptimizerMethod<TruthyAnd, 3>
+{
+	static bool applySimple(
+		AssemblyItem const& _push,
+		AssemblyItem const& _not,
+		AssemblyItem const& _and,
+		std::back_insert_iterator<AssemblyItems>
+	)
+	{
+		return (
+			_push.type() == Push && _push.data() == 0 &&
+			_not == Instruction::NOT &&
+			_and == Instruction::AND
+		);
 	}
 };
 
@@ -254,7 +339,7 @@ struct UnreachableCode
 {
 	static bool apply(OptimiserState& _state)
 	{
-		auto it = _state.items.begin() + _state.i;
+		auto it = _state.items.begin() + static_cast<ptrdiff_t>(_state.i);
 		auto end = _state.items.end();
 		if (it == end)
 			return false;
@@ -268,13 +353,13 @@ struct UnreachableCode
 		)
 			return false;
 
-		size_t i = 1;
+		ptrdiff_t i = 1;
 		while (it + i != end && it[i].type() != Tag)
 			i++;
 		if (i > 1)
 		{
 			*_state.out = it[0];
-			_state.i += i;
+			_state.i += static_cast<size_t>(i);
 			return true;
 		}
 		else
@@ -296,7 +381,7 @@ void applyMethods(OptimiserState& _state, Method, OtherMethods... _other)
 
 size_t numberOfPops(AssemblyItems const& _items)
 {
-	return std::count(_items.begin(), _items.end(), Instruction::POP);
+	return static_cast<size_t>(std::count(_items.begin(), _items.end(), Instruction::POP));
 }
 
 }
@@ -305,10 +390,15 @@ bool PeepholeOptimiser::optimise()
 {
 	OptimiserState state {m_items, 0, std::back_inserter(m_optimisedItems)};
 	while (state.i < m_items.size())
-		applyMethods(state, PushPop(), OpPop(), DoublePush(), DoubleSwap(), CommutativeSwap(), SwapComparison(), JumpToNext(), UnreachableCode(), TagConjunctions(), Identity());
+		applyMethods(
+			state,
+			PushPop(), OpPop(), DoublePush(), DoubleSwap(), CommutativeSwap(), SwapComparison(),
+			DupSwap(), IsZeroIsZeroJumpI(), JumpToNext(), UnreachableCode(),
+			TagConjunctions(), TruthyAnd(), Identity()
+		);
 	if (m_optimisedItems.size() < m_items.size() || (
 		m_optimisedItems.size() == m_items.size() && (
-			eth::bytesRequired(m_optimisedItems, 3) < eth::bytesRequired(m_items, 3) ||
+			evmasm::bytesRequired(m_optimisedItems, 3) < evmasm::bytesRequired(m_items, 3) ||
 			numberOfPops(m_optimisedItems) > numberOfPops(m_items)
 		)
 	))

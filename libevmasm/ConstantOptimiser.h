@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /** @file ConstantOptimiser.cpp
  * @author Christian <c@ethdev.com>
  * @date 2015
@@ -23,17 +24,13 @@
 
 #include <libevmasm/Exceptions.h>
 
-#include <libsolidity/interface/EVMVersion.h>
+#include <liblangutil/EVMVersion.h>
 
-#include <libdevcore/Assertions.h>
-#include <libdevcore/CommonData.h>
-#include <libdevcore/CommonIO.h>
+#include <libsolutil/Assertions.h>
 
 #include <vector>
 
-namespace dev
-{
-namespace eth
+namespace solidity::evmasm
 {
 
 class AssemblyItem;
@@ -47,26 +44,29 @@ class ConstantOptimisationMethod
 {
 public:
 	/// Tries to optimised how constants are represented in the source code and modifies
-	/// @a _assembly and its @a _items.
+	/// @a _assembly.
 	/// @returns zero if no optimisations could be performed.
 	static unsigned optimiseConstants(
 		bool _isCreation,
 		size_t _runs,
-		solidity::EVMVersion _evmVersion,
-		Assembly& _assembly,
-		AssemblyItems& _items
+		langutil::EVMVersion _evmVersion,
+		Assembly& _assembly
 	);
+
+protected:
+	/// This is the public API for the optimiser methods, but it doesn't need to be exposed to the caller.
 
 	struct Params
 	{
 		bool isCreation; ///< Whether this is called during contract creation or runtime.
 		size_t runs; ///< Estimated number of calls per opcode oven the lifetime of the contract.
 		size_t multiplicity; ///< Number of times the constant appears in the code.
-		solidity::EVMVersion evmVersion; ///< Version of the EVM
+		langutil::EVMVersion evmVersion; ///< Version of the EVM
 	};
 
 	explicit ConstantOptimisationMethod(Params const& _params, u256 const& _value):
 		m_params(_params), m_value(_value) {}
+	virtual ~ConstantOptimisationMethod() = default;
 	virtual bigint gasNeeded() const = 0;
 	/// Executes the method, potentially appending to the assembly and returns a vector of
 	/// assembly items the constant should be relpaced with in one sweep.
@@ -74,14 +74,10 @@ public:
 	virtual AssemblyItems execute(Assembly& _assembly) const = 0;
 
 protected:
-	size_t dataSize() const { return std::max<size_t>(1, dev::bytesRequired(m_value)); }
-
 	/// @returns the run gas for the given items ignoring special gas costs
 	static bigint simpleRunGas(AssemblyItems const& _items);
 	/// @returns the gas needed to store the given data literally
 	bigint dataGas(bytes const& _data) const;
-	/// @returns the gas needed to store the value literally
-	bigint dataGas() const { return dataGas(toCompactBigEndian(m_value, 1)); }
 	static size_t bytesRequired(AssemblyItems const& _items);
 	/// @returns the combined estimated gas usage taking @a m_params into account.
 	bigint combineGas(
@@ -110,8 +106,8 @@ class LiteralMethod: public ConstantOptimisationMethod
 public:
 	explicit LiteralMethod(Params const& _params, u256 const& _value):
 		ConstantOptimisationMethod(_params, _value) {}
-	virtual bigint gasNeeded() const override;
-	virtual AssemblyItems execute(Assembly&) const override { return AssemblyItems{}; }
+	bigint gasNeeded() const override;
+	AssemblyItems execute(Assembly&) const override { return AssemblyItems{}; }
 };
 
 /**
@@ -120,9 +116,10 @@ public:
 class CodeCopyMethod: public ConstantOptimisationMethod
 {
 public:
-	explicit CodeCopyMethod(Params const& _params, u256 const& _value);
-	virtual bigint gasNeeded() const override;
-	virtual AssemblyItems execute(Assembly& _assembly) const override;
+	explicit CodeCopyMethod(Params const& _params, u256 const& _value):
+		ConstantOptimisationMethod(_params, _value) {}
+	bigint gasNeeded() const override;
+	AssemblyItems execute(Assembly& _assembly) const override;
 
 protected:
 	static AssemblyItems const& copyRoutine();
@@ -145,8 +142,8 @@ public:
 		);
 	}
 
-	virtual bigint gasNeeded() const override { return gasNeeded(m_routine); }
-	virtual AssemblyItems execute(Assembly&) const override
+	bigint gasNeeded() const override { return gasNeeded(m_routine); }
+	AssemblyItems execute(Assembly&) const override
 	{
 		return m_routine;
 	}
@@ -155,7 +152,7 @@ protected:
 	/// Tries to recursively find a way to compute @a _value.
 	AssemblyItems findRepresentation(u256 const& _value);
 	/// Recomputes the value from the calculated representation and checks for correctness.
-	static bool checkRepresentation(u256 const& _value, AssemblyItems const& _routine);
+	bool checkRepresentation(u256 const& _value, AssemblyItems const& _routine) const;
 	bigint gasNeeded(AssemblyItems const& _routine) const;
 
 	/// Counter for the complexity of optimization, will stop when it reaches zero.
@@ -163,5 +160,4 @@ protected:
 	AssemblyItems m_routine;
 };
 
-}
 }

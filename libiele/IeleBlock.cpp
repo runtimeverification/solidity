@@ -2,10 +2,10 @@
 
 #include "IeleFunction.h"
 
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleBlock::IeleBlock(IeleContext *Ctx, const llvm::Twine &Name,
                      IeleFunction *F, IeleBlock *InsertBefore) :

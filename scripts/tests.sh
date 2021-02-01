@@ -5,7 +5,7 @@
 #
 # The documentation for solidity is hosted at:
 #
-#     https://solidity.readthedocs.org
+#     https://docs.soliditylang.org
 #
 # ------------------------------------------------------------------------------
 # This file is part of solidity.
@@ -28,7 +28,27 @@
 
 set -e
 
-REPO_ROOT="$(dirname "$0")"/..
+REPO_ROOT="$(dirname "$0")/.."
+SOLIDITY_BUILD_DIR="${SOLIDITY_BUILD_DIR:-${REPO_ROOT}/build}"
+
+source "${REPO_ROOT}/scripts/common.sh"
+
+WORKDIR=`mktemp -d`
+CMDLINE_PID=
+
+cleanup() {
+    # ensure failing commands don't cause termination during cleanup (especially within safe_kill)
+    set +e
+
+    if [[ -n "$CMDLINE_PID" ]]
+    then
+        safe_kill $CMDLINE_PID "Commandline tests"
+    fi
+
+    echo "Cleaning up working directory ${WORKDIR} ..."
+    rm -rf "$WORKDIR" || true
+}
+trap cleanup INT TERM
 
 if [ "$1" = --junit_report ]
 then
@@ -42,105 +62,79 @@ else
     log_directory=""
 fi
 
-function printError() { echo "$(tput setaf 1)$1$(tput sgr0)"; }
-function printTask() { echo "$(tput bold)$(tput setaf 2)$1$(tput sgr0)"; }
-
-
 printTask "Running commandline tests..."
-"$REPO_ROOT/test/cmdlineTests.sh" &
-CMDLINE_PID=$!
 # Only run in parallel if this is run on CI infrastructure
-if [ -z "$CI" ]
+if [[ -n "$CI" ]]
 then
-    if ! wait $CMDLINE_PID
+    "$REPO_ROOT/test/cmdlineTests.sh" &
+    CMDLINE_PID=$!
+else
+    if ! $REPO_ROOT/test/cmdlineTests.sh
     then
         printError "Commandline tests FAILED"
         exit 1
     fi
 fi
 
-function download_eth()
-{
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        ETH_PATH="$REPO_ROOT/eth"
-    elif [ -z $CI ]; then
-        ETH_PATH="eth"
-    else
-        mkdir -p /tmp/test
-        if grep -i trusty /etc/lsb-release >/dev/null 2>&1
-        then
-            # built from 5ac09111bd0b6518365fe956e1bdb97a2db82af1 at 2018-04-05
-            ETH_BINARY=eth_2018-04-05_trusty
-            ETH_HASH="1e5e178b005e5b51f9d347df4452875ba9b53cc6"
-        else
-            # built from 5ac09111bd0b6518365fe956e1bdb97a2db82af1 at 2018-04-05
-            ETH_BINARY=eth_2018-04-05_artful
-            ETH_HASH="eb2d0df022753bb2b442ba73e565a9babf6828d6"
-        fi
-        wget -q -O /tmp/test/eth https://github.com/ethereum/cpp-ethereum/releases/download/solidityTester/$ETH_BINARY
-        test "$(shasum /tmp/test/eth)" = "$ETH_HASH  /tmp/test/eth"
-        sync
-        chmod +x /tmp/test/eth
-        sync # Otherwise we might get a "text file busy" error
-        ETH_PATH="/tmp/test/eth"
-    fi
-
-}
-
-# $1: data directory
-# echos the PID
-function run_eth()
-{
-    $ETH_PATH --test -d "$1" >/dev/null 2>&1 &
-    echo $!
-    # Wait until the IPC endpoint is available.
-    while [ ! -S "$1"/geth.ipc ] ; do sleep 1; done
-    sleep 2
-}
-
-download_eth
-ETH_PID=$(run_eth /tmp/test)
-
-progress="--show-progress"
-if [ "$CIRCLECI" ]
-then
-    progress=""
-fi
 
 EVM_VERSIONS="homestead byzantium"
 
-if [ "$CIRCLECI" ] || [ -z "$CI" ]
+if [ -z "$CI" ]
 then
-EVM_VERSIONS+=" constantinople"
+    EVM_VERSIONS+=" constantinople petersburg istanbul"
 fi
 
 # And then run the Solidity unit-tests in the matrix combination of optimizer / no optimizer
-# and homestead / byzantium VM, # pointing to that IPC endpoint.
+# and homestead / byzantium VM
 for optimize in "" "--optimize"
 do
-  for vm in $EVM_VERSIONS
-  do
-    printTask "--> Running tests using "$optimize" --evm-version "$vm"..."
-    log=""
-    if [ -n "$log_directory" ]
-    then
-      if [ -n "$optimize" ]
-      then
-        log=--logger=JUNIT,test_suite,$log_directory/opt_$vm.xml $testargs
-      else
-        log=--logger=JUNIT,test_suite,$log_directory/noopt_$vm.xml $testargs_no_opt
-      fi
-    fi
-    "$REPO_ROOT"/build/test/soltest $progress $log -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --ipcpath /tmp/test/geth.ipc
-  done
+    for vm in $EVM_VERSIONS
+    do
+        FORCE_ABIV1_RUNS="no"
+        if [[ "$vm" == "istanbul" ]]
+        then
+            FORCE_ABIV1_RUNS="no yes" # run both in istanbul
+        fi
+        for abiv1 in $FORCE_ABIV1_RUNS
+        do
+            force_abiv1_flag=""
+            if [[ "$abiv1" == "yes" ]]
+            then
+                force_abiv1_flag="--abiencoderv1"
+            fi
+            printTask "--> Running tests using "$optimize" --evm-version "$vm" $force_abiv1_flag..."
+
+            log=""
+            if [ -n "$log_directory" ]
+            then
+                if [ -n "$optimize" ]
+                then
+                    log=--logger=JUNIT,error,$log_directory/opt_$vm.xml
+                else
+                    log=--logger=JUNIT,error,$log_directory/noopt_$vm.xml
+                fi
+            fi
+
+            EWASM_ARGS=""
+            [ "${vm}" = "byzantium" ] && [ "${optimize}" = "" ] && EWASM_ARGS="--ewasm"
+
+            set +e
+            "${SOLIDITY_BUILD_DIR}"/test/soltest --show-progress $log -- ${EWASM_ARGS} --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" $SMT_FLAGS $force_abiv1_flag
+
+            if test "0" -ne "$?"; then
+                exit 1
+            fi
+            set -e
+
+        done
+    done
 done
 
-if ! wait $CMDLINE_PID
+if [[ -n $CMDLINE_PID ]] && ! wait $CMDLINE_PID
 then
     printError "Commandline tests FAILED"
+    CMDLINE_PID=
     exit 1
 fi
 
-pkill "$ETH_PID" || true
-sleep 4
-pgrep "$ETH_PID" && pkill -9 "$ETH_PID" || true
+cleanup

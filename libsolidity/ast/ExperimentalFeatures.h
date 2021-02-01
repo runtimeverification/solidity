@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * List of experimental features.
  */
@@ -21,36 +22,32 @@
 #pragma once
 
 #include <map>
+#include <set>
 
-namespace dev
-{
-namespace solidity
+namespace solidity::frontend
 {
 
 enum class ExperimentalFeature
 {
-	ABIEncoderV2, // new ABI encoder that makes use of JULIA
+	ABIEncoderV2, // new ABI encoder that makes use of Yul
 	SMTChecker,
-	V050, // v0.5.0 breaking changes
 	Test,
 	TestOnlyAnalysis
 };
 
-static const std::map<ExperimentalFeature, bool> ExperimentalFeatureOnlyAnalysis =
+static std::set<ExperimentalFeature> const ExperimentalFeatureWithoutWarning =
 {
-	{ ExperimentalFeature::SMTChecker, true },
-	{ ExperimentalFeature::TestOnlyAnalysis, true },
-	{ ExperimentalFeature::V050, true }
+	ExperimentalFeature::ABIEncoderV2,
+	ExperimentalFeature::SMTChecker,
+	ExperimentalFeature::TestOnlyAnalysis,
 };
 
-static const std::map<std::string, ExperimentalFeature> ExperimentalFeatureNames =
+static std::map<std::string, ExperimentalFeature> const ExperimentalFeatureNames =
 {
 	{ "ABIEncoderV2", ExperimentalFeature::ABIEncoderV2 },
 	{ "SMTChecker", ExperimentalFeature::SMTChecker },
-	{ "v0.5.0", ExperimentalFeature::V050 },
 	{ "__test", ExperimentalFeature::Test },
 	{ "__testOnlyAnalysis", ExperimentalFeature::TestOnlyAnalysis },
 };
 
-}
 }

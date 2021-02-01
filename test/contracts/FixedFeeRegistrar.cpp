@@ -14,14 +14,18 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2015
  * Tests for a fixed fee registrar contract.
  */
 
+#include <libsolutil/LazyInit.h>
+
 #include <string>
 #include <tuple>
+#include <optional>
 
 #if defined(_MSC_VER)
 #pragma warning(push)
@@ -35,13 +39,11 @@
 #include <test/libsolidity/SolidityExecutionFramework.h>
 
 using namespace std;
-using namespace dev::test;
+using namespace solidity;
+using namespace solidity::util;
+using namespace solidity::test;
 
-namespace dev
-{
-namespace solidity
-{
-namespace test
+namespace solidity::frontend::test
 {
 
 namespace
@@ -53,15 +55,15 @@ static char const* registrarCode = R"DELIMITER(
 // @authors:
 //   Gav Wood <g@ethdev.com>
 
-pragma solidity ^0.4.0;
+pragma solidity >=0.4.0 <0.9.0;
 
-contract Registrar {
+abstract contract Registrar {
 	event Changed(string indexed name);
 
-	function owner(string _name) constant returns (address o_owner);
-	function addr(string _name) constant returns (address o_address);
-	function subRegistrar(string _name) constant returns (address o_subRegistrar);
-	function content(string _name) constant returns (bytes32 o_content);
+	function owner(string memory _name) public virtual view returns (address o_owner);
+	function addr(string memory _name) public virtual view returns (address o_address);
+	function subRegistrar(string memory _name) virtual public view returns (address o_subRegistrar);
+	function content(string memory _name) public virtual view returns (bytes32 o_content);
 }
 
 contract FixedFeeRegistrar is Registrar {
@@ -72,70 +74,77 @@ contract FixedFeeRegistrar is Registrar {
 		address owner;
 	}
 
-	modifier onlyrecordowner(string _name) { if (m_record(_name).owner == msg.sender) _; }
+	modifier onlyrecordowner(string memory _name) { if (m_record(_name).owner == msg.sender) _; }
 
-	function reserve(string _name) payable {
-		Record rec = m_record(_name);
-		if (rec.owner == 0 && msg.value >= c_fee) {
+	function reserve(string memory _name) public payable {
+		Record storage rec = m_record(_name);
+		if (rec.owner == 0x0000000000000000000000000000000000000000 && msg.value >= c_fee) {
 			rec.owner = msg.sender;
-			Changed(_name);
+			emit Changed(_name);
 		}
 	}
-	function disown(string _name, address _refund) onlyrecordowner(_name) {
-		delete m_recordData[uint(keccak256(_name)) / 8];
+	function disown(string memory _name, address payable _refund) onlyrecordowner(_name) public {
+		delete m_recordData[uint(keccak256(bytes(_name))) / 8];
 		if (!_refund.send(c_fee))
-			throw;
-		Changed(_name);
+			revert();
+		emit Changed(_name);
 	}
-	function transfer(string _name, address _newOwner) onlyrecordowner(_name) {
+	function transfer(string memory _name, address _newOwner) onlyrecordowner(_name) public {
 		m_record(_name).owner = _newOwner;
-		Changed(_name);
+		emit Changed(_name);
 	}
-	function setAddr(string _name, address _a) onlyrecordowner(_name) {
+	function setAddr(string memory _name, address _a) onlyrecordowner(_name) public {
 		m_record(_name).addr = _a;
-		Changed(_name);
+		emit Changed(_name);
 	}
-	function setSubRegistrar(string _name, address _registrar) onlyrecordowner(_name) {
+	function setSubRegistrar(string memory _name, address _registrar) onlyrecordowner(_name) public {
 		m_record(_name).subRegistrar = _registrar;
-		Changed(_name);
+		emit Changed(_name);
 	}
-	function setContent(string _name, bytes32 _content) onlyrecordowner(_name) {
+	function setContent(string memory _name, bytes32 _content) onlyrecordowner(_name) public {
 		m_record(_name).content = _content;
-		Changed(_name);
+		emit Changed(_name);
 	}
 
-	function record(string _name) constant returns (address o_addr, address o_subRegistrar, bytes32 o_content, address o_owner) {
-		Record rec = m_record(_name);
+	function record(string memory _name) public view returns (address o_addr, address o_subRegistrar, bytes32 o_content, address o_owner) {
+		Record storage rec = m_record(_name);
 		o_addr = rec.addr;
 		o_subRegistrar = rec.subRegistrar;
 		o_content = rec.content;
 		o_owner = rec.owner;
 	}
-	function addr(string _name) constant returns (address) { return m_record(_name).addr; }
-	function subRegistrar(string _name) constant returns (address) { return m_record(_name).subRegistrar; }
-	function content(string _name) constant returns (bytes32) { return m_record(_name).content; }
-	function owner(string _name) constant returns (address) { return m_record(_name).owner; }
+	function addr(string memory _name) public override view returns (address) { return m_record(_name).addr; }
+	function subRegistrar(string memory _name) public override view returns (address) { return m_record(_name).subRegistrar; }
+	function content(string memory _name) public override view returns (bytes32) { return m_record(_name).content; }
+	function owner(string memory _name) public override view returns (address) { return m_record(_name).owner; }
 
 	Record[2**253] m_recordData;
-	function m_record(string _name) constant internal returns (Record storage o_record) {
-		return m_recordData[uint(keccak256(_name)) / 8];
+	function m_record(string memory _name) view internal returns (Record storage o_record) {
+		return m_recordData[uint(keccak256(bytes(_name))) / 8];
 	}
 	uint constant c_fee = 69 ether;
 }
 )DELIMITER";
 
-static unique_ptr<bytes> s_compiledRegistrar;
+static LazyInit<bytes> s_compiledRegistrar;
 
 class RegistrarTestFramework: public SolidityExecutionFramework
 {
 protected:
 	void deployRegistrar()
 	{
-		if (!s_compiledRegistrar)
-			s_compiledRegistrar.reset(new bytes(compileContract(registrarCode, "FixedFeeRegistrar")));
+		bytes const& compiled = s_compiledRegistrar.init([&]{
+			return compileContract(registrarCode, "FixedFeeRegistrar");
+		});
 
+<<<<<<< ours
 		sendMessage(std::vector<bytes>(), "", *s_compiledRegistrar, true);
 		BOOST_REQUIRE(m_status == 0);
+=======
+		sendMessage(compiled, true);
+		BOOST_REQUIRE(m_transactionSuccessful);
+		BOOST_REQUIRE(!m_output.empty());
+>>>>>>> theirs
 	}
 	u256 const m_fee = u256("69000000000000000000");
 };
@@ -160,7 +169,11 @@ BOOST_AUTO_TEST_CASE(reserve)
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee + 1, encodeDyn(name[1])) == encodeArgs());
 	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name[1])) == encodeArgs(account(0)));
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee - 1, encodeDyn(name[2])) == encodeArgs());
+<<<<<<< ours
 	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name[2])) == encodeArgs(0));
+=======
+	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name[2])) == encodeArgs(h160{}));
+>>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE(double_reserve)
@@ -190,11 +203,15 @@ BOOST_AUTO_TEST_CASE(properties)
 		m_sender = account(0);
 		sendEther(account(count), 100 * ether);
 		m_sender = account(count);
-		Address owner = m_sender;
+		h160 owner = m_sender;
 		// setting by sender works
 		BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee, encodeDyn(name)) == encodeArgs());
 		BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(owner));
+<<<<<<< ours
 		BOOST_CHECK(callContractFunction("setAddr(string,address)", encodeDyn(name), u256(addr)) == encodeArgs());
+=======
+		BOOST_CHECK(callContractFunction("setAddr(string,address)", u256(0x40), u256(addr), u256(name.length()), name) == encodeArgs());
+>>>>>>> theirs
 		BOOST_CHECK(callContractFunction("addr(string)", encodeDyn(name)) == encodeArgs(addr));
 		BOOST_CHECK(callContractFunction("setSubRegistrar(string,address)", encodeDyn(name), addr + 20) == encodeArgs());
 		BOOST_CHECK(callContractFunction("subRegistrar(string)", encodeDyn(name)) == encodeArgs(addr + 20));
@@ -206,7 +223,11 @@ BOOST_AUTO_TEST_CASE(properties)
 		sendEther(account(count), 100 * ether);
 		m_sender = account(count);
 		BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(owner));
+<<<<<<< ours
 		BOOST_CHECK(callContractFunction("setAddr(string,address)", encodeDyn(name), addr + 1) == encodeArgs());
+=======
+		BOOST_CHECK(callContractFunction("setAddr(string,address)", u256(0x40), addr + 1, u256(name.length()), name) == encodeArgs());
+>>>>>>> theirs
 		BOOST_CHECK(callContractFunction("addr(string)", encodeDyn(name)) == encodeArgs(addr));
 		BOOST_CHECK(callContractFunction("setSubRegistrar(string,address)", encodeDyn(name), addr + 20 + 1) == encodeArgs());
 		BOOST_CHECK(callContractFunction("subRegistrar(string)", encodeDyn(name)) == encodeArgs(addr + 20));
@@ -221,8 +242,13 @@ BOOST_AUTO_TEST_CASE(transfer)
 	deployRegistrar();
 	string name = "abc";
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee, encodeDyn(name)) == encodeArgs());
+<<<<<<< ours
 	BOOST_CHECK(callContractFunction("setContent(string,bytes32)", encodeDyn(name), account(0)) == encodeArgs());
 	BOOST_CHECK(callContractFunction("transfer(string,address)", encodeDyn(name), u256(555)) == encodeArgs());
+=======
+	BOOST_CHECK(callContractFunction("setContent(string,bytes32)", u256(0x40), account(0), u256(name.length()), name) == encodeArgs());
+	BOOST_CHECK(callContractFunction("transfer(string,address)", u256(0x40), u256(555), u256(name.length()), name) == encodeArgs());
+>>>>>>> theirs
 	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(u256(555)));
 	BOOST_CHECK(callContractFunction("content(string)", encodeDyn(name)) == encodeArgs(account(0)));
 }
@@ -232,6 +258,7 @@ BOOST_AUTO_TEST_CASE(disown)
 	deployRegistrar();
 	string name = "abc";
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee, encodeDyn(name)) == encodeArgs());
+<<<<<<< ours
 	BOOST_CHECK(callContractFunction("setContent(string,bytes32)", encodeDyn(name), account(0)) == encodeArgs());
 	BOOST_CHECK(callContractFunction("setAddr(string,address)", encodeDyn(name), u256(124)) == encodeArgs());
 	BOOST_CHECK(callContractFunction("setSubRegistrar(string,address)", encodeDyn(name), u256(125)) == encodeArgs());
@@ -239,6 +266,15 @@ BOOST_AUTO_TEST_CASE(disown)
 	BOOST_CHECK_EQUAL(balanceAt(Address(0x124)), 0);
 	BOOST_CHECK(callContractFunction("disown(string,address)", encodeDyn(name), u256(0x124)) == encodeArgs());
 	BOOST_CHECK_EQUAL(balanceAt(Address(0x124)), m_fee);
+=======
+	BOOST_CHECK(callContractFunction("setContent(string,bytes32)", u256(0x40), account(0), u256(name.length()), name) == encodeArgs());
+	BOOST_CHECK(callContractFunction("setAddr(string,address)", u256(0x40), u256(124), u256(name.length()), name) == encodeArgs());
+	BOOST_CHECK(callContractFunction("setSubRegistrar(string,address)", u256(0x40), u256(125), u256(name.length()), name) == encodeArgs());
+
+	BOOST_CHECK_EQUAL(balanceAt(h160(0x124)), 0);
+	BOOST_CHECK(callContractFunction("disown(string,address)", u256(0x40), u256(0x124), name.size(), name) == encodeArgs());
+	BOOST_CHECK_EQUAL(balanceAt(h160(0x124)), m_fee);
+>>>>>>> theirs
 
 	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(u256(0)));
 	BOOST_CHECK(callContractFunction("content(string)", encodeDyn(name)) == encodeArgs(u256(0)));
@@ -248,6 +284,4 @@ BOOST_AUTO_TEST_CASE(disown)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-}
-}
 } // end namespaces

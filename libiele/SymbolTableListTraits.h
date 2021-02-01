@@ -2,12 +2,12 @@
 
 #include "IeleValueSymbolTable.h"
 
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
 
 #include "llvm/ADT/ilist.h"
 #include <cstddef>
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleArgument;
@@ -148,4 +148,4 @@ class SymbolTableList :
   public llvm::iplist_impl<llvm::simple_ilist<T>, SymbolTableListTraits<T>> {};
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

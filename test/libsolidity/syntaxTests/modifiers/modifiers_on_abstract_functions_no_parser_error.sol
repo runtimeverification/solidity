@@ -2,12 +2,12 @@
 // into a parser error (they wrongly recognized
 // these functions as state variables of
 // function type).
-contract C
+abstract contract C
 {
     modifier only_owner() { _; }
-    function foo() only_owner public;
-    function bar() public only_owner;
+    function foo() only_owner public virtual;
+    function bar() public only_owner virtual;
 }
 // ----
-// Warning: (203-236): Modifiers of functions without implementation are ignored.
-// Warning: (241-274): Modifiers of functions without implementation are ignored.
+// SyntaxError 2668: (212-253): Functions without implementation cannot have modifiers.
+// SyntaxError 2668: (258-299): Functions without implementation cannot have modifiers.

@@ -1,19 +1,20 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2014
@@ -21,13 +22,14 @@
  */
 
 #include <libsolidity/analysis/DeclarationContainer.h>
+
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/ast/Types.h>
-#include <libdevcore/StringUtils.h>
+#include <libsolutil/StringUtils.h>
 
 using namespace std;
-using namespace dev;
-using namespace dev::solidity;
+using namespace solidity;
+using namespace solidity::frontend;
 
 Declaration const* DeclarationContainer::conflictingDeclaration(
 	Declaration const& _declaration,
@@ -49,16 +51,10 @@ Declaration const* DeclarationContainer::conflictingDeclaration(
 		dynamic_cast<MagicVariableDeclaration const*>(&_declaration)
 	)
 	{
-		// check that all other declarations with the same name are functions or a public state variable or events.
-		// And then check that the signatures are different.
+		// check that all other declarations are of the same kind (in which
+		// case the type checker will ensure that the signatures are different)
 		for (Declaration const* declaration: declarations)
 		{
-			if (auto variableDeclaration = dynamic_cast<VariableDeclaration const*>(declaration))
-			{
-				if (variableDeclaration->isStateVariable() && !variableDeclaration->isConstant() && variableDeclaration->isPublic())
-					continue;
-				return declaration;
-			}
 			if (
 				dynamic_cast<FunctionDefinition const*>(&_declaration) &&
 				!dynamic_cast<FunctionDefinition const*>(declaration)
@@ -96,9 +92,15 @@ void DeclarationContainer::activateVariable(ASTString const& _name)
 	m_invisibleDeclarations.erase(_name);
 }
 
+bool DeclarationContainer::isInvisible(ASTString const& _name) const
+{
+	return m_invisibleDeclarations.count(_name);
+}
+
 bool DeclarationContainer::registerDeclaration(
 	Declaration const& _declaration,
 	ASTString const* _name,
+	langutil::SourceLocation const* _location,
 	bool _invisible,
 	bool _update
 )
@@ -114,13 +116,32 @@ bool DeclarationContainer::registerDeclaration(
 		m_declarations.erase(*_name);
 		m_invisibleDeclarations.erase(*_name);
 	}
-	else if (conflictingDeclaration(_declaration, _name))
-		return false;
+	else
+	{
+		if (conflictingDeclaration(_declaration, _name))
+			return false;
+
+		// Do not warn about shadowing for structs and enums because their members are
+		// not accessible without prefixes. Also do not warn about event parameters
+		// because they do not participate in any proper scope.
+		bool special = _declaration.scope() && (_declaration.isStructMember() || _declaration.isEnumValue() || _declaration.isEventParameter());
+		if (m_enclosingContainer && !special)
+			m_homonymCandidates.emplace_back(*_name, _location ? _location : &_declaration.location());
+	}
 
 	vector<Declaration const*>& decls = _invisible ? m_invisibleDeclarations[*_name] : m_declarations[*_name];
-	if (!contains(decls, &_declaration))
+	if (!util::contains(decls, &_declaration))
 		decls.push_back(&_declaration);
 	return true;
+}
+
+bool DeclarationContainer::registerDeclaration(
+	Declaration const& _declaration,
+	bool _invisible,
+	bool _update
+)
+{
+	return registerDeclaration(_declaration, nullptr, nullptr, _invisible, _update);
 }
 
 vector<Declaration const*> DeclarationContainer::resolveName(ASTString const& _name, bool _recursive, bool _alsoInvisible) const
@@ -138,20 +159,23 @@ vector<Declaration const*> DeclarationContainer::resolveName(ASTString const& _n
 
 vector<ASTString> DeclarationContainer::similarNames(ASTString const& _name) const
 {
-	static size_t const MAXIMUM_EDIT_DISTANCE = 2;
+
+	// because the function below has quadratic runtime - it will not magically improve once a better algorithm is discovered ;)
+	// since 80 is the suggested line length limit, we use 80^2 as length threshold
+	static size_t const MAXIMUM_LENGTH_THRESHOLD = 80 * 80;
 
 	vector<ASTString> similar;
-
+	size_t maximumEditDistance = _name.size() > 3 ? 2 : _name.size() / 2;
 	for (auto const& declaration: m_declarations)
 	{
 		string const& declarationName = declaration.first;
-		if (stringWithinDistance(_name, declarationName, MAXIMUM_EDIT_DISTANCE))
+		if (util::stringWithinDistance(_name, declarationName, maximumEditDistance, MAXIMUM_LENGTH_THRESHOLD))
 			similar.push_back(declarationName);
 	}
 	for (auto const& declaration: m_invisibleDeclarations)
 	{
 		string const& declarationName = declaration.first;
-		if (stringWithinDistance(_name, declarationName, MAXIMUM_EDIT_DISTANCE))
+		if (util::stringWithinDistance(_name, declarationName, maximumEditDistance, MAXIMUM_LENGTH_THRESHOLD))
 			similar.push_back(declarationName);
 	}
 
@@ -159,4 +183,17 @@ vector<ASTString> DeclarationContainer::similarNames(ASTString const& _name) con
 		similar += m_enclosingContainer->similarNames(_name);
 
 	return similar;
+}
+
+void DeclarationContainer::populateHomonyms(back_insert_iterator<Homonyms> _it) const
+{
+	for (DeclarationContainer const* innerContainer: m_innerContainers)
+		innerContainer->populateHomonyms(_it);
+
+	for (auto [name, location]: m_homonymCandidates)
+	{
+		vector<Declaration const*> const& declarations = m_enclosingContainer->resolveName(name, true, true);
+		if (!declarations.empty())
+			_it = make_pair(location, declarations);
+	}
 }

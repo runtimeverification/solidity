@@ -4,12 +4,12 @@
 #include "IeleFunction.h"
 #include "IeleGlobalVariable.h"
 
-#include <libsolidity/interface/Exceptions.h>
+#include <liblangutil/Exceptions.h>
 
 #include "llvm/Support/raw_ostream.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleInstruction::IeleInstruction(IeleOps opc, IeleInstruction *InsertBefore) :
   InstID(opc), Parent(nullptr) {

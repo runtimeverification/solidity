@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Oracles/DifficultyOracle.sol";
 
 
@@ -16,12 +16,12 @@ contract DifficultyOracleFactory {
      */
     /// @dev Creates a new difficulty oracle contract
     /// @param blockNumber Target block number
-    /// @return Oracle contract
+    /// @return difficultyOracle Oracle contract
     function createDifficultyOracle(uint256 blockNumber)
         public
         returns (DifficultyOracle difficultyOracle)
     {
         difficultyOracle = new DifficultyOracle(blockNumber);
-        DifficultyOracleCreation(msg.sender, difficultyOracle, blockNumber);
+        emit DifficultyOracleCreation(msg.sender, difficultyOracle, blockNumber);
     }
 }

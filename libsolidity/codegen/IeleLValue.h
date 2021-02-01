@@ -1,10 +1,8 @@
 #pragma once
 #include "libsolidity/codegen/IeleCompiler.h"
 
-namespace dev
-{
-namespace solidity
-{
+namespace solidity {
+namespace frontend {
 
 class IeleLValue
 {
@@ -156,5 +154,5 @@ public:
   virtual IeleRValue *read(iele::IeleBlock *InsertAtEnd) const override;
 };
 
-}
-}
+} // end namespace frontend
+} // end namespace solidity

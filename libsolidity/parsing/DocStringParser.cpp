@@ -1,15 +1,34 @@
+/*
+	This file is part of solidity.
+
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// SPDX-License-Identifier: GPL-3.0
 
 #include <libsolidity/parsing/DocStringParser.h>
-#include <libsolidity/interface/ErrorReporter.h>
-#include <libsolidity/interface/Exceptions.h>
 
+#include <liblangutil/Common.h>
+#include <liblangutil/ErrorReporter.h>
+#include <liblangutil/Exceptions.h>
+
+#include <boost/range/algorithm/find_first_of.hpp>
 #include <boost/range/irange.hpp>
-#include <boost/range/algorithm.hpp>
 
 using namespace std;
-using namespace dev;
-using namespace dev::solidity;
-
+using namespace solidity;
+using namespace solidity::langutil;
+using namespace solidity::frontend;
 
 namespace
 {
@@ -22,12 +41,19 @@ string::const_iterator skipLineOrEOS(
 	return (_nlPos == _end) ? _end : ++_nlPos;
 }
 
-string::const_iterator firstSpaceOrTab(
+string::const_iterator firstNonIdentifier(
 	string::const_iterator _pos,
 	string::const_iterator _end
 )
 {
-	return boost::range::find_first_of(make_pair(_pos, _end), " \t");
+	auto currPos = _pos;
+	if (currPos == _pos && isIdentifierStart(*currPos))
+	{
+		currPos++;
+		while (currPos != _end && isIdentifierPart(*currPos))
+			currPos++;
+	}
+	return currPos;
 }
 
 string::const_iterator firstWhitespaceOrNewline(
@@ -52,10 +78,9 @@ string::const_iterator skipWhitespace(
 
 }
 
-bool DocStringParser::parse(string const& _docString, ErrorReporter& _errorReporter)
+void DocStringParser::parse(string const& _docString, ErrorReporter& _errorReporter)
 {
 	m_errorReporter = &_errorReporter;
-	m_errorsOccurred = false;
 	m_lastTag = nullptr;
 
 	auto currPos = _docString.begin();
@@ -70,16 +95,12 @@ bool DocStringParser::parse(string const& _docString, ErrorReporter& _errorRepor
 		{
 			// we found a tag
 			auto tagNameEndPos = firstWhitespaceOrNewline(tagPos, end);
-			if (tagNameEndPos == end)
-			{
-				appendError("End of tag " + string(tagPos, tagNameEndPos) + "not found");
-				break;
-			}
-
-			currPos = parseDocTag(tagNameEndPos + 1, end, string(tagPos + 1, tagNameEndPos));
+			auto tagName = string(tagPos + 1, tagNameEndPos);
+			auto tagDataPos = (tagNameEndPos != end) ? tagNameEndPos + 1 : tagNameEndPos;
+			currPos = parseDocTag(tagDataPos, end, tagName);
 		}
 		else if (!!m_lastTag) // continuation of the previous tag
-			currPos = appendDocTag(currPos, end);
+			currPos = parseDocTagLine(currPos, end, true);
 		else if (currPos != end)
 		{
 			// if it begins without a tag then consider it as @notice
@@ -94,14 +115,13 @@ bool DocStringParser::parse(string const& _docString, ErrorReporter& _errorRepor
 			currPos = nlPos + 1;
 		}
 	}
-	return !m_errorsOccurred;
 }
 
 DocStringParser::iter DocStringParser::parseDocTagLine(iter _pos, iter _end, bool _appending)
 {
 	solAssert(!!m_lastTag, "");
 	auto nlPos = find(_pos, _end, '\n');
-	if (_appending && _pos < _end && *_pos != ' ' && *_pos != '\t')
+	if (_appending && _pos != _end && *_pos != ' ' && *_pos != '\t')
 		m_lastTag->content += " ";
 	else if (!_appending)
 		_pos = skipWhitespace(_pos, _end);
@@ -115,10 +135,10 @@ DocStringParser::iter DocStringParser::parseDocTagParam(iter _pos, iter _end)
 	auto nameStartPos = skipWhitespace(_pos, _end);
 	if (nameStartPos == _end)
 	{
-		appendError("No param name given");
+		m_errorReporter->docstringParsingError(3335_error, "No param name given");
 		return _end;
 	}
-	auto nameEndPos = firstSpaceOrTab(nameStartPos, _end);
+	auto nameEndPos = firstNonIdentifier(nameStartPos, _end);
 	auto paramName = string(nameStartPos, nameEndPos);
 
 	auto descStartPos = skipWhitespace(nameEndPos, _end);
@@ -126,7 +146,7 @@ DocStringParser::iter DocStringParser::parseDocTagParam(iter _pos, iter _end)
 
 	if (descStartPos == nlPos)
 	{
-		appendError("No description given for param " + paramName);
+		m_errorReporter->docstringParsingError(9942_error, "No description given for param " + paramName);
 		return _end;
 	}
 
@@ -153,22 +173,10 @@ DocStringParser::iter DocStringParser::parseDocTag(iter _pos, iter _end, string 
 		}
 	}
 	else
-		return appendDocTag(_pos, _end);
-}
-
-DocStringParser::iter DocStringParser::appendDocTag(iter _pos, iter _end)
-{
-	solAssert(!!m_lastTag, "");
-	return parseDocTagLine(_pos, _end, true);
+		return parseDocTagLine(_pos, _end, true);
 }
 
 void DocStringParser::newTag(string const& _tagName)
 {
 	m_lastTag = &m_docTags.insert(make_pair(_tagName, DocTag()))->second;
-}
-
-void DocStringParser::appendError(string const& _description)
-{
-	m_errorsOccurred = true;
-	m_errorReporter->docstringParsingError(_description);
 }

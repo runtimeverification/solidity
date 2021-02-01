@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /** @file Exceptions.h
  * @author Christian <c@ethdev.com>
  * @date 2014
@@ -21,17 +22,17 @@
 
 #pragma once
 
-#include <libdevcore/Exceptions.h>
+#include <libsolutil/Exceptions.h>
 
-namespace dev
-{
-namespace eth
+namespace solidity::evmasm
 {
 
-struct AssemblyException: virtual Exception {};
+struct AssemblyException: virtual util::Exception {};
 struct OptimizerException: virtual AssemblyException {};
 struct StackTooDeepException: virtual OptimizerException {};
 struct ItemNotAvailableException: virtual OptimizerException {};
 
-}
+DEV_SIMPLE_EXCEPTION(InvalidDeposit);
+DEV_SIMPLE_EXCEPTION(InvalidOpcode);
+
 }

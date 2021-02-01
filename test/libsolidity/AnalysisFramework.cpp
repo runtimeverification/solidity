@@ -14,53 +14,65 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * Framework for testing features from the analysis phase of compiler.
  */
 
 #include <test/libsolidity/AnalysisFramework.h>
 
-#include <test/Options.h>
+#include <test/Common.h>
 
 #include <libsolidity/interface/CompilerStack.h>
-#include <libsolidity/interface/SourceReferenceFormatter.h>
+#include <liblangutil/SourceReferenceFormatter.h>
 
 #include <libsolidity/ast/AST.h>
 
-#include <libsolidity/parsing/Scanner.h>
+#include <liblangutil/Scanner.h>
 
-#include <libdevcore/SHA3.h>
+#include <libsolutil/Keccak256.h>
 
 #include <boost/test/unit_test.hpp>
 
 using namespace std;
-using namespace dev;
-using namespace dev::solidity;
-using namespace dev::solidity::test;
+using namespace solidity;
+using namespace solidity::util;
+using namespace solidity::langutil;
+using namespace solidity::frontend;
+using namespace solidity::frontend::test;
 
 pair<SourceUnit const*, ErrorList>
 AnalysisFramework::parseAnalyseAndReturnError(
 	string const& _source,
 	bool _reportWarnings,
-	bool _insertVersionPragma,
-	bool _allowMultipleErrors
+	bool _insertLicenseAndVersionPragma,
+	bool _allowMultipleErrors,
+	bool _allowRecoveryErrors
 )
 {
-	m_compiler.reset();
-	m_compiler.addSource("", _insertVersionPragma ? "pragma solidity >=0.0;\n" + _source : _source);
-	m_compiler.setEVMVersion(dev::test::Options::get().evmVersion());
-	if (!m_compiler.parse())
+	compiler().reset();
+	// Do not insert license if it is already present.
+	bool insertLicense = _insertLicenseAndVersionPragma && _source.find("// SPDX-License-Identifier:") == string::npos;
+	compiler().setSources({{"",
+		string{_insertLicenseAndVersionPragma ? "pragma solidity >=0.0;\n" : ""} +
+		string{insertLicense ? "// SPDX-License-Identifier: GPL-3.0\n" : ""} +
+		_source
+	}});
+	compiler().setEVMVersion(solidity::test::CommonOptions::get().evmVersion());
+	compiler().setParserErrorRecovery(_allowRecoveryErrors);
+	_allowMultipleErrors = _allowMultipleErrors || _allowRecoveryErrors;
+	if (!compiler().parse())
 	{
-		BOOST_ERROR("Parsing contract failed in analysis test suite:" + formatErrors());
+		BOOST_FAIL("Parsing contract failed in analysis test suite:" + formatErrors());
 	}
 
-	m_compiler.analyze();
+	compiler().analyze();
 
-	ErrorList errors = filterErrors(m_compiler.errors(), _reportWarnings);
+	ErrorList errors = filterErrors(compiler().errors(), _reportWarnings);
 	if (errors.size() > 1 && !_allowMultipleErrors)
 		BOOST_FAIL("Multiple errors found: " + formatErrors());
 
-	return make_pair(&m_compiler.ast(""), std::move(errors));
+	return make_pair(&compiler().ast(""), std::move(errors));
 }
 
 ErrorList AnalysisFramework::filterErrors(ErrorList const& _errorList, bool _includeWarnings) const
@@ -84,7 +96,22 @@ ErrorList AnalysisFramework::filterErrors(ErrorList const& _errorList, bool _inc
 				continue;
 		}
 
-		errors.emplace_back(currentError);
+		std::shared_ptr<Error const> newError = currentError;
+		for (auto const& messagePrefix: m_messagesToCut)
+			if (currentError->comment()->find(messagePrefix) == 0)
+			{
+				SourceLocation const* location = boost::get_error_info<errinfo_sourceLocation>(*currentError);
+				// sufficient for now, but in future we might clone the error completely, including the secondary location
+				newError = make_shared<Error>(
+					currentError->errorId(),
+					currentError->type(),
+					location ? *location : SourceLocation(),
+					messagePrefix + " ...."
+				);
+				break;
+			}
+
+		errors.emplace_back(newError);
 	}
 
 	return errors;
@@ -117,18 +144,14 @@ ErrorList AnalysisFramework::expectError(std::string const& _source, bool _warni
 string AnalysisFramework::formatErrors() const
 {
 	string message;
-	for (auto const& error: m_compiler.errors())
+	for (auto const& error: compiler().errors())
 		message += formatError(*error);
 	return message;
 }
 
 string AnalysisFramework::formatError(Error const& _error) const
 {
-	return SourceReferenceFormatter::formatExceptionInformation(
-			_error,
-			(_error.type() == Error::Type::Warning) ? "Warning" : "Error",
-			[&](std::string const& _sourceName) -> solidity::Scanner const& { return m_compiler.scanner(_sourceName); }
-		);
+	return SourceReferenceFormatter::formatErrorInformation(_error);
 }
 
 ContractDefinition const* AnalysisFramework::retrieveContractByName(SourceUnit const& _source, string const& _name)
@@ -147,6 +170,6 @@ FunctionTypePointer AnalysisFramework::retrieveFunctionBySignature(
 	std::string const& _signature
 )
 {
-	FixedHash<4> hash(dev::keccak256(_signature));
+	FixedHash<4> hash(util::keccak256(_signature));
 	return _contract.interfaceFunctions()[hash];
 }

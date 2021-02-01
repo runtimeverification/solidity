@@ -1,11 +1,11 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Events/Event.sol";
 import "../MarketMakers/MarketMaker.sol";
 import "../Markets/Market.sol";
 
 
 /// @title Abstract market factory contract - Functions to be implemented by market factories
-contract MarketFactory {
+abstract contract MarketFactory {
 
     /*
      *  Events
@@ -15,5 +15,6 @@ contract MarketFactory {
     /*
      *  Public functions
      */
-    function createMarket(Event eventContract, MarketMaker marketMaker, uint24 fee) public returns (Market);
+    function createMarket(Event eventContract, MarketMaker marketMaker, uint24
+fee) virtual public returns (Market);
 }

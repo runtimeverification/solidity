@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2014
@@ -22,16 +23,14 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include <libsolidity/ast/ASTForward.h>
+#include <boost/noncopyable.hpp>
 #include <map>
 #include <memory>
-#include <boost/noncopyable.hpp>
-#include <libsolidity/ast/ASTForward.h>
+#include <string>
+#include <vector>
 
-namespace dev
-{
-namespace solidity
+namespace solidity::frontend
 {
 
 class Type; // forward
@@ -47,6 +46,7 @@ class GlobalContext: private boost::noncopyable
 public:
 	GlobalContext();
 	void setCurrentContract(ContractDefinition const& _contract);
+	void resetCurrentContract() { m_currentContract = nullptr; }
 	MagicVariableDeclaration const* currentThis() const;
 	MagicVariableDeclaration const* currentSuper() const;
 
@@ -60,5 +60,4 @@ private:
 	std::map<ContractDefinition const*, std::shared_ptr<MagicVariableDeclaration const>> mutable m_superPointer;
 };
 
-}
 }

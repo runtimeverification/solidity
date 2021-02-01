@@ -14,73 +14,74 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 
 #include <libsolidity/analysis/ViewPureChecker.h>
-
+#include <libsolidity/ast/ExperimentalFeatures.h>
+#include <libyul/AST.h>
+#include <libyul/backends/evm/EVMDialect.h>
+#include <liblangutil/ErrorReporter.h>
 #include <libevmasm/SemanticInformation.h>
 
-#include <libsolidity/inlineasm/AsmData.h>
-#include <libsolidity/ast/ExperimentalFeatures.h>
-
 #include <functional>
+#include <utility>
+#include <variant>
 
 using namespace std;
-using namespace dev;
-using namespace dev::solidity;
+using namespace solidity;
+using namespace solidity::langutil;
+using namespace solidity::frontend;
 
 namespace
 {
 
-class AssemblyViewPureChecker: public boost::static_visitor<void>
+class AssemblyViewPureChecker
 {
 public:
-	explicit AssemblyViewPureChecker(std::function<void(StateMutability, SourceLocation const&)> _reportMutability):
-		m_reportMutability(_reportMutability) {}
+	explicit AssemblyViewPureChecker(
+		yul::Dialect const& _dialect,
+		std::function<void(StateMutability, SourceLocation const&)> _reportMutability
+	):
+		m_dialect(_dialect),
+		m_reportMutability(std::move(_reportMutability)) {}
 
-	void operator()(assembly::Label const&) { }
-	void operator()(assembly::Instruction const& _instruction)
+	void operator()(yul::Literal const&) {}
+	void operator()(yul::Identifier const&) {}
+	void operator()(yul::ExpressionStatement const& _expr)
 	{
-		checkInstruction(_instruction.location, _instruction.instruction);
+		std::visit(*this, _expr.expression);
 	}
-	void operator()(assembly::Literal const&) {}
-	void operator()(assembly::Identifier const&) {}
-	void operator()(assembly::FunctionalInstruction const& _instr)
+	void operator()(yul::Assignment const& _assignment)
 	{
-		checkInstruction(_instr.location, _instr.instruction);
-		for (auto const& arg: _instr.arguments)
-			boost::apply_visitor(*this, arg);
+		std::visit(*this, *_assignment.value);
 	}
-	void operator()(assembly::ExpressionStatement const& _expr)
-	{
-		boost::apply_visitor(*this, _expr.expression);
-	}
-	void operator()(assembly::StackAssignment const&) {}
-	void operator()(assembly::Assignment const& _assignment)
-	{
-		boost::apply_visitor(*this, *_assignment.value);
-	}
-	void operator()(assembly::VariableDeclaration const& _varDecl)
+	void operator()(yul::VariableDeclaration const& _varDecl)
 	{
 		if (_varDecl.value)
-			boost::apply_visitor(*this, *_varDecl.value);
+			std::visit(*this, *_varDecl.value);
 	}
-	void operator()(assembly::FunctionDefinition const& _funDef)
+	void operator()(yul::FunctionDefinition const& _funDef)
 	{
 		(*this)(_funDef.body);
 	}
-	void operator()(assembly::FunctionCall const& _funCall)
+	void operator()(yul::FunctionCall const& _funCall)
 	{
+		if (yul::EVMDialect const* dialect = dynamic_cast<decltype(dialect)>(&m_dialect))
+			if (yul::BuiltinFunctionForEVM const* fun = dialect->builtin(_funCall.functionName.name))
+				if (fun->instruction)
+					checkInstruction(_funCall.location, *fun->instruction);
+
 		for (auto const& arg: _funCall.arguments)
-			boost::apply_visitor(*this, arg);
+			std::visit(*this, arg);
 	}
-	void operator()(assembly::If const& _if)
+	void operator()(yul::If const& _if)
 	{
-		boost::apply_visitor(*this, *_if.condition);
+		std::visit(*this, *_if.condition);
 		(*this)(_if.body);
 	}
-	void operator()(assembly::Switch const& _switch)
+	void operator()(yul::Switch const& _switch)
 	{
-		boost::apply_visitor(*this, *_switch.expression);
+		std::visit(*this, *_switch.expression);
 		for (auto const& _case: _switch.cases)
 		{
 			if (_case.value)
@@ -88,70 +89,56 @@ public:
 			(*this)(_case.body);
 		}
 	}
-	void operator()(assembly::ForLoop const& _for)
+	void operator()(yul::ForLoop const& _for)
 	{
 		(*this)(_for.pre);
-		boost::apply_visitor(*this, *_for.condition);
+		std::visit(*this, *_for.condition);
 		(*this)(_for.body);
 		(*this)(_for.post);
 	}
-	void operator()(assembly::Block const& _block)
+	void operator()(yul::Break const&)
+	{
+	}
+	void operator()(yul::Continue const&)
+	{
+	}
+	void operator()(yul::Leave const&)
+	{
+	}
+	void operator()(yul::Block const& _block)
 	{
 		for (auto const& s: _block.statements)
-			boost::apply_visitor(*this, s);
+			std::visit(*this, s);
 	}
 
 private:
-	std::function<void(StateMutability, SourceLocation const&)> m_reportMutability;
-	void checkInstruction(SourceLocation _location, solidity::Instruction _instruction)
+	void checkInstruction(SourceLocation _location, evmasm::Instruction _instruction)
 	{
-		if (eth::SemanticInformation::invalidInViewFunctions(_instruction))
+		if (evmasm::SemanticInformation::invalidInViewFunctions(_instruction))
 			m_reportMutability(StateMutability::NonPayable, _location);
-		else if (eth::SemanticInformation::invalidInPureFunctions(_instruction))
+		else if (evmasm::SemanticInformation::invalidInPureFunctions(_instruction))
 			m_reportMutability(StateMutability::View, _location);
 	}
+
+	yul::Dialect const& m_dialect;
+	std::function<void(StateMutability, SourceLocation const&)> m_reportMutability;
 };
 
 }
 
 bool ViewPureChecker::check()
 {
-	// The bool means "enforce view with errors".
-	map<ContractDefinition const*, bool> contracts;
-
-	for (auto const& node: m_ast)
-	{
-		SourceUnit const* source = dynamic_cast<SourceUnit const*>(node.get());
-		solAssert(source, "");
-		bool enforceView = source->annotation().experimentalFeatures.count(ExperimentalFeature::V050);
-		for (ContractDefinition const* c: source->filteredNodes<ContractDefinition>(source->nodes()))
-			contracts[c] = enforceView;
-	}
-
-	// Check modifiers first to infer their state mutability.
-	for (auto const& contract: contracts)
-	{
-		m_enforceViewWithError = contract.second;
-		for (ModifierDefinition const* mod: contract.first->functionModifiers())
-			mod->accept(*this);
-	}
-
-	for (auto const& contract: contracts)
-	{
-		m_enforceViewWithError = contract.second;
-		contract.first->accept(*this);
-	}
+	for (auto const& source: m_ast)
+		source->accept(*this);
 
 	return !m_errors;
 }
-
-
 
 bool ViewPureChecker::visit(FunctionDefinition const& _funDef)
 {
 	solAssert(!m_currentFunction, "");
 	m_currentFunction = &_funDef;
-	m_currentBestMutability = StateMutability::Pure;
+	m_bestMutabilityAndLocation = {StateMutability::Pure, _funDef.location()};
 	return true;
 }
 
@@ -159,31 +146,34 @@ void ViewPureChecker::endVisit(FunctionDefinition const& _funDef)
 {
 	solAssert(m_currentFunction == &_funDef, "");
 	if (
-		m_currentBestMutability < _funDef.stateMutability() &&
+		m_bestMutabilityAndLocation.mutability < _funDef.stateMutability() &&
 		_funDef.stateMutability() != StateMutability::Payable &&
 		_funDef.isImplemented() &&
+		!_funDef.body().statements().empty() &&
 		!_funDef.isConstructor() &&
 		!_funDef.isFallback() &&
-		!_funDef.annotation().superFunction
+		!_funDef.isReceive() &&
+		!_funDef.virtualSemantics()
 	)
 		m_errorReporter.warning(
+			2018_error,
 			_funDef.location(),
-			"Function state mutability can be restricted to " + stateMutabilityToString(m_currentBestMutability)
+			"Function state mutability can be restricted to " + stateMutabilityToString(m_bestMutabilityAndLocation.mutability)
 		);
 	m_currentFunction = nullptr;
 }
 
-bool ViewPureChecker::visit(ModifierDefinition const&)
+bool ViewPureChecker::visit(ModifierDefinition const& _modifier)
 {
 	solAssert(m_currentFunction == nullptr, "");
-	m_currentBestMutability = StateMutability::Pure;
+	m_bestMutabilityAndLocation = {StateMutability::Pure, _modifier.location()};
 	return true;
 }
 
 void ViewPureChecker::endVisit(ModifierDefinition const& _modifierDef)
 {
 	solAssert(m_currentFunction == nullptr, "");
-	m_inferredMutability[&_modifierDef] = m_currentBestMutability;
+	m_inferredMutability[&_modifierDef] = std::move(m_bestMutabilityAndLocation);
 }
 
 void ViewPureChecker::endVisit(Identifier const& _identifier)
@@ -193,10 +183,16 @@ void ViewPureChecker::endVisit(Identifier const& _identifier)
 
 	StateMutability mutability = StateMutability::Pure;
 
-	bool writes = _identifier.annotation().lValueRequested;
+	bool writes = _identifier.annotation().willBeWrittenTo;
 	if (VariableDeclaration const* varDecl = dynamic_cast<VariableDeclaration const*>(declaration))
 	{
-		if (varDecl->isStateVariable() && !varDecl->isConstant())
+		if (varDecl->immutable())
+		{
+			// Immutables that are assigned literals are pure.
+			if (!(varDecl->value() && varDecl->value()->annotation().type->category() == Type::Category::RationalNumber))
+				mutability = StateMutability::View;
+		}
+		else if (varDecl->isStateVariable() && !varDecl->isConstant())
 			mutability = writes ? StateMutability::NonPayable : StateMutability::View;
 	}
 	else if (MagicVariableDeclaration const* magicVar = dynamic_cast<MagicVariableDeclaration const*>(declaration))
@@ -204,8 +200,8 @@ void ViewPureChecker::endVisit(Identifier const& _identifier)
 		switch (magicVar->type()->category())
 		{
 		case Type::Category::Contract:
-			solAssert(_identifier.name() == "this" || _identifier.name() == "super", "");
-			if (!dynamic_cast<ContractType const&>(*magicVar->type()).isSuper())
+			solAssert(_identifier.name() == "this", "");
+			if (dynamic_cast<ContractType const*>(magicVar->type()))
 				// reads the address
 				mutability = StateMutability::View;
 			break;
@@ -224,55 +220,115 @@ void ViewPureChecker::endVisit(Identifier const& _identifier)
 void ViewPureChecker::endVisit(InlineAssembly const& _inlineAssembly)
 {
 	AssemblyViewPureChecker{
-		[=](StateMutability _mutability, SourceLocation const& _location) { reportMutability(_mutability, _location); }
+		_inlineAssembly.dialect(),
+		[&](StateMutability _mutability, SourceLocation const& _location) { reportMutability(_mutability, _location); }
 	}(_inlineAssembly.operations());
 }
 
-void ViewPureChecker::reportMutability(StateMutability _mutability, SourceLocation const& _location)
+void ViewPureChecker::reportMutability(
+	StateMutability _mutability,
+	SourceLocation const& _location,
+	std::optional<SourceLocation> const& _nestedLocation
+)
 {
-	if (m_currentFunction && m_currentFunction->stateMutability() < _mutability)
-	{
-		string text;
-		if (_mutability == StateMutability::View)
-			text =
-				"Function declared as pure, but this expression (potentially) reads from the "
-				"environment or state and thus requires \"view\".";
-		else if (_mutability == StateMutability::NonPayable)
-			text =
-				"Function declared as " +
-				stateMutabilityToString(m_currentFunction->stateMutability()) +
-				", but this expression (potentially) modifies the state and thus "
-				"requires non-payable (the default) or payable.";
-		else
-			solAssert(false, "");
+	if (_mutability > m_bestMutabilityAndLocation.mutability)
+		m_bestMutabilityAndLocation = MutabilityAndLocation{_mutability, _location};
+	if (!m_currentFunction || _mutability <= m_currentFunction->stateMutability())
+		return;
 
-		solAssert(
-			m_currentFunction->stateMutability() == StateMutability::View ||
-			m_currentFunction->stateMutability() == StateMutability::Pure,
-			""
+	// Check for payable here, because any occurrence of `msg.value`
+	// will set mutability to payable.
+	if (_mutability == StateMutability::View || (
+		_mutability == StateMutability::Payable &&
+		m_currentFunction->stateMutability() == StateMutability::Pure
+	))
+	{
+		m_errorReporter.typeError(
+			2527_error,
+			_location,
+			"Function declared as pure, but this expression (potentially) reads from the "
+			"environment or state and thus requires \"view\"."
 		);
-		if (!m_enforceViewWithError && m_currentFunction->stateMutability() == StateMutability::View)
-			m_errorReporter.warning(_location, text);
-		else
+		m_errors = true;
+	}
+	else if (_mutability == StateMutability::NonPayable)
+	{
+		m_errorReporter.typeError(
+			8961_error,
+			_location,
+			"Function declared as " +
+			stateMutabilityToString(m_currentFunction->stateMutability()) +
+			", but this expression (potentially) modifies the state and thus "
+			"requires non-payable (the default) or payable."
+		);
+		m_errors = true;
+	}
+	else if (_mutability == StateMutability::Payable)
+	{
+		// We do not warn for library functions because they cannot be payable anyway.
+		// Also internal functions should be allowed to use `msg.value`.
+		if ((m_currentFunction->isConstructor() || m_currentFunction->isPublic()) && !m_currentFunction->libraryFunction())
 		{
+			if (_nestedLocation)
+				m_errorReporter.typeError(
+					4006_error,
+					_location,
+					SecondarySourceLocation().append("\"msg.value\" or \"callvalue()\" appear here inside the modifier.", *_nestedLocation),
+					m_currentFunction->isConstructor()  ?
+						"This modifier uses \"msg.value\" or \"callvalue()\" and thus the constructor has to be payable."
+						: "This modifier uses \"msg.value\" or \"callvalue()\" and thus the function has to be payable or internal."
+				);
+			else
+				m_errorReporter.typeError(
+					5887_error,
+					_location,
+					m_currentFunction->isConstructor()  ?
+						"\"msg.value\" and \"callvalue()\" can only be used in payable constructors. Make the constructor \"payable\" to avoid this error."
+						: "\"msg.value\" and \"callvalue()\" can only be used in payable public functions. Make the function \"payable\" or use an internal function to avoid this error."
+				);
 			m_errors = true;
-			m_errorReporter.typeError(_location, text);
 		}
 	}
-	if (_mutability > m_currentBestMutability)
-		m_currentBestMutability = _mutability;
+	else
+		solAssert(false, "");
+
+	solAssert(
+		m_currentFunction->stateMutability() == StateMutability::View ||
+		m_currentFunction->stateMutability() == StateMutability::Pure ||
+		m_currentFunction->stateMutability() == StateMutability::NonPayable,
+		""
+	);
+}
+
+ViewPureChecker::MutabilityAndLocation const& ViewPureChecker::modifierMutability(
+	ModifierDefinition const& _modifier
+)
+{
+	if (!m_inferredMutability.count(&_modifier))
+	{
+		MutabilityAndLocation bestMutabilityAndLocation{};
+		FunctionDefinition const* currentFunction = nullptr;
+		swap(bestMutabilityAndLocation, m_bestMutabilityAndLocation);
+		swap(currentFunction, m_currentFunction);
+
+		_modifier.accept(*this);
+
+		swap(bestMutabilityAndLocation, m_bestMutabilityAndLocation);
+		swap(currentFunction, m_currentFunction);
+	}
+	return m_inferredMutability.at(&_modifier);
 }
 
 void ViewPureChecker::endVisit(FunctionCall const& _functionCall)
 {
-	if (_functionCall.annotation().kind != FunctionCallKind::FunctionCall)
+	if (*_functionCall.annotation().kind != FunctionCallKind::FunctionCall)
 		return;
 
-	StateMutability mut = dynamic_cast<FunctionType const&>(*_functionCall.expression().annotation().type).stateMutability();
+	StateMutability mutability = dynamic_cast<FunctionType const&>(*_functionCall.expression().annotation().type).stateMutability();
 	// We only require "nonpayable" to call a payble function.
-	if (mut == StateMutability::Payable)
-		mut = StateMutability::NonPayable;
-	reportMutability(mut, _functionCall.location());
+	if (mutability == StateMutability::Payable)
+		mutability = StateMutability::NonPayable;
+	reportMutability(mutability, _functionCall.location());
 }
 
 bool ViewPureChecker::visit(MemberAccess const& _memberAccess)
@@ -294,26 +350,46 @@ bool ViewPureChecker::visit(MemberAccess const& _memberAccess)
 void ViewPureChecker::endVisit(MemberAccess const& _memberAccess)
 {
 	StateMutability mutability = StateMutability::Pure;
-	bool writes = _memberAccess.annotation().lValueRequested;
+	bool writes = _memberAccess.annotation().willBeWrittenTo;
 
 	ASTString const& member = _memberAccess.memberName();
 	switch (_memberAccess.expression().annotation().type->category())
 	{
-	case Type::Category::Contract:
-	case Type::Category::Integer:
-		if (member == "balance" && !_memberAccess.annotation().referencedDeclaration)
+	case Type::Category::Address:
+		if (member == "balance" || member == "code" || member == "codehash")
 			mutability = StateMutability::View;
 		if (member == "codesize" && !_memberAccess.annotation().referencedDeclaration)
 			mutability = StateMutability::View;
 		break;
 	case Type::Category::Magic:
 	{
-		// we can ignore the kind of magic and only look at the name of the member
-		set<string> static const pureMembers{
-			"encode", "encodePacked", "encodeWithSelector", "encodeWithSignature", "data", "sig", "blockhash"
+		using MagicMember = pair<MagicType::Kind, string>;
+		set<MagicMember> static const pureMembers{
+			{MagicType::Kind::ABI, "decode"},
+			{MagicType::Kind::ABI, "encode"},
+			{MagicType::Kind::ABI, "encodePacked"},
+			{MagicType::Kind::ABI, "encodeWithSelector"},
+			{MagicType::Kind::ABI, "encodeWithSignature"},
+			{MagicType::Kind::Message, "data"},
+			{MagicType::Kind::Message, "sig"},
+			{MagicType::Kind::MetaType, "creationCode"},
+			{MagicType::Kind::MetaType, "runtimeCode"},
+			{MagicType::Kind::MetaType, "name"},
+			{MagicType::Kind::MetaType, "interfaceId"},
+			{MagicType::Kind::MetaType, "min"},
+			{MagicType::Kind::MetaType, "max"},
 		};
-		if (!pureMembers.count(member))
+		set<MagicMember> static const payableMembers{
+			{MagicType::Kind::Message, "value"}
+		};
+
+		auto const& type = dynamic_cast<MagicType const&>(*_memberAccess.expression().annotation().type);
+		MagicMember magicMember(type.kind(), member);
+
+		if (!pureMembers.count(magicMember))
 			mutability = StateMutability::View;
+		if (payableMembers.count(magicMember))
+			mutability = StateMutability::Payable;
 		break;
 	}
 	case Type::Category::Struct:
@@ -326,11 +402,18 @@ void ViewPureChecker::endVisit(MemberAccess const& _memberAccess)
 	{
 		auto const& type = dynamic_cast<ArrayType const&>(*_memberAccess.expression().annotation().type);
 		if (member == "length" && type.isDynamicallySized() && type.dataStoredIn(DataLocation::Storage))
-			mutability = writes ? StateMutability::NonPayable : StateMutability::View;
+			mutability = StateMutability::View;
 		break;
 	}
 	default:
+	{
+		if (VariableDeclaration const* varDecl = dynamic_cast<VariableDeclaration const*>(
+			_memberAccess.annotation().referencedDeclaration
+		))
+			if (varDecl->isStateVariable() && !varDecl->isConstant())
+				mutability = writes ? StateMutability::NonPayable : StateMutability::View;
 		break;
+	}
 	}
 	reportMutability(mutability, _memberAccess.location());
 }
@@ -341,21 +424,26 @@ void ViewPureChecker::endVisit(IndexAccess const& _indexAccess)
 		solAssert(_indexAccess.annotation().type->category() == Type::Category::TypeType, "");
 	else
 	{
-		bool writes = _indexAccess.annotation().lValueRequested;
+		bool writes = _indexAccess.annotation().willBeWrittenTo;
 		if (_indexAccess.baseExpression().annotation().type->dataStoredIn(DataLocation::Storage))
 			reportMutability(writes ? StateMutability::NonPayable : StateMutability::View, _indexAccess.location());
 	}
 }
 
-void ViewPureChecker::endVisit(ModifierInvocation const& _modifier)
+void ViewPureChecker::endVisit(IndexRangeAccess const& _indexRangeAccess)
 {
-	solAssert(_modifier.name(), "");
-	if (ModifierDefinition const* mod = dynamic_cast<decltype(mod)>(_modifier.name()->annotation().referencedDeclaration))
-	{
-		solAssert(m_inferredMutability.count(mod), "");
-		reportMutability(m_inferredMutability.at(mod), _modifier.location());
-	}
-	else
-		solAssert(dynamic_cast<ContractDefinition const*>(_modifier.name()->annotation().referencedDeclaration), "");
+	bool writes = _indexRangeAccess.annotation().willBeWrittenTo;
+	if (_indexRangeAccess.baseExpression().annotation().type->dataStoredIn(DataLocation::Storage))
+		reportMutability(writes ? StateMutability::NonPayable : StateMutability::View, _indexRangeAccess.location());
 }
 
+void ViewPureChecker::endVisit(ModifierInvocation const& _modifier)
+{
+	if (ModifierDefinition const* mod = dynamic_cast<decltype(mod)>(_modifier.name().annotation().referencedDeclaration))
+	{
+		MutabilityAndLocation const& mutAndLocation = modifierMutability(*mod);
+		reportMutability(mutAndLocation.mutability, _modifier.location(), mutAndLocation.location);
+	}
+	else
+		solAssert(dynamic_cast<ContractDefinition const*>(_modifier.name().annotation().referencedDeclaration), "");
+}

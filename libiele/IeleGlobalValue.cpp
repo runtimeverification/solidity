@@ -1,7 +1,7 @@
 #include "IeleGlobalValue.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleGlobalValue::IeleGlobalValue(IeleContext *Ctx, const llvm::Twine &Name,
                                  IeleValueTy ivty) :

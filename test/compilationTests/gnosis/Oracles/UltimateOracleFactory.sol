@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Oracles/UltimateOracle.sol";
 
 
@@ -30,7 +30,7 @@ contract UltimateOracleFactory {
     /// @param challengePeriod Time to challenge oracle outcome
     /// @param challengeAmount Amount to challenge the outcome
     /// @param frontRunnerPeriod Time to overbid the front-runner
-    /// @return Oracle contract
+    /// @return ultimateOracle Oracle contract
     function createUltimateOracle(
         Oracle oracle,
         Token collateralToken,
@@ -50,7 +50,7 @@ contract UltimateOracleFactory {
             challengeAmount,
             frontRunnerPeriod
         );
-        UltimateOracleCreation(
+        emit UltimateOracleCreation(
             msg.sender,
             ultimateOracle,
             oracle,

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <libdevcore/Common.h>
+#include <libsolutil/Common.h>
 #include "IeleConstant.h"
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleIntConstant : public IeleConstant {
@@ -41,4 +41,4 @@ public:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

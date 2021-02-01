@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2015
@@ -21,18 +22,22 @@
  */
 
 #include <libsolidity/codegen/LValue.h>
-#include <libevmasm/Instruction.h>
-#include <libsolidity/ast/Types.h>
+
 #include <libsolidity/ast/AST.h>
+#include <libsolidity/ast/Types.h>
 #include <libsolidity/codegen/CompilerUtils.h>
+#include <libevmasm/Instruction.h>
 
 using namespace std;
-using namespace dev;
 using namespace solidity;
+using namespace solidity::evmasm;
+using namespace solidity::frontend;
+using namespace solidity::langutil;
+using namespace solidity::util;
 
 
 StackVariable::StackVariable(CompilerContext& _compilerContext, VariableDeclaration const& _declaration):
-	LValue(_compilerContext, _declaration.annotation().type.get()),
+	LValue(_compilerContext, _declaration.annotation().type),
 	m_baseStackOffset(m_context.baseStackOffsetOfVariable(_declaration)),
 	m_size(m_dataType->sizeOnStack())
 {
@@ -43,7 +48,7 @@ void StackVariable::retrieveValue(SourceLocation const& _location, bool) const
 	unsigned stackPos = m_context.baseToCurrentStackOffset(m_baseStackOffset);
 	if (stackPos + 1 > 16) //@todo correct this by fetching earlier or moving to memory
 		BOOST_THROW_EXCEPTION(
-			CompilerError() <<
+			StackTooDeepError() <<
 			errinfo_sourceLocation(_location) <<
 			errinfo_comment("Stack too deep, try removing local variables.")
 		);
@@ -57,7 +62,7 @@ void StackVariable::storeValue(Type const&, SourceLocation const& _location, boo
 	unsigned stackDiff = m_context.baseToCurrentStackOffset(m_baseStackOffset) - m_size + 1;
 	if (stackDiff > 16)
 		BOOST_THROW_EXCEPTION(
-			CompilerError() <<
+			StackTooDeepError() <<
 			errinfo_sourceLocation(_location) <<
 			errinfo_comment("Stack too deep, try removing local variables.")
 		);
@@ -70,8 +75,10 @@ void StackVariable::storeValue(Type const&, SourceLocation const& _location, boo
 
 void StackVariable::setToZero(SourceLocation const& _location, bool) const
 {
+/*
 	CompilerUtils(m_context).pushZeroValue(*m_dataType);
 	storeValue(*m_dataType, _location, true);
+*/
 }
 
 MemoryItem::MemoryItem(CompilerContext& _compilerContext, Type const& _type, bool _padded):
@@ -133,17 +140,55 @@ void MemoryItem::storeValue(Type const& _sourceType, SourceLocation const&, bool
 
 void MemoryItem::setToZero(SourceLocation const&, bool _removeReference) const
 {
+/*
 	CompilerUtils utils(m_context);
-	if (!_removeReference)
-		m_context << Instruction::DUP1;
+	solAssert(_removeReference, "");
 	utils.pushZeroValue(*m_dataType);
 	utils.storeInMemoryDynamic(*m_dataType, m_padded);
 	m_context << Instruction::POP;
+*/
+}
+
+
+ImmutableItem::ImmutableItem(CompilerContext& _compilerContext, VariableDeclaration const& _variable):
+	LValue(_compilerContext, _variable.annotation().type), m_variable(_variable)
+{
+	solAssert(_variable.immutable(), "");
+}
+
+void ImmutableItem::retrieveValue(SourceLocation const&, bool) const
+{
+	solUnimplementedAssert(m_dataType->isValueType(), "");
+	solAssert(!m_context.runtimeContext(), "Tried to read immutable at construction time.");
+	for (auto&& slotName: m_context.immutableVariableSlotNames(m_variable))
+		m_context.appendImmutable(slotName);
+}
+
+void ImmutableItem::storeValue(Type const& _sourceType, SourceLocation const&, bool _move) const
+{
+	CompilerUtils utils(m_context);
+	solUnimplementedAssert(m_dataType->isValueType(), "");
+	solAssert(_sourceType.isValueType(), "");
+
+	utils.convertType(_sourceType, *m_dataType, true);
+	m_context << m_context.immutableMemoryOffset(m_variable);
+	if (_move)
+		utils.moveIntoStack(m_dataType->sizeOnStack());
+	else
+		utils.copyToStackTop(m_dataType->sizeOnStack() + 1, m_dataType->sizeOnStack());
+	utils.storeInMemoryDynamic(*m_dataType, false);
+	m_context << Instruction::POP;
+}
+
+void ImmutableItem::setToZero(SourceLocation const&, bool) const
+{
+	solAssert(false, "Attempted to set immutable variable to zero.");
 }
 
 StorageItem::StorageItem(CompilerContext& _compilerContext, VariableDeclaration const& _declaration):
 	StorageItem(_compilerContext, *_declaration.annotation().type)
 {
+	solAssert(!_declaration.immutable(), "");
 	auto const& location = m_context.storageLocationOfVariable(_declaration);
 	m_context << location.first << u256(location.second);
 }
@@ -204,6 +249,14 @@ void StorageItem::retrieveValue(SourceLocation const&, bool _remove) const
 				CompilerUtils(m_context).splitExternalFunctionType(false);
 				cleaned = true;
 			}
+			else if (fun->kind() == FunctionType::Kind::Internal)
+			{
+/*
+				m_context << Instruction::DUP1 << Instruction::ISZERO;
+				CompilerUtils(m_context).pushZeroValue(*fun);
+				m_context << Instruction::MUL << Instruction::OR;
+*/
+			}
 		}
 		if (!cleaned)
 		{
@@ -212,9 +265,10 @@ void StorageItem::retrieveValue(SourceLocation const&, bool _remove) const
 		}
 	}
 }
-/*
+
 void StorageItem::storeValue(Type const& _sourceType, SourceLocation const& _location, bool _move) const
 {
+/*
 	CompilerUtils utils(m_context);
 	solAssert(m_dataType, "");
 
@@ -244,7 +298,7 @@ void StorageItem::storeValue(Type const& _sourceType, SourceLocation const& _loc
 			// stack: value storage_ref multiplier
 			// fetch old value
 			m_context << Instruction::DUP2 << Instruction::SLOAD;
-			// stack: value storege_ref multiplier old_full_value
+			// stack: value storage_ref multiplier old_full_value
 			// clear bytes in old value
 			m_context
 				<< Instruction::DUP2 << ((u256(1) << (8 * m_dataType->storageBytes())) - 1)
@@ -267,7 +321,7 @@ void StorageItem::storeValue(Type const& _sourceType, SourceLocation const& _loc
 			else if (m_dataType->category() == Type::Category::FixedBytes)
 			{
 				solAssert(_sourceType.category() == Type::Category::FixedBytes, "source not fixed bytes");
-				CompilerUtils(m_context).rightShiftNumberOnStack(256 - 8 * dynamic_cast<FixedBytesType const&>(*m_dataType).numBytes(), false);
+				CompilerUtils(m_context).rightShiftNumberOnStack(256 - 8 * dynamic_cast<FixedBytesType const&>(*m_dataType).numBytes());
 			}
 			else
 			{
@@ -286,7 +340,8 @@ void StorageItem::storeValue(Type const& _sourceType, SourceLocation const& _loc
 	{
 		solAssert(
 			_sourceType.category() == m_dataType->category(),
-			"Wrong type conversation for assignment.");
+			"Wrong type conversation for assignment."
+		);
 		if (m_dataType->category() == Type::Category::Array)
 		{
 			m_context << Instruction::POP; // remove byte offset
@@ -308,40 +363,48 @@ void StorageItem::storeValue(Type const& _sourceType, SourceLocation const& _loc
 				structType.structDefinition() == sourceType.structDefinition(),
 				"Struct assignment with conversion."
 			);
-			solAssert(sourceType.location() != DataLocation::CallData, "Structs in calldata not supported.");
-			for (auto const& member: structType.members(nullptr))
+			solAssert(!structType.containsNestedMapping(), "");
+			if (sourceType.location() == DataLocation::CallData)
 			{
-				// assign each member that is not a mapping
-				TypePointer const& memberType = member.type;
-				if (memberType->category() == Type::Category::Mapping)
-					continue;
-				TypePointer sourceMemberType = sourceType.memberType(member.name);
-				if (sourceType.location() == DataLocation::Storage)
+				solAssert(sourceType.sizeOnStack() == 1, "");
+				solAssert(structType.sizeOnStack() == 1, "");
+				m_context << Instruction::DUP2 << Instruction::DUP2;
+				m_context.callYulFunction(m_context.utilFunctions().updateStorageValueFunction(sourceType, structType, 0), 2, 0);
+			}
+			else
+			{
+				for (auto const& member: structType.members(nullptr))
 				{
-					// stack layout: source_ref target_ref
-					pair<u256, unsigned> const& offsets = sourceType.storageOffsetsOfMember(member.name);
-					m_context << offsets.first << Instruction::DUP3 << Instruction::ADD;
-					m_context << u256(offsets.second);
-					// stack: source_ref target_ref source_member_ref source_member_off
-					StorageItem(m_context, *sourceMemberType).retrieveValue(_location, true);
-					// stack: source_ref target_ref source_value...
-				}
-				else
-				{
-					solAssert(sourceType.location() == DataLocation::Memory, "");
-					// stack layout: source_ref target_ref
+					// assign each member that can live outside of storage
+					TypePointer const& memberType = member.type;
+					solAssert(memberType->nameable(), "");
 					TypePointer sourceMemberType = sourceType.memberType(member.name);
-					m_context << sourceType.memoryOffsetOfMember(member.name);
-					m_context << Instruction::DUP3 << Instruction::ADD;
-					MemoryItem(m_context, *sourceMemberType).retrieveValue(_location, true);
-					// stack layout: source_ref target_ref source_value...
+					if (sourceType.location() == DataLocation::Storage)
+					{
+						// stack layout: source_ref target_ref
+						pair<u256, unsigned> const& offsets = sourceType.storageOffsetsOfMember(member.name);
+						m_context << offsets.first << Instruction::DUP3 << Instruction::ADD;
+						m_context << u256(offsets.second);
+						// stack: source_ref target_ref source_member_ref source_member_off
+						StorageItem(m_context, *sourceMemberType).retrieveValue(_location, true);
+						// stack: source_ref target_ref source_value...
+					}
+					else
+					{
+						solAssert(sourceType.location() == DataLocation::Memory, "");
+						// stack layout: source_ref target_ref
+						m_context << sourceType.memoryOffsetOfMember(member.name);
+						m_context << Instruction::DUP3 << Instruction::ADD;
+						MemoryItem(m_context, *sourceMemberType).retrieveValue(_location, true);
+						// stack layout: source_ref target_ref source_value...
+					}
+					unsigned stackSize = sourceMemberType->sizeOnStack();
+					pair<u256, unsigned> const& offsets = structType.storageOffsetsOfMember(member.name);
+					m_context << dupInstruction(1 + stackSize) << offsets.first << Instruction::ADD;
+					m_context << u256(offsets.second);
+					// stack: source_ref target_ref target_off source_value... target_member_ref target_member_byte_off
+					StorageItem(m_context, *memberType).storeValue(*sourceMemberType, _location, true);
 				}
-				unsigned stackSize = sourceMemberType->sizeOnStack();
-				pair<u256, unsigned> const& offsets = structType.storageOffsetsOfMember(member.name);
-				m_context << dupInstruction(1 + stackSize) << offsets.first << Instruction::ADD;
-				m_context << u256(offsets.second);
-				// stack: source_ref target_ref target_off source_value... target_member_ref target_member_byte_off
-				StorageItem(m_context, *memberType).storeValue(*sourceMemberType, _location, true);
 			}
 			// stack layout: source_ref target_ref
 			solAssert(sourceType.sizeOnStack() == 1, "Unexpected source size.");
@@ -356,10 +419,12 @@ void StorageItem::storeValue(Type const& _sourceType, SourceLocation const& _loc
 					<< errinfo_sourceLocation(_location)
 					<< errinfo_comment("Invalid non-value type for assignment."));
 	}
+*/
 }
 
 void StorageItem::setToZero(SourceLocation const&, bool _removeReference) const
 {
+/*
 	if (m_dataType->category() == Type::Category::Array)
 	{
 		if (!_removeReference)
@@ -405,7 +470,7 @@ void StorageItem::setToZero(SourceLocation const&, bool _removeReference) const
 			// stack: storage_ref multiplier
 			// fetch old value
 			m_context << Instruction::DUP2 << Instruction::SLOAD;
-			// stack: storege_ref multiplier old_full_value
+			// stack: storage_ref multiplier old_full_value
 			// clear bytes in old value
 			m_context
 				<< Instruction::SWAP1 << ((u256(1) << (8 * m_dataType->storageBytes())) - 1)
@@ -415,14 +480,11 @@ void StorageItem::setToZero(SourceLocation const&, bool _removeReference) const
 			m_context << Instruction::SWAP1 << Instruction::SSTORE;
 		}
 	}
-}
 */
-
-/// Used in StorageByteArrayElement
-static FixedBytesType byteType(1);
+}
 
 StorageByteArrayElement::StorageByteArrayElement(CompilerContext& _compilerContext):
-	LValue(_compilerContext, &byteType)
+	LValue(_compilerContext, TypeProvider::byte())
 {
 }
 
@@ -461,8 +523,7 @@ void StorageByteArrayElement::storeValue(Type const&, SourceLocation const&, boo
 void StorageByteArrayElement::setToZero(SourceLocation const&, bool _removeReference) const
 {
 	// stack: ref byte_number
-	if (!_removeReference)
-		m_context << Instruction::DUP2 << Instruction::DUP2;
+	solAssert(_removeReference, "");
 	m_context << u256(31) << Instruction::SUB << u256(0x100) << Instruction::EXP;
 	// stack: ref (1<<(8*(31-byte_number)))
 	m_context << Instruction::DUP2 << Instruction::SLOAD;
@@ -473,37 +534,6 @@ void StorageByteArrayElement::setToZero(SourceLocation const&, bool _removeRefer
 	// stack: ref old_full_value_with_cleared_byte
 	m_context << Instruction::SWAP1 << Instruction::SSTORE;
 }
-
-StorageArrayLength::StorageArrayLength(CompilerContext& _compilerContext, const ArrayType& _arrayType):
-	LValue(_compilerContext, _arrayType.memberType("length").get()),
-	m_arrayType(_arrayType)
-{
-	solAssert(m_arrayType.isDynamicallySized(), "");
-}
-
-void StorageArrayLength::retrieveValue(SourceLocation const&, bool _remove) const
-{
-	ArrayUtils(m_context).retrieveLength(m_arrayType);
-	if (_remove)
-		m_context << Instruction::SWAP1 << Instruction::POP;
-}
-
-void StorageArrayLength::storeValue(Type const&, SourceLocation const&, bool _move) const
-{
-	if (_move)
-		m_context << Instruction::SWAP1;
-	else
-		m_context << Instruction::DUP2;
-	ArrayUtils(m_context).resizeDynamicArray(m_arrayType);
-}
-
-void StorageArrayLength::setToZero(SourceLocation const&, bool _removeReference) const
-{
-	if (!_removeReference)
-		m_context << Instruction::DUP1;
-	ArrayUtils(m_context).clearDynamicArray(m_arrayType);
-}
-
 
 TupleObject::TupleObject(
 	CompilerContext& _compilerContext,
@@ -522,24 +552,9 @@ unsigned TupleObject::sizeOnStack() const
 	return size;
 }
 
-void TupleObject::retrieveValue(SourceLocation const& _location, bool _remove) const
+void TupleObject::retrieveValue(SourceLocation const&, bool) const
 {
-	unsigned initialDepth = sizeOnStack();
-	unsigned initialStack = m_context.stackHeight();
-	for (auto const& lv: m_lvalues)
-		if (lv)
-		{
-			solAssert(initialDepth + m_context.stackHeight() >= initialStack, "");
-			unsigned depth = initialDepth + m_context.stackHeight() - initialStack;
-			if (lv->sizeOnStack() > 0)
-			{
-				if (_remove && depth > lv->sizeOnStack())
-					CompilerUtils(m_context).moveToStackTop(depth, depth - lv->sizeOnStack());
-				else if (!_remove && depth > 0)
-					CompilerUtils(m_context).copyToStackTop(depth, lv->sizeOnStack());
-			}
-			lv->retrieveValue(_location, true);
-		}
+	solAssert(false, "Tried to retrieve value of tuple.");
 }
 
 void TupleObject::storeValue(Type const& _sourceType, SourceLocation const& _location, bool) const
@@ -570,24 +585,7 @@ void TupleObject::storeValue(Type const& _sourceType, SourceLocation const& _loc
 	CompilerUtils(m_context).popStackElement(_sourceType);
 }
 
-void TupleObject::setToZero(SourceLocation const& _location, bool _removeReference) const
+void TupleObject::setToZero(SourceLocation const&, bool) const
 {
-	if (_removeReference)
-	{
-		for (size_t i = 0; i < m_lvalues.size(); ++i)
-			if (m_lvalues[m_lvalues.size() - i])
-				m_lvalues[m_lvalues.size() - i]->setToZero(_location, true);
-	}
-	else
-	{
-		unsigned depth = sizeOnStack();
-		for (auto const& val: m_lvalues)
-			if (val)
-			{
-				if (val->sizeOnStack() > 0)
-					CompilerUtils(m_context).copyToStackTop(depth, val->sizeOnStack());
-				val->setToZero(_location, false);
-				depth -= val->sizeOnStack();
-			}
-	}
+	solAssert(false, "Tried to delete tuple.");
 }

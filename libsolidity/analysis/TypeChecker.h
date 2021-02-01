@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2015
@@ -22,19 +23,20 @@
 
 #pragma once
 
-#include <libsolidity/interface/EVMVersion.h>
+#include <liblangutil/EVMVersion.h>
 
-#include <libsolidity/ast/Types.h>
 #include <libsolidity/ast/ASTAnnotations.h>
 #include <libsolidity/ast/ASTForward.h>
 #include <libsolidity/ast/ASTVisitor.h>
+#include <libsolidity/ast/Types.h>
 
-namespace dev
+namespace solidity::langutil
 {
-namespace solidity
-{
-
 class ErrorReporter;
+}
+
+namespace solidity::frontend
+{
 
 /**
  * The module that performs type analysis on the AST, checks the applicability of operations on
@@ -45,14 +47,14 @@ class TypeChecker: private ASTConstVisitor
 {
 public:
 	/// @param _errorReporter provides the error logging functionality.
-	TypeChecker(EVMVersion _evmVersion, ErrorReporter& _errorReporter):
+	TypeChecker(langutil::EVMVersion _evmVersion, langutil::ErrorReporter& _errorReporter):
 		m_evmVersion(_evmVersion),
 		m_errorReporter(_errorReporter)
 	{}
 
-	/// Performs type checking on the given contract and all of its sub-nodes.
+	/// Performs type checking on the given source and all of its sub-nodes.
 	/// @returns true iff all checks passed. Note even if all checks passed, errors() can still contain warnings
-	bool checkTypeRequirements(ASTNode const& _contract);
+	bool checkTypeRequirements(SourceUnit const& _source);
 
 	/// @returns the type of an expression and asserts that it is present.
 	TypePointer const& type(Expression const& _expression) const;
@@ -60,69 +62,90 @@ public:
 	/// (this can happen for variables with non-explicit types before their types are resolved)
 	TypePointer const& type(VariableDeclaration const& _variable) const;
 
+	static bool typeSupportedByOldABIEncoder(Type const& _type, bool _isLibraryCall);
+
 private:
 
-	virtual bool visit(ContractDefinition const& _contract) override;
-	/// Checks that two functions defined in this contract with the same name have different
-	/// arguments and that there is at most one constructor.
-	void checkContractDuplicateFunctions(ContractDefinition const& _contract);
-	void checkContractDuplicateEvents(ContractDefinition const& _contract);
-	void checkContractIllegalOverrides(ContractDefinition const& _contract);
-	/// Reports a type error with an appropiate message if overriden function signature differs.
-	/// Also stores the direct super function in the AST annotations.
-	void checkFunctionOverride(FunctionDefinition const& function, FunctionDefinition const& super);
-	void overrideError(FunctionDefinition const& function, FunctionDefinition const& super, std::string message);
-	void checkContractAbstractFunctions(ContractDefinition const& _contract);
-	void checkContractBaseConstructorArguments(ContractDefinition const& _contract);
-	void annotateBaseConstructorArguments(
-		ContractDefinition const& _currentContract,
-		FunctionDefinition const* _baseConstructor,
-		ASTNode const* _argumentNode
-	);
-	/// Checks that different functions with external visibility end up having different
-	/// external argument types (i.e. different signature).
-	void checkContractExternalTypeClashes(ContractDefinition const& _contract);
-	/// Checks that all requirements for a library are fulfilled if this is a library.
-	void checkLibraryRequirements(ContractDefinition const& _contract);
+	bool visit(ContractDefinition const& _contract) override;
 	/// Checks (and warns) if a tuple assignment might cause unexpected overwrites in storage.
 	/// Should only be called if the left hand side is tuple-typed.
 	void checkDoubleStorageAssignment(Assignment const& _assignment);
+	// Checks whether the expression @arg _expression can be assigned from type @arg _type
+	// and reports an error, if not.
+	void checkExpressionAssignment(Type const& _type, Expression const& _expression);
 
-	virtual void endVisit(InheritanceSpecifier const& _inheritance) override;
-	virtual void endVisit(UsingForDirective const& _usingFor) override;
-	virtual bool visit(StructDefinition const& _struct) override;
-	virtual bool visit(FunctionDefinition const& _function) override;
-	virtual bool visit(VariableDeclaration const& _variable) override;
-	virtual bool visit(EnumDefinition const& _enum) override;
+	/// Performs type checks for ``abi.decode(bytes memory, (...))`` and returns the
+	/// vector of return types (which is basically the second argument) if successful. It returns
+	/// the empty vector on error.
+	TypePointers typeCheckABIDecodeAndRetrieveReturnType(
+		FunctionCall const& _functionCall,
+		bool _abiEncoderV2
+	);
+
+	TypePointers typeCheckMetaTypeFunctionAndRetrieveReturnType(FunctionCall const& _functionCall);
+
+	/// Performs type checks and determines result types for type conversion FunctionCall nodes.
+	TypePointer typeCheckTypeConversionAndRetrieveReturnType(
+		FunctionCall const& _functionCall
+	);
+
+	/// Performs type checks on function call and struct ctor FunctionCall nodes (except for kind ABIDecode).
+	void typeCheckFunctionCall(
+		FunctionCall const& _functionCall,
+		FunctionTypePointer _functionType
+	);
+
+	void typeCheckFallbackFunction(FunctionDefinition const& _function);
+	void typeCheckReceiveFunction(FunctionDefinition const& _function);
+	void typeCheckConstructor(FunctionDefinition const& _function);
+
+	/// Performs general number and type checks of arguments against function call and struct ctor FunctionCall node parameters.
+	void typeCheckFunctionGeneralChecks(
+		FunctionCall const& _functionCall,
+		FunctionTypePointer _functionType
+	);
+
+	/// Performs general checks and checks specific to ABI encode functions
+	void typeCheckABIEncodeFunctions(
+		FunctionCall const& _functionCall,
+		FunctionTypePointer _functionType
+	);
+
+	void endVisit(InheritanceSpecifier const& _inheritance) override;
+	void endVisit(ModifierDefinition const& _modifier) override;
+	bool visit(FunctionDefinition const& _function) override;
+	bool visit(VariableDeclaration const& _variable) override;
 	/// We need to do this manually because we want to pass the bases of the current contract in
 	/// case this is a base constructor call.
 	void visitManually(ModifierInvocation const& _modifier, std::vector<ContractDefinition const*> const& _bases);
-	virtual bool visit(EventDefinition const& _eventDef) override;
-	virtual void endVisit(FunctionTypeName const& _funType) override;
-	virtual bool visit(InlineAssembly const& _inlineAssembly) override;
-	virtual bool visit(IfStatement const& _ifStatement) override;
-	virtual bool visit(WhileStatement const& _whileStatement) override;
-	virtual bool visit(ForStatement const& _forStatement) override;
-	virtual void endVisit(Return const& _return) override;
-	virtual bool visit(EmitStatement const&) override { m_insideEmitStatement = true; return true; }
-	virtual void endVisit(EmitStatement const& _emit) override;
-	virtual bool visit(VariableDeclarationStatement const& _variable) override;
-	virtual void endVisit(ExpressionStatement const& _statement) override;
-	virtual bool visit(Conditional const& _conditional) override;
-	virtual bool visit(Assignment const& _assignment) override;
-	virtual bool visit(TupleExpression const& _tuple) override;
-	virtual void endVisit(BinaryOperation const& _operation) override;
-	virtual bool visit(UnaryOperation const& _operation) override;
-	virtual bool visit(FunctionCall const& _functionCall) override;
-	virtual void endVisit(NewExpression const& _newExpression) override;
-	virtual bool visit(MemberAccess const& _memberAccess) override;
-	virtual bool visit(IndexAccess const& _indexAccess) override;
-	virtual bool visit(Identifier const& _identifier) override;
-	virtual void endVisit(ElementaryTypeNameExpression const& _expr) override;
-	virtual void endVisit(Literal const& _literal) override;
-
-	template <class T>
-	void findDuplicateDefinitions(std::map<std::string, std::vector<T>> const& _definitions, std::string _message);
+	bool visit(EventDefinition const& _eventDef) override;
+	void endVisit(FunctionTypeName const& _funType) override;
+	bool visit(InlineAssembly const& _inlineAssembly) override;
+	bool visit(IfStatement const& _ifStatement) override;
+	void endVisit(TryStatement const& _tryStatement) override;
+	bool visit(WhileStatement const& _whileStatement) override;
+	bool visit(ForStatement const& _forStatement) override;
+	void endVisit(Return const& _return) override;
+	void endVisit(EmitStatement const& _emit) override;
+	bool visit(VariableDeclarationStatement const& _variable) override;
+	void endVisit(ExpressionStatement const& _statement) override;
+	bool visit(Conditional const& _conditional) override;
+	bool visit(Assignment const& _assignment) override;
+	bool visit(TupleExpression const& _tuple) override;
+	void endVisit(BinaryOperation const& _operation) override;
+	bool visit(UnaryOperation const& _operation) override;
+	bool visit(FunctionCall const& _functionCall) override;
+	bool visit(FunctionCallOptions const& _functionCallOptions) override;
+	void endVisit(NewExpression const& _newExpression) override;
+	bool visit(MemberAccess const& _memberAccess) override;
+	bool visit(IndexAccess const& _indexAccess) override;
+	bool visit(IndexRangeAccess const& _indexRangeAccess) override;
+	bool visit(Identifier const& _identifier) override;
+	void endVisit(IdentifierPath const& _identifierPath) override;
+	void endVisit(UserDefinedTypeName const& _userDefinedTypeName) override;
+	void endVisit(ElementaryTypeNameExpression const& _expr) override;
+	void endVisit(Literal const& _literal) override;
+	void endVisit(UsingForDirective const& _usingForDirective) override;
 
 	bool contractDependenciesAreCyclic(
 		ContractDefinition const& _contract,
@@ -132,23 +155,37 @@ private:
 	/// @returns the referenced declaration and throws on error.
 	Declaration const& dereference(Identifier const& _identifier) const;
 	/// @returns the referenced declaration and throws on error.
-	Declaration const& dereference(UserDefinedTypeName const& _typeName) const;
+	Declaration const& dereference(IdentifierPath const& _path) const;
+
+	std::vector<Declaration const*> cleanOverloadedDeclarations(
+		Identifier const& _reference,
+		std::vector<Declaration const*> const& _candidates
+	);
 
 	/// Runs type checks on @a _expression to infer its type and then checks that it is implicitly
 	/// convertible to @a _expectedType.
-	void expectType(Expression const& _expression, Type const& _expectedType);
+	bool expectType(Expression const& _expression, Type const& _expectedType);
 	/// Runs type checks on @a _expression to infer its type and then checks that it is an LValue.
-	void requireLValue(Expression const& _expression);
+	void requireLValue(Expression const& _expression, bool _ordinaryAssignment);
 
-	ContractDefinition const* m_scope = nullptr;
+	bool useABICoderV2() const;
 
-	EVMVersion m_evmVersion;
+	/// @returns the current scope that can have function or type definitions.
+	/// This is either a contract or a source unit.
+	ASTNode const* currentDefinitionScope() const
+	{
+		if (m_currentContract)
+			return m_currentContract;
+		else
+			return m_currentSourceUnit;
+	}
 
-	/// Flag indicating whether we are currently inside an EmitStatement.
-	bool m_insideEmitStatement = false;
+	SourceUnit const* m_currentSourceUnit = nullptr;
+	ContractDefinition const* m_currentContract = nullptr;
 
-	ErrorReporter& m_errorReporter;
+	langutil::EVMVersion m_evmVersion;
+
+	langutil::ErrorReporter& m_errorReporter;
 };
 
-}
 }

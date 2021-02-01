@@ -11,14 +11,14 @@
 
 #include <map>
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleContract;
 
 } // end namespace iele
 
-namespace solidity {
+namespace frontend {
 
 class IeleLValue;
 class IeleRValue;
@@ -45,11 +45,15 @@ public:
   // Compiles a contract.
   void compileContract(
       const ContractDefinition &contract,
-      const std::map<const ContractDefinition *, iele::IeleContract *> &contracts,
+      const std::map<const ContractDefinition *, std::shared_ptr<IeleCompiler const>> &otherCompilers,
       const bytes &metadata);
 
   // Returns the compiled IeleContract.
-  iele::IeleContract &assembly() const { return *CompiledContract; }
+  iele::IeleContract &assembly() const {
+    solAssert(CompiledContract,
+              "Attempted access to compiled contract before compiling successfully.");
+    return *CompiledContract;
+  }
 
   std::string assemblyString(const StringMap &_sourceCodes = StringMap()) const {
     std::string ret;
@@ -64,9 +68,11 @@ public:
     return value;
   }
 
-  eth::LinkerObject assembledObject() const {
+  evmasm::LinkerObject assembledObject() const {
     bytes bytecode = CompiledContract->toBinary();
-    return {bytecode, std::map<size_t, std::string>()};
+    return {bytecode,
+            std::map<size_t, std::string>(),
+            std::map<u256, std::pair<std::string, std::vector<size_t>>>()};
   }
 
   // Update currently enabled set of experimental features.
@@ -116,7 +122,7 @@ public:
 
 private:
   iele::IeleContract *CompiledContract;
-  std::map<const ContractDefinition *, iele::IeleContract *> CompiledContracts;
+  std::map<const ContractDefinition *, std::shared_ptr<IeleCompiler const>> OtherCompilers;
   iele::IeleContext Context;
   iele::IeleContract *CompilingContract;
   iele::IeleFunction *CompilingFunction;
@@ -310,7 +316,7 @@ private:
   void appendArrayLengthResize(iele::IeleValue *LValue, iele::IeleValue *NewLength);
 
   iele::IeleLocalVariable *appendBinaryOperator(
-      Token::Value Opcode, iele::IeleValue *LeftOperand,
+      Token Opcode, iele::IeleValue *LeftOperand,
       iele::IeleValue *RightOperand,
       TypePointer ResultType);
 
@@ -329,7 +335,7 @@ private:
     TypePointer SourceType, TypePointers TargetTypes);
 
   iele::IeleValue *appendBooleanOperator(
-      Token::Value Opcode,
+      Token Opcode,
       const Expression &LeftOperand,
       const Expression &RightOperand);
 
@@ -420,5 +426,5 @@ private:
   void appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value);
 };
 
+} // end namespace frontend
 } // end namespace solidity
-} // end namespace dev

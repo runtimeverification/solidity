@@ -2,7 +2,7 @@
 
 #include "IeleValue.h"
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleConstant : public IeleValue {
@@ -24,4 +24,4 @@ public:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

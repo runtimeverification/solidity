@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Oracles/MajorityOracle.sol";
 
 
@@ -16,12 +16,12 @@ contract MajorityOracleFactory {
      */
     /// @dev Creates a new majority oracle contract
     /// @param oracles List of oracles taking part in the majority vote
-    /// @return Oracle contract
-    function createMajorityOracle(Oracle[] oracles)
+    /// @return majorityOracle Oracle contract
+    function createMajorityOracle(Oracle[] memory oracles)
         public
         returns (MajorityOracle majorityOracle)
     {
         majorityOracle = new MajorityOracle(oracles);
-        MajorityOracleCreation(msg.sender, majorityOracle, oracles);
+        emit MajorityOracleCreation(msg.sender, majorityOracle, oracles);
     }
 }

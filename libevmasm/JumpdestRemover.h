@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Alex Beregszaszi
  * Removes unused JUMPDESTs.
@@ -24,9 +25,7 @@
 #include <cstddef>
 #include <set>
 
-namespace dev
-{
-namespace eth
+namespace solidity::evmasm
 {
 class AssemblyItem;
 using AssemblyItems = std::vector<AssemblyItem>;
@@ -46,5 +45,4 @@ private:
 	AssemblyItems& m_items;
 };
 
-}
 }

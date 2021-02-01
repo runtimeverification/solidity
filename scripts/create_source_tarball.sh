@@ -23,7 +23,6 @@ REPO_ROOT="$(dirname "$0")"/..
     mkdir "$SOLDIR"
     # Store the current source
     git checkout-index -a --prefix="$SOLDIR"
-    git submodule foreach 'git checkout-index -a --prefix="'"$SOLDIR"'/$path/"'
     # Store the commit hash
     echo "$commithash" > "$SOLDIR/commit_hash.txt"
     if [ -e prerelease.txt -a ! -s prerelease.txt ]
@@ -32,8 +31,8 @@ REPO_ROOT="$(dirname "$0")"/..
     fi
     # Add dependencies
     mkdir -p "$SOLDIR/deps/downloads/" 2>/dev/null || true
-    wget -O "$SOLDIR/deps/downloads/jsoncpp-1.7.7.tar.gz" https://github.com/open-source-parsers/jsoncpp/archive/1.7.7.tar.gz
+    wget -O "$SOLDIR/deps/downloads/jsoncpp-1.9.3.tar.gz" https://github.com/open-source-parsers/jsoncpp/archive/1.9.3.tar.gz
     mkdir -p "$REPO_ROOT/upload"
-    tar czf "$REPO_ROOT/upload/solidity_$versionstring.tar.gz" -C "$TEMPDIR" "solidity_$versionstring"
+    tar --owner 0 --group 0 -czf "$REPO_ROOT/upload/solidity_$versionstring.tar.gz" -C "$TEMPDIR" "solidity_$versionstring"
     rm -r "$TEMPDIR"
 )

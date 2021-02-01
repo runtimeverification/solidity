@@ -1,9 +1,9 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 
 
 /// @title Abstract oracle contract - Functions to be implemented by oracles
-contract Oracle {
+abstract contract Oracle {
 
-    function isOutcomeSet() public constant returns (bool);
-    function getOutcome() public constant returns (int256);
+    function isOutcomeSet() virtual public view returns (bool);
+    function getOutcome() virtual public view returns (int256);
 }

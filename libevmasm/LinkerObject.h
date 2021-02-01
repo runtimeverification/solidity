@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /** @file Assembly.h
  * @author Gav Wood <i@gavwood.com>
  * @date 2014
@@ -21,12 +22,10 @@
 
 #pragma once
 
-#include <libdevcore/Common.h>
-#include <libdevcore/FixedHash.h>
+#include <libsolutil/Common.h>
+#include <libsolutil/FixedHash.h>
 
-namespace dev
-{
-namespace eth
+namespace solidity::evmasm
 {
 
 /**
@@ -35,27 +34,37 @@ namespace eth
  */
 struct LinkerObject
 {
+	/// The bytecode.
 	bytes bytecode;
+
 	/// Map from offsets in bytecode to library identifiers. The addresses starting at those offsets
 	/// need to be replaced by the actual addresses by the linker.
 	std::map<size_t, std::string> linkReferences;
+
+	/// Map from hashes of the identifiers of immutable variables to the full identifier of the immutable and
+	/// to a list of offsets into the bytecode that refer to their values.
+	std::map<u256, std::pair<std::string, std::vector<size_t>>> immutableReferences;
 
 	/// Appends the bytecode of @a _other and incorporates its link references.
 	void append(LinkerObject const& _other);
 
 	/// Links the given libraries by replacing their uses in the code and removes them from the references.
-	void link(std::map<std::string, h160> const& _libraryAddresses);
+	void link(std::map<std::string, util::h160> const& _libraryAddresses);
 
 	/// @returns a hex representation of the bytecode of the given object, replacing unlinked
-	/// addresses by placeholders.
+	/// addresses by placeholders. This output is lowercase.
 	std::string toHex() const;
 
+	/// @returns a 36 character string that is used as a placeholder for the library
+	/// address (enclosed by `__` on both sides). The placeholder is the hex representation
+	/// of the first 18 bytes of the keccak-256 hash of @a _libraryName.
+	static std::string libraryPlaceholder(std::string const& _libraryName);
+
 private:
-	static h160 const* matchLibrary(
+	static util::h160 const* matchLibrary(
 		std::string const& _linkRefName,
-		std::map<std::string, h160> const& _libraryAddresses
+		std::map<std::string, util::h160> const& _libraryAddresses
 	);
 };
 
-}
 }

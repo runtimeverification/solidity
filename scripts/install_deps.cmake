@@ -43,7 +43,7 @@ function(download_and_unpack PACKAGE_URL DST_DIR)
   if (STATUS)
     message("Unpacking ${FILE_NAME} to ${DST_DIR}")
     execute_process(COMMAND ${CMAKE_COMMAND} -E tar -xf ${DST_FILE}
-        WORKING_DIRECTORY ${DST_DIR})
+      WORKING_DIRECTORY ${DST_DIR})
   endif()
 endfunction(download_and_unpack)
 
@@ -59,8 +59,8 @@ function(create_package NAME DIR)
 
   set(PACKAGE_FILE "${PACKAGES_DIR}/${NAME}.tar.gz")
   execute_process(COMMAND ${CMAKE_COMMAND} -E
-      tar -czf ${PACKAGE_FILE} ${TOP_FILES}
-      WORKING_DIRECTORY ${DIR})
+    tar -czf ${PACKAGE_FILE} ${TOP_FILES}
+    WORKING_DIRECTORY ${DIR})
 endfunction(create_package)
 
 # Downloads the source code of the package and unpacks it to dedicated 'src'
@@ -90,10 +90,10 @@ function(prepare_package_source NAME VERSION URL)
 endfunction()
 
 set(INSTALL_DIR "${ROOT_DIR}/install")
-set(SERVER "https://github.com/ethereum/cpp-dependencies/releases/download/vc140/")
+set(SERVER "https://github.com/ethereum/cpp-dependencies/releases/download/vs2017/")
 
 function(download_and_install PACKAGE_NAME)
   download_and_unpack("${SERVER}${PACKAGE_NAME}.tar.gz" ${INSTALL_DIR})
 endfunction(download_and_install)
 
-download_and_install("boost-1.61")
+download_and_install("boost-1.67.0")

@@ -19,19 +19,17 @@
  */
 
 #include <test/libsolidity/AnalysisFramework.h>
+#include <test/Metadata.h>
+#include <test/Common.h>
 
-#include <test/Options.h>
+#include <boost/test/unit_test.hpp>
 
 using namespace std;
 
-namespace dev
-{
-namespace solidity
-{
-namespace test
+namespace solidity::frontend::test
 {
 
-BOOST_FIXTURE_TEST_SUITE(Compiler, AnalysisFramework)
+BOOST_FIXTURE_TEST_SUITE(SolidityCompiler, AnalysisFramework)
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(does_not_include_creation_time_only_internal_functions, 2)
 BOOST_AUTO_TEST_CASE(does_not_include_creation_time_only_internal_functions)
@@ -39,11 +37,13 @@ BOOST_AUTO_TEST_CASE(does_not_include_creation_time_only_internal_functions)
 	char const* sourceCode = R"(
 		contract C {
 			uint x;
-			function C() { f(); }
-			function f() internal { for (uint i = 0; i < 10; ++i) x += 3 + i; }
+			constructor() { f(); }
+			function f() internal { unchecked { for (uint i = 0; i < 10; ++i) x += 3 + i; } }
 		}
 	)";
+	compiler().setOptimiserSettings(solidity::test::CommonOptions::get().optimize);
 	BOOST_REQUIRE(success(sourceCode));
+<<<<<<< ours
 	m_compiler.setOptimiserSettings(dev::test::Options::get().optimize);
 	BOOST_REQUIRE_MESSAGE(m_compiler.compile(), "Compiling contract failed");
 	bytes const& creationBytecode = m_compiler.object("C").bytecode;
@@ -52,10 +52,17 @@ BOOST_AUTO_TEST_CASE(does_not_include_creation_time_only_internal_functions)
 	BOOST_CHECK(creationBytecode.size() <= 160);
 	BOOST_CHECK(runtimeBytecode.size() >= 50);
 	BOOST_CHECK(runtimeBytecode.size() <= 70);
+=======
+	BOOST_REQUIRE_MESSAGE(compiler().compile(), "Compiling contract failed");
+	bytes const& creationBytecode = solidity::test::bytecodeSansMetadata(compiler().object("C").bytecode);
+	bytes const& runtimeBytecode = solidity::test::bytecodeSansMetadata(compiler().runtimeObject("C").bytecode);
+	BOOST_CHECK(creationBytecode.size() >= 90);
+	BOOST_CHECK(creationBytecode.size() <= 120);
+	BOOST_CHECK(runtimeBytecode.size() >= 10);
+	BOOST_CHECK(runtimeBytecode.size() <= 30);
+>>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
-}
-}
 }

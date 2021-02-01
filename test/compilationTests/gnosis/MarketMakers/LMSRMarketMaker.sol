@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Utils/Math.sol";
 import "../MarketMakers/MarketMaker.sol";
 
@@ -21,10 +21,11 @@ contract LMSRMarketMaker is MarketMaker {
     /// @param market Market contract
     /// @param outcomeTokenIndex Index of outcome to buy
     /// @param outcomeTokenCount Number of outcome tokens to buy
-    /// @return Cost
+    /// @return cost Cost
     function calcCost(Market market, uint8 outcomeTokenIndex, uint256 outcomeTokenCount)
         public
-        constant
+        override
+        view
         returns (uint256 cost)
     {
         require(market.eventContract().getOutcomeCount() > 1);
@@ -56,10 +57,11 @@ contract LMSRMarketMaker is MarketMaker {
     /// @param market Market contract
     /// @param outcomeTokenIndex Index of outcome to sell
     /// @param outcomeTokenCount Number of outcome tokens to sell
-    /// @return Profit
+    /// @return profit Profit
     function calcProfit(Market market, uint8 outcomeTokenIndex, uint256 outcomeTokenCount)
         public
-        constant
+        override
+        view
         returns (uint256 profit)
     {
         require(market.eventContract().getOutcomeCount() > 1);
@@ -82,10 +84,11 @@ contract LMSRMarketMaker is MarketMaker {
     /// @dev Returns marginal price of an outcome
     /// @param market Market contract
     /// @param outcomeTokenIndex Index of outcome to determine marginal price of
-    /// @return Marginal price of an outcome as a fixed point number
+    /// @return price Marginal price of an outcome as a fixed point number
     function calcMarginalPrice(Market market, uint8 outcomeTokenIndex)
         public
-        constant
+        override
+        view
         returns (uint256 price)
     {
         require(market.eventContract().getOutcomeCount() > 1);
@@ -95,7 +98,7 @@ contract LMSRMarketMaker is MarketMaker {
         // The price function is exp(quantities[i]/b) / sum(exp(q/b) for q in quantities)
         // To avoid overflow, calculate with
         // exp(quantities[i]/b - offset) / sum(exp(q/b - offset) for q in quantities)
-        var (sum, , outcomeExpTerm) = sumExpOffset(logN, netOutcomeTokensSold, funding, outcomeTokenIndex);
+        (uint256 sum, , uint256 outcomeExpTerm) = sumExpOffset(logN, netOutcomeTokensSold, funding, outcomeTokenIndex);
         return outcomeExpTerm / (sum / ONE);
     }
 
@@ -107,16 +110,16 @@ contract LMSRMarketMaker is MarketMaker {
     /// @param logN Logarithm of the number of outcomes
     /// @param netOutcomeTokensSold Net outcome tokens sold by market
     /// @param funding Initial funding for market
-    /// @return Cost level
-    function calcCostLevel(int256 logN, int256[] netOutcomeTokensSold, uint256 funding)
+    /// @return costLevel Cost level
+    function calcCostLevel(int256 logN, int256[] memory netOutcomeTokensSold, uint256 funding)
         private
-        constant
+        view
         returns(int256 costLevel)
     {
         // The cost function is C = b * log(sum(exp(q/b) for q in quantities)).
         // To avoid overflow, we need to calc with an exponent offset:
         // C = b * (offset + log(sum(exp(q/b - offset) for q in quantities)))
-        var (sum, offset, ) = sumExpOffset(logN, netOutcomeTokensSold, funding, 0);
+        (uint256 sum, int256 offset, ) = sumExpOffset(logN, netOutcomeTokensSold, funding, 0);
         costLevel = Math.ln(sum);
         costLevel = costLevel.add(offset);
         costLevel = (costLevel.mul(int256(ONE)) / logN).mul(int256(funding));
@@ -128,10 +131,12 @@ contract LMSRMarketMaker is MarketMaker {
     /// @param netOutcomeTokensSold Net outcome tokens sold by market
     /// @param funding Initial funding for market
     /// @param outcomeIndex Index of exponential term to extract (for use by marginal price function)
-    /// @return A result structure composed of the sum, the offset used, and the summand associated with the supplied index
-    function sumExpOffset(int256 logN, int256[] netOutcomeTokensSold, uint256 funding, uint8 outcomeIndex)
+    /// @return sum The sum of the outcomes
+    /// @return offset The offset that is used for all
+    /// @return outcomeExpTerm The summand associated with the supplied index
+    function sumExpOffset(int256 logN, int256[] memory netOutcomeTokensSold, uint256 funding, uint8 outcomeIndex)
         private
-        constant
+        view
         returns (uint256 sum, int256 offset, uint256 outcomeExpTerm)
     {
         // Naive calculation of this causes an overflow
@@ -167,11 +172,11 @@ contract LMSRMarketMaker is MarketMaker {
     ///      number of collateral tokens (which is the same as the number of outcome tokens the
     ///      market created) subtracted by the quantity of that token held by the market.
     /// @param market Market contract
-    /// @return Net outcome tokens sold by market
+    /// @return quantities Net outcome tokens sold by market
     function getNetOutcomeTokensSold(Market market)
         private
-        constant
-        returns (int256[] quantities)
+        view
+        returns (int256[] memory quantities)
     {
         quantities = new int256[](market.eventContract().getOutcomeCount());
         for (uint8 i = 0; i < quantities.length; i++)

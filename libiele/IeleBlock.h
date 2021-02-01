@@ -7,7 +7,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Twine.h"
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleValueSymbolTable;
@@ -125,4 +125,4 @@ public:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

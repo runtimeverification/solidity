@@ -14,20 +14,21 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /** @file PathGasMeter.cpp
  * @author Christian <c@ethdev.com>
  * @date 2015
  */
 
-#include "PathGasMeter.h"
+#include <libevmasm/PathGasMeter.h>
 #include <libevmasm/KnownState.h>
 #include <libevmasm/SemanticInformation.h>
 
 using namespace std;
-using namespace dev;
-using namespace dev::eth;
+using namespace solidity;
+using namespace solidity::evmasm;
 
-PathGasMeter::PathGasMeter(AssemblyItems const& _items, solidity::EVMVersion _evmVersion):
+PathGasMeter::PathGasMeter(AssemblyItems const& _items, langutil::EVMVersion _evmVersion):
 	m_items(_items), m_evmVersion(_evmVersion)
 {
 	for (size_t i = 0; i < m_items.size(); ++i)
@@ -40,10 +41,10 @@ GasMeter::GasConsumption PathGasMeter::estimateMax(
 	shared_ptr<KnownState> const& _state
 )
 {
-	auto path = unique_ptr<GasPath>(new GasPath());
+	auto path = make_unique<GasPath>();
 	path->index = _startIndex;
 	path->state = _state->copy();
-	m_queue.push_back(move(path));
+	queue(move(path));
 
 	GasMeter::GasConsumption gas;
 	while (!m_queue.empty() && !gas.isInfinite)
@@ -51,12 +52,23 @@ GasMeter::GasConsumption PathGasMeter::estimateMax(
 	return gas;
 }
 
+void PathGasMeter::queue(std::unique_ptr<GasPath>&& _newPath)
+{
+	if (
+		m_highestGasUsagePerJumpdest.count(_newPath->index) &&
+		_newPath->gas < m_highestGasUsagePerJumpdest.at(_newPath->index)
+	)
+		return;
+	m_highestGasUsagePerJumpdest[_newPath->index] = _newPath->gas;
+	m_queue[_newPath->index] = move(_newPath);
+}
+
 GasMeter::GasConsumption PathGasMeter::handleQueueItem()
 {
 	assertThrow(!m_queue.empty(), OptimizerException, "");
 
-	unique_ptr<GasPath> path = move(m_queue.back());
-	m_queue.pop_back();
+	unique_ptr<GasPath> path = move(m_queue.rbegin()->second);
+	m_queue.erase(--m_queue.end());
 
 	shared_ptr<KnownState> state = path->state;
 	GasMeter meter(state, m_evmVersion, path->largestMemoryAccess);
@@ -109,7 +121,7 @@ GasMeter::GasConsumption PathGasMeter::handleQueueItem()
 
 		for (u256 const& tag: jumpTags)
 		{
-			auto newPath = unique_ptr<GasPath>(new GasPath());
+			auto newPath = make_unique<GasPath>();
 			newPath->index = m_items.size();
 			if (m_tagPositions.count(tag))
 				newPath->index = m_tagPositions.at(tag);
@@ -117,7 +129,7 @@ GasMeter::GasConsumption PathGasMeter::handleQueueItem()
 			newPath->largestMemoryAccess = meter.largestMemoryAccess();
 			newPath->state = state->copy();
 			newPath->visitedJumpdests = path->visitedJumpdests;
-			m_queue.push_back(move(newPath));
+			queue(move(newPath));
 		}
 
 		if (branchStops)

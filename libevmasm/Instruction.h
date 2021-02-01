@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /** @file Instruction.h
  * @author Gav Wood <i@gavwood.com>
  * @date 2014
@@ -21,25 +22,20 @@
 
 #pragma once
 
+#include <libevmasm/Exceptions.h>
+#include <libsolutil/Common.h>
+#include <libsolutil/Assertions.h>
 #include <functional>
-#include <libdevcore/Common.h>
-#include <libdevcore/Assertions.h>
-#include "Exceptions.h"
 
-namespace dev
+namespace solidity::evmasm
 {
-namespace solidity
-{
-
-DEV_SIMPLE_EXCEPTION(InvalidDeposit);
-DEV_SIMPLE_EXCEPTION(InvalidOpcode);
 
 /// Virtual machine bytecode instruction.
 enum class Instruction: uint8_t
 {
 	STOP = 0x00,		///< halts execution
 	ADD,				///< addition operation
-	MUL,				///< mulitplication operation
+	MUL,				///< multiplication operation
 	SUB,				///< subtraction operation
 	DIV,				///< integer division operation
 	SDIV,				///< signed integer division operation
@@ -50,11 +46,11 @@ enum class Instruction: uint8_t
 	EXP,				///< exponential operation
 	SIGNEXTEND,			///< extend length of signed integer
 
-	LT = 0x10,			///< less-than comparision
-	GT,					///< greater-than comparision
-	SLT,				///< signed less-than comparision
-	SGT,				///< signed greater-than comparision
-	EQ,					///< equality comparision
+	LT = 0x10,			///< less-than comparison
+	GT,					///< greater-than comparison
+	SLT,				///< signed less-than comparison
+	SGT,				///< signed greater-than comparison
+	EQ,					///< equality comparison
 	ISZERO,				///< simple not operator
 	AND,				///< bitwise AND operation
 	OR,					///< bitwise OR operation
@@ -82,6 +78,7 @@ enum class Instruction: uint8_t
 	EXTCODECOPY,		///< copy external code (from another contract)
 	RETURNDATASIZE = 0x3d,	///< get size of return data buffer
 	RETURNDATACOPY = 0x3e,	///< copy return data in current environment to memory
+	EXTCODEHASH = 0x3f,	///< get external code hash (from another contract)
 
 	BLOCKHASH = 0x40,	///< get hash of most recent complete block
 	COINBASE,			///< get the block's coinbase address
@@ -89,6 +86,8 @@ enum class Instruction: uint8_t
 	NUMBER,				///< get the block's number
 	DIFFICULTY,			///< get the block's difficulty
 	GASLIMIT,			///< get the block's gas limit
+	CHAINID,			///< get the config's chainid param
+	SELFBALANCE,		///< get balance of the current account
 
 	POP = 0x50,			///< remove item from stack
 	MLOAD,				///< load word from memory
@@ -176,24 +175,24 @@ enum class Instruction: uint8_t
 	LOG3,				///< Makes a log entry; 3 topics.
 	LOG4,				///< Makes a log entry; 4 topics.
 
-	JUMPTO = 0xb0,      ///< alter the program counter to a jumpdest -- not part of Instructions.cpp
-	JUMPIF,             ///< conditionally alter the program counter -- not part of Instructions.cpp
-	JUMPV,              ///< alter the program counter to a jumpdest -- not part of Instructions.cpp
-	JUMPSUB,            ///< alter the program counter to a beginsub -- not part of Instructions.cpp
-	JUMPSUBV,           ///< alter the program counter to a beginsub -- not part of Instructions.cpp
-	BEGINSUB,           ///< set a potential jumpsub destination -- not part of Instructions.cpp
-	BEGINDATA,          ///< begin the data section -- not part of Instructions.cpp
-	RETURNSUB,          ///< return to subroutine jumped from -- not part of Instructions.cpp
-	PUTLOCAL,           ///< pop top of stack to local variable -- not part of Instructions.cpp
-	GETLOCAL,           ///< push local variable to top of stack -- not part of Instructions.cpp
+	EIP615_JUMPTO = 0xb0,      ///< alter the program counter to a jumpdest -- not part of Instructions.cpp
+	EIP615_JUMPIF,             ///< conditionally alter the program counter -- not part of Instructions.cpp
+	EIP615_JUMPV,              ///< alter the program counter to a jumpdest -- not part of Instructions.cpp
+	EIP615_JUMPSUB,            ///< alter the program counter to a beginsub -- not part of Instructions.cpp
+	EIP615_JUMPSUBV,           ///< alter the program counter to a beginsub -- not part of Instructions.cpp
+	EIP615_BEGINSUB,           ///< set a potential jumpsub destination -- not part of Instructions.cpp
+	EIP615_BEGINDATA,          ///< begin the data section -- not part of Instructions.cpp
+	EIP615_RETURNSUB,          ///< return to subroutine jumped from -- not part of Instructions.cpp
+	EIP615_PUTLOCAL,           ///< pop top of stack to local variable -- not part of Instructions.cpp
+	EIP615_GETLOCAL,           ///< push local variable to top of stack -- not part of Instructions.cpp
 
 	CREATE = 0xf0,		///< create a new account with associated code
 	CALL,				///< message-call into an account
 	CALLCODE,			///< message-call with another account's code only
 	RETURN,				///< halt execution returning output data
 	DELEGATECALL,		///< like CALLCODE but keeps caller's value and sender
+	CREATE2 = 0xf5,		///< create new account with associated code at address `sha3(0xff + sender + salt + init code) % 2**160`
 	STATICCALL = 0xfa,	///< like CALL but disallow state modifications
-	CREATE2 = 0xfb,		///< create new account with associated code at address `sha3(sender + salt + sha3(init code)) % 2**160`
 
 	REVERT = 0xfd,		///< halt execution, revert state and return output data
 	INVALID = 0xfe,		///< invalid instruction for expressing runtime errors (e.g., division-by-zero)
@@ -218,22 +217,34 @@ inline bool isSwapInstruction(Instruction _inst)
 	return Instruction::SWAP1 <= _inst && _inst <= Instruction::SWAP16;
 }
 
+/// @returns true if the instruction is a LOG
+inline bool isLogInstruction(Instruction _inst)
+{
+	return Instruction::LOG0 <= _inst && _inst <= Instruction::LOG4;
+}
+
 /// @returns the number of PUSH Instruction _inst
 inline unsigned getPushNumber(Instruction _inst)
 {
-	return (byte)_inst - unsigned(Instruction::PUSH1) + 1;
+	return (uint8_t)_inst - unsigned(Instruction::PUSH1) + 1;
 }
 
 /// @returns the number of DUP Instruction _inst
 inline unsigned getDupNumber(Instruction _inst)
 {
-	return (byte)_inst - unsigned(Instruction::DUP1) + 1;
+	return (uint8_t)_inst - unsigned(Instruction::DUP1) + 1;
 }
 
 /// @returns the number of SWAP Instruction _inst
 inline unsigned getSwapNumber(Instruction _inst)
 {
-	return (byte)_inst - unsigned(Instruction::SWAP1) + 1;
+	return (uint8_t)_inst - unsigned(Instruction::SWAP1) + 1;
+}
+
+/// @returns the number of LOG Instruction _inst
+inline unsigned getLogNumber(Instruction _inst)
+{
+	return (uint8_t)_inst - unsigned(Instruction::LOG0);
 }
 
 /// @returns the PUSH<_number> instruction
@@ -293,7 +304,7 @@ struct InstructionInfo
 /// Information on all the instructions.
 InstructionInfo instructionInfo(Instruction _inst);
 
-/// check whether instructions exists
+/// check whether instructions exists.
 bool isValidInstruction(Instruction _inst);
 
 /// Convert from string mnemonic to Instruction type.
@@ -305,5 +316,4 @@ void eachInstruction(bytes const& _mem, std::function<void(Instruction,u256 cons
 /// Convert from EVM code to simple EVM assembly language.
 std::string disassemble(bytes const& _mem);
 
-}
 }

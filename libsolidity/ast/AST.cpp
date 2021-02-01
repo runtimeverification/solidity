@@ -1,19 +1,20 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2014
@@ -21,62 +22,38 @@
  */
 
 #include <libsolidity/ast/AST.h>
+
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/ast/AST_accept.h>
-
-#include <libdevcore/SHA3.h>
+#include <libsolidity/ast/TypeProvider.h>
+#include <libsolutil/Keccak256.h>
 
 #include <boost/algorithm/string.hpp>
 
 #include <algorithm>
 #include <functional>
+#include <utility>
 
 using namespace std;
-using namespace dev;
-using namespace dev::solidity;
+using namespace solidity;
+using namespace solidity::frontend;
 
-class IDDispenser
+ASTNode::ASTNode(int64_t _id, SourceLocation _location):
+	m_id(static_cast<size_t>(_id)),
+	m_location(std::move(_location))
 {
-public:
-	static size_t next() { return ++instance(); }
-	static void reset() { instance() = 0; }
-private:
-	static size_t& instance()
-	{
-		static IDDispenser dispenser;
-		return dispenser.id;
-	}
-	size_t id = 0;
-};
-
-ASTNode::ASTNode(SourceLocation const& _location):
-	m_id(IDDispenser::next()),
-	m_location(_location)
-{
-}
-
-ASTNode::~ASTNode()
-{
-	delete m_annotation;
-}
-
-void ASTNode::resetID()
-{
-	IDDispenser::reset();
 }
 
 ASTAnnotation& ASTNode::annotation() const
 {
 	if (!m_annotation)
-		m_annotation = new ASTAnnotation();
+		m_annotation = make_unique<ASTAnnotation>();
 	return *m_annotation;
 }
 
 SourceUnitAnnotation& SourceUnit::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new SourceUnitAnnotation();
-	return dynamic_cast<SourceUnitAnnotation&>(*m_annotation);
+	return initAnnotation<SourceUnitAnnotation>();
 }
 
 set<SourceUnit const*> SourceUnit::referencedSourceUnits(bool _recurse, set<SourceUnit const*> _skipList) const
@@ -98,22 +75,25 @@ set<SourceUnit const*> SourceUnit::referencedSourceUnits(bool _recurse, set<Sour
 
 ImportAnnotation& ImportDirective::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new ImportAnnotation();
-	return dynamic_cast<ImportAnnotation&>(*m_annotation);
+	return initAnnotation<ImportAnnotation>();
 }
 
 TypePointer ImportDirective::type() const
 {
 	solAssert(!!annotation().sourceUnit, "");
-	return make_shared<ModuleType>(*annotation().sourceUnit);
+	return TypeProvider::module(*annotation().sourceUnit);
 }
 
-map<FixedHash<4>, FunctionTypePointer> ContractDefinition::interfaceFunctions() const
+bool ContractDefinition::derivesFrom(ContractDefinition const& _base) const
 {
-	auto exportedFunctionList = interfaceFunctionList();
+	return util::contains(annotation().linearizedBaseContracts, &_base);
+}
 
-	map<FixedHash<4>, FunctionTypePointer> exportedFunctions;
+map<util::FixedHash<4>, FunctionTypePointer> ContractDefinition::interfaceFunctions(bool _includeInheritedFunctions) const
+{
+	auto exportedFunctionList = interfaceFunctionList(_includeInheritedFunctions);
+
+	map<util::FixedHash<4>, FunctionTypePointer> exportedFunctions;
 	for (auto const& it: exportedFunctionList)
 		exportedFunctions.insert(it);
 
@@ -133,10 +113,9 @@ FunctionDefinition const* ContractDefinition::constructor() const
 	return nullptr;
 }
 
-bool ContractDefinition::constructorIsPublic() const
+bool ContractDefinition::canBeDeployed() const
 {
-	FunctionDefinition const* f = constructor();
-	return !f || f->isPublic();
+	return !abstract() && !isInterface();
 }
 
 FunctionDefinition const* ContractDefinition::fallbackFunction() const
@@ -148,12 +127,21 @@ FunctionDefinition const* ContractDefinition::fallbackFunction() const
 	return nullptr;
 }
 
+FunctionDefinition const* ContractDefinition::receiveFunction() const
+{
+	for (ContractDefinition const* contract: annotation().linearizedBaseContracts)
+		for (FunctionDefinition const* f: contract->definedFunctions())
+			if (f->isReceive())
+				return f;
+	return nullptr;
+}
+
 vector<EventDefinition const*> const& ContractDefinition::interfaceEvents() const
 {
-	if (!m_interfaceEvents)
-	{
+	return m_interfaceEvents.init([&]{
 		set<string> eventsSeen;
-		m_interfaceEvents.reset(new vector<EventDefinition const*>());
+		vector<EventDefinition const*> interfaceEvents;
+
 		for (ContractDefinition const* contract: annotation().linearizedBaseContracts)
 			for (EventDefinition const* e: contract->events())
 			{
@@ -166,28 +154,31 @@ vector<EventDefinition const*> const& ContractDefinition::interfaceEvents() cons
 				if (eventsSeen.count(eventSignature) == 0)
 				{
 					eventsSeen.insert(eventSignature);
-					m_interfaceEvents->push_back(e);
+					interfaceEvents.push_back(e);
 				}
 			}
-	}
-	return *m_interfaceEvents;
+
+		return interfaceEvents;
+	});
 }
 
-vector<pair<FixedHash<4>, FunctionTypePointer>> const& ContractDefinition::interfaceFunctionList() const
+vector<pair<util::FixedHash<4>, FunctionTypePointer>> const& ContractDefinition::interfaceFunctionList(bool _includeInheritedFunctions) const
 {
-	if (!m_interfaceFunctionList)
-	{
+	return m_interfaceFunctionList[_includeInheritedFunctions].init([&]{
 		set<string> signaturesSeen;
-		m_interfaceFunctionList.reset(new vector<pair<FixedHash<4>, FunctionTypePointer>>());
+		vector<pair<util::FixedHash<4>, FunctionTypePointer>> interfaceFunctionList;
+
 		for (ContractDefinition const* contract: annotation().linearizedBaseContracts)
 		{
+			if (_includeInheritedFunctions == false && contract != this)
+				continue;
 			vector<FunctionTypePointer> functions;
 			for (FunctionDefinition const* f: contract->definedFunctions())
 				if (f->isPartOfExternalInterface())
-					functions.push_back(make_shared<FunctionType>(*f, false));
+					functions.push_back(TypeProvider::function(*f, FunctionType::Kind::External));
 			for (VariableDeclaration const* v: contract->stateVariables())
 				if (v->isPartOfExternalInterface())
-					functions.push_back(make_shared<FunctionType>(*v));
+					functions.push_back(TypeProvider::function(*v));
 			for (FunctionTypePointer const& fun: functions)
 			{
 				if (!fun->interfaceFunctionType())
@@ -197,104 +188,109 @@ vector<pair<FixedHash<4>, FunctionTypePointer>> const& ContractDefinition::inter
 				if (signaturesSeen.count(functionSignature) == 0)
 				{
 					signaturesSeen.insert(functionSignature);
-					FixedHash<4> hash(dev::keccak256(functionSignature));
-					m_interfaceFunctionList->push_back(make_pair(hash, fun));
+					util::FixedHash<4> hash(util::keccak256(functionSignature));
+					interfaceFunctionList.emplace_back(hash, fun);
 				}
 			}
 		}
-	}
-	return *m_interfaceFunctionList;
+
+		return interfaceFunctionList;
+	});
 }
 
-vector<Declaration const*> const& ContractDefinition::inheritableMembers() const
+uint32_t ContractDefinition::interfaceId() const
 {
-	if (!m_inheritableMembers)
-	{
-		set<string> memberSeen;
-		m_inheritableMembers.reset(new vector<Declaration const*>());
-		auto addInheritableMember = [&](Declaration const* _decl)
-		{
-			solAssert(_decl, "addInheritableMember got a nullpointer.");
-			if (memberSeen.count(_decl->name()) == 0 && _decl->isVisibleInDerivedContracts())
-			{
-				memberSeen.insert(_decl->name());
-				m_inheritableMembers->push_back(_decl);
-			}
-		};
-
-		for (FunctionDefinition const* f: definedFunctions())
-			addInheritableMember(f);
-
-		for (VariableDeclaration const* v: stateVariables())
-			addInheritableMember(v);
-
-		for (StructDefinition const* s: definedStructs())
-			addInheritableMember(s);
-
-		for (EnumDefinition const* e: definedEnums())
-			addInheritableMember(e);
-
-		for (EventDefinition const* e: events())
-			addInheritableMember(e);
-	}
-	return *m_inheritableMembers;
+	uint32_t result{0};
+	for (auto const& function: interfaceFunctionList(false))
+		result ^= util::fromBigEndian<uint32_t>(function.first.ref());
+	return result;
 }
 
 TypePointer ContractDefinition::type() const
 {
-	return make_shared<TypeType>(make_shared<ContractType>(*this));
+	return TypeProvider::typeType(TypeProvider::contract(*this));
 }
 
 ContractDefinitionAnnotation& ContractDefinition::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new ContractDefinitionAnnotation();
-	return dynamic_cast<ContractDefinitionAnnotation&>(*m_annotation);
+	return initAnnotation<ContractDefinitionAnnotation>();
+}
+
+ContractDefinition const* ContractDefinition::superContract(ContractDefinition const& _mostDerivedContract) const
+{
+	auto const& hierarchy = _mostDerivedContract.annotation().linearizedBaseContracts;
+	auto it = find(hierarchy.begin(), hierarchy.end(), this);
+	solAssert(it != hierarchy.end(), "Base not found in inheritance hierarchy.");
+	++it;
+	if (it == hierarchy.end())
+		return nullptr;
+	else
+	{
+		solAssert(*it != this, "");
+		return *it;
+	}
+}
+
+FunctionDefinition const* ContractDefinition::nextConstructor(ContractDefinition const& _mostDerivedContract) const
+{
+	ContractDefinition const* next = superContract(_mostDerivedContract);
+	if (next == nullptr)
+		return nullptr;
+	for (ContractDefinition const* c: _mostDerivedContract.annotation().linearizedBaseContracts)
+		if (c == next || next == nullptr)
+		{
+			if (c->constructor())
+				return c->constructor();
+			next = nullptr;
+		}
+
+	return nullptr;
 }
 
 TypeNameAnnotation& TypeName::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new TypeNameAnnotation();
-	return dynamic_cast<TypeNameAnnotation&>(*m_annotation);
+	return initAnnotation<TypeNameAnnotation>();
 }
 
 TypePointer StructDefinition::type() const
 {
-	return make_shared<TypeType>(make_shared<StructType>(*this));
+	solAssert(annotation().recursive.has_value(), "Requested struct type before DeclarationTypeChecker.");
+	return TypeProvider::typeType(TypeProvider::structType(*this, DataLocation::Storage));
 }
 
-TypeDeclarationAnnotation& StructDefinition::annotation() const
+StructDeclarationAnnotation& StructDefinition::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new TypeDeclarationAnnotation();
-	return dynamic_cast<TypeDeclarationAnnotation&>(*m_annotation);
+	return initAnnotation<StructDeclarationAnnotation>();
 }
 
 TypePointer EnumValue::type() const
 {
 	auto parentDef = dynamic_cast<EnumDefinition const*>(scope());
 	solAssert(parentDef, "Enclosing Scope of EnumValue was not set");
-	return make_shared<EnumType>(*parentDef);
+	return TypeProvider::enumType(*parentDef);
 }
 
 TypePointer EnumDefinition::type() const
 {
-	return make_shared<TypeType>(make_shared<EnumType>(*this));
+	return TypeProvider::typeType(TypeProvider::enumType(*this));
 }
 
 TypeDeclarationAnnotation& EnumDefinition::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new TypeDeclarationAnnotation();
-	return dynamic_cast<TypeDeclarationAnnotation&>(*m_annotation);
+	return initAnnotation<TypeDeclarationAnnotation>();
 }
 
-ContractDefinition::ContractKind FunctionDefinition::inContractKind() const
+bool FunctionDefinition::libraryFunction() const
 {
-	auto contractDef = dynamic_cast<ContractDefinition const*>(scope());
-	solAssert(contractDef, "Enclosing Scope of FunctionDefinition was not set.");
-	return contractDef->contractKind();
+	if (auto const* contractDef = dynamic_cast<ContractDefinition const*>(scope()))
+		return contractDef->isLibrary();
+	return false;
+}
+
+Visibility FunctionDefinition::defaultVisibility() const
+{
+	solAssert(!isConstructor(), "");
+	return isFree() ? Visibility::Internal : Declaration::defaultVisibility();
 }
 
 FunctionTypePointer FunctionDefinition::functionType(bool _internal) const
@@ -303,32 +299,28 @@ FunctionTypePointer FunctionDefinition::functionType(bool _internal) const
 	{
 		switch (visibility())
 		{
-		case Declaration::Visibility::Default:
+		case Visibility::Default:
 			solAssert(false, "visibility() should not return Default");
-		case Declaration::Visibility::Private:
-		case Declaration::Visibility::Internal:
-		case Declaration::Visibility::Public:
-			return make_shared<FunctionType>(*this, _internal);
-		case Declaration::Visibility::External:
+		case Visibility::Private:
+		case Visibility::Internal:
+		case Visibility::Public:
+			return TypeProvider::function(*this, FunctionType::Kind::Internal);
+		case Visibility::External:
 			return {};
-		default:
-			solAssert(false, "visibility() should not return a Visibility");
 		}
 	}
 	else
 	{
 		switch (visibility())
 		{
-		case Declaration::Visibility::Default:
+		case Visibility::Default:
 			solAssert(false, "visibility() should not return Default");
-		case Declaration::Visibility::Private:
-		case Declaration::Visibility::Internal:
+		case Visibility::Private:
+		case Visibility::Internal:
 			return {};
-		case Declaration::Visibility::Public:
-		case Declaration::Visibility::External:
-			return make_shared<FunctionType>(*this, _internal);
-		default:
-			solAssert(false, "visibility() should not return a Visibility");
+		case Visibility::Public:
+		case Visibility::External:
+			return TypeProvider::function(*this, FunctionType::Kind::External);
 		}
 	}
 
@@ -338,110 +330,210 @@ FunctionTypePointer FunctionDefinition::functionType(bool _internal) const
 
 TypePointer FunctionDefinition::type() const
 {
-	solAssert(visibility() != Declaration::Visibility::External, "");
-	return make_shared<FunctionType>(*this);
+	solAssert(visibility() != Visibility::External, "");
+	return TypeProvider::function(*this, FunctionType::Kind::Internal);
+}
+
+TypePointer FunctionDefinition::typeViaContractName() const
+{
+	if (libraryFunction())
+	{
+		if (isPublic())
+			return FunctionType(*this).asExternallyCallableFunction(true);
+		else
+			return TypeProvider::function(*this, FunctionType::Kind::Internal);
+	}
+	else
+		return TypeProvider::function(*this, FunctionType::Kind::Declaration);
 }
 
 string FunctionDefinition::externalSignature() const
 {
-	return FunctionType(*this).externalSignature();
+	return TypeProvider::function(*this)->externalSignature();
 }
 
-string FunctionDefinition::fullyQualifiedName() const
+string FunctionDefinition::externalIdentifierHex() const
 {
-	auto const* contract = dynamic_cast<ContractDefinition const*>(scope());
-	solAssert(contract, "Enclosing scope of function definition was not set.");
-
-	auto fname = name().empty() ? "<fallback>" : name();
-	return sourceUnitName() + ":" + contract->name() + "." + fname;
+	return TypeProvider::function(*this)->externalIdentifierHex();
 }
 
 FunctionDefinitionAnnotation& FunctionDefinition::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new FunctionDefinitionAnnotation();
-	return dynamic_cast<FunctionDefinitionAnnotation&>(*m_annotation);
+	return initAnnotation<FunctionDefinitionAnnotation>();
+}
+
+FunctionDefinition const& FunctionDefinition::resolveVirtual(
+	ContractDefinition const& _mostDerivedContract,
+	ContractDefinition const* _searchStart
+) const
+{
+	solAssert(!isConstructor(), "");
+	// If we are not doing super-lookup and the function is not virtual, we can stop here.
+	if (_searchStart == nullptr && !virtualSemantics())
+		return *this;
+
+	solAssert(!isFree(), "");
+	solAssert(isOrdinary(), "");
+	solAssert(!libraryFunction(), "");
+
+	FunctionType const* functionType = TypeProvider::function(*this)->asExternallyCallableFunction(false);
+
+	for (ContractDefinition const* c: _mostDerivedContract.annotation().linearizedBaseContracts)
+	{
+		if (_searchStart != nullptr && c != _searchStart)
+			continue;
+		_searchStart = nullptr;
+		for (FunctionDefinition const* function: c->definedFunctions())
+			if (
+				function->name() == name() &&
+				!function->isConstructor() &&
+				FunctionType(*function).asExternallyCallableFunction(false)->hasEqualParameterTypes(*functionType)
+			)
+				return *function;
+	}
+	solAssert(false, "Virtual function " + name() + " not found.");
+	return *this; // not reached
 }
 
 TypePointer ModifierDefinition::type() const
 {
-	return make_shared<ModifierType>(*this);
+	return TypeProvider::modifier(*this);
 }
 
 ModifierDefinitionAnnotation& ModifierDefinition::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new ModifierDefinitionAnnotation();
-	return dynamic_cast<ModifierDefinitionAnnotation&>(*m_annotation);
+	return initAnnotation<ModifierDefinitionAnnotation>();
 }
+
+ModifierDefinition const& ModifierDefinition::resolveVirtual(
+	ContractDefinition const& _mostDerivedContract,
+	ContractDefinition const* _searchStart
+) const
+{
+	solAssert(_searchStart == nullptr, "Used super in connection with modifiers.");
+
+	// If we are not doing super-lookup and the modifier is not virtual, we can stop here.
+	if (_searchStart == nullptr && !virtualSemantics())
+		return *this;
+
+	solAssert(!dynamic_cast<ContractDefinition const&>(*scope()).isLibrary(), "");
+
+	for (ContractDefinition const* c: _mostDerivedContract.annotation().linearizedBaseContracts)
+	{
+		if (_searchStart != nullptr && c != _searchStart)
+			continue;
+		_searchStart = nullptr;
+		for (ModifierDefinition const* modifier: c->functionModifiers())
+			if (modifier->name() == name())
+				return *modifier;
+	}
+	solAssert(false, "Virtual modifier " + name() + " not found.");
+	return *this; // not reached
+}
+
 
 TypePointer EventDefinition::type() const
 {
-	return make_shared<FunctionType>(*this);
+	return TypeProvider::function(*this);
 }
 
 FunctionTypePointer EventDefinition::functionType(bool _internal) const
 {
 	if (_internal)
-		return make_shared<FunctionType>(*this);
+		return TypeProvider::function(*this);
 	else
-		return {};
+		return nullptr;
 }
 
 EventDefinitionAnnotation& EventDefinition::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new EventDefinitionAnnotation();
-	return dynamic_cast<EventDefinitionAnnotation&>(*m_annotation);
-}
-
-UserDefinedTypeNameAnnotation& UserDefinedTypeName::annotation() const
-{
-	if (!m_annotation)
-		m_annotation = new UserDefinedTypeNameAnnotation();
-	return dynamic_cast<UserDefinedTypeNameAnnotation&>(*m_annotation);
+	return initAnnotation<EventDefinitionAnnotation>();
 }
 
 SourceUnit const& Scopable::sourceUnit() const
 {
 	ASTNode const* s = scope();
 	solAssert(s, "");
-	// will not always be a declaratoion
+	// will not always be a declaration
 	while (dynamic_cast<Scopable const*>(s) && dynamic_cast<Scopable const*>(s)->scope())
 		s = dynamic_cast<Scopable const*>(s)->scope();
 	return dynamic_cast<SourceUnit const&>(*s);
 }
 
+CallableDeclaration const* Scopable::functionOrModifierDefinition() const
+{
+	ASTNode const* s = scope();
+	solAssert(s, "");
+	while (dynamic_cast<Scopable const*>(s))
+	{
+		if (auto funDef = dynamic_cast<FunctionDefinition const*>(s))
+			return funDef;
+		if (auto modDef = dynamic_cast<ModifierDefinition const*>(s))
+			return modDef;
+		s = dynamic_cast<Scopable const*>(s)->scope();
+	}
+	return nullptr;
+}
+
 string Scopable::sourceUnitName() const
 {
-	return sourceUnit().annotation().path;
+	return *sourceUnit().annotation().path;
+}
+
+bool Declaration::isEnumValue() const
+{
+	solAssert(scope(), "");
+	return dynamic_cast<EnumDefinition const*>(scope());
+}
+
+bool Declaration::isStructMember() const
+{
+	solAssert(scope(), "");
+	return dynamic_cast<StructDefinition const*>(scope());
+}
+
+bool Declaration::isEventParameter() const
+{
+	solAssert(scope(), "");
+	return dynamic_cast<EventDefinition const*>(scope());
+}
+
+DeclarationAnnotation& Declaration::annotation() const
+{
+	return initAnnotation<DeclarationAnnotation>();
 }
 
 bool VariableDeclaration::isLValue() const
 {
-	// External function parameters and constant declared variables are Read-Only
-	return !isExternalCallableParameter() && !m_isConstant;
+	// Constant declared variables are Read-Only
+	return !isConstant();
 }
 
 bool VariableDeclaration::isLocalVariable() const
 {
 	auto s = scope();
 	return
+		dynamic_cast<FunctionTypeName const*>(s) ||
 		dynamic_cast<CallableDeclaration const*>(s) ||
 		dynamic_cast<Block const*>(s) ||
+		dynamic_cast<TryCatchClause const*>(s) ||
 		dynamic_cast<ForStatement const*>(s);
 }
 
-bool VariableDeclaration::isCallableParameter() const
+bool VariableDeclaration::isCallableOrCatchParameter() const
 {
-	auto const* callable = dynamic_cast<CallableDeclaration const*>(scope());
-	if (!callable)
-		return false;
-	for (auto const& variable: callable->parameters())
-		if (variable.get() == this)
-			return true;
-	if (callable->returnParameterList())
-		for (auto const& variable: callable->returnParameterList()->parameters())
+	if (isReturnParameter() || isTryCatchParameter())
+		return true;
+
+	vector<ASTPointer<VariableDeclaration>> const* parameters = nullptr;
+
+	if (auto const* funTypeName = dynamic_cast<FunctionTypeName const*>(scope()))
+		parameters = &funTypeName->parameterTypes();
+	else if (auto const* callable = dynamic_cast<CallableDeclaration const*>(scope()))
+		parameters = &callable->parameters();
+
+	if (parameters)
+		for (auto const& variable: *parameters)
 			if (variable.get() == this)
 				return true;
 	return false;
@@ -449,35 +541,135 @@ bool VariableDeclaration::isCallableParameter() const
 
 bool VariableDeclaration::isLocalOrReturn() const
 {
-	return isReturnParameter() || (isLocalVariable() && !isCallableParameter());
+	return isReturnParameter() || (isLocalVariable() && !isCallableOrCatchParameter());
 }
 
 bool VariableDeclaration::isReturnParameter() const
 {
-	auto const* callable = dynamic_cast<CallableDeclaration const*>(scope());
-	if (!callable)
-		return false;
-	if (callable->returnParameterList())
-		for (auto const& variable: callable->returnParameterList()->parameters())
+	vector<ASTPointer<VariableDeclaration>> const* returnParameters = nullptr;
+
+	if (auto const* funTypeName = dynamic_cast<FunctionTypeName const*>(scope()))
+		returnParameters = &funTypeName->returnParameterTypes();
+	else if (auto const* callable = dynamic_cast<CallableDeclaration const*>(scope()))
+		if (callable->returnParameterList())
+			returnParameters = &callable->returnParameterList()->parameters();
+
+	if (returnParameters)
+		for (auto const& variable: *returnParameters)
 			if (variable.get() == this)
 				return true;
 	return false;
 }
 
+bool VariableDeclaration::isTryCatchParameter() const
+{
+	return dynamic_cast<TryCatchClause const*>(scope());
+}
+
 bool VariableDeclaration::isExternalCallableParameter() const
 {
-	auto const* callable = dynamic_cast<CallableDeclaration const*>(scope());
-	if (!callable || callable->visibility() != Declaration::Visibility::External)
+	if (!isCallableOrCatchParameter())
 		return false;
-	for (auto const& variable: callable->parameters())
-		if (variable.get() == this)
-			return true;
+
+	if (auto const* callable = dynamic_cast<CallableDeclaration const*>(scope()))
+		if (callable->visibility() == Visibility::External)
+			return !isReturnParameter();
+
 	return false;
 }
 
-bool VariableDeclaration::canHaveAutoType() const
+bool VariableDeclaration::isPublicCallableParameter() const
 {
-	return isLocalVariable() && !isCallableParameter();
+	if (!isCallableOrCatchParameter())
+		return false;
+
+	if (auto const* callable = dynamic_cast<CallableDeclaration const*>(scope()))
+		if (callable->visibility() == Visibility::Public)
+			return !isReturnParameter();
+
+	return false;
+}
+
+bool VariableDeclaration::isInternalCallableParameter() const
+{
+	if (!isCallableOrCatchParameter())
+		return false;
+
+	if (auto const* funTypeName = dynamic_cast<FunctionTypeName const*>(scope()))
+		return funTypeName->visibility() == Visibility::Internal;
+	else if (auto const* callable = dynamic_cast<CallableDeclaration const*>(scope()))
+		return callable->visibility() <= Visibility::Internal;
+	return false;
+}
+
+bool VariableDeclaration::isConstructorParameter() const
+{
+	if (!isCallableOrCatchParameter())
+		return false;
+	if (auto const* function = dynamic_cast<FunctionDefinition const*>(scope()))
+		return function->isConstructor();
+	return false;
+}
+
+bool VariableDeclaration::isLibraryFunctionParameter() const
+{
+	if (!isCallableOrCatchParameter())
+		return false;
+	if (auto const* funDef = dynamic_cast<FunctionDefinition const*>(scope()))
+		return funDef->libraryFunction();
+	return false;
+}
+
+bool VariableDeclaration::hasReferenceOrMappingType() const
+{
+	solAssert(typeName().annotation().type, "Can only be called after reference resolution");
+	Type const* type = typeName().annotation().type;
+	return type->category() == Type::Category::Mapping || dynamic_cast<ReferenceType const*>(type);
+}
+
+bool VariableDeclaration::isStateVariable() const
+{
+	return dynamic_cast<ContractDefinition const*>(scope());
+}
+
+bool VariableDeclaration::isFileLevelVariable() const
+{
+	return dynamic_cast<SourceUnit const*>(scope());
+}
+
+set<VariableDeclaration::Location> VariableDeclaration::allowedDataLocations() const
+{
+	using Location = VariableDeclaration::Location;
+
+	if (!hasReferenceOrMappingType() || isStateVariable() || isEventParameter())
+		return set<Location>{ Location::Unspecified };
+	else if (isCallableOrCatchParameter())
+	{
+		set<Location> locations{ Location::Memory };
+		if (
+			isConstructorParameter() ||
+			isInternalCallableParameter() ||
+			isLibraryFunctionParameter() ||
+			isTryCatchParameter()
+		)
+			locations.insert(Location::Storage);
+		if (!isTryCatchParameter() && !isConstructorParameter())
+			locations.insert(Location::CallData);
+
+		return locations;
+	}
+	else if (isLocalVariable())
+		// Further restrictions will be imposed later on.
+		return set<Location>{ Location::Memory, Location::Storage, Location::CallData };
+	else
+		// Struct members etc.
+		return set<Location>{ Location::Unspecified };
+}
+
+string VariableDeclaration::externalIdentifierHex() const
+{
+	solAssert(isStateVariable() && isPublic(), "Can only be called for public state variables");
+	return TypeProvider::function(*this)->externalIdentifierHex();
 }
 
 TypePointer VariableDeclaration::type() const
@@ -488,93 +680,124 @@ TypePointer VariableDeclaration::type() const
 FunctionTypePointer VariableDeclaration::functionType(bool _internal) const
 {
 	if (_internal)
-		return {};
+		return nullptr;
 	switch (visibility())
 	{
-	case Declaration::Visibility::Default:
+	case Visibility::Default:
 		solAssert(false, "visibility() should not return Default");
-	case Declaration::Visibility::Private:
-	case Declaration::Visibility::Internal:
-		return {};
-	case Declaration::Visibility::Public:
-	case Declaration::Visibility::External:
-		return make_shared<FunctionType>(*this);
-	default:
-		solAssert(false, "visibility() should not return a Visibility");
+	case Visibility::Private:
+	case Visibility::Internal:
+		return nullptr;
+	case Visibility::Public:
+	case Visibility::External:
+		return TypeProvider::function(*this);
 	}
 
 	// To make the compiler happy
-	return {};
+	return nullptr;
 }
 
 VariableDeclarationAnnotation& VariableDeclaration::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new VariableDeclarationAnnotation();
-	return dynamic_cast<VariableDeclarationAnnotation&>(*m_annotation);
+	return initAnnotation<VariableDeclarationAnnotation>();
 }
 
 StatementAnnotation& Statement::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new StatementAnnotation();
-	return dynamic_cast<StatementAnnotation&>(*m_annotation);
+	return initAnnotation<StatementAnnotation>();
 }
 
 InlineAssemblyAnnotation& InlineAssembly::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new InlineAssemblyAnnotation();
-	return dynamic_cast<InlineAssemblyAnnotation&>(*m_annotation);
+	return initAnnotation<InlineAssemblyAnnotation>();
+}
+
+BlockAnnotation& Block::annotation() const
+{
+	return initAnnotation<BlockAnnotation>();
+}
+
+TryCatchClauseAnnotation& TryCatchClause::annotation() const
+{
+	return initAnnotation<TryCatchClauseAnnotation>();
+}
+
+ForStatementAnnotation& ForStatement::annotation() const
+{
+	return initAnnotation<ForStatementAnnotation>();
 }
 
 ReturnAnnotation& Return::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new ReturnAnnotation();
-	return dynamic_cast<ReturnAnnotation&>(*m_annotation);
-}
-
-VariableDeclarationStatementAnnotation& VariableDeclarationStatement::annotation() const
-{
-	if (!m_annotation)
-		m_annotation = new VariableDeclarationStatementAnnotation();
-	return dynamic_cast<VariableDeclarationStatementAnnotation&>(*m_annotation);
+	return initAnnotation<ReturnAnnotation>();
 }
 
 ExpressionAnnotation& Expression::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new ExpressionAnnotation();
-	return dynamic_cast<ExpressionAnnotation&>(*m_annotation);
+	return initAnnotation<ExpressionAnnotation>();
 }
 
 MemberAccessAnnotation& MemberAccess::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new MemberAccessAnnotation();
-	return dynamic_cast<MemberAccessAnnotation&>(*m_annotation);
+	return initAnnotation<MemberAccessAnnotation>();
 }
 
 BinaryOperationAnnotation& BinaryOperation::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new BinaryOperationAnnotation();
-	return dynamic_cast<BinaryOperationAnnotation&>(*m_annotation);
+	return initAnnotation<BinaryOperationAnnotation>();
 }
 
 FunctionCallAnnotation& FunctionCall::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new FunctionCallAnnotation();
-	return dynamic_cast<FunctionCallAnnotation&>(*m_annotation);
+	return initAnnotation<FunctionCallAnnotation>();
+}
+
+vector<ASTPointer<Expression const>> FunctionCall::sortedArguments() const
+{
+	// normal arguments
+	if (m_names.empty())
+		return arguments();
+
+	// named arguments
+	FunctionTypePointer functionType;
+	if (*annotation().kind == FunctionCallKind::StructConstructorCall)
+	{
+		auto const& type = dynamic_cast<TypeType const&>(*m_expression->annotation().type);
+		auto const& structType = dynamic_cast<StructType const&>(*type.actualType());
+		functionType = structType.constructorType();
+	}
+	else
+		functionType = dynamic_cast<FunctionType const*>(m_expression->annotation().type);
+
+	vector<ASTPointer<Expression const>> sorted;
+	for (auto const& parameterName: functionType->parameterNames())
+	{
+		bool found = false;
+		for (size_t j = 0; j < m_names.size() && !found; j++)
+			if ((found = (parameterName == *m_names.at(j))))
+				// we found the actual parameter position
+				sorted.push_back(m_arguments.at(j));
+		solAssert(found, "");
+	}
+
+	if (!functionType->takesArbitraryParameters())
+	{
+		solAssert(m_arguments.size() == functionType->parameterTypes().size(), "");
+		solAssert(m_arguments.size() == m_names.size(), "");
+		solAssert(m_arguments.size() == sorted.size(), "");
+	}
+
+	return sorted;
 }
 
 IdentifierAnnotation& Identifier::annotation() const
 {
-	if (!m_annotation)
-		m_annotation = new IdentifierAnnotation();
-	return dynamic_cast<IdentifierAnnotation&>(*m_annotation);
+	return initAnnotation<IdentifierAnnotation>();
+}
+
+ASTString Literal::valueWithoutUnderscores() const
+{
+	return boost::erase_all_copy(value(), "_");
 }
 
 bool Literal::isHexNumber() const
@@ -592,22 +815,44 @@ bool Literal::looksLikeAddress() const
 	if (!isHexNumber())
 		return false;
 
-	return abs(int(value().length()) - 42) <= 1;
+	return abs(int(valueWithoutUnderscores().length()) - 42) <= 1;
 }
 
 bool Literal::passesAddressChecksum() const
 {
 	solAssert(isHexNumber(), "Expected hex number");
-	return dev::passesAddressChecksum(value(), true);
+	return util::passesAddressChecksum(valueWithoutUnderscores(), true);
 }
 
-std::string Literal::getChecksummedAddress() const
+string Literal::getChecksummedAddress() const
 {
 	solAssert(isHexNumber(), "Expected hex number");
 	/// Pad literal to be a proper hex address.
-	string address = value().substr(2);
+	string address = valueWithoutUnderscores().substr(2);
 	if (address.length() > 40)
 		return string();
 	address.insert(address.begin(), 40 - address.size(), '0');
-	return dev::getChecksummedAddress(address);
+	return util::getChecksummedAddress(address);
+}
+
+TryCatchClause const* TryStatement::successClause() const
+{
+	solAssert(m_clauses.size() > 0, "");
+	return m_clauses[0].get();
+}
+
+TryCatchClause const* TryStatement::structuredClause() const
+{
+	for (size_t i = 1; i < m_clauses.size(); ++i)
+		if (m_clauses[i]->errorName() == "Error")
+			return m_clauses[i].get();
+	return nullptr;
+}
+
+TryCatchClause const* TryStatement::fallbackClause() const
+{
+	for (size_t i = 1; i < m_clauses.size(); ++i)
+		if (m_clauses[i]->errorName().empty())
+			return m_clauses[i].get();
+	return nullptr;
 }

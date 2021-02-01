@@ -14,63 +14,66 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2015
  * Tests for a fixed fee registrar contract.
  */
 
-#include <string>
-#include <tuple>
-#include <boost/test/unit_test.hpp>
 #include <test/libsolidity/SolidityExecutionFramework.h>
 #include <test/contracts/ContractInterface.h>
+#include <test/EVMHost.h>
+
+#include <libsolutil/LazyInit.h>
+
+#include <boost/test/unit_test.hpp>
+
+#include <string>
+#include <optional>
 
 using namespace std;
-using namespace dev::test;
+using namespace solidity;
+using namespace solidity::util;
+using namespace solidity::test;
 
-namespace dev
-{
-namespace solidity
-{
-namespace test
+namespace solidity::frontend::test
 {
 
 namespace
 {
-
 static char const* registrarCode = R"DELIMITER(
-pragma solidity ^0.4.0;
+pragma solidity >=0.7.0 <0.9.0;
 
-contract NameRegister {
-	function addr(string _name) constant returns (address o_owner);
-	function name(address _owner) constant returns (string o_name);
+abstract contract NameRegister {
+	function addr(string memory _name) public virtual view returns (address o_owner);
+	function name(address _owner) public view virtual returns (string memory o_name);
 }
 
-contract Registrar is NameRegister {
+abstract contract Registrar is NameRegister {
 	event Changed(string indexed name);
 	event PrimaryChanged(string indexed name, address indexed addr);
 
-	function owner(string _name) constant returns (address o_owner);
-	function addr(string _name) constant returns (address o_address);
-	function subRegistrar(string _name) constant returns (address o_subRegistrar);
-	function content(string _name) constant returns (bytes32 o_content);
+	function owner(string memory _name) public view virtual returns (address o_owner);
+	function addr(string memory _name) public virtual override view returns (address o_address);
+	function subRegistrar(string memory _name) public virtual view returns (address o_subRegistrar);
+	function content(string memory _name) public virtual view returns (bytes32 o_content);
 
-	function name(address _owner) constant returns (string o_name);
+	function name(address _owner) public virtual override view returns (string memory o_name);
 }
 
-contract AuctionSystem {
+abstract contract AuctionSystem {
 	event AuctionEnded(string indexed _name, address _winner);
 	event NewBid(string indexed _name, address _bidder, uint _value);
 
 	/// Function that is called once an auction ends.
-	function onAuctionEnd(string _name) internal;
+	function onAuctionEnd(string memory _name) internal virtual;
 
-	function bid(string _name, address _bidder, uint _value) internal {
-		var auction = m_auctions[_name];
-		if (auction.endDate > 0 && now > auction.endDate)
+	function bid(string memory _name, address payable _bidder, uint _value) internal {
+		Auction storage auction = m_auctions[_name];
+		if (auction.endDate > 0 && block.timestamp > auction.endDate)
 		{
-			AuctionEnded(_name, auction.highestBidder);
+			emit AuctionEnded(_name, auction.highestBidder);
 			onAuctionEnd(_name);
 			delete m_auctions[_name];
 			return;
@@ -82,16 +85,16 @@ contract AuctionSystem {
 			auction.sumOfBids += _value;
 			auction.highestBid = _value;
 			auction.highestBidder = _bidder;
-			auction.endDate = now + c_biddingTime;
+			auction.endDate = block.timestamp + c_biddingTime;
 
-			NewBid(_name, _bidder, _value);
+			emit NewBid(_name, _bidder, _value);
 		}
 	}
 
 	uint constant c_biddingTime = 7 days;
 
 	struct Auction {
-		address highestBidder;
+		address payable highestBidder;
 		uint highestBid;
 		uint secondHighestBid;
 		uint sumOfBids;
@@ -102,91 +105,91 @@ contract AuctionSystem {
 
 contract GlobalRegistrar is Registrar, AuctionSystem {
 	struct Record {
-		address owner;
+		address payable owner;
 		address primary;
 		address subRegistrar;
 		bytes32 content;
 		uint renewalDate;
 	}
 
-	uint constant c_renewalInterval = 1 years;
+	uint constant c_renewalInterval = 365 days;
 	uint constant c_freeBytes = 12;
 
-	function Registrar() {
+	constructor() {
 		// TODO: Populate with hall-of-fame.
 	}
 
-	function onAuctionEnd(string _name) internal {
-		var auction = m_auctions[_name];
-		var record = m_toRecord[_name];
-		var previousOwner = record.owner;
-		record.renewalDate = now + c_renewalInterval;
+	function onAuctionEnd(string memory _name) internal override {
+		Auction storage auction = m_auctions[_name];
+		Record storage record = m_toRecord[_name];
+		address previousOwner = record.owner;
+		record.renewalDate = block.timestamp + c_renewalInterval;
 		record.owner = auction.highestBidder;
-		Changed(_name);
-		if (previousOwner != 0) {
+		emit Changed(_name);
+		if (previousOwner != 0x0000000000000000000000000000000000000000) {
 			if (!record.owner.send(auction.sumOfBids - auction.highestBid / 100))
-				throw;
+				revert();
 		} else {
 			if (!auction.highestBidder.send(auction.highestBid - auction.secondHighestBid))
-				throw;
+				revert();
 		}
 	}
 
-	function reserve(string _name) external payable {
+	function reserve(string calldata _name) external payable {
 		if (bytes(_name).length == 0)
-			throw;
+			revert();
 		bool needAuction = requiresAuction(_name);
 		if (needAuction)
 		{
-			if (now < m_toRecord[_name].renewalDate)
-				throw;
-			bid(_name, msg.sender, msg.value);
+			if (block.timestamp < m_toRecord[_name].renewalDate)
+				revert();
+			bid(_name, payable(msg.sender), msg.value);
 		} else {
-			Record record = m_toRecord[_name];
-			if (record.owner != 0)
-				throw;
-			m_toRecord[_name].owner = msg.sender;
-			Changed(_name);
+			Record storage record = m_toRecord[_name];
+			if (record.owner != 0x0000000000000000000000000000000000000000)
+				revert();
+			m_toRecord[_name].owner = payable(msg.sender);
+			emit Changed(_name);
 		}
 	}
 
-	function requiresAuction(string _name) internal returns (bool) {
+	function requiresAuction(string memory _name) internal returns (bool) {
 		return bytes(_name).length < c_freeBytes;
 	}
 
-	modifier onlyrecordowner(string _name) { if (m_toRecord[_name].owner == msg.sender) _; }
+	modifier onlyrecordowner(string memory _name) { if (m_toRecord[_name].owner == msg.sender) _; }
 
-	function transfer(string _name, address _newOwner) onlyrecordowner(_name) {
+	function transfer(string memory _name, address payable _newOwner) onlyrecordowner(_name) public {
 		m_toRecord[_name].owner = _newOwner;
-		Changed(_name);
+		emit Changed(_name);
 	}
 
-	function disown(string _name) onlyrecordowner(_name) {
+	function disown(string memory _name) onlyrecordowner(_name) public {
 		if (stringsEqual(m_toName[m_toRecord[_name].primary], _name))
 		{
-			PrimaryChanged(_name, m_toRecord[_name].primary);
+			emit PrimaryChanged(_name, m_toRecord[_name].primary);
 			m_toName[m_toRecord[_name].primary] = "";
 		}
 		delete m_toRecord[_name];
-		Changed(_name);
+		emit Changed(_name);
 	}
 
-	function setAddress(string _name, address _a, bool _primary) onlyrecordowner(_name) {
+	function setAddress(string memory _name, address _a, bool _primary) onlyrecordowner(_name) public {
 		m_toRecord[_name].primary = _a;
 		if (_primary)
 		{
-			PrimaryChanged(_name, _a);
+			emit PrimaryChanged(_name, _a);
 			m_toName[_a] = _name;
 		}
-		Changed(_name);
+		emit Changed(_name);
 	}
-	function setSubRegistrar(string _name, address _registrar) onlyrecordowner(_name) {
+	function setSubRegistrar(string memory _name, address _registrar) onlyrecordowner(_name) public {
 		m_toRecord[_name].subRegistrar = _registrar;
-		Changed(_name);
+		emit Changed(_name);
 	}
-	function setContent(string _name, bytes32 _content) onlyrecordowner(_name) {
+	function setContent(string memory _name, bytes32 _content) onlyrecordowner(_name) public {
 		m_toRecord[_name].content = _content;
-		Changed(_name);
+		emit Changed(_name);
 	}
 
 	function stringsEqual(string storage _a, string memory _b) internal returns (bool) {
@@ -201,29 +204,36 @@ contract GlobalRegistrar is Registrar, AuctionSystem {
 		return true;
 	}
 
-	function owner(string _name) constant returns (address) { return m_toRecord[_name].owner; }
-	function addr(string _name) constant returns (address) { return m_toRecord[_name].primary; }
-	function subRegistrar(string _name) constant returns (address) { return m_toRecord[_name].subRegistrar; }
-	function content(string _name) constant returns (bytes32) { return m_toRecord[_name].content; }
-	function name(address _addr) constant returns (string o_name) { return m_toName[_addr]; }
+	function owner(string memory _name) public override view returns (address) { return m_toRecord[_name].owner; }
+	function addr(string memory _name) public override view returns (address) { return m_toRecord[_name].primary; }
+	function subRegistrar(string memory _name) public override view returns (address) { return m_toRecord[_name].subRegistrar; }
+	function content(string memory _name) public override view returns (bytes32) { return m_toRecord[_name].content; }
+	function name(address _addr) public override view returns (string memory o_name) { return m_toName[_addr]; }
 
 	mapping (address => string) m_toName;
 	mapping (string => Record) m_toRecord;
 }
 )DELIMITER";
 
-static unique_ptr<bytes> s_compiledRegistrar;
+static LazyInit<bytes> s_compiledRegistrar;
 
 class AuctionRegistrarTestFramework: public SolidityExecutionFramework
 {
 protected:
 	void deployRegistrar()
 	{
-		if (!s_compiledRegistrar)
-			s_compiledRegistrar.reset(new bytes(compileContract(registrarCode, "GlobalRegistrar")));
+		bytes const& compiled = s_compiledRegistrar.init([&]{
+			return compileContract(registrarCode, "GlobalRegistrar");
+		});
 
+<<<<<<< ours
 		sendMessage(std::vector<bytes>(), "", *s_compiledRegistrar, true);
 		BOOST_REQUIRE(m_status == 0);
+=======
+		sendMessage(compiled, true);
+		BOOST_REQUIRE(m_transactionSuccessful);
+		BOOST_REQUIRE(!m_output.empty());
+>>>>>>> theirs
 	}
 
 	class RegistrarInterface: public ContractInterface
@@ -234,27 +244,27 @@ protected:
 		{
 			callString("reserve", _name);
 		}
-		u160 owner(string const& _name)
+		h160 owner(string const& _name)
 		{
 			return callStringReturnsAddress("owner", _name);
 		}
-		void setAddress(string const& _name, u160 const& _address, bool _primary)
+		void setAddress(string const& _name, h160 const& _address, bool _primary)
 		{
 			callStringAddressBool("setAddress", _name, _address, _primary);
 		}
-		u160 addr(string const& _name)
+		h160 addr(string const& _name)
 		{
 			return callStringReturnsAddress("addr", _name);
 		}
-		string name(u160 const& _addr)
+		string name(h160 const& _addr)
 		{
 			return callAddressReturnsString("name", _addr);
 		}
-		void setSubRegistrar(string const& _name, u160 const& _address)
+		void setSubRegistrar(string const& _name, h160 const& _address)
 		{
 			callStringAddress("setSubRegistrar", _name, _address);
 		}
-		u160 subRegistrar(string const& _name)
+		h160 subRegistrar(string const& _name)
 		{
 			return callStringReturnsAddress("subRegistrar", _name);
 		}
@@ -266,7 +276,7 @@ protected:
 		{
 			return callStringReturnsBytes32("content", _name);
 		}
-		void transfer(string const& _name, u160 const& _target)
+		void transfer(string const& _name, h160 const& _target)
 		{
 			return callStringAddress("transfer", _name, _target);
 		}
@@ -276,8 +286,7 @@ protected:
 		}
 	};
 
-	size_t const m_biddingTime = size_t(7 * 24 * 3600);
-	size_t const m_renewalInterval = size_t(365 * 24 * 3600);
+	int64_t const m_biddingTime = 7 * 24 * 3600;
 };
 
 }
@@ -300,12 +309,12 @@ BOOST_AUTO_TEST_CASE(reserve)
 
 	// should not work
 	registrar.reserve("");
-	BOOST_CHECK_EQUAL(registrar.owner(""), u160(0));
+	BOOST_CHECK_EQUAL(registrar.owner(""), h160{});
 
 	for (auto const& name: names)
 	{
 		registrar.reserve(name);
-		BOOST_CHECK_EQUAL(registrar.owner(name), u160(m_sender));
+		BOOST_CHECK_EQUAL(registrar.owner(name), m_sender);
 	}
 }
 
@@ -342,20 +351,20 @@ BOOST_AUTO_TEST_CASE(properties)
 		// setting by sender works
 		registrar.reserve(name);
 		BOOST_CHECK_EQUAL(registrar.owner(name), sender);
-		registrar.setAddress(name, addr, true);
-		BOOST_CHECK_EQUAL(registrar.addr(name), u160(addr));
-		registrar.setSubRegistrar(name, addr + 20);
-		BOOST_CHECK_EQUAL(registrar.subRegistrar(name), u160(addr + 20));
+		registrar.setAddress(name, h160(addr), true);
+		BOOST_CHECK_EQUAL(registrar.addr(name), h160(addr));
+		registrar.setSubRegistrar(name, h160(addr + 20));
+		BOOST_CHECK_EQUAL(registrar.subRegistrar(name), h160(addr + 20));
 		registrar.setContent(name, h256(u256(addr + 90)));
 		BOOST_CHECK_EQUAL(registrar.content(name), h256(u256(addr + 90)));
 
 		// but not by someone else
 		m_sender = account(count - 1);
 		BOOST_CHECK_EQUAL(registrar.owner(name), sender);
-		registrar.setAddress(name, addr + 1, true);
-		BOOST_CHECK_EQUAL(registrar.addr(name), u160(addr));
-		registrar.setSubRegistrar(name, addr + 20 + 1);
-		BOOST_CHECK_EQUAL(registrar.subRegistrar(name), u160(addr + 20));
+		registrar.setAddress(name, h160(addr + 1), true);
+		BOOST_CHECK_EQUAL(registrar.addr(name), h160(addr));
+		registrar.setSubRegistrar(name, h160(addr + 20 + 1));
+		BOOST_CHECK_EQUAL(registrar.subRegistrar(name), h160(addr + 20));
 		registrar.setContent(name, h256(u256(addr + 90 + 1)));
 		BOOST_CHECK_EQUAL(registrar.content(name), h256(u256(addr + 90)));
 		count++;
@@ -369,8 +378,8 @@ BOOST_AUTO_TEST_CASE(transfer)
 	RegistrarInterface registrar(*this);
 	registrar.reserve(name);
 	registrar.setContent(name, h256(u256(123)));
-	registrar.transfer(name, u160(555));
-	BOOST_CHECK_EQUAL(registrar.owner(name), u160(555));
+	registrar.transfer(name, h160(555));
+	BOOST_CHECK_EQUAL(registrar.owner(name), h160(555));
 	BOOST_CHECK_EQUAL(registrar.content(name), h256(u256(123)));
 }
 
@@ -382,9 +391,9 @@ BOOST_AUTO_TEST_CASE(disown)
 	RegistrarInterface registrar(*this);
 	registrar.reserve(name);
 	registrar.setContent(name, h256(u256(123)));
-	registrar.setAddress(name, u160(124), true);
-	registrar.setSubRegistrar(name, u160(125));
-	BOOST_CHECK_EQUAL(registrar.name(u160(124)), name);
+	registrar.setAddress(name, h160(124), true);
+	registrar.setSubRegistrar(name, h160(125));
+	BOOST_CHECK_EQUAL(registrar.name(h160(124)), name);
 
 	// someone else tries disowning
 	sendEther(account(1), u256(10) * ether);
@@ -394,11 +403,11 @@ BOOST_AUTO_TEST_CASE(disown)
 
 	m_sender = account(0);
 	registrar.disown(name);
-	BOOST_CHECK_EQUAL(registrar.owner(name), 0);
-	BOOST_CHECK_EQUAL(registrar.addr(name), 0);
-	BOOST_CHECK_EQUAL(registrar.subRegistrar(name), 0);
+	BOOST_CHECK_EQUAL(registrar.owner(name), h160());
+	BOOST_CHECK_EQUAL(registrar.addr(name), h160());
+	BOOST_CHECK_EQUAL(registrar.subRegistrar(name), h160());
 	BOOST_CHECK_EQUAL(registrar.content(name), h256());
-	BOOST_CHECK_EQUAL(registrar.name(u160(124)), "");
+	BOOST_CHECK_EQUAL(registrar.name(h160(124)), "");
 }
 
 BOOST_AUTO_TEST_CASE(auction_simple)
@@ -410,9 +419,14 @@ BOOST_AUTO_TEST_CASE(auction_simple)
 	// initiate auction
 	registrar.setNextValue(8);
 	registrar.reserve(name);
-	BOOST_CHECK_EQUAL(registrar.owner(name), 0);
+	BOOST_CHECK_EQUAL(registrar.owner(name), h160());
 	// "wait" until auction end
+<<<<<<< ours
 	modifyTimestamp(currentTimestamp() + m_biddingTime + 10);
+=======
+
+	m_evmcHost->tx_context.block_timestamp += m_biddingTime + 10;
+>>>>>>> theirs
 	// trigger auction again
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), m_sender);
@@ -424,32 +438,49 @@ BOOST_AUTO_TEST_CASE(auction_bidding)
 	string name = "x";
 
 	unsigned startTime = 0x776347e2;
+<<<<<<< ours
 	modifyTimestamp(startTime);
+=======
+	m_evmcHost->tx_context.block_timestamp = startTime;
+>>>>>>> theirs
 
 	RegistrarInterface registrar(*this);
 	// initiate auction
 	registrar.setNextValue(8);
 	registrar.reserve(name);
-	BOOST_CHECK_EQUAL(registrar.owner(name), 0);
+	BOOST_CHECK_EQUAL(registrar.owner(name), h160());
 	// overbid self
+<<<<<<< ours
 	modifyTimestamp(startTime + m_biddingTime - 10);
+=======
+	m_evmcHost->tx_context.block_timestamp = startTime + m_biddingTime - 10;
+>>>>>>> theirs
 	registrar.setNextValue(12);
 	registrar.reserve(name);
 	// another bid by someone else
 	sendEther(account(1), 10 * ether);
 	m_sender = account(1);
+<<<<<<< ours
 	modifyTimestamp(startTime + 2 * m_biddingTime - 50);
+=======
+	m_evmcHost->tx_context.block_timestamp = startTime + 2 * m_biddingTime - 50;
+>>>>>>> theirs
 	registrar.setNextValue(13);
 	registrar.reserve(name);
-	BOOST_CHECK_EQUAL(registrar.owner(name), 0);
+	BOOST_CHECK_EQUAL(registrar.owner(name), h160());
 	// end auction by first bidder (which is not highest) trying to overbid again (too late)
 	m_sender = account(0);
+<<<<<<< ours
 	modifyTimestamp(startTime + 4 * m_biddingTime);
+=======
+	m_evmcHost->tx_context.block_timestamp = startTime + 4 * m_biddingTime;
+>>>>>>> theirs
 	registrar.setNextValue(20);
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), account(1));
 }
 
+<<<<<<< ours
 BOOST_AUTO_TEST_CASE(auction_renewal)
 {
 	deployRegistrar();
@@ -481,8 +512,8 @@ BOOST_AUTO_TEST_CASE(auction_renewal)
 	BOOST_CHECK_EQUAL(registrar.owner(name), account(1));
 }
 
+=======
+>>>>>>> theirs
 BOOST_AUTO_TEST_SUITE_END()
 
-}
-}
 } // end namespaces

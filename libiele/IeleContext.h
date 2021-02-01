@@ -6,7 +6,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
-#include <libdevcore/Common.h>
+#include <libsolutil/Common.h>
 #include <map>
 
 namespace llvm {
@@ -14,7 +14,7 @@ namespace llvm {
 
 } // end llvm namespace
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleContext {
@@ -37,4 +37,4 @@ public:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity

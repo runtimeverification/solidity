@@ -5,7 +5,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include <vector>
 
-namespace dev {
+namespace solidity {
 namespace iele {
 
 class IeleBlock;
@@ -344,13 +344,13 @@ public:
 };
 
 } // end namespace iele
-} // end namespace dev
+} // end namespace solidity
 
 namespace llvm {
 // Specialization for isa so that we can check f.e. isa<IeleValue> for an
 // IeleInstruction. Mainly used by SymbolTableListTraits.
-template <> struct isa_impl<dev::iele::IeleValue, dev::iele::IeleInstruction> {
-  static inline bool doit(const dev::iele::IeleInstruction &Val) {
+template <> struct isa_impl<solidity::iele::IeleValue, solidity::iele::IeleInstruction> {
+  static inline bool doit(const solidity::iele::IeleInstruction &Val) {
     return false;
   }
 };

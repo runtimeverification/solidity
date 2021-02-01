@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2014
@@ -21,45 +22,46 @@
  */
 
 #include <libsolidity/codegen/Compiler.h>
-#include <libevmasm/Assembly.h>
+
 #include <libsolidity/codegen/ContractCompiler.h>
+#include <libevmasm/Assembly.h>
 
 using namespace std;
-using namespace dev;
-using namespace dev::solidity;
+using namespace solidity;
+using namespace solidity::frontend;
 
 void Compiler::compileContract(
 	ContractDefinition const& _contract,
-	std::map<const ContractDefinition*, eth::Assembly const*> const& _contracts,
+	std::map<ContractDefinition const*, shared_ptr<Compiler const>> const& _otherCompilers,
 	bytes const& _metadata
 )
 {
-	ContractCompiler runtimeCompiler(nullptr, m_runtimeContext, m_optimize);
-	runtimeCompiler.compileContract(_contract, _contracts);
+	ContractCompiler runtimeCompiler(nullptr, m_runtimeContext, m_optimiserSettings);
+	runtimeCompiler.compileContract(_contract, _otherCompilers);
 	m_runtimeContext.appendAuxiliaryData(_metadata);
 
 	// This might modify m_runtimeContext because it can access runtime functions at
 	// creation time.
-	ContractCompiler creationCompiler(&runtimeCompiler, m_context, m_optimize);
-	m_runtimeSub = creationCompiler.compileConstructor(_contract, _contracts);
+	OptimiserSettings creationSettings{m_optimiserSettings};
+	// The creation code will be executed at most once, so we modify the optimizer
+	// settings accordingly.
+	creationSettings.expectedExecutionsPerDeployment = 1;
+	ContractCompiler creationCompiler(&runtimeCompiler, m_context, creationSettings);
+	m_runtimeSub = creationCompiler.compileConstructor(_contract, _otherCompilers);
 
-	m_context.optimise(m_optimize, m_optimizeRuns);
+	m_context.optimise(m_optimiserSettings);
+
+	solAssert(m_context.appendYulUtilityFunctionsRan(), "appendYulUtilityFunctions() was not called.");
+	solAssert(m_runtimeContext.appendYulUtilityFunctionsRan(), "appendYulUtilityFunctions() was not called.");
 }
 
-void Compiler::compileClone(
-	ContractDefinition const& _contract,
-	map<ContractDefinition const*, eth::Assembly const*> const& _contracts
-)
+std::shared_ptr<evmasm::Assembly> Compiler::runtimeAssemblyPtr() const
 {
-	solAssert(!_contract.isLibrary(), "");
-	ContractCompiler runtimeCompiler(nullptr, m_runtimeContext, m_optimize);
-	ContractCompiler cloneCompiler(&runtimeCompiler, m_context, m_optimize);
-	m_runtimeSub = cloneCompiler.compileClone(_contract, _contracts);
-
-	m_context.optimise(m_optimize, m_optimizeRuns);
+	solAssert(m_context.runtimeContext(), "");
+	return m_context.runtimeContext()->assemblyPtr();
 }
 
-eth::AssemblyItem Compiler::functionEntryLabel(FunctionDefinition const& _function) const
+evmasm::AssemblyItem Compiler::functionEntryLabel(FunctionDefinition const& _function) const
 {
 	return m_runtimeContext.functionEntryLabelIfExists(_function);
 }

@@ -1,19 +1,20 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2015
@@ -22,34 +23,124 @@
  */
 
 #include <libsolidity/analysis/DocStringAnalyser.h>
+
 #include <libsolidity/ast/AST.h>
-#include <libsolidity/interface/ErrorReporter.h>
 #include <libsolidity/parsing/DocStringParser.h>
+#include <liblangutil/ErrorReporter.h>
 
 using namespace std;
-using namespace dev;
-using namespace dev::solidity;
+using namespace solidity;
+using namespace solidity::langutil;
+using namespace solidity::frontend;
+
+namespace
+{
+
+void copyMissingTags(set<CallableDeclaration const*> const& _baseFunctions, StructurallyDocumentedAnnotation& _target, CallableDeclaration const* _declaration = nullptr)
+{
+	// Only copy if there is exactly one direct base function.
+	if (_baseFunctions.size() != 1)
+		return;
+
+	CallableDeclaration const& baseFunction = **_baseFunctions.begin();
+
+	auto hasReturnParameter = [](CallableDeclaration const& declaration, size_t _n)
+	{
+		return declaration.returnParameterList() &&
+			declaration.returnParameters().size() > _n;
+	};
+
+	auto& sourceDoc = dynamic_cast<StructurallyDocumentedAnnotation const&>(baseFunction.annotation());
+
+	for (auto it = sourceDoc.docTags.begin(); it != sourceDoc.docTags.end();)
+	{
+		string const& tag = it->first;
+		// Don't copy tag "inheritdoc" or already existing tags
+		if (tag == "inheritdoc" || _target.docTags.count(tag))
+		{
+			it++;
+			continue;
+		}
+
+		size_t n = 0;
+		// Iterate over all values of the current tag (it's a multimap)
+		for (auto next = sourceDoc.docTags.upper_bound(tag); it != next; it++, n++)
+		{
+			DocTag content = it->second;
+
+			// Update the parameter name for @return tags
+			if (_declaration && tag == "return")
+			{
+				size_t docParaNameEndPos = content.content.find_first_of(" \t");
+				string const docParameterName = content.content.substr(0, docParaNameEndPos);
+
+				if (
+					hasReturnParameter(*_declaration, n) &&
+					docParameterName != _declaration->returnParameters().at(n)->name()
+				)
+				{
+					bool baseHasNoName =
+						hasReturnParameter(baseFunction, n) &&
+						baseFunction.returnParameters().at(n)->name().empty();
+
+					string paramName = _declaration->returnParameters().at(n)->name();
+					content.content =
+						(paramName.empty() ? "" : std::move(paramName) + " ") + (
+							string::npos == docParaNameEndPos || baseHasNoName ?
+							content.content :
+							content.content.substr(docParaNameEndPos + 1)
+						);
+				}
+			}
+
+			_target.docTags.emplace(tag, content);
+		}
+	}
+}
+
+CallableDeclaration const* findBaseCallable(set<CallableDeclaration const*> const& _baseFunctions, int64_t _contractId)
+{
+	for (CallableDeclaration const* baseFuncCandidate: _baseFunctions)
+		if (baseFuncCandidate->annotation().contract->id() == _contractId)
+			return baseFuncCandidate;
+		else if (auto callable = findBaseCallable(baseFuncCandidate->annotation().baseFunctions, _contractId))
+			return callable;
+
+	return nullptr;
+}
+
+bool parameterNamesEqual(CallableDeclaration const& _a, CallableDeclaration const& _b)
+{
+	return boost::range::equal(_a.parameters(), _b.parameters(), [](auto const& pa, auto const& pb) { return pa->name() == pb->name(); });
+}
+
+}
 
 bool DocStringAnalyser::analyseDocStrings(SourceUnit const& _sourceUnit)
 {
-	m_errorOccured = false;
+	auto errorWatcher = m_errorReporter.errorWatcher();
 	_sourceUnit.accept(*this);
-
-	return !m_errorOccured;
-}
-
-bool DocStringAnalyser::visit(ContractDefinition const& _contract)
-{
-	static const set<string> validTags = set<string>{"author", "title", "dev", "notice"};
-	parseDocStrings(_contract, _contract.annotation(), validTags, "contracts");
-
-	return true;
+	return errorWatcher.ok();
 }
 
 bool DocStringAnalyser::visit(FunctionDefinition const& _function)
 {
-	handleCallable(_function, _function, _function.annotation());
+	if (!_function.isConstructor())
+		handleCallable(_function, _function, _function.annotation());
 	return true;
+}
+
+bool DocStringAnalyser::visit(VariableDeclaration const& _variable)
+{
+	if (!_variable.isStateVariable() && !_variable.isFileLevelVariable())
+		return false;
+
+	if (CallableDeclaration const* baseFunction = resolveInheritDoc(_variable.annotation().baseFunctions, _variable, _variable.annotation()))
+		copyMissingTags({baseFunction}, _variable.annotation());
+	else if (_variable.annotation().docTags.empty())
+		copyMissingTags(_variable.annotation().baseFunctions, _variable.annotation());
+
+	return false;
 }
 
 bool DocStringAnalyser::visit(ModifierDefinition const& _modifier)
@@ -68,50 +159,39 @@ bool DocStringAnalyser::visit(EventDefinition const& _event)
 
 void DocStringAnalyser::handleCallable(
 	CallableDeclaration const& _callable,
-	Documented const& _node,
-	DocumentedAnnotation& _annotation
+	StructurallyDocumented const& _node,
+	StructurallyDocumentedAnnotation& _annotation
 )
 {
-	static const set<string> validTags = set<string>{"author", "dev", "notice", "return", "param"};
-	parseDocStrings(_node, _annotation, validTags, "functions");
-
-	set<string> validParams;
-	for (auto const& p: _callable.parameters())
-		validParams.insert(p->name());
-	if (_callable.returnParameterList())
-		for (auto const& p: _callable.returnParameterList()->parameters())
-			validParams.insert(p->name());
-	auto paramRange = _annotation.docTags.equal_range("param");
-	for (auto i = paramRange.first; i != paramRange.second; ++i)
-		if (!validParams.count(i->second.paramName))
-			appendError(
-				"Documented parameter \"" +
-				i->second.paramName +
-				"\" not found in the parameter list of the function."
-			);
+	if (CallableDeclaration const* baseFunction = resolveInheritDoc(_callable.annotation().baseFunctions, _node, _annotation))
+		copyMissingTags({baseFunction}, _annotation, &_callable);
+	else if (
+		_annotation.docTags.empty() &&
+		_callable.annotation().baseFunctions.size() == 1 &&
+		parameterNamesEqual(_callable, **_callable.annotation().baseFunctions.begin())
+	)
+		copyMissingTags(_callable.annotation().baseFunctions, _annotation, &_callable);
 }
 
-void DocStringAnalyser::parseDocStrings(
-	Documented const& _node,
-	DocumentedAnnotation& _annotation,
-	set<string> const& _validTags,
-	string const& _nodeName
+CallableDeclaration const* DocStringAnalyser::resolveInheritDoc(
+	set<CallableDeclaration const*> const& _baseFuncs,
+	StructurallyDocumented const& _node,
+	StructurallyDocumentedAnnotation& _annotation
 )
 {
-	DocStringParser parser;
-	if (_node.documentation() && !_node.documentation()->empty())
-	{
-		if (!parser.parse(*_node.documentation(), m_errorReporter))
-			m_errorOccured = true;
-		_annotation.docTags = parser.tags();
-	}
-	for (auto const& docTag: _annotation.docTags)
-		if (!_validTags.count(docTag.first))
-			appendError("Doc tag @" + docTag.first + " not valid for " + _nodeName + ".");
-}
+	if (_annotation.inheritdocReference == nullptr)
+		return nullptr;
 
-void DocStringAnalyser::appendError(string const& _description)
-{
-	m_errorOccured = true;
-	m_errorReporter.docstringParsingError(_description);
+	if (auto const callable = findBaseCallable(_baseFuncs, _annotation.inheritdocReference->id()))
+		return callable;
+
+	m_errorReporter.docstringParsingError(
+		4682_error,
+		_node.documentation()->location(),
+		"Documentation tag @inheritdoc references contract \"" +
+		_annotation.inheritdocReference->name() +
+		"\", but the contract does not contain a function that is overridden by this function."
+	);
+
+	return nullptr;
 }

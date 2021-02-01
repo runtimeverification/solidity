@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Lefteris <lefteris@ethdev.com>
  * @date 2014
@@ -22,17 +23,16 @@
 #pragma once
 
 #include <libsolidity/interface/CompilerStack.h>
-#include <libsolidity/interface/AssemblyStack.h>
-#include <libsolidity/interface/EVMVersion.h>
+#include <libsolidity/interface/DebugSettings.h>
+#include <libyul/AssemblyStack.h>
+#include <liblangutil/EVMVersion.h>
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem/path.hpp>
 
 #include <memory>
 
-namespace dev
-{
-namespace solidity
+namespace solidity::frontend
 {
 
 //forward declaration
@@ -41,8 +41,6 @@ enum class DocumentationType: uint8_t;
 class CommandLineInterface
 {
 public:
-	CommandLineInterface() {}
-
 	/// Parse command line arguments and return false if we should not continue
 	bool parseArguments(int _argc, char** _argv);
 	/// Parse the files and create source code objects
@@ -54,28 +52,46 @@ public:
 private:
 	bool link();
 	void writeLinkedFiles();
+	/// @returns the ``// <identifier> -> name`` hint for library placeholders.
+	static std::string libraryPlaceholderHint(std::string const& _libraryName);
+	/// @returns the full object with library placeholder hints in hex.
+	static std::string objectWithLinkRefsHex(evmasm::LinkerObject const& _obj);
 
-	bool assemble(AssemblyStack::Language _language, AssemblyStack::Machine _targetMachine);
+	bool assemble(
+		yul::AssemblyStack::Language _language,
+		yul::AssemblyStack::Machine _targetMachine,
+		bool _optimize,
+		std::optional<std::string> _yulOptimiserSteps = std::nullopt
+	);
 
 	void outputCompilationResults();
 
 	void handleCombinedJSON();
-	void handleAst(std::string const& _argStr);
+	void handleAst();
 	void handleBinary(std::string const& _contract);
 	void handleOpcode(std::string const& _contract);
+	void handleIR(std::string const& _contract);
+	void handleIROptimized(std::string const& _contract);
+	void handleEwasm(std::string const& _contract);
 	void handleBytecode(std::string const& _contract);
 	void handleSignatureHashes(std::string const& _contract);
 	void handleMetadata(std::string const& _contract);
 	void handleABI(std::string const& _contract);
 	void handleNatspec(bool _natspecDev, std::string const& _contract);
 	void handleGasEstimation(std::string const& _contract);
-	void handleFormal();
+	void handleStorageLayout(std::string const& _contract);
 
 	/// Fills @a m_sourceCodes initially and @a m_redirects.
 	bool readInputFilesAndConfigureRemappings();
 	/// Tries to read from the file @a _input or interprets _input literally if that fails.
 	/// It then tries to parse the contents and appends to m_libraries.
 	bool parseLibraryOption(std::string const& _input);
+
+	/// Tries to read @ m_sourceCodes as a JSONs holding ASTs
+	/// such that they can be imported into the compiler  (importASTs())
+	/// (produced by --combined-json ast,compact-format <file.sol>
+	/// or standard-json output
+	std::map<std::string, Json::Value> parseAstFromInput();
 
 	/// Create a file in the given directory
 	/// @arg _fileName the name of the file
@@ -87,6 +103,9 @@ private:
 	/// @arg _json json string to be written
 	void createJson(std::string const& _fileName, std::string const& _json);
 
+	size_t countEnabledOptions(std::vector<std::string> const& _optionNames) const;
+	static std::string joinOptionNames(std::vector<std::string> const& _optionNames, std::string _separator = ", ");
+
 	bool m_error = false; ///< If true, some error occurred.
 
 	bool m_onlyAssemble = false;
@@ -97,15 +116,29 @@ private:
 	boost::program_options::variables_map m_args;
 	/// map of input files to source code strings
 	std::map<std::string, std::string> m_sourceCodes;
+	/// list of remappings
+	std::vector<frontend::CompilerStack::Remapping> m_remappings;
 	/// list of allowed directories to read files from
 	std::vector<boost::filesystem::path> m_allowedDirectories;
+	/// Base path, used for resolving relative paths in imports.
+	boost::filesystem::path m_basePath;
 	/// map of library names to addresses
-	std::map<std::string, h160> m_libraries;
+	std::map<std::string, util::h160> m_libraries;
 	/// Solidity compiler stack
-	std::unique_ptr<dev::solidity::CompilerStack> m_compiler;
+	std::unique_ptr<frontend::CompilerStack> m_compiler;
+	CompilerStack::State m_stopAfter = CompilerStack::State::CompilationSuccessful;
 	/// EVM version to use
-	EVMVersion m_evmVersion;
+	langutil::EVMVersion m_evmVersion;
+	/// How to handle revert strings
+	RevertStrings m_revertStrings = RevertStrings::Default;
+	/// Chosen hash method for the bytecode metadata.
+	CompilerStack::MetadataHash m_metadataHash = CompilerStack::MetadataHash::IPFS;
+	/// Model checker settings.
+	ModelCheckerSettings m_modelCheckerSettings;
+	/// Whether or not to colorize diagnostics output.
+	bool m_coloredOutput = true;
+	/// Whether or not to output error IDs.
+	bool m_withErrorIds = false;
 };
 
-}
 }

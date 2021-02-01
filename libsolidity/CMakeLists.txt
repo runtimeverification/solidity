@@ -1,40 +1,153 @@
-# Until we have a clear separation, libjulia has to be included here
-file(GLOB_RECURSE sources "*.cpp" "../libjulia/*.cpp")
-file(GLOB_RECURSE headers "*.h" "../libjulia/*.h")
+# Until we have a clear separation, libyul has to be included here
+set(sources
+	analysis/ConstantEvaluator.cpp
+	analysis/ConstantEvaluator.h
+	analysis/ContractLevelChecker.cpp
+	analysis/ContractLevelChecker.h
+	analysis/ControlFlowAnalyzer.cpp
+	analysis/ControlFlowAnalyzer.h
+	analysis/ControlFlowBuilder.cpp
+	analysis/ControlFlowBuilder.h
+	analysis/ControlFlowGraph.cpp
+	analysis/ControlFlowGraph.h
+	analysis/DeclarationContainer.cpp
+	analysis/DeclarationContainer.h
+	analysis/DeclarationTypeChecker.cpp
+	analysis/DeclarationTypeChecker.h
+	analysis/DocStringAnalyser.cpp
+	analysis/DocStringAnalyser.h
+	analysis/DocStringTagParser.cpp
+	analysis/DocStringTagParser.h
+	analysis/ImmutableValidator.cpp
+	analysis/ImmutableValidator.h
+	analysis/GlobalContext.cpp
+	analysis/GlobalContext.h
+	analysis/NameAndTypeResolver.cpp
+	analysis/NameAndTypeResolver.h
+	analysis/OverrideChecker.cpp
+	analysis/OverrideChecker.h
+	analysis/PostTypeChecker.cpp
+	analysis/PostTypeChecker.h
+	analysis/ReferencesResolver.cpp
+	analysis/ReferencesResolver.h
+	analysis/Scoper.cpp
+	analysis/Scoper.h
+	analysis/StaticAnalyzer.cpp
+	analysis/StaticAnalyzer.h
+	analysis/SyntaxChecker.cpp
+	analysis/SyntaxChecker.h
+	analysis/TypeChecker.cpp
+	analysis/TypeChecker.h
+	analysis/ViewPureChecker.cpp
+	analysis/ViewPureChecker.h
+	ast/AST.cpp
+	ast/AST.h
+	ast/AST_accept.h
+	ast/ASTAnnotations.cpp
+	ast/ASTAnnotations.h
+	ast/ASTEnums.h
+	ast/ASTForward.h
+	ast/ASTJsonConverter.cpp
+	ast/ASTJsonConverter.h
+	ast/ASTUtils.cpp
+	ast/ASTUtils.h
+	ast/ASTJsonImporter.cpp
+	ast/ASTJsonImporter.h
+	ast/ASTVisitor.h
+	ast/ExperimentalFeatures.h
+	ast/Types.cpp
+	ast/Types.h
+	ast/TypeProvider.cpp
+	ast/TypeProvider.h
+	codegen/ABIFunctions.cpp
+	codegen/ABIFunctions.h
+	codegen/ArrayUtils.cpp
+	codegen/ArrayUtils.h
+	codegen/Compiler.cpp
+	codegen/Compiler.h
+	codegen/CompilerContext.cpp
+	codegen/CompilerContext.h
+	codegen/CompilerUtils.cpp
+	codegen/CompilerUtils.h
+	codegen/ContractCompiler.cpp
+	codegen/ContractCompiler.h
+	codegen/ExpressionCompiler.cpp
+	codegen/ExpressionCompiler.h
+	codegen/IeleCompiler.cpp
+	codegen/IeleCompiler.h
+	codegen/IeleLValue.cpp
+	codegen/IeleLValue.h
+	codegen/IeleRValue.h
+	codegen/LValue.cpp
+	codegen/LValue.h
+	codegen/MultiUseYulFunctionCollector.h
+	codegen/MultiUseYulFunctionCollector.cpp
+	codegen/ReturnInfo.h
+	codegen/ReturnInfo.cpp
+	codegen/YulUtilFunctions.h
+	codegen/YulUtilFunctions.cpp
+	codegen/ir/Common.cpp
+	codegen/ir/Common.h
+	codegen/ir/IRGenerator.cpp
+	codegen/ir/IRGenerator.h
+	codegen/ir/IRGeneratorForStatements.cpp
+	codegen/ir/IRGeneratorForStatements.h
+	codegen/ir/IRGenerationContext.cpp
+	codegen/ir/IRGenerationContext.h
+	codegen/ir/IRLValue.h
+	codegen/ir/IRVariable.cpp
+	codegen/ir/IRVariable.h
+	formal/ArraySlicePredicate.cpp
+	formal/ArraySlicePredicate.h
+	formal/BMC.cpp
+	formal/BMC.h
+	formal/CHC.cpp
+	formal/CHC.h
+	formal/EncodingContext.cpp
+	formal/EncodingContext.h
+	formal/ModelChecker.cpp
+	formal/ModelChecker.h
+	formal/Predicate.cpp
+	formal/Predicate.h
+	formal/PredicateInstance.cpp
+	formal/PredicateInstance.h
+	formal/PredicateSort.cpp
+	formal/PredicateSort.h
+	formal/SMTEncoder.cpp
+	formal/SMTEncoder.h
+	formal/SSAVariable.cpp
+	formal/SSAVariable.h
+	formal/SymbolicState.cpp
+	formal/SymbolicState.h
+	formal/SymbolicTypes.cpp
+	formal/SymbolicTypes.h
+	formal/SymbolicVariables.cpp
+	formal/SymbolicVariables.h
+	formal/VariableUsage.cpp
+	formal/VariableUsage.h
+	interface/ABI.cpp
+	interface/ABI.h
+	interface/CompilerStack.cpp
+	interface/CompilerStack.h
+	interface/DebugSettings.h
+	interface/GasEstimator.cpp
+	interface/GasEstimator.h
+	interface/Natspec.cpp
+	interface/Natspec.h
+	interface/OptimiserSettings.h
+	interface/ReadFile.h
+	interface/StandardCompiler.cpp
+	interface/StandardCompiler.h
+	interface/StorageLayout.cpp
+	interface/StorageLayout.h
+	interface/Version.cpp
+	interface/Version.h
+	parsing/DocStringParser.cpp
+	parsing/DocStringParser.h
+	parsing/Parser.cpp
+	parsing/Parser.h
+	parsing/Token.h
+)
 
-find_package(Z3 QUIET)
-if (${Z3_FOUND})
-  include_directories(${Z3_INCLUDE_DIR})
-  add_definitions(-DHAVE_Z3)
-  message("Z3 SMT solver found. This enables optional SMT checking with Z3.")
-  list(REMOVE_ITEM sources "${CMAKE_CURRENT_SOURCE_DIR}/formal/CVC4Interface.cpp")
-else()
-  list(REMOVE_ITEM sources "${CMAKE_CURRENT_SOURCE_DIR}/formal/Z3Interface.cpp")
-  find_package(GMP QUIET)
-  find_package(CVC4 QUIET)
-  if (${CVC4_FOUND})
-    if (${GMP_FOUND})
-      include_directories(${CVC4_INCLUDE_DIR})
-      add_definitions(-DHAVE_CVC4)
-      message("CVC4 SMT solver and GMP found. This enables optional SMT checking with CVC4.")
-    else()
-      message("CVC4 SMT solver found but its dependency GMP was NOT found. Optional SMT checking with CVC4 will not be available. Please install GMP if it is desired.")
-      list(REMOVE_ITEM sources "${CMAKE_CURRENT_SOURCE_DIR}/formal/CVC4Interface.cpp")
-    endif()
-  else()
-    message("No SMT solver found (Z3 or CVC4). Optional SMT checking will not be available. Please install Z3 or CVC4 if it is desired.")
-    list(REMOVE_ITEM sources "${CMAKE_CURRENT_SOURCE_DIR}/formal/CVC4Interface.cpp")
-  endif()
-endif()
-
-add_library(solidity ${sources} ${headers})
-target_link_libraries(solidity PUBLIC evmasm iele devcore)
-
-if (${Z3_FOUND})
-  target_link_libraries(solidity PUBLIC ${Z3_LIBRARY})
-endif()
-
-if (${CVC4_FOUND} AND ${GMP_FOUND})
-  target_link_libraries(solidity PUBLIC ${CVC4_LIBRARY})
-  target_link_libraries(solidity PUBLIC ${GMP_LIBRARY})
-endif()
+add_library(solidity ${sources})
+target_link_libraries(solidity PUBLIC yul evmasm iele langutil smtutil solutil Boost::boost)

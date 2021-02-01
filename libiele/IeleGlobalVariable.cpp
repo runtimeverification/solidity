@@ -3,8 +3,8 @@
 #include "IeleContract.h"
 #include "IeleIntConstant.h"
 
-using namespace dev;
-using namespace dev::iele;
+using namespace solidity;
+using namespace solidity::iele;
 
 IeleGlobalVariable::IeleGlobalVariable(IeleContext *Ctx,
                                        const llvm::Twine &Name,

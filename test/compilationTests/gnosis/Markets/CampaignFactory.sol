@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Markets/Campaign.sol";
 
 
@@ -21,7 +21,7 @@ contract CampaignFactory {
     /// @param fee Market fee
     /// @param funding Initial funding for market
     /// @param deadline Campaign deadline
-    /// @return Market contract
+    /// @return campaign Market contract
     function createCampaigns(
         Event eventContract,
         MarketFactory marketFactory,
@@ -34,6 +34,6 @@ contract CampaignFactory {
         returns (Campaign campaign)
     {
         campaign = new Campaign(eventContract, marketFactory, marketMaker, fee, funding, deadline);
-        CampaignCreation(msg.sender, campaign, eventContract, marketFactory, marketMaker, fee, funding, deadline);
+        emit CampaignCreation(msg.sender, campaign, eventContract, marketFactory, marketMaker, fee, funding, deadline);
     }
 }

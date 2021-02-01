@@ -14,18 +14,19 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2014
  * Tests for the Solidity optimizer.
  */
 
+#include <test/Metadata.h>
 #include <test/libsolidity/SolidityExecutionFramework.h>
 
 #include <libevmasm/Instruction.h>
 
 #include <boost/test/unit_test.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include <chrono>
 #include <string>
@@ -33,21 +34,16 @@
 #include <memory>
 
 using namespace std;
-using namespace dev::eth;
-using namespace dev::test;
+using namespace solidity::util;
+using namespace solidity::evmasm;
+using namespace solidity::test;
 
-namespace dev
-{
-namespace solidity
-{
-namespace test
+namespace solidity::frontend::test
 {
 
 class OptimizerTestFramework: public SolidityExecutionFramework
 {
 public:
-	OptimizerTestFramework() { }
-
 	bytes const& compileAndRunWithOptimizer(
 		std::string const& _sourceCode,
 		u256 const& _value = 0,
@@ -56,13 +52,13 @@ public:
 		unsigned const _optimizeRuns = 200
 	)
 	{
-		bool const c_optimize = m_optimize;
-		unsigned const c_optimizeRuns = m_optimizeRuns;
-		m_optimize = _optimize;
-		m_optimizeRuns = _optimizeRuns;
+		OptimiserSettings previousSettings = std::move(m_optimiserSettings);
+		// This uses "none" / "full" while most other test frameworks use
+		// "minimal" / "standard".
+		m_optimiserSettings = _optimize ? OptimiserSettings::full() : OptimiserSettings::none();
+		m_optimiserSettings.expectedExecutionsPerDeployment = _optimizeRuns;
 		bytes const& ret = compileAndRun(_sourceCode, _value, _contractName);
-		m_optimize = c_optimize;
-		m_optimizeRuns = c_optimizeRuns;
+		m_optimiserSettings = std::move(previousSettings);
 		return ret;
 	}
 
@@ -74,16 +70,22 @@ public:
 		unsigned const _optimizeRuns = 200
 	)
 	{
-		m_nonOptimizedBytecode = compileAndRunWithOptimizer(_sourceCode, _value, _contractName, false, _optimizeRuns);
+		m_nonOptimizedBytecode = compileAndRunWithOptimizer("pragma solidity >=0.0;\n" + _sourceCode, _value, _contractName, false, _optimizeRuns);
 		m_nonOptimizedContract = m_contractAddress;
+<<<<<<< ours
 		m_optimizedBytecode = compileAndRunWithOptimizer(_sourceCode, _value, _contractName, true, _optimizeRuns);
 		size_t nonOptimizedSize = m_nonOptimizedBytecode.size();
 		size_t optimizedSize = m_optimizedBytecode.size();
+=======
+		m_optimizedBytecode = compileAndRunWithOptimizer("pragma solidity >=0.0;\n" + _sourceCode, _value, _contractName, true, _optimizeRuns);
+		size_t nonOptimizedSize = numInstructions(m_nonOptimizedBytecode);
+		size_t optimizedSize = numInstructions(m_optimizedBytecode);
+>>>>>>> theirs
 		BOOST_CHECK_MESSAGE(
 			_optimizeRuns < 50 || optimizedSize < nonOptimizedSize,
 			string("Optimizer did not reduce bytecode size. Non-optimized size: ") +
-			std::to_string(nonOptimizedSize) + " - optimized size: " +
-			std::to_string(optimizedSize)
+			to_string(nonOptimizedSize) + " - optimized size: " +
+			to_string(optimizedSize)
 		);
 		m_optimizedContract = m_contractAddress;
 	}
@@ -102,17 +104,14 @@ public:
 		BOOST_CHECK_MESSAGE(nonOptimizedOutput == optimizedOutput, "Computed values do not match.");
 	}
 
-	/// @returns the number of intructions in the given bytecode, not taking the metadata hash
+	/// @returns the number of instructions in the given bytecode, not taking the metadata hash
 	/// into account.
-	size_t numInstructions(bytes const& _bytecode, boost::optional<Instruction> _which = boost::optional<Instruction>{})
+	size_t numInstructions(bytes const& _bytecode, std::optional<Instruction> _which = std::optional<Instruction>{})
 	{
-		BOOST_REQUIRE(_bytecode.size() > 5);
-		size_t metadataSize = (_bytecode[_bytecode.size() - 2] << 8) + _bytecode[_bytecode.size() - 1];
-		BOOST_REQUIRE_MESSAGE(metadataSize == 0x29, "Invalid metadata size");
-		BOOST_REQUIRE(_bytecode.size() >= metadataSize + 2);
-		bytes realCode = bytes(_bytecode.begin(), _bytecode.end() - metadataSize - 2);
+		bytes realCode = bytecodeSansMetadata(_bytecode);
+		BOOST_REQUIRE_MESSAGE(!realCode.empty(), "Invalid or missing metadata in bytecode.");
 		size_t instructions = 0;
-		solidity::eachInstruction(realCode, [&](Instruction _instr, u256 const&) {
+		evmasm::eachInstruction(realCode, [&](Instruction _instr, u256 const&) {
 			if (!_which || *_which == _instr)
 				instructions++;
 		});
@@ -124,8 +123,8 @@ protected:
 	u256 m_gasUsedNonOptimized;
 	bytes m_nonOptimizedBytecode;
 	bytes m_optimizedBytecode;
-	Address m_optimizedContract;
-	Address m_nonOptimizedContract;
+	h160 m_optimizedContract;
+	h160 m_nonOptimizedContract;
 };
 
 BOOST_FIXTURE_TEST_SUITE(SolidityOptimizer, OptimizerTestFramework)
@@ -135,10 +134,11 @@ BOOST_AUTO_TEST_CASE(smoke_test)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(uint a) returns (uint b) {
+			function f(uint a) public returns (uint b) {
 				return a;
 			}
-		})";
+		}
+	)";
 	compileBothVersions(sourceCode);
 	compareVersions("f(uint)", u256(7));
 }
@@ -148,10 +148,11 @@ BOOST_AUTO_TEST_CASE(identities)
 {
 	char const* sourceCode = R"(
 		contract test {
-			function f(int a) returns (int b) {
+			function f(int a) public returns (int b) {
 				return int(0) | (int(1) * (int(0) ^ (0 + a)));
 			}
-		})";
+		}
+	)";
 	compileBothVersions(sourceCode);
 	compareVersions("f(int)", u256(0x12334664));
 }
@@ -162,11 +163,12 @@ BOOST_AUTO_TEST_CASE(unused_expressions)
 	char const* sourceCode = R"(
 		contract test {
 			uint data;
-			function f() returns (uint a, uint b) {
+			function f() public returns (uint a, uint b) {
 				10 + 20;
 				data;
 			}
-		})";
+		}
+	)";
 	compileBothVersions(sourceCode);
 	compareVersions("f()");
 }
@@ -179,10 +181,11 @@ BOOST_AUTO_TEST_CASE(constant_folding_both_sides)
 	// literals as late as possible
 	char const* sourceCode = R"(
 		contract test {
-			function f(uint x) returns (uint y) {
+			function f(uint x) public returns (uint y) {
 				return 98 ^ (7 * ((1 | (x | 1000)) * 40) ^ 102);
 			}
-		})";
+		}
+	)";
 	compileBothVersions(sourceCode);
 	compareVersions("f(uint)", 7);
 }
@@ -193,7 +196,7 @@ BOOST_AUTO_TEST_CASE(storage_access)
 	char const* sourceCode = R"(
 		contract test {
 			uint8[40] data;
-			function f(uint x) returns (uint y) {
+			function f(uint x) public returns (uint y) {
 				data[2] = data[7] = uint8(x);
 				data[4] = data[2] * 10 + data[3];
 			}
@@ -210,13 +213,21 @@ BOOST_AUTO_TEST_CASE(array_copy)
 		contract test {
 			bytes2[] data1;
 			bytes5[] data2;
+<<<<<<< ours
 			function f(uint x, bytes data) returns (uint l, uint y) {
 				data1.length = data.length;
 				for (uint i = 0; i < data.length; ++i)
 					data1[i] = data[i];
+=======
+			function f(uint x) public returns (uint l, uint y) {
+				for (uint i = 0; i < msg.data.length; i++)
+					data1.push();
+				for (uint i = 0; i < msg.data.length; ++i)
+					data1[i] = msg.data[i];
+>>>>>>> theirs
 				data2 = data1;
 				l = data2.length;
-				y = uint(data2[x]);
+				y = uint(uint40(data2[x]));
 			}
 		}
 	)";
@@ -231,8 +242,13 @@ BOOST_AUTO_TEST_CASE(function_calls)
 {
 	char const* sourceCode = R"(
 		contract test {
+<<<<<<< ours
 			function f1(uint256 x) returns (uint256) { return x*x; }
 			function f(uint256 x) returns (uint256) { return f1(7+x) - this.f1(x**9); }
+=======
+			function f1(uint x) public returns (uint) { unchecked { return x*x; } }
+			function f(uint x) public returns (uint) { unchecked { return f1(7+x) - this.f1(x**9); } }
+>>>>>>> theirs
 		}
 	)";
 	compileBothVersions(sourceCode);
@@ -247,8 +263,8 @@ BOOST_AUTO_TEST_CASE(storage_write_in_loops)
 	char const* sourceCode = R"(
 		contract test {
 			uint d;
-			function f(uint a) returns (uint r) {
-				var x = d;
+			function f(uint a) public returns (uint r) {
+				uint x = d;
 				for (uint i = 1; i < a * a; i++) {
 					r = d;
 					d = i;
@@ -268,18 +284,18 @@ BOOST_AUTO_TEST_CASE(storage_write_in_loops)
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(retain_information_in_branches, 1)
 BOOST_AUTO_TEST_CASE(retain_information_in_branches)
 {
-	// This tests that the optimizer knows that we already have "z == keccak256(y)" inside both branches.
+	// This tests that the optimizer knows that we already have "z == keccak256(abi.encodePacked(y))" inside both branches.
 	char const* sourceCode = R"(
 		contract c {
 			bytes32 d;
 			uint a;
-			function f(uint x, bytes32 y) returns (uint r_a, bytes32 r_d) {
-				bytes32 z = keccak256(y);
+			function f(uint x, bytes32 y) public returns (uint r_a, bytes32 r_d) {
+				bytes32 z = keccak256(abi.encodePacked(y));
 				if (x > 8) {
-					z = keccak256(y);
+					z = keccak256(abi.encodePacked(y));
 					a = x;
 				} else {
-					z = keccak256(y);
+					z = keccak256(abi.encodePacked(y));
 					a = x;
 				}
 				r_a = a;
@@ -317,19 +333,19 @@ BOOST_AUTO_TEST_CASE(store_tags_as_unions)
 		contract test {
 			bytes32 data;
 			function f(uint x, bytes32 y) external returns (uint r_a, bytes32 r_d) {
-				r_d = keccak256(y);
+				r_d = keccak256(abi.encodePacked(y));
 				shared(y);
-				r_d = keccak256(y);
+				r_d = keccak256(abi.encodePacked(y));
 				r_a = 5;
 			}
 			function g(uint x, bytes32 y) external returns (uint r_a, bytes32 r_d) {
-				r_d = keccak256(y);
+				r_d = keccak256(abi.encodePacked(y));
 				shared(y);
-				r_d = bytes32(uint(keccak256(y)) + 2);
+				r_d = bytes32(uint(keccak256(abi.encodePacked(y))) + 2);
 				r_a = 7;
 			}
 			function shared(bytes32 y) internal {
-				data = keccak256(y);
+				data = keccak256(abi.encodePacked(y));
 			}
 		}
 	)";
@@ -355,12 +371,21 @@ BOOST_AUTO_TEST_CASE(incorrect_storage_access_bug)
 	char const* sourceCode = R"(
 		contract C
 		{
+<<<<<<< ours
 			mapping(uint256 => uint) data;
 			function f() returns (uint)
 			{
 				if(data[now] == 0)
 					data[uint256(-7)] = 5;
 				return data[now];
+=======
+			mapping(uint => uint) data;
+			function f() public returns (uint)
+			{
+				if (data[block.timestamp] == 0)
+					data[type(uint).max - 6] = 5;
+				return data[block.timestamp];
+>>>>>>> theirs
 			}
 		}
 	)";
@@ -376,7 +401,7 @@ BOOST_AUTO_TEST_CASE(sequence_number_for_calls)
 	// to storage), so the sequence number should be incremented.
 	char const* sourceCode = R"(
 		contract test {
-			function f(string a, string b) returns (bool) { return sha256(a) == sha256(b); }
+			function f(string memory a, string memory b) public returns (bool) { return sha256(bytes(a)) == sha256(bytes(b)); }
 		}
 	)";
 	compileBothVersions(sourceCode);
@@ -392,24 +417,24 @@ BOOST_AUTO_TEST_CASE(computing_constants)
 			uint m_b;
 			uint m_c;
 			uint m_d;
-			function C() {
+			constructor() {
 				set();
 			}
-			function set() returns (uint) {
+			function set() public returns (uint) {
 				m_a = 0x77abc0000000000000000000000000000000000000000000000000000000001;
 				m_b = 0x817416927846239487123469187231298734162934871263941234127518276;
 				g();
 				return 1;
 			}
-			function g() {
+			function g() public {
 				m_b = 0x817416927846239487123469187231298734162934871263941234127518276;
 				m_c = 0x817416927846239487123469187231298734162934871263941234127518276;
 				h();
 			}
-			function h() {
+			function h() public {
 				m_d = 0xff05694900000000000000000000000000000000000000000000000000000000;
 			}
-			function get() returns (uint ra, uint rb, uint rc, uint rd) {
+			function get() public returns (uint ra, uint rb, uint rc, uint rd) {
 				ra = m_a;
 				rb = m_b;
 				rc = m_c;
@@ -449,11 +474,14 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 	// This tests that the constant optimizer does not try to find the best representation
 	// indefinitely but instead stops after some number of iterations.
 	char const* sourceCode = R"(
-	pragma solidity ^0.4.0;
-
 	contract HexEncoding {
+<<<<<<< ours
 		function hexEncodeTest(address addr) returns (bytes32 ret) {
 			uint256 x = uint256(addr) / 2**32;
+=======
+		function hexEncodeTest(address addr) public returns (bytes32 ret) {
+			uint x = uint(uint160(addr)) / 2**32;
+>>>>>>> theirs
 
 			// Nibble interleave
 			x = x & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
@@ -469,9 +497,17 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 			uint256 j = (x & 0x0202020202020202020202020202020202020202020202020202020202020202) / 2;
 			x = x + (h & (i | j)) * 0x27 + 0x3030303030303030303030303030303030303030303030303030303030303030;
 
+<<<<<<< ours
 			uint256[2] memory arr;
 			arr[0] = x;
 			x = uint256(addr) * 2**96;
+=======
+			// Store and load next batch
+			assembly {
+				mstore(0, x)
+			}
+			x = uint160(addr) * 2**96;
+>>>>>>> theirs
 
 			// Nibble interleave
 			x = x & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
@@ -496,7 +532,18 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 	auto start = std::chrono::steady_clock::now();
 	compileBothVersions(sourceCode);
 	double duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
-	BOOST_CHECK_MESSAGE(duration < 20, "Compilation of constants took longer than 20 seconds.");
+	// Since run time on an ASan build is not really realistic, we disable this test for those builds.
+	size_t maxDuration = 20;
+#if !defined(__SANITIZE_ADDRESS__) && defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define __SANITIZE_ADDRESS__ 1
+#endif
+#endif
+#if __SANITIZE_ADDRESS__
+	maxDuration = numeric_limits<size_t>::max();
+	BOOST_TEST_MESSAGE("Disabled constant optimizer run time check for address sanitizer build.");
+#endif
+	BOOST_CHECK_MESSAGE(duration <= double(maxDuration), "Compilation of constants took longer than 20 seconds.");
 	compareVersions("hexEncodeTest(address)", u256(0x123456789));
 }
 
@@ -523,8 +570,8 @@ BOOST_AUTO_TEST_CASE(inconsistency)
 
 			// Called with params: containerIndex=0, valueIndex=0
 			function levelIII(uint containerIndex, uint valueIndex) private {
-				Container container = containers[containerIndex];
-				Value value = container.values[valueIndex];
+				Container storage container = containers[containerIndex];
+				Value storage value = container.values[valueIndex];
 				debug = container.valueIndices[value.number];
 			}
 			function levelII() private {
@@ -534,16 +581,15 @@ BOOST_AUTO_TEST_CASE(inconsistency)
 			}
 
 			function trigger() public returns (uint) {
-				containers.length++;
-				Container container = containers[0];
+				Container storage container = containers.push();
 
 				container.values.push(Value({
 					badnum: 9000,
 					number: 0
 				}));
 
-				container.valueIndices.length++;
-				valueIndices.length++;
+				container.valueIndices.push();
+				valueIndices.push();
 
 				levelII();
 				return debug;
@@ -567,11 +613,11 @@ BOOST_AUTO_TEST_CASE(dead_code_elimination_across_assemblies)
 	char const* sourceCode = R"(
 		contract DCE {
 			function () internal returns (uint) stored;
-			function DCE() {
+			constructor() {
 				stored = f;
 			}
 			function f() internal returns (uint) { return 7; }
-			function test() returns (uint) { return stored(); }
+			function test() public returns (uint) { return stored(); }
 		}
 	)";
 	compileBothVersions(sourceCode);
@@ -583,13 +629,18 @@ BOOST_AUTO_TEST_CASE(invalid_state_at_control_flow_join)
 {
 	char const* sourceCode = R"(
 		contract Test {
+<<<<<<< ours
 			uint public totalSupply = 100;
 			function f() returns (uint r) {
+=======
+			uint256 public totalSupply = 100;
+			function f() public returns (uint r) {
+>>>>>>> theirs
 				if (false)
 					r = totalSupply;
 				totalSupply -= 10;
 			}
-			function test() returns (uint) {
+			function test() public returns (uint) {
 				f();
 				return this.totalSupply();
 			}
@@ -608,7 +659,7 @@ BOOST_AUTO_TEST_CASE(init_empty_dynamic_arrays)
 	// not use any memory.
 	char const* sourceCode = R"(
 		contract Test {
-			function f() pure returns (uint r) {
+			function f() public pure returns (uint r) {
 				uint[][] memory x = new uint[][](20000);
 				return x.length;
 			}
@@ -628,7 +679,7 @@ BOOST_AUTO_TEST_CASE(optimise_multi_stores)
 			struct S { uint16 a; uint16 b; uint16[3] c; uint[] dyn; }
 			uint padding;
 			S[] s;
-			function f() public returns (uint16, uint16, uint16[3], uint) {
+			function f() public returns (uint16, uint16, uint16[3] memory, uint) {
 				uint16[3] memory c;
 				c[0] = 7;
 				c[1] = 8;
@@ -640,12 +691,96 @@ BOOST_AUTO_TEST_CASE(optimise_multi_stores)
 	)";
 	compileBothVersions(sourceCode);
 	compareVersions("f()");
-	BOOST_CHECK_EQUAL(numInstructions(m_nonOptimizedBytecode, Instruction::SSTORE), 9);
-	BOOST_CHECK_EQUAL(numInstructions(m_optimizedBytecode, Instruction::SSTORE), 8);
+	BOOST_CHECK_EQUAL(numInstructions(m_nonOptimizedBytecode, Instruction::SSTORE), 8);
+	BOOST_CHECK_EQUAL(numInstructions(m_optimizedBytecode, Instruction::SSTORE), 7);
+}
+
+BOOST_AUTO_TEST_CASE(optimise_constant_to_codecopy)
+{
+	char const* sourceCode = R"(
+		contract C {
+			// We use the state variable so that the functions won't be deemed identical
+			// and be optimised out to the same implementation.
+			uint a;
+			function f() public returns (uint) {
+				a = 1;
+				// This cannot be represented well with the `CalculateMethod`,
+				// hence the decision will be between `LiteralMethod` and `CopyMethod`.
+				return 0x1234123412431234123412412342112341234124312341234124;
+			}
+			function g() public returns (uint) {
+				a = 2;
+				return 0x1234123412431234123412412342112341234124312341234124;
+			}
+			function h() public returns (uint) {
+				a = 3;
+				return 0x1234123412431234123412412342112341234124312341234124;
+			}
+			function i() public returns (uint) {
+				a = 4;
+				return 0x1234123412431234123412412342112341234124312341234124;
+			}
+		}
+	)";
+	compileBothVersions(sourceCode, 0, "C", 50);
+	compareVersions("f()");
+	compareVersions("g()");
+	compareVersions("h()");
+	compareVersions("i()");
+	// This is counting in the deployed code.
+	BOOST_CHECK_EQUAL(numInstructions(m_nonOptimizedBytecode, Instruction::CODECOPY), 0);
+	BOOST_CHECK_EQUAL(numInstructions(m_optimizedBytecode, Instruction::CODECOPY), 4);
+}
+
+BOOST_AUTO_TEST_CASE(byte_access)
+{
+	char const* sourceCode = R"(
+		contract C
+		{
+			function f(bytes32 x) public returns (bytes1 r)
+			{
+				assembly { r := and(byte(x, 31), 0xff) }
+			}
+		}
+	)";
+	compileBothVersions(sourceCode);
+	compareVersions("f(bytes32)", u256("0x1223344556677889900112233445566778899001122334455667788990011223"));
+}
+
+BOOST_AUTO_TEST_CASE(shift_optimizer_bug)
+{
+	char const* sourceCode = R"(
+		contract C
+		{
+			function f(uint x) public returns (uint)
+			{
+				return (x << 1) << type(uint).max;
+			}
+			function g(uint x) public returns (uint)
+			{
+				return (x >> 1) >> type(uint).max;
+			}
+		}
+	)";
+	compileBothVersions(sourceCode);
+	compareVersions("f(uint256)", 7);
+	compareVersions("g(uint256)", u256(-1));
+}
+
+BOOST_AUTO_TEST_CASE(avoid_double_cleanup)
+{
+	char const* sourceCode = R"(
+		contract C {
+			receive() external payable {
+				abi.encodePacked(uint200(0));
+			}
+		}
+	)";
+	compileBothVersions(sourceCode, 0, "C", 50);
+	// Check that there is no double AND instruction in the resulting code
+	BOOST_CHECK_EQUAL(numInstructions(m_nonOptimizedBytecode, Instruction::AND), 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
-}
-}
 } // end namespaces

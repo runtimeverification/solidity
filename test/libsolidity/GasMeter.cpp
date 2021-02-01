@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2015
@@ -26,31 +27,28 @@
 #include <libevmasm/PathGasMeter.h>
 #include <libsolidity/ast/AST.h>
 #include <libsolidity/interface/GasEstimator.h>
-#include <libsolidity/interface/SourceReferenceFormatter.h>
 
 using namespace std;
-using namespace dev::eth;
-using namespace dev::solidity;
-using namespace dev::test;
+using namespace solidity::langutil;
+using namespace solidity::evmasm;
+using namespace solidity::frontend;
+using namespace solidity::frontend::test;
 
-namespace dev
-{
-namespace solidity
-{
-namespace test
+namespace solidity::frontend::test
 {
 
 class GasMeterTestFramework: public SolidityExecutionFramework
 {
 public:
-	GasMeterTestFramework() { }
 	void compile(string const& _sourceCode)
 	{
-		m_compiler.reset(false);
-		m_compiler.addSource("", "pragma solidity >=0.0;\n" + _sourceCode);
-		m_compiler.setOptimiserSettings(dev::test::Options::get().optimize);
+		m_compiler.reset();
+		m_compiler.setSources({{"", "pragma solidity >=0.0;\n"
+				"// SPDX-License-Identifier: GPL-3.0\n" + _sourceCode}});
+		m_compiler.setOptimiserSettings(solidity::test::CommonOptions::get().optimize);
 		m_compiler.setEVMVersion(m_evmVersion);
 		BOOST_REQUIRE_MESSAGE(m_compiler.compile(), "Compiling contract failed");
+<<<<<<< ours
 
 		AssemblyItems const* items = nullptr; //m_compiler.runtimeAssemblyItems(m_compiler.lastContractName());
 		ASTNode const& sourceUnit = m_compiler.ast("");
@@ -59,14 +57,16 @@ public:
 			GasEstimator(dev::test::Options::get().evmVersion()).structuralEstimation(*items, vector<ASTNode const*>({&sourceUnit})),
 			{&sourceUnit}
 		);
+=======
+>>>>>>> theirs
 	}
 
-	void testCreationTimeGas(string const& _sourceCode)
+	void testCreationTimeGas(string const& _sourceCode, u256 const& _tolerance = u256(0))
 	{
 /*
 		compileAndRun(_sourceCode);
 		auto state = make_shared<KnownState>();
-		PathGasMeter meter(*m_compiler.assemblyItems(m_compiler.lastContractName()), dev::test::Options::get().evmVersion());
+		PathGasMeter meter(*m_compiler.assemblyItems(m_compiler.lastContractName()), solidity::test::CommonOptions::get().evmVersion());
 		GasMeter::GasConsumption gas = meter.estimateMax(0, state);
 		u256 bytecodeSize(m_compiler.runtimeObject(m_compiler.lastContractName()).bytecode.size());
 		// costs for deployment
@@ -74,30 +74,54 @@ public:
 		// costs for transaction
 		gas += gasForTransaction(m_compiler.object(m_compiler.lastContractName()).bytecode, vector<bytes>());
 
+<<<<<<< ours
 		BOOST_REQUIRE(!gas.isInfinite);
 		BOOST_CHECK_EQUAL(gas.value, m_gasUsed);
 */
 		BOOST_REQUIRE(false);
+=======
+		// Skip the tests when we use ABIEncoderV2.
+		// TODO: We should enable this again once the yul optimizer is activated.
+		if (solidity::test::CommonOptions::get().useABIEncoderV1)
+		{
+			BOOST_REQUIRE(!gas.isInfinite);
+			BOOST_CHECK_LE(m_gasUsed, gas.value);
+			BOOST_CHECK_LE(gas.value - _tolerance, m_gasUsed);
+		}
+>>>>>>> theirs
 	}
 
 	/// Compares the gas computed by PathGasMeter for the given signature (but unknown arguments)
 	/// against the actual gas usage computed by the VM on the given set of argument variants.
+<<<<<<< ours
 	void testRunTimeGas(string const& _sig, vector<vector<bytes>> _argumentVariants)
+=======
+	void testRunTimeGas(string const& _sig, vector<bytes> _argumentVariants, u256 const& _tolerance = u256(0))
+>>>>>>> theirs
 	{
 /*
 		u256 gasUsed = 0;
 		GasMeter::GasConsumption gas;
+<<<<<<< ours
 		for (vector<bytes> const& arguments: _argumentVariants)
 		{
 			callContractFunctionNoEncoding(_sig, arguments);
+=======
+		util::FixedHash<4> hash(util::keccak256(_sig));
+		for (bytes const& arguments: _argumentVariants)
+		{
+			sendMessage(hash.asBytes() + arguments, false, 0);
+			BOOST_CHECK(m_transactionSuccessful);
+>>>>>>> theirs
 			gasUsed = max(gasUsed, m_gasUsed);
 			gas = max(gas, gasForTransaction(_sig, arguments));
 		}
 
-		gas += GasEstimator(dev::test::Options::get().evmVersion()).functionalEstimation(
+		gas += GasEstimator(solidity::test::CommonOptions::get().evmVersion()).functionalEstimation(
 			*m_compiler.runtimeAssemblyItems(m_compiler.lastContractName()),
 			_sig
 		);
+<<<<<<< ours
 		BOOST_REQUIRE(!gas.isInfinite);
 		BOOST_CHECK_EQUAL(gas.value, m_gasUsed);
 */
@@ -111,23 +135,38 @@ public:
 		for (auto i: txData)
 			gas += i != 0 ? GasCosts::txDataNonZeroGas : GasCosts::txDataZeroGas;
 		return gas;
+=======
+		// Skip the tests when we use ABIEncoderV2.
+		// TODO: We should enable this again once the yul optimizer is activated.
+		if (solidity::test::CommonOptions::get().useABIEncoderV1)
+		{
+			BOOST_REQUIRE(!gas.isInfinite);
+			BOOST_CHECK_LE(m_gasUsed, gas.value);
+			BOOST_CHECK_LE(gas.value - _tolerance, m_gasUsed);
+		}
+>>>>>>> theirs
 	}
 
 	static GasMeter::GasConsumption gasForTransaction(string const& _sig, vector<bytes> const& _arguments)
 	{
+<<<<<<< ours
 		GasMeter::GasConsumption gas = GasCosts::txGas;
 		bytes txData = rlpEncode(asBytes(_sig), _arguments);
 		for (auto i: txData)
 			gas += i != 0 ? GasCosts::txDataNonZeroGas : GasCosts::txDataZeroGas;
+=======
+		auto evmVersion = solidity::test::CommonOptions::get().evmVersion();
+		GasMeter::GasConsumption gas = _isCreation ? GasCosts::txCreateGas : GasCosts::txGas;
+		for (auto i: _data)
+			gas += i != 0 ? GasCosts::txDataNonZeroGas(evmVersion) : GasCosts::txDataZeroGas;
+>>>>>>> theirs
 		return gas;
 	}
-
-protected:
-	map<ASTNode const*, eth::GasMeter::GasConsumption> m_gasCosts;
 };
 
 BOOST_FIXTURE_TEST_SUITE(GasMeterTests, GasMeterTestFramework)
 
+<<<<<<< ours
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(non_overlapping_filtered_costs, 1)
 BOOST_AUTO_TEST_CASE(non_overlapping_filtered_costs)
 {
@@ -162,14 +201,16 @@ BOOST_AUTO_TEST_CASE(non_overlapping_filtered_costs)
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(simple_contract, 1)
+=======
+>>>>>>> theirs
 BOOST_AUTO_TEST_CASE(simple_contract)
 {
 	// Tests a simple "deploy contract" code without constructor. The actual contract is not relevant.
 	char const* sourceCode = R"(
 		contract test {
 			bytes32 public shaValue;
-			function f(uint a) {
-				shaValue = keccak256(a);
+			function f(uint a) public {
+				shaValue = keccak256(abi.encodePacked(a));
 			}
 		}
 	)";
@@ -182,8 +223,8 @@ BOOST_AUTO_TEST_CASE(store_keccak256)
 	char const* sourceCode = R"(
 		contract test {
 			bytes32 public shaValue;
-			function test(uint a) {
-				shaValue = keccak256(a);
+			constructor() {
+				shaValue = keccak256(abi.encodePacked(this));
 			}
 		}
 	)";
@@ -197,14 +238,14 @@ BOOST_AUTO_TEST_CASE(updating_store)
 		contract test {
 			uint data;
 			uint data2;
-			function test() {
+			constructor() {
 				data = 1;
 				data = 2;
 				data2 = 0;
 			}
 		}
 	)";
-	testCreationTimeGas(sourceCode);
+	testCreationTimeGas(sourceCode, m_evmVersion < langutil::EVMVersion::constantinople() ? u256(0) : u256(9600));
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(branches, 1)
@@ -214,7 +255,7 @@ BOOST_AUTO_TEST_CASE(branches)
 		contract test {
 			uint data;
 			uint data2;
-			function f(uint x) {
+			function f(uint x) public {
 				if (x > 7)
 					data2 = 1;
 				else
@@ -233,9 +274,9 @@ BOOST_AUTO_TEST_CASE(function_calls)
 		contract test {
 			uint data;
 			uint data2;
-			function f(uint x) {
+			function f(uint x) public {
 				if (x > 7)
-					data2 = g(x**8) + 1;
+					{ unchecked { data2 = g(x**8) + 1; } }
 				else
 					data = 1;
 			}
@@ -255,13 +296,13 @@ BOOST_AUTO_TEST_CASE(multiple_external_functions)
 		contract test {
 			uint data;
 			uint data2;
-			function f(uint x) {
+			function f(uint x) public {
 				if (x > 7)
-					data2 = g(x**8) + 1;
+					{ unchecked { data2 = g(x**8) + 1; } }
 				else
 					data = 1;
 			}
-			function g(uint x) returns (uint) {
+			function g(uint x) public returns (uint) {
 				return data2;
 			}
 		}
@@ -276,17 +317,26 @@ BOOST_AUTO_TEST_CASE(exponent_size)
 {
 	char const* sourceCode = R"(
 		contract A {
-			function g(uint x) returns (uint) {
-				return x ** 0x100;
+			function f(uint x) public returns (uint) {
+				unchecked { return x ** 0; }
 			}
-			function h(uint x) returns (uint) {
-				return x ** 0x10000;
+			function g(uint x) public returns (uint) {
+				unchecked { return x ** 0x100; }
+			}
+			function h(uint x) public returns (uint) {
+				unchecked { return x ** 0x10000; }
 			}
 		}
 	)";
 	testCreationTimeGas(sourceCode);
+<<<<<<< ours
 	testRunTimeGas("g(uint256)", vector<vector<bytes>>{encodeArgs(2)});
 	testRunTimeGas("h(uint256)", vector<vector<bytes>>{encodeArgs(2)});
+=======
+	testRunTimeGas("f(uint256)", vector<bytes>{encodeArgs(2)});
+	testRunTimeGas("g(uint256)", vector<bytes>{encodeArgs(2)});
+	testRunTimeGas("h(uint256)", vector<bytes>{encodeArgs(2)});
+>>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(balance_gas, 1)
@@ -294,7 +344,7 @@ BOOST_AUTO_TEST_CASE(balance_gas)
 {
 	char const* sourceCode = R"(
 		contract A {
-			function lookup_balance(address a) returns (uint) {
+			function lookup_balance(address a) public returns (uint) {
 				return a.balance;
 			}
 		}
@@ -308,7 +358,7 @@ BOOST_AUTO_TEST_CASE(extcodesize_gas)
 {
 	char const* sourceCode = R"(
 		contract A {
-			function f() returns (uint _s) {
+			function f() public returns (uint _s) {
 				assembly {
 					_s := extcodesize(0x30)
 				}
@@ -327,14 +377,54 @@ BOOST_AUTO_TEST_CASE(regular_functions_exclude_fallback)
 	char const* sourceCode = R"(
 		contract A {
 			uint public x;
-			function() { x = 2; }
+			fallback() external { x = 2; }
 		}
 	)";
 	testCreationTimeGas(sourceCode);
 	testRunTimeGas("x()", vector<vector<bytes>>{encodeArgs()});
 }
+
+BOOST_AUTO_TEST_CASE(complex_control_flow)
+{
+	// This crashed the gas estimator previously (or took a very long time).
+	// Now we do not follow branches if they start out with lower gas costs than the ones
+	// we previously considered. This of course reduces accuracy.
+	char const* sourceCode = R"(
+		contract log {
+			function ln(int128 x) public pure returns (int128 result) {
+				unchecked {
+					int128 t = x / 256;
+					int128 y = 5545177;
+					x = t;
+					t = x * 16; if (t <= 1000000) { x = t; y = y - 2772588; }
+					t = x * 4; if (t <= 1000000) { x = t; y = y - 1386294; }
+					t = x * 2; if (t <= 1000000) { x = t; y = y - 693147; }
+					t = x + x / 2; if (t <= 1000000) { x = t; y = y - 405465; }
+					t = x + x / 4; if (t <= 1000000) { x = t; y = y - 223144; }
+					t = x + x / 8; if (t <= 1000000) { x = t; y = y - 117783; }
+					t = x + x / 16; if (t <= 1000000) { x = t; y = y - 60624; }
+					t = x + x / 32; if (t <= 1000000) { x = t; y = y - 30771; }
+					t = x + x / 64; if (t <= 1000000) { x = t; y = y - 15504; }
+					t = x + x / 128; if (t <= 1000000) { x = t; y = y - 7782; }
+					t = x + x / 256; if (t <= 1000000) { x = t; y = y - 3898; }
+					t = x + x / 512; if (t <= 1000000) { x = t; y = y - 1951; }
+					t = x + x / 1024; if (t <= 1000000) { x = t; y = y - 976; }
+					t = x + x / 2048; if (t <= 1000000) { x = t; y = y - 488; }
+					t = x + x / 4096; if (t <= 1000000) { x = t; y = y - 244; }
+					t = x + x / 8192; if (t <= 1000000) { x = t; y = y - 122; }
+					t = x + x / 16384; if (t <= 1000000) { x = t; y = y - 61; }
+					t = x + x / 32768; if (t <= 1000000) { x = t; y = y - 31; }
+					t = x + x / 65536; if (t <= 1000000) { y = y - 15; }
+					return y;
+				}
+			}
+		}
+	)";
+	testCreationTimeGas(sourceCode);
+	// max gas is used for small x
+	testRunTimeGas("ln(int128)", vector<bytes>{encodeArgs(0), encodeArgs(10), encodeArgs(105), encodeArgs(30000)});
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
-}
-}
 }

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Tokens/Token.sol";
 import "../Tokens/OutcomeToken.sol";
 import "../Oracles/Oracle.sol";
@@ -6,7 +6,7 @@ import "../Oracles/Oracle.sol";
 
 /// @title Event contract - Provide basic functionality required by different event types
 /// @author Stefan George - <stefan@gnosis.pm>
-contract Event {
+abstract contract Event {
 
     /*
      *  Events
@@ -33,18 +33,17 @@ contract Event {
     /// @param _collateralToken Tokens used as collateral in exchange for outcome tokens
     /// @param _oracle Oracle contract used to resolve the event
     /// @param outcomeCount Number of event outcomes
-    function Event(Token _collateralToken, Oracle _oracle, uint8 outcomeCount)
-        public
+    constructor(Token _collateralToken, Oracle _oracle, uint8 outcomeCount)
     {
         // Validate input
-        require(address(_collateralToken) != 0 && address(_oracle) != 0 && outcomeCount >= 2);
+        require(address(_collateralToken) != address(0) && address(_oracle) != address(0) && outcomeCount >= 2);
         collateralToken = _collateralToken;
         oracle = _oracle;
         // Create an outcome token for each outcome
         for (uint8 i = 0; i < outcomeCount; i++) {
             OutcomeToken outcomeToken = new OutcomeToken();
             outcomeTokens.push(outcomeToken);
-            OutcomeTokenCreation(outcomeToken, i);
+            emit OutcomeTokenCreation(outcomeToken, i);
         }
     }
 
@@ -54,11 +53,11 @@ contract Event {
         public
     {
         // Transfer collateral tokens to events contract
-        require(collateralToken.transferFrom(msg.sender, this, collateralTokenCount));
+        require(collateralToken.transferFrom(msg.sender, address(this), collateralTokenCount));
         // Issue new outcome tokens to sender
         for (uint8 i = 0; i < outcomeTokens.length; i++)
             outcomeTokens[i].issue(msg.sender, collateralTokenCount);
-        OutcomeTokenSetIssuance(msg.sender, collateralTokenCount);
+        emit OutcomeTokenSetIssuance(msg.sender, collateralTokenCount);
     }
 
     /// @dev Sells equal number of tokens of all outcomes, exchanging collateral tokens and sets of outcome tokens 1:1
@@ -71,7 +70,7 @@ contract Event {
             outcomeTokens[i].revoke(msg.sender, outcomeTokenCount);
         // Transfer collateral tokens to sender
         require(collateralToken.transfer(msg.sender, outcomeTokenCount));
-        OutcomeTokenSetRevocation(msg.sender, outcomeTokenCount);
+        emit OutcomeTokenSetRevocation(msg.sender, outcomeTokenCount);
     }
 
     /// @dev Sets winning event outcome
@@ -83,14 +82,14 @@ contract Event {
         // Set winning outcome
         outcome = oracle.getOutcome();
         isOutcomeSet = true;
-        OutcomeAssignment(outcome);
+        emit OutcomeAssignment(outcome);
     }
 
     /// @dev Returns outcome count
     /// @return Outcome count
     function getOutcomeCount()
         public
-        constant
+        view
         returns (uint8)
     {
         return uint8(outcomeTokens.length);
@@ -100,18 +99,18 @@ contract Event {
     /// @return Outcome tokens
     function getOutcomeTokens()
         public
-        constant
-        returns (OutcomeToken[])
+        view
+        returns (OutcomeToken[] memory)
     {
         return outcomeTokens;
     }
 
     /// @dev Returns the amount of outcome tokens held by owner
-    /// @return Outcome token distribution
+    /// @return outcomeTokenDistribution Outcome token distribution
     function getOutcomeTokenDistribution(address owner)
         public
-        constant
-        returns (uint256[] outcomeTokenDistribution)
+        view
+        returns (uint256[] memory outcomeTokenDistribution)
     {
         outcomeTokenDistribution = new uint256[](outcomeTokens.length);
         for (uint8 i = 0; i < outcomeTokenDistribution.length; i++)
@@ -120,9 +119,9 @@ contract Event {
 
     /// @dev Calculates and returns event hash
     /// @return Event hash
-    function getEventHash() public constant returns (bytes32);
+    function getEventHash() virtual public view returns (bytes32);
 
     /// @dev Exchanges sender's winning outcome tokens for collateral tokens
     /// @return Sender's winnings
-    function redeemWinnings() public returns (uint256);
+    function redeemWinnings() virtual public returns (uint256);
 }

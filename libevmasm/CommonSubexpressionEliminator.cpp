@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @file CommonSubexpressionEliminator.cpp
  * @author Christian <c@ethdev.com>
@@ -23,13 +24,14 @@
 
 #include <functional>
 #include <boost/range/adaptor/reversed.hpp>
-#include <libdevcore/SHA3.h>
+#include <libsolutil/Keccak256.h>
 #include <libevmasm/CommonSubexpressionEliminator.h>
 #include <libevmasm/AssemblyItem.h>
 
 using namespace std;
-using namespace dev;
-using namespace dev::eth;
+using namespace solidity;
+using namespace solidity::evmasm;
+using namespace solidity::langutil;
 
 vector<AssemblyItem> CommonSubexpressionEliminator::getOptimizedItems()
 {
@@ -157,11 +159,10 @@ AssemblyItems CSECodeGenerator::generateCode(
 		for (auto id: {p.first, p.second})
 			if (unsigned seqNr = m_expressionClasses.representative(id).sequenceNumber)
 			{
-				if (seqNr < _initialSequenceNumber)
-					// Invalid sequenced operation.
-					// @todo quick fix for now. Proper fix needs to choose representative with higher
-					// sequence number during dependency analyis.
-					BOOST_THROW_EXCEPTION(StackTooDeepException());
+				// Invalid sequenced operation.
+				// @todo quick fix for now. Proper fix needs to choose representative with higher
+				// sequence number during dependency analysis.
+				assertThrow(seqNr >= _initialSequenceNumber, StackTooDeepException, "");
 				sequencedExpressions.insert(make_pair(seqNr, id));
 			}
 
@@ -221,12 +222,9 @@ void CSECodeGenerator::addDependencies(Id _c)
 		return; // we already computed the dependencies for _c
 	ExpressionClasses::Expression expr = m_expressionClasses.representative(_c);
 	assertThrow(expr.item, OptimizerException, "");
-	if (expr.item->type() == UndefinedItem)
-		BOOST_THROW_EXCEPTION(
-			// If this exception happens, we need to find a different way to generate the
-			// compound expression.
-			ItemNotAvailableException() << errinfo_comment("Undefined item requested but not available.")
-		);
+	// If this exception happens, we need to find a different way to generate the
+	// compound expression.
+	assertThrow(expr.item->type() != UndefinedItem, ItemNotAvailableException, "Undefined item requested but not available.");
 	for (Id argument: expr.arguments)
 	{
 		addDependencies(argument);
@@ -389,7 +387,11 @@ void CSECodeGenerator::generateClassElement(Id _c, bool _allowSequenced)
 			"Opcodes with more than two arguments not implemented yet."
 		);
 	for (size_t i = 0; i < arguments.size(); ++i)
-		assertThrow(m_stack[m_stackHeight - i] == arguments[i], OptimizerException, "Expected arguments not present." );
+		assertThrow(
+			m_stack[m_stackHeight - static_cast<int>(i)] == arguments[i],
+			OptimizerException,
+			"Expected arguments not present."
+		);
 
 	while (SemanticInformation::isCommutativeOperation(*expr.item) &&
 			!m_generatedItems.empty() &&
@@ -398,8 +400,8 @@ void CSECodeGenerator::generateClassElement(Id _c, bool _allowSequenced)
 		appendOrRemoveSwap(m_stackHeight - 1, itemLocation);
 	for (size_t i = 0; i < arguments.size(); ++i)
 	{
-		m_classPositions[m_stack[m_stackHeight - i]].erase(m_stackHeight - i);
-		m_stack.erase(m_stackHeight - i);
+		m_classPositions[m_stack[m_stackHeight - static_cast<int>(i)]].erase(m_stackHeight - static_cast<int>(i));
+		m_stack.erase(m_stackHeight - static_cast<int>(i));
 	}
 	appendItem(*expr.item);
 	if (expr.item->type() != Operation || instructionInfo(expr.item->instruction()).ret == 1)
@@ -470,7 +472,7 @@ void CSECodeGenerator::appendDup(int _fromPosition, SourceLocation const& _locat
 	int instructionNum = 1 + m_stackHeight - _fromPosition;
 	assertThrow(instructionNum <= 16, StackTooDeepException, "Stack too deep, try removing local variables.");
 	assertThrow(1 <= instructionNum, OptimizerException, "Invalid stack access.");
-	appendItem(AssemblyItem(dupInstruction(instructionNum), _location));
+	appendItem(AssemblyItem(dupInstruction(static_cast<unsigned>(instructionNum)), _location));
 	m_stack[m_stackHeight] = m_stack[_fromPosition];
 	m_classPositions[m_stack[m_stackHeight]].insert(m_stackHeight);
 }
@@ -483,7 +485,7 @@ void CSECodeGenerator::appendOrRemoveSwap(int _fromPosition, SourceLocation cons
 	int instructionNum = m_stackHeight - _fromPosition;
 	assertThrow(instructionNum <= 16, StackTooDeepException, "Stack too deep, try removing local variables.");
 	assertThrow(1 <= instructionNum, OptimizerException, "Invalid stack access.");
-	appendItem(AssemblyItem(swapInstruction(instructionNum), _location));
+	appendItem(AssemblyItem(swapInstruction(static_cast<unsigned>(instructionNum)), _location));
 
 	if (m_stack[m_stackHeight] != m_stack[_fromPosition])
 	{
@@ -505,5 +507,5 @@ void CSECodeGenerator::appendOrRemoveSwap(int _fromPosition, SourceLocation cons
 void CSECodeGenerator::appendItem(AssemblyItem const& _item)
 {
 	m_generatedItems.push_back(_item);
-	m_stackHeight += _item.deposit();
+	m_stackHeight += static_cast<int>(_item.deposit());
 }

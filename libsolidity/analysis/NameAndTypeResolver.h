@@ -1,19 +1,20 @@
 /*
-    This file is part of solidity.
+	This file is part of solidity.
 
-    solidity is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	solidity is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    solidity is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	solidity is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with solidity.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @author Christian <c@ethdev.com>
  * @date 2014
@@ -22,20 +23,26 @@
 
 #pragma once
 
-#include <map>
-#include <list>
-#include <boost/noncopyable.hpp>
 #include <libsolidity/analysis/DeclarationContainer.h>
+#include <libsolidity/analysis/GlobalContext.h>
 #include <libsolidity/analysis/ReferencesResolver.h>
-#include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/ast/ASTAnnotations.h>
+#include <libsolidity/ast/ASTVisitor.h>
 
-namespace dev
-{
-namespace solidity
-{
+#include <liblangutil/EVMVersion.h>
 
+#include <boost/noncopyable.hpp>
+
+#include <list>
+#include <map>
+
+namespace solidity::langutil
+{
 class ErrorReporter;
+}
+
+namespace solidity::frontend
+{
 
 /**
  * Resolves name references, typenames and sets the (explicitly given) types for all variable
@@ -48,9 +55,9 @@ public:
 	/// @param _scopes mapping of scopes to be used (usually default constructed), these
 	/// are filled during the lifetime of this object.
 	NameAndTypeResolver(
-		std::vector<Declaration const*> const& _globals,
-		std::map<ASTNode const*, std::shared_ptr<DeclarationContainer>>& _scopes,
-		ErrorReporter& _errorReporter
+		GlobalContext& _globalContext,
+		langutil::EVMVersion _evmVersion,
+		langutil::ErrorReporter& _errorReporter
 	);
 	/// Registers all declarations found in the AST node, usually a source unit.
 	/// @returns false in case of error.
@@ -59,17 +66,14 @@ public:
 	bool registerDeclarations(SourceUnit& _sourceUnit, ASTNode const* _currentScope = nullptr);
 	/// Applies the effect of import directives.
 	bool performImports(SourceUnit& _sourceUnit, std::map<std::string, SourceUnit const*> const& _sourceUnits);
-	/// Resolves all names and types referenced from the given AST Node.
-	/// This is usually only called at the contract level, but with a bit of care, it can also
-	/// be called at deeper levels.
-	/// @param _resolveInsideCode if false, does not descend into nodes that contain code.
+	/// Resolves all names and types referenced from the given Source Node.
 	/// @returns false in case of error.
-	bool resolveNamesAndTypes(ASTNode& _node, bool _resolveInsideCode = true);
+	bool resolveNamesAndTypes(SourceUnit& _source);
 	/// Updates the given global declaration (used for "this"). Not to be used with declarations
 	/// that create their own scope.
 	/// @returns false in case of error.
 	bool updateDeclaration(Declaration const& _declaration);
-	/// Activates a previously inactive (invisible) variable. To be used in C99 scpoing for
+	/// Activates a previously inactive (invisible) variable. To be used in C99 scoping for
 	/// VariableDeclarationStatements.
 	void activateVariable(std::string const& _name);
 
@@ -88,14 +92,11 @@ public:
 	/// @note Returns a null pointer if any component in the path was not unique or not found.
 	Declaration const* pathFromCurrentScope(std::vector<ASTString> const& _path) const;
 
-	/// returns the vector of declarations without repetitions
-	std::vector<Declaration const*> cleanedDeclarations(
-		Identifier const& _identifier,
-		std::vector<Declaration const*> const& _declarations
-	);
-
 	/// Generate and store warnings about variables that are named like instructions.
-	void warnVariablesNamedLikeInstructions();
+	void warnVariablesNamedLikeInstructions() const;
+
+	/// Generate and store warnings about declarations with the same name.
+	void warnHomonymDeclarations() const;
 
 	/// @returns a list of similar identifiers in the current and enclosing scopes. May return empty string if no suggestions.
 	std::string similarNameSuggestions(ASTString const& _name) const;
@@ -115,17 +116,19 @@ private:
 	void linearizeBaseContracts(ContractDefinition& _contract);
 	/// Computes the C3-merge of the given list of lists of bases.
 	/// @returns the linearized vector or an empty vector if linearization is not possible.
-	template <class _T>
-	static std::vector<_T const*> cThreeMerge(std::list<std::list<_T const*>>& _toMerge);
+	template <class T>
+	static std::vector<T const*> cThreeMerge(std::list<std::list<T const*>>& _toMerge);
 
 	/// Maps nodes declaring a scope to scopes, i.e. ContractDefinition and FunctionDeclaration,
 	/// where nullptr denotes the global scope. Note that structs are not scope since they do
 	/// not contain code.
 	/// Aliases (for example `import "x" as y;`) create multiple pointers to the same scope.
-	std::map<ASTNode const*, std::shared_ptr<DeclarationContainer>>& m_scopes;
+	std::map<ASTNode const*, std::shared_ptr<DeclarationContainer>> m_scopes;
 
+	langutil::EVMVersion m_evmVersion;
 	DeclarationContainer* m_currentScope = nullptr;
-	ErrorReporter& m_errorReporter;
+	langutil::ErrorReporter& m_errorReporter;
+	GlobalContext& m_globalContext;
 };
 
 /**
@@ -142,8 +145,8 @@ public:
 	DeclarationRegistrationHelper(
 		std::map<ASTNode const*, std::shared_ptr<DeclarationContainer>>& _scopes,
 		ASTNode& _astRoot,
-		bool _useC99Scoping,
-		ErrorReporter& _errorReporter,
+		langutil::ErrorReporter& _errorReporter,
+		GlobalContext& _globalContext,
 		ASTNode const* _currentScope = nullptr
 	);
 
@@ -151,10 +154,9 @@ public:
 		DeclarationContainer& _container,
 		Declaration const& _declaration,
 		std::string const* _name,
-		SourceLocation const* _errorLocation,
-		bool _warnOnShadow,
+		langutil::SourceLocation const* _errorLocation,
 		bool _inactive,
-		ErrorReporter& _errorReporter
+		langutil::ErrorReporter& _errorReporter
 	);
 
 private:
@@ -163,39 +165,27 @@ private:
 	bool visit(ImportDirective& _import) override;
 	bool visit(ContractDefinition& _contract) override;
 	void endVisit(ContractDefinition& _contract) override;
-	bool visit(StructDefinition& _struct) override;
-	void endVisit(StructDefinition& _struct) override;
-	bool visit(EnumDefinition& _enum) override;
-	void endVisit(EnumDefinition& _enum) override;
-	bool visit(EnumValue& _value) override;
-	bool visit(FunctionDefinition& _function) override;
-	void endVisit(FunctionDefinition& _function) override;
-	bool visit(ModifierDefinition& _modifier) override;
-	void endVisit(ModifierDefinition& _modifier) override;
-	bool visit(Block& _block) override;
-	void endVisit(Block& _block) override;
-	bool visit(ForStatement& _forLoop) override;
-	void endVisit(ForStatement& _forLoop) override;
 	void endVisit(VariableDeclarationStatement& _variableDeclarationStatement) override;
-	bool visit(VariableDeclaration& _declaration) override;
-	bool visit(EventDefinition& _event) override;
-	void endVisit(EventDefinition& _event) override;
+
+	bool visitNode(ASTNode& _node) override;
+	void endVisitNode(ASTNode& _node) override;
+
 
 	void enterNewSubScope(ASTNode& _subScope);
 	void closeCurrentScope();
-	void registerDeclaration(Declaration& _declaration, bool _opensScope);
+	void registerDeclaration(Declaration& _declaration);
 
 	static bool isOverloadedFunction(Declaration const& _declaration1, Declaration const& _declaration2);
 
 	/// @returns the canonical name of the current scope.
 	std::string currentCanonicalName() const;
 
-	bool m_useC99Scoping = false;
 	std::map<ASTNode const*, std::shared_ptr<DeclarationContainer>>& m_scopes;
 	ASTNode const* m_currentScope = nullptr;
 	VariableScope* m_currentFunction = nullptr;
-	ErrorReporter& m_errorReporter;
+	ContractDefinition const* m_currentContract = nullptr;
+	langutil::ErrorReporter& m_errorReporter;
+	GlobalContext& m_globalContext;
 };
 
-}
 }

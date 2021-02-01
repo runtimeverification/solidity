@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity >=0.0;
 import "../Oracles/Oracle.sol";
 
 
@@ -38,8 +38,7 @@ contract SignedMessageOracle is Oracle {
     /// @param v Signature parameter
     /// @param r Signature parameter
     /// @param s Signature parameter
-    function SignedMessageOracle(bytes32 _descriptionHash, uint8 v, bytes32 r, bytes32 s)
-        public
+    constructor(bytes32 _descriptionHash, uint8 v, bytes32 r, bytes32 s)
     {
         signer = ecrecover(_descriptionHash, v, r, s);
         descriptionHash = _descriptionHash;
@@ -58,10 +57,10 @@ contract SignedMessageOracle is Oracle {
         // Result is not set yet and nonce and signer are valid
         require(   !isSet
                 && _nonce > nonce
-                && signer == ecrecover(keccak256(descriptionHash, newSigner, _nonce), v, r, s));
+                && signer == ecrecover(keccak256(abi.encodePacked(descriptionHash, newSigner, _nonce)), v, r, s));
         nonce = _nonce;
         signer = newSigner;
-        SignerReplacement(newSigner);
+        emit SignerReplacement(newSigner);
     }
 
     /// @dev Sets outcome based on signed message
@@ -74,17 +73,18 @@ contract SignedMessageOracle is Oracle {
     {
         // Result is not set yet and signer is valid
         require(   !isSet
-                && signer == ecrecover(keccak256(descriptionHash, _outcome), v, r, s));
+                && signer == ecrecover(keccak256(abi.encodePacked(descriptionHash, _outcome)), v, r, s));
         isSet = true;
         outcome = _outcome;
-        OutcomeAssignment(_outcome);
+        emit OutcomeAssignment(_outcome);
     }
 
     /// @dev Returns if winning outcome
     /// @return Is outcome set?
     function isOutcomeSet()
         public
-        constant
+        override
+        view
         returns (bool)
     {
         return isSet;
@@ -94,7 +94,8 @@ contract SignedMessageOracle is Oracle {
     /// @return Outcome
     function getOutcome()
         public
-        constant
+        override
+        view
         returns (int256)
     {
         return outcome;

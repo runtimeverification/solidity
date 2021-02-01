@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 #------------------------------------------------------------------------------
-# Bash script to execute the Solidity tests.
+# Bash script to execute the Solidity tests using the emscripten binary.
 #
 # The documentation for solidity is hosted at:
 #
-#     https://solidity.readthedocs.org
+#     https://docs.soliditylang.org
 #
 # ------------------------------------------------------------------------------
 # This file is part of solidity.
@@ -28,11 +28,15 @@
 
 set -e
 
+if test -z "$1"; then
+	BUILD_DIR="emscripten_build"
+else
+	BUILD_DIR="$1"
+fi
+
 REPO_ROOT=$(cd $(dirname "$0")/.. && pwd)
-SOLJSON="$REPO_ROOT/build/libsolc/soljson.js"
+SOLJSON="$REPO_ROOT/$BUILD_DIR/libsolc/soljson.js"
 VERSION=$("$REPO_ROOT"/scripts/get_version.sh)
 
 echo "Running solcjs tests...."
-"$REPO_ROOT/test/solcjsTests.sh" "$SOLJSON" "$VERSION"
-echo "Running external tests...."
-"$REPO_ROOT/test/externalTests.sh" "$SOLJSON"
+"$REPO_ROOT/test/externalTests/solc-js/solc-js.sh" "$SOLJSON" "$VERSION"

@@ -14,6 +14,7 @@
 	You should have received a copy of the GNU General Public License
 	along with solidity.  If not, see <http://www.gnu.org/licenses/>.
 */
+// SPDX-License-Identifier: GPL-3.0
 /**
  * @file ExpressionClasses.h
  * @author Christian <c@ethdev.com>
@@ -23,7 +24,7 @@
 
 #pragma once
 
-#include <libdevcore/Common.h>
+#include <libsolutil/Common.h>
 #include <libevmasm/AssemblyItem.h>
 
 #include <vector>
@@ -31,9 +32,12 @@
 #include <memory>
 #include <set>
 
-namespace dev
+namespace solidity::langutil
 {
-namespace eth
+struct SourceLocation;
+}
+
+namespace solidity::evmasm
 {
 
 class Pattern;
@@ -74,7 +78,7 @@ public:
 	/// @returns the canonical representative of an expression class.
 	Expression const& representative(Id _id) const { return m_representatives.at(_id); }
 	/// @returns the number of classes.
-	Id size() const { return m_representatives.size(); }
+	size_t size() const { return m_representatives.size(); }
 
 	/// Forces the given @a _item with @a _arguments to the class @a _id. This can be used to
 	/// add prior knowledge e.g. about CALLDATA, but has to be used with caution. Will not work as
@@ -82,7 +86,7 @@ public:
 	void forceEqual(Id _id, AssemblyItem const& _item, Ids const& _arguments, bool _copyItem = true);
 
 	/// @returns the id of a new class which is different to all other classes.
-	Id newClass(SourceLocation const& _location);
+	Id newClass(langutil::SourceLocation const& _location);
 
 	/// @returns true if the values of the given classes are known to be different (on every input).
 	/// @note that this function might still return false for some different inputs.
@@ -122,5 +126,4 @@ private:
 	std::vector<std::shared_ptr<AssemblyItem>> m_spareAssemblyItems;
 };
 
-}
 }

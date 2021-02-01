@@ -1,11 +1,9 @@
 contract C {
-    function f() pure public returns (bytes32) {
-        return keccak256(uint8(1));
-    }
-    function g() pure public returns (bytes) {
-        return abi.encode(1);
-    }
-    function h() pure public returns (bytes) {
+    function k() pure public returns (bytes memory) {
         return abi.encodePacked(uint8(1));
     }
+    function l() pure public returns (bytes memory) {
+        return abi.encode(1);
+    }
 }
+// ----

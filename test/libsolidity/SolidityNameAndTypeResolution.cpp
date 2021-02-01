@@ -22,27 +22,25 @@
 
 #include <test/libsolidity/AnalysisFramework.h>
 
-#include <test/Options.h>
+#include <test/Common.h>
 
 #include <libsolidity/ast/AST.h>
 
-#include <libdevcore/SHA3.h>
+#include <libsolutil/Keccak256.h>
 
 #include <boost/test/unit_test.hpp>
 
 #include <string>
 
 using namespace std;
+using namespace solidity::langutil;
 
-namespace dev
-{
-namespace solidity
-{
-namespace test
+namespace solidity::frontend::test
 {
 
 BOOST_FIXTURE_TEST_SUITE(SolidityNameAndTypeResolution, AnalysisFramework)
 
+<<<<<<< ours
 BOOST_AUTO_TEST_CASE(name_references)
 {
 	char const* text = R"(
@@ -336,19 +334,21 @@ BOOST_AUTO_TEST_CASE(comparison_of_mapping_types)
 	CHECK_ERROR(text, TypeError, "Operator == not compatible");
 }
 
+=======
+>>>>>>> theirs
 BOOST_AUTO_TEST_CASE(function_no_implementation)
 {
 	SourceUnit const* sourceUnit = nullptr;
 	char const* text = R"(
-		contract test {
-			function functionName(bytes32 input) public returns (bytes32 out);
+		abstract contract test {
+			function functionName(bytes32 input) public virtual returns (bytes32 out);
 		}
 	)";
 	sourceUnit = parseAndAnalyse(text);
 	std::vector<ASTPointer<ASTNode>> nodes = sourceUnit->nodes();
 	ContractDefinition* contract = dynamic_cast<ContractDefinition*>(nodes[1].get());
 	BOOST_REQUIRE(contract);
-	BOOST_CHECK(!contract->annotation().unimplementedFunctions.empty());
+	BOOST_CHECK(!contract->annotation().unimplementedDeclarations->empty());
 	BOOST_CHECK(!contract->definedFunctions()[0]->isImplemented());
 }
 
@@ -356,18 +356,18 @@ BOOST_AUTO_TEST_CASE(abstract_contract)
 {
 	SourceUnit const* sourceUnit = nullptr;
 	char const* text = R"(
-		contract base { function foo(); }
-		contract derived is base { function foo() public {} }
+		abstract contract base { function foo() public virtual; }
+		contract derived is base { function foo() public override {} }
 	)";
 	sourceUnit = parseAndAnalyse(text);
 	std::vector<ASTPointer<ASTNode>> nodes = sourceUnit->nodes();
 	ContractDefinition* base = dynamic_cast<ContractDefinition*>(nodes[1].get());
 	ContractDefinition* derived = dynamic_cast<ContractDefinition*>(nodes[2].get());
 	BOOST_REQUIRE(base);
-	BOOST_CHECK(!base->annotation().unimplementedFunctions.empty());
+	BOOST_CHECK(!base->annotation().unimplementedDeclarations->empty());
 	BOOST_CHECK(!base->definedFunctions()[0]->isImplemented());
 	BOOST_REQUIRE(derived);
-	BOOST_CHECK(derived->annotation().unimplementedFunctions.empty());
+	BOOST_CHECK(derived->annotation().unimplementedDeclarations->empty());
 	BOOST_CHECK(derived->definedFunctions()[0]->isImplemented());
 }
 
@@ -375,54 +375,32 @@ BOOST_AUTO_TEST_CASE(abstract_contract_with_overload)
 {
 	SourceUnit const* sourceUnit = nullptr;
 	char const* text = R"(
-		contract base { function foo(bool); }
-		contract derived is base { function foo(uint) public {} }
+		abstract contract base { function foo(bool) public virtual; }
+		abstract contract derived is base { function foo(uint) public {} }
 	)";
 	sourceUnit = parseAndAnalyse(text);
 	std::vector<ASTPointer<ASTNode>> nodes = sourceUnit->nodes();
 	ContractDefinition* base = dynamic_cast<ContractDefinition*>(nodes[1].get());
 	ContractDefinition* derived = dynamic_cast<ContractDefinition*>(nodes[2].get());
 	BOOST_REQUIRE(base);
-	BOOST_CHECK(!base->annotation().unimplementedFunctions.empty());
+	BOOST_CHECK(!base->annotation().unimplementedDeclarations->empty());
 	BOOST_REQUIRE(derived);
-	BOOST_CHECK(!derived->annotation().unimplementedFunctions.empty());
-}
-
-BOOST_AUTO_TEST_CASE(create_abstract_contract)
-{
-	char const* text = R"(
-		contract base { function foo(); }
-		contract derived {
-			base b;
-			function foo() public { b = new base(); }
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Trying to create an instance of an abstract contract.");
-}
-
-BOOST_AUTO_TEST_CASE(redeclare_implemented_abstract_function_as_abstract)
-{
-	char const* text = R"(
-		contract base { function foo(); }
-		contract derived is base { function foo() public {} }
-		contract wrong is derived { function foo(); }
-	)";
-	CHECK_ERROR(text, TypeError, "Redeclaring an already implemented function as abstract");
+	BOOST_CHECK(!derived->annotation().unimplementedDeclarations->empty());
 }
 
 BOOST_AUTO_TEST_CASE(implement_abstract_via_constructor)
 {
 	SourceUnit const* sourceUnit = nullptr;
 	char const* text = R"(
-		contract base { function foo(); }
-		contract foo is base { function foo() public {} }
+		abstract contract base { function foo() public virtual; }
+		abstract contract foo is base { constructor() {} }
 	)";
 	sourceUnit = parseAndAnalyse(text);
 	std::vector<ASTPointer<ASTNode>> nodes = sourceUnit->nodes();
 	BOOST_CHECK_EQUAL(nodes.size(), 3);
 	ContractDefinition* derived = dynamic_cast<ContractDefinition*>(nodes[2].get());
 	BOOST_REQUIRE(derived);
-	BOOST_CHECK(!derived->annotation().unimplementedFunctions.empty());
+	BOOST_CHECK(!derived->annotation().unimplementedDeclarations->empty());
 }
 
 BOOST_AUTO_TEST_CASE(function_canonical_signature)
@@ -473,7 +451,7 @@ BOOST_AUTO_TEST_CASE(function_external_types)
 			uint a;
 		}
 		contract Test {
-			function boo(uint, bool, bytes8, bool[2], uint[], C, address[]) external returns (uint ret) {
+			function boo(uint, bool, bytes8, bool[2] calldata, uint[] calldata, C, address[] calldata) external returns (uint ret) {
 				ret = 5;
 			}
 		}
@@ -491,9 +469,9 @@ BOOST_AUTO_TEST_CASE(function_external_types)
 
 BOOST_AUTO_TEST_CASE(enum_external_type)
 {
-	// bug #1801
 	SourceUnit const* sourceUnit = nullptr;
 	char const* text = R"(
+		// test for bug #1801
 		contract Test {
 			enum ActionChoices { GoLeft, GoRight, GoStraight, Sit }
 			function boo(ActionChoices enumArg) external returns (uint ret) {
@@ -512,56 +490,73 @@ BOOST_AUTO_TEST_CASE(enum_external_type)
 		}
 }
 
-BOOST_AUTO_TEST_CASE(external_structs)
+BOOST_AUTO_TEST_CASE(external_struct_signatures)
 {
 	char const* text = R"(
-		pragma experimental ABIEncoderV2;
+		pragma abicoder v2;
 		contract Test {
 			enum ActionChoices { GoLeft, GoRight, GoStraight, Sit }
-			struct Empty {}
+			struct Simple { uint i; }
 			struct Nested { X[2][] a; uint y; }
-			struct X { bytes32 x; Test t; Empty[] e; }
-			function f(ActionChoices, uint, Empty) external {}
-			function g(Test, Nested) external {}
-			function h(function(Nested) external returns (uint)[]) external {}
-			function i(Nested[]) external {}
+			struct X { bytes32 x; Test t; Simple[] s; }
+			function f(ActionChoices, uint, Simple calldata) external {}
+			function g(Test, Nested calldata) external {}
+			function h(function(Nested memory) external returns (uint)[] calldata) external {}
+			function i(Nested[] calldata) external {}
 		}
 	)";
-	SourceUnit const* sourceUnit = parseAndAnalyse(text);
+	// Ignore analysis errors. This test only checks that correct signatures
+	// are generated for external structs, but they are not yet supported
+	// in code generation and therefore cause an error in the TypeChecker.
+	SourceUnit const* sourceUnit = parseAnalyseAndReturnError(text, false, true, true).first;
 	for (ASTPointer<ASTNode> const& node: sourceUnit->nodes())
 		if (ContractDefinition* contract = dynamic_cast<ContractDefinition*>(node.get()))
 		{
 			auto functions = contract->definedFunctions();
 			BOOST_REQUIRE(!functions.empty());
+<<<<<<< ours
 			BOOST_CHECK_EQUAL("f(uint8,uint,())", functions[0]->externalSignature());
 			BOOST_CHECK_EQUAL("g(address,((bytes32,address,()[])[2][],uint))", functions[1]->externalSignature());
 			BOOST_CHECK_EQUAL("h(function[])", functions[2]->externalSignature());
 			BOOST_CHECK_EQUAL("i(((bytes32,address,()[])[2][],uint)[])", functions[3]->externalSignature());
+=======
+			BOOST_CHECK_EQUAL("f(uint8,uint256,(uint256))", functions[0]->externalSignature());
+			BOOST_CHECK_EQUAL("g(address,((bytes32,address,(uint256)[])[2][],uint256))", functions[1]->externalSignature());
+			BOOST_CHECK_EQUAL("h(function[])", functions[2]->externalSignature());
+			BOOST_CHECK_EQUAL("i(((bytes32,address,(uint256)[])[2][],uint256)[])", functions[3]->externalSignature());
+>>>>>>> theirs
 		}
 }
 
-BOOST_AUTO_TEST_CASE(external_structs_in_libraries)
+BOOST_AUTO_TEST_CASE(external_struct_signatures_in_libraries)
 {
 	char const* text = R"(
-		pragma experimental ABIEncoderV2;
+		pragma abicoder v2;
 		library Test {
 			enum ActionChoices { GoLeft, GoRight, GoStraight, Sit }
-			struct Empty {}
+			struct Simple { uint i; }
 			struct Nested { X[2][] a; uint y; }
-			struct X { bytes32 x; Test t; Empty[] e; }
-			function f(ActionChoices, uint, Empty) external {}
-			function g(Test, Nested) external {}
-			function h(function(Nested) external returns (uint)[]) external {}
-			function i(Nested[]) external {}
+			struct X { bytes32 x; Test t; Simple[] s; }
+			function f(ActionChoices, uint, Simple calldata) external {}
+			function g(Test, Nested calldata) external {}
+			function h(function(Nested memory) external returns (uint)[] calldata) external {}
+			function i(Nested[] calldata) external {}
 		}
 	)";
-	SourceUnit const* sourceUnit = parseAndAnalyse(text);
+	// Ignore analysis errors. This test only checks that correct signatures
+	// are generated for external structs, but calldata structs are not yet supported
+	// in code generation and therefore cause an error in the TypeChecker.
+	SourceUnit const* sourceUnit = parseAnalyseAndReturnError(text, false, true, true).first;
 	for (ASTPointer<ASTNode> const& node: sourceUnit->nodes())
 		if (ContractDefinition* contract = dynamic_cast<ContractDefinition*>(node.get()))
 		{
 			auto functions = contract->definedFunctions();
 			BOOST_REQUIRE(!functions.empty());
+<<<<<<< ours
 			BOOST_CHECK_EQUAL("f(Test.ActionChoices,uint,Test.Empty)", functions[0]->externalSignature());
+=======
+			BOOST_CHECK_EQUAL("f(Test.ActionChoices,uint256,Test.Simple)", functions[0]->externalSignature());
+>>>>>>> theirs
 			BOOST_CHECK_EQUAL("g(Test,Test.Nested)", functions[1]->externalSignature());
 			BOOST_CHECK_EQUAL("h(function[])", functions[2]->externalSignature());
 			BOOST_CHECK_EQUAL("i(Test.Nested[])", functions[3]->externalSignature());
@@ -587,64 +582,83 @@ BOOST_AUTO_TEST_CASE(struct_with_mapping_in_library)
 		}
 }
 
-BOOST_AUTO_TEST_CASE(functions_with_identical_structs_in_interface)
+BOOST_AUTO_TEST_CASE(state_variable_accessors)
 {
 	char const* text = R"(
-		pragma experimental ABIEncoderV2;
-
-		contract C {
-			struct S1 { }
-			struct S2 { }
-			function f(S1) pure {}
-			function f(S2) pure {}
+		contract test {
+			function fun() public {
+				uint64(2);
+			}
+			uint256 public foo;
+			mapping(uint=>bytes4) public map;
+			mapping(uint=>mapping(uint=>bytes4)) public multiple_map;
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Function overload clash during conversion to external types for arguments");
+
+	SourceUnit const* source;
+	ContractDefinition const* contract;
+	source = parseAndAnalyse(text);
+	BOOST_REQUIRE((contract = retrieveContractByName(*source, "test")) != nullptr);
+	FunctionTypePointer function = retrieveFunctionBySignature(*contract, "foo()");
+	BOOST_REQUIRE(function && function->hasDeclaration());
+	auto returnParams = function->returnParameterTypes();
+	BOOST_CHECK_EQUAL(returnParams.at(0)->canonicalName(), "uint256");
+	BOOST_CHECK(function->stateMutability() == StateMutability::View);
+
+	function = retrieveFunctionBySignature(*contract, "map(uint256)");
+	BOOST_REQUIRE(function && function->hasDeclaration());
+	auto params = function->parameterTypes();
+	BOOST_CHECK_EQUAL(params.at(0)->canonicalName(), "uint256");
+	returnParams = function->returnParameterTypes();
+	BOOST_CHECK_EQUAL(returnParams.at(0)->canonicalName(), "bytes4");
+	BOOST_CHECK(function->stateMutability() == StateMutability::View);
+
+	function = retrieveFunctionBySignature(*contract, "multiple_map(uint256,uint256)");
+	BOOST_REQUIRE(function && function->hasDeclaration());
+	params = function->parameterTypes();
+	BOOST_CHECK_EQUAL(params.at(0)->canonicalName(), "uint256");
+	BOOST_CHECK_EQUAL(params.at(1)->canonicalName(), "uint256");
+	returnParams = function->returnParameterTypes();
+	BOOST_CHECK_EQUAL(returnParams.at(0)->canonicalName(), "bytes4");
+	BOOST_CHECK(function->stateMutability() == StateMutability::View);
 }
 
-BOOST_AUTO_TEST_CASE(functions_with_different_structs_in_interface)
+BOOST_AUTO_TEST_CASE(private_state_variable)
 {
 	char const* text = R"(
-		pragma experimental ABIEncoderV2;
-
-		contract C {
-			struct S1 { function() external a; }
-			struct S2 { bytes24 a; }
-			function f(S1) pure {}
-			function f(S2) pure {}
+		contract test {
+			function fun() public {
+				uint64(2);
+			}
+			uint256 private foo;
+			uint256 internal bar;
 		}
 	)";
-	CHECK_SUCCESS(text);
+
+	ContractDefinition const* contract;
+	SourceUnit const* source = parseAndAnalyse(text);
+	BOOST_CHECK((contract = retrieveContractByName(*source, "test")) != nullptr);
+	FunctionTypePointer function;
+	function = retrieveFunctionBySignature(*contract, "foo()");
+	BOOST_CHECK_MESSAGE(function == nullptr, "Accessor function of a private variable should not exist");
+	function = retrieveFunctionBySignature(*contract, "bar()");
+	BOOST_CHECK_MESSAGE(function == nullptr, "Accessor function of an internal variable should not exist");
 }
 
-BOOST_AUTO_TEST_CASE(functions_with_stucts_of_non_external_types_in_interface)
+BOOST_AUTO_TEST_CASE(string)
 {
-	char const* text = R"(
-		pragma experimental ABIEncoderV2;
-
+	char const* sourceCode = R"(
 		contract C {
-			struct S { function() internal a; }
-			function f(S) {}
+			string s;
+			function f(string calldata x) external { s = x; }
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Internal or recursive type is not allowed for public or external functions.");
+	BOOST_CHECK_NO_THROW(parseAndAnalyse(sourceCode));
 }
 
-BOOST_AUTO_TEST_CASE(functions_with_stucts_of_non_external_types_in_interface_2)
+BOOST_AUTO_TEST_CASE(dynamic_return_types_not_possible)
 {
-	char const* text = R"(
-		pragma experimental ABIEncoderV2;
-
-		contract C {
-			struct S { mapping(uint => uint) a; }
-			function f(S) {}
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Internal or recursive type is not allowed for public or external functions.");
-}
-
-BOOST_AUTO_TEST_CASE(functions_with_stucts_of_non_external_types_in_interface_nested)
-{
+<<<<<<< ours
 	char const* text = R"(
 		pragma experimental ABIEncoderV2;
 
@@ -7062,14 +7076,28 @@ BOOST_AUTO_TEST_CASE(non_external_fallback)
 		pragma experimental "v0.5.0";
 		contract C {
 			function () public { }
+=======
+	char const* sourceCode = R"(
+		abstract contract C {
+			function f(uint) public virtual returns (string memory);
+			function g() public {
+				string memory x = this.f(2);
+				// we can assign to x but it is not usable.
+				bytes(x).length;
+			}
+>>>>>>> theirs
 		}
 	)";
-	CHECK_ERROR(text, TypeError, "Fallback function must be defined as \"external\".");
+	if (solidity::test::CommonOptions::get().evmVersion() == EVMVersion::homestead())
+		CHECK_ERROR(sourceCode, TypeError, "Type inaccessible dynamic type is not implicitly convertible to expected type string memory.");
+	else
+		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
 }
 
-BOOST_AUTO_TEST_CASE(invalid_literal_in_tuple)
+BOOST_AUTO_TEST_CASE(warn_nonpresent_pragma)
 {
 	char const* text = R"(
+<<<<<<< ours
 		contract C {
 			function f() pure public {
 				uint x;
@@ -7110,346 +7138,67 @@ BOOST_AUTO_TEST_CASE(invalid_literal_in_tuple)
 				((2**270) / 2**100, 1);
 			}
 		}
+=======
+		// SPDX-License-Identifier: GPL-3.0
+		contract C {}
+>>>>>>> theirs
 	)";
-	CHECK_SUCCESS(text);
+	auto sourceAndError = parseAnalyseAndReturnError(text, true, false);
+	BOOST_REQUIRE(!sourceAndError.second.empty());
+	BOOST_REQUIRE(!!sourceAndError.first);
+	BOOST_CHECK(searchErrorMessage(*sourceAndError.second.front(), "Source file does not specify required compiler version!"));
 }
 
-BOOST_AUTO_TEST_CASE(warn_about_sha3)
+BOOST_AUTO_TEST_CASE(returndatasize_as_variable)
 {
 	char const* text = R"(
-		contract test {
-			function f() pure public {
-				bytes32 x = sha3(uint8(1));
-				x;
-			}
-		}
+		contract C { function f() public pure { uint returndatasize; returndatasize; assembly { pop(returndatasize()) }}}
 	)";
-	CHECK_WARNING(text, "\"sha3\" has been deprecated in favour of \"keccak256\"");
+	vector<pair<Error::Type, std::string>> expectations(vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Variable is shadowed in inline assembly by an instruction of the same name"}
+	});
+	if (!solidity::test::CommonOptions::get().evmVersion().supportsReturndata())
+	{
+		expectations.emplace_back(make_pair(Error::Type::TypeError, std::string("\"returndatasize\" instruction is only available for Byzantium-compatible VMs")));
+		expectations.emplace_back(make_pair(Error::Type::TypeError, std::string("Expected expression to evaluate to one value, but got 0 values instead.")));
+	}
+	CHECK_ALLOW_MULTI(text, expectations);
 }
 
-BOOST_AUTO_TEST_CASE(warn_about_suicide)
+BOOST_AUTO_TEST_CASE(create2_as_variable)
 {
 	char const* text = R"(
-		contract test {
-			function f() public {
-				suicide(1);
-			}
-		}
+		contract c { function f() public { uint create2; create2; assembly { pop(create2(0, 0, 0, 0)) } }}
 	)";
-	CHECK_WARNING(text, "\"suicide\" has been deprecated in favour of \"selfdestruct\"");
+	// This needs special treatment, because the message mentions the EVM version,
+	// so cannot be run via isoltest.
+	vector<pair<Error::Type, std::string>> expectations(vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Variable is shadowed in inline assembly by an instruction of the same name"}
+	});
+	if (!solidity::test::CommonOptions::get().evmVersion().hasCreate2())
+	{
+		expectations.emplace_back(make_pair(Error::Type::TypeError, std::string("\"create2\" instruction is only available for Constantinople-compatible VMs")));
+		expectations.emplace_back(make_pair(Error::Type::TypeError, std::string("Expected expression to evaluate to one value, but got 0 values instead.")));
+	}
+	CHECK_ALLOW_MULTI(text, expectations);
 }
 
-BOOST_AUTO_TEST_CASE(address_overload_resolution)
+BOOST_AUTO_TEST_CASE(extcodehash_as_variable)
 {
 	char const* text = R"(
-		contract C {
-			function balance() returns (uint) {
-				this.balance; // to avoid pureness warning
-				return 1;
-			}
-			function transfer(uint amount) {
-				address(this).transfer(amount); // to avoid pureness warning
-			}
-		}
-		contract D {
-			function f() {
-				var x = (new C()).balance();
-				x;
-				(new C()).transfer(5);
-			}
-		}
+		contract c { function f() public view { uint extcodehash; extcodehash; assembly { pop(extcodehash(0)) } }}
 	)";
-	CHECK_SUCCESS(text);
-}
-
-BOOST_AUTO_TEST_CASE(array_length_invalid_expression)
-{
-	char const* text = R"(
-		contract C {
-			uint[-true] ids;
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Invalid array length, expected integer literal or constant expression.");
-	text = R"(
-		contract C {
-			uint[true/1] ids;
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Invalid array length, expected integer literal or constant expression.");
-	text = R"(
-		contract C {
-			uint[1/true] ids;
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Invalid array length, expected integer literal or constant expression.");
-	text = R"(
-		contract C {
-			uint[1.111111E1111111111111] ids;
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Invalid array length, expected integer literal or constant expression.");
-	text = R"(
-		contract C {
-			uint[3/0] ids;
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Operator / not compatible with types int_const 3 and int_const 0");
-}
-
-BOOST_AUTO_TEST_CASE(warn_about_address_members_on_contract)
-{
-	std::string text = R"(
-		contract C {
-			function f() view public {
-				this.balance;
-			}
-		}
-	)";
-	CHECK_WARNING(text, "Using contract member \"balance\" inherited from the address type is deprecated.");
-	text = R"(
-		contract C {
-			function f() view public {
-				this.transfer;
-			}
-		}
-	)";
-	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "Using contract member \"transfer\" inherited from the address type is deprecated"},
-		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
-	}));
-	text = R"(
-		contract C {
-			function f() view public {
-				this.send;
-			}
-		}
-	)";
-	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "Using contract member \"send\" inherited from the address type is deprecated"},
-		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
-	}));
-	text = R"(
-		contract C {
-			function f() view public {
-				this.call;
-			}
-		}
-	)";
-	CHECK_WARNING(text, "Using contract member \"call\" inherited from the address type is deprecated.");
-	text = R"(
-		contract C {
-			function f() view public {
-				this.callcode;
-			}
-		}
-	)";
-	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "Using contract member \"callcode\" inherited from the address type is deprecated"},
-		{Error::Type::Warning, "\"callcode\" has been deprecated in favour of \"delegatecall\""}
-	}));
-	text = R"(
-		contract C {
-			function f() view public {
-				this.delegatecall;
-			}
-		}
-	)";
-	CHECK_WARNING(text, "Using contract member \"delegatecall\" inherited from the address type is deprecated.");
-}
-
-BOOST_AUTO_TEST_CASE(warn_about_address_members_on_non_this_contract)
-{
-	std::string text = R"(
-		contract C {
-			function f() view public {
-				C c;
-				c.balance;
-			}
-		}
-	)";
-	CHECK_WARNING(text, "Using contract member \"balance\" inherited from the address type is deprecated");
-	text = R"(
-		contract C {
-			function f() view public {
-				C c;
-				c.transfer;
-			}
-		}
-	)";
-	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "Using contract member \"transfer\" inherited from the address type is deprecated"},
-		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
-	}));
-	text = R"(
-		contract C {
-			function f() view public {
-				C c;
-				c.send;
-			}
-		}
-	)";
-	CHECK_ALLOW_MULTI(text, (vector<pair<Error::Type, std::string>>{
-		{Error::Type::Warning, "Using contract member \"send\" inherited from the address type is deprecated"},
-		{Error::Type::TypeError, "Value transfer to a contract without a payable fallback function"}
-	}));
-	text = R"(
-		contract C {
-			function f() pure public {
-				C c;
-				c.call;
-			}
-		}
-	)";
-	CHECK_WARNING(text, "Using contract member \"call\" inherited from the address type is deprecated");
-	text = R"(
-		contract C {
-			function f() pure public {
-				C c;
-				c.callcode;
-			}
-		}
-	)";
-	CHECK_WARNING_ALLOW_MULTI(text, (std::vector<std::string>{
-		"Using contract member \"callcode\" inherited from the address type is deprecated",
-		"\"callcode\" has been deprecated in favour of \"delegatecall\""
-	}));
-	text = R"(
-		contract C {
-			function f() pure public {
-				C c;
-				c.delegatecall;
-			}
-		}
-	)";
-	CHECK_WARNING(text, "Using contract member \"delegatecall\" inherited from the address type is deprecated");
-}
-
-BOOST_AUTO_TEST_CASE(no_address_members_on_contract)
-{
-	char const* text = R"(
-		pragma experimental "v0.5.0";
-		contract C {
-			function f() public {
-				this.balance;
-			}
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Member \"balance\" not found or not visible after argument-dependent lookup in contract");
-	text = R"(
-		pragma experimental "v0.5.0";
-		contract C {
-			function f() public {
-				this.transfer;
-			}
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Member \"transfer\" not found or not visible after argument-dependent lookup in contract");
-	text = R"(
-		pragma experimental "v0.5.0";
-		contract C {
-			function f() public {
-				this.send;
-			}
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Member \"send\" not found or not visible after argument-dependent lookup in contract");
-	text = R"(
-		pragma experimental "v0.5.0";
-		contract C {
-			function f() public {
-				this.call;
-			}
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Member \"call\" not found or not visible after argument-dependent lookup in contract");
-	text = R"(
-		pragma experimental "v0.5.0";
-		contract C {
-			function f() public {
-				this.callcode;
-			}
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Member \"callcode\" not found or not visible after argument-dependent lookup in contract");
-	text = R"(
-		pragma experimental "v0.5.0";
-		contract C {
-			function f() public {
-				this.delegatecall;
-			}
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Member \"delegatecall\" not found or not visible after argument-dependent lookup in contract");
-}
-
-BOOST_AUTO_TEST_CASE(no_warning_for_using_members_that_look_like_address_members)
-{
-	char const* text = R"(
-		pragma experimental "v0.5.0";
-		contract C {
-			function transfer(uint) public;
-			function f() public {
-				this.transfer(10);
-			}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(emit_events)
-{
-	char const* text = R"(
-		contract C {
-			event e();
-			function f() public {
-				emit e();
-			}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-	text = R"(
-		contract C {
-			event e(uint a, string b);
-			function f() public {
-				emit e(2, "abc");
-				emit e({b: "abc", a: 8});
-			}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-	text = R"(
-		contract A { event e(uint a, string b); }
-		contract C is A {
-			function f() public {
-				emit A.e(2, "abc");
-				emit A.e({b: "abc", a: 8});
-			}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(old_style_events_050)
-{
-	char const* text = R"(
-		contract C {
-			event e();
-			function f() public {
-				e();
-			}
-		}
-	)";
-	CHECK_WARNING(text, "without \"emit\" prefix");
-	text = R"(
-		pragma experimental "v0.5.0";
-		contract C {
-			event e();
-			function f() public {
-				e();
-			}
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "have to be prefixed");
+	// This needs special treatment, because the message mentions the EVM version,
+	// so cannot be run via isoltest.
+	vector<pair<Error::Type, std::string>> expectations(vector<pair<Error::Type, std::string>>{
+		{Error::Type::Warning, "Variable is shadowed in inline assembly by an instruction of the same name"}
+	});
+	if (!solidity::test::CommonOptions::get().evmVersion().hasExtCodeHash())
+	{
+		expectations.emplace_back(make_pair(Error::Type::TypeError, std::string("\"extcodehash\" instruction is only available for Constantinople-compatible VMs")));
+		expectations.emplace_back(make_pair(Error::Type::TypeError, std::string("Expected expression to evaluate to one value, but got 0 values instead.")));
+	}
+	CHECK_ALLOW_MULTI(text, expectations);
 }
 
 BOOST_AUTO_TEST_CASE(getter_is_memory_type)
@@ -7463,7 +7212,7 @@ BOOST_AUTO_TEST_CASE(getter_is_memory_type)
 	)";
 	CHECK_SUCCESS_NO_WARNINGS(text);
 	// Check that the getters return a memory strings, not a storage strings.
-	ContractDefinition const& c = dynamic_cast<ContractDefinition const&>(*m_compiler.ast("").nodes().at(1));
+	ContractDefinition const& c = dynamic_cast<ContractDefinition const&>(*compiler().ast("").nodes().at(1));
 	BOOST_CHECK(c.interfaceFunctions().size() == 2);
 	for (auto const& f: c.interfaceFunctions())
 	{
@@ -7472,52 +7221,90 @@ BOOST_AUTO_TEST_CASE(getter_is_memory_type)
 	}
 }
 
-BOOST_AUTO_TEST_CASE(require_visibility_specifiers)
+BOOST_AUTO_TEST_CASE(address_staticcall)
 {
-	char const* text = R"(
+	char const* sourceCode = R"(
 		contract C {
-			function f() pure { }
-		}
-	)";
-	CHECK_WARNING(text, "No visibility specified. Defaulting to");
-	text = R"(
-		pragma experimental "v0.5.0";
-		contract C {
-			function f() pure { }
-		}
-	)";
-	CHECK_ERROR(text, SyntaxError, "No visibility specified.");
-}
-
-BOOST_AUTO_TEST_CASE(blockhash)
-{
-	char const* code = R"(
-		contract C {
-			function f() public view returns (bytes32) {
-				return block.blockhash(3);
+			function f() public view returns(bool) {
+				(bool success,) = address(0x4242).staticcall("");
+				return success;
 			}
 		}
 	)";
-	CHECK_WARNING(code, "\"block.blockhash()\" has been deprecated in favor of \"blockhash()\"");
 
-	code = R"(
+	if (solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
+		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
+	else
+		CHECK_ERROR(sourceCode, TypeError, "\"staticcall\" is not supported by the VM version.");
+}
+
+BOOST_AUTO_TEST_CASE(address_staticcall_value)
+{
+	if (solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
+	{
+		char const* sourceCode = R"(
+			contract C {
+				function f() public view {
+					address(0x4242).staticcall.value;
+				}
+			}
+		)";
+		CHECK_ERROR(sourceCode, TypeError, "Member \"value\" is only available for payable functions.");
+	}
+}
+
+BOOST_AUTO_TEST_CASE(address_call_full_return_type)
+{
+	char const* sourceCode = R"(
 		contract C {
-			function f() public view returns (bytes32) { return blockhash(3); }
+			function f() public {
+				(bool success, bytes memory m) = address(0x4242).call("");
+				success; m;
+			}
 		}
 	)";
-	CHECK_SUCCESS_NO_WARNINGS(code);
 
-	code = R"(
-		pragma experimental "v0.5.0";
+	if (solidity::test::CommonOptions::get().evmVersion().supportsReturndata())
+		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
+	else
+		CHECK_ERROR(sourceCode, TypeError, "Type inaccessible dynamic type is not implicitly convertible to expected type bytes memory.");
+}
+
+BOOST_AUTO_TEST_CASE(address_delegatecall_full_return_type)
+{
+	char const* sourceCode = R"(
 		contract C {
-			function f() public returns (bytes32) { return block.blockhash(3); }
+			function f() public {
+				(bool success, bytes memory m) = address(0x4242).delegatecall("");
+				success; m;
+			}
 		}
 	)";
-	CHECK_ERROR(code, TypeError, "\"block.blockhash()\" has been deprecated in favor of \"blockhash()\"");
+
+	if (solidity::test::CommonOptions::get().evmVersion().supportsReturndata())
+		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
+	else
+		CHECK_ERROR(sourceCode, TypeError, "Type inaccessible dynamic type is not implicitly convertible to expected type bytes memory.");
+}
+
+
+BOOST_AUTO_TEST_CASE(address_staticcall_full_return_type)
+{
+	if (solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
+	{
+		char const* sourceCode = R"(
+			contract C {
+				function f() public view {
+					(bool success, bytes memory m) = address(0x4242).staticcall("");
+					success; m;
+				}
+			}
+		)";
+
+		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
+	}
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
-}
-}
 } // end namespaces

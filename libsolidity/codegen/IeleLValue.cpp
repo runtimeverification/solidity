@@ -2,8 +2,8 @@
 
 #include "libiele/IeleIntConstant.h"
 
-using namespace dev;
-using namespace dev::solidity;
+using namespace solidity;
+using namespace solidity::frontend;
 
 RegisterLValue::RegisterLValue(std::vector<iele::IeleLocalVariable *> Var) :
   Var(Var) {}
