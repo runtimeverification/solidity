@@ -33,6 +33,8 @@ std::string IeleCompiler::getIeleNameForFunction(
     IeleFunctionName = "init";
   else if (function.isFallback())
     IeleFunctionName = "deposit";
+  else if (function.isReceive())
+    IeleFunctionName = "receive";
   else if (function.isPublic())
     IeleFunctionName = function.externalSignature();
   else
@@ -743,7 +745,9 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     appendRevert();
   }
 
-  if (function.isPublic() && !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) && !contractFor(&function)->isLibrary()) {
+  if ((function.isConstructor() || function.isPublic()) &&
+      !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) &&
+      !contractFor(&function)->isLibrary()) {
     if (!function.isPayable() && isMostDerived(&function)) {
       appendPayableCheck();
     }
@@ -4442,8 +4446,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     else
       solAssert(false, "IeleCompiler: Unknown magic member.");
     break;
-  case Type::Category::Contract:
-  case Type::Category::Integer: {
+  case Type::Category::Address: {
     // Visit accessed exression (skip in case of magic base expression).
     IeleRValue *ExprValue = compileExpression(memberAccess.expression());
     solAssert(ExprValue,
@@ -4872,6 +4875,11 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
       min = 0;
       max = (bigint(1) << type.numBits()) - 1;
     }
+    break;
+  }
+  case Type::Category::Address: {
+    min = 0;
+    max = (bigint(1) << 160) - 1;
     break;
   }
   case Type::Category::Bool: {
@@ -6450,6 +6458,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       return IeleRValue::Create({appendCopyFromStorageToMemory(TargetType, Value, SourceType)});
     return Value;
   case Type::Category::Integer:
+  case Type::Category::Address:
   case Type::Category::RationalNumber:
   case Type::Category::Contract: {
     switch(TargetType->category()) {
@@ -6476,6 +6485,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       solUnimplemented("Not yet implemented - FixedPointType.");
       break;
     case Type::Category::Integer:
+    case Type::Category::Address:
     case Type::Category::Contract: {
       IntegerType const& targetType = TargetType->category() == Type::Category::Integer
         ? dynamic_cast<const IntegerType &>(*TargetType) : *TypeProvider::uint(160);
