@@ -207,7 +207,7 @@ string BytesUtils::formatString(bytes const& _bytes, size_t _cutOff)
 }
 
 string BytesUtils::formatRawBytes(
-	bytes const& _bytes,
+	vector<bytes> const& _bytes,
 	solidity::frontend::test::ParameterList const& _parameters,
 	string _linePrefix)
 {
@@ -215,20 +215,30 @@ string BytesUtils::formatRawBytes(
 	ParameterList parameters;
 	auto it = _bytes.begin();
 
-	if (_bytes.size() != ContractABIUtils::encodingSize(_parameters))
+	bool sizesAgree = _parameters.size() == _bytes.size();
+	size_t totalBytesSize = 0;
+	for (unsigned i = 0; sizesAgree && i < _bytes.size(); ++i) {
+		sizesAgree = sizesAgree && _bytes[i].size() == _parameters[i].abiType.size;
+		totalBytesSize += _bytes[i].size();
+	}
+
+	if (!sizesAgree)
 		parameters = ContractABIUtils::defaultParameters((_bytes.size() + 31) / 32);
-	else
+	else {
+		soltestAssert(totalBytesSize == ContractABIUtils::encodingSize(_parameters), "");
 		parameters = _parameters;
+	}
+
 
 	for (auto const& parameter: parameters)
 	{
-		bytes byteRange{it, it + static_cast<long>(parameter.abiType.size)};
+		bytes byteRange{*it};
 
 		os << _linePrefix << byteRange;
 		if (&parameter != &parameters.back())
 			os << endl;
 
-		it += static_cast<long>(parameter.abiType.size);
+		++it;
 	}
 
 	return os.str();
@@ -308,7 +318,7 @@ string BytesUtils::formatBytes(
 }
 
 string BytesUtils::formatBytesRange(
-	bytes _bytes,
+	vector<bytes> _bytes,
 	solidity::frontend::test::ParameterList const& _parameters,
 	bool _highlight
 )
@@ -317,15 +327,23 @@ string BytesUtils::formatBytesRange(
 	ParameterList parameters;
 	auto it = _bytes.begin();
 
-	if (_bytes.size() != ContractABIUtils::encodingSize(_parameters))
-		parameters = ContractABIUtils::defaultParameters((_bytes.size() + 31) / 32);
-	else
-		parameters = _parameters;
+	bool sizesAgree = _parameters.size() == _bytes.size();
+	size_t totalBytesSize = 0;
+	for (unsigned i = 0; sizesAgree && i < _bytes.size(); ++i) {
+		sizesAgree = sizesAgree && _bytes[i].size() == _parameters[i].abiType.size;
+		totalBytesSize += _bytes[i].size();
+	}
 
+	if (!sizesAgree)
+		parameters = ContractABIUtils::defaultParameters((_bytes.size() + 31) / 32);
+	else {
+		soltestAssert(totalBytesSize == ContractABIUtils::encodingSize(_parameters), "");
+		parameters = _parameters;
+	}
 
 	for (auto const& parameter: parameters)
 	{
-		bytes byteRange{it, it + static_cast<long>(parameter.abiType.size)};
+		bytes byteRange{*it};
 
 		if (!parameter.matchesBytes(byteRange))
 			AnsiColorized(
@@ -339,7 +357,7 @@ string BytesUtils::formatBytesRange(
 		if (&parameter != &parameters.back())
 			os << ", ";
 
-		it += static_cast<long>(parameter.abiType.size);
+		++it;
 	}
 
 	return os.str();

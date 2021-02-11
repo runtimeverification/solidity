@@ -11,6 +11,8 @@ set(sources
     InteractiveTests.h
     Metadata.cpp
     Metadata.h
+    RPCSession.cpp
+    RPCSession.h
     TestCase.cpp
     TestCase.h
     TestCaseReader.cpp
@@ -19,12 +21,12 @@ set(sources
 detect_stray_source_files("${sources}" ".")
 
 set(contracts_sources
-    contracts/AuctionRegistrar.cpp
-    contracts/ContractInterface.h
-    contracts/FixedFeeRegistrar.cpp
-    contracts/Wallet.cpp
+#    contracts/AuctionRegistrar.cpp
+#    contracts/ContractInterface.h
+#    contracts/FixedFeeRegistrar.cpp
+#    contracts/Wallet.cpp
 )
-detect_stray_source_files("${contracts_sources}" "contracts/")
+#detect_stray_source_files("${contracts_sources}" "contracts/")
 
 set(libsolutil_sources
     libsolutil/Checksum.cpp
@@ -59,7 +61,7 @@ detect_stray_source_files("${liblangutil_sources}" "liblangutil/")
 
 set(libsolidity_sources
     libsolidity/ABIDecoderTests.cpp
-    libsolidity/ABIEncoderTests.cpp
+#    libsolidity/ABIEncoderTests.cpp
     libsolidity/ABIJsonTest.cpp
     libsolidity/ABIJsonTest.h
     libsolidity/ABITestsCommon.h
@@ -84,21 +86,21 @@ set(libsolidity_sources
     libsolidity/SMTCheckerTest.cpp
     libsolidity/SMTCheckerTest.h
     libsolidity/SolidityCompiler.cpp
-    libsolidity/SolidityEndToEndTest.cpp
+#    libsolidity/SolidityEndToEndTest.cpp
     libsolidity/SolidityExecutionFramework.cpp
     libsolidity/SolidityExecutionFramework.h
     libsolidity/SolidityExpressionCompiler.cpp
-    libsolidity/SolidityNameAndTypeResolution.cpp
-    libsolidity/SolidityNatspecJSON.cpp
-    libsolidity/SolidityOptimizer.cpp
-    libsolidity/SolidityParser.cpp
-    libsolidity/SolidityTypes.cpp
-    libsolidity/StandardCompiler.cpp
+#    libsolidity/SolidityNameAndTypeResolution.cpp
+#    libsolidity/SolidityNatspecJSON.cpp
+#    libsolidity/SolidityOptimizer.cpp
+#    libsolidity/SolidityParser.cpp
+#    libsolidity/SolidityTypes.cpp
+#    libsolidity/StandardCompiler.cpp
     libsolidity/SyntaxTest.cpp
     libsolidity/SyntaxTest.h
-    libsolidity/ViewPureChecker.cpp
+#    libsolidity/ViewPureChecker.cpp
 )
-detect_stray_source_files("${libsolidity_sources}" "libsolidity/")
+#detect_stray_source_files("${libsolidity_sources}" "libsolidity/")
 
 set(libsolidity_util_sources
     libsolidity/util/BytesUtils.cpp

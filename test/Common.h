@@ -52,10 +52,12 @@ struct ConfigException : public util::Exception {};
 struct CommonOptions: boost::noncopyable
 {
 	std::vector<boost::filesystem::path> vmPaths;
+	boost::filesystem::path ipcPath;
 	boost::filesystem::path testPath;
 	bool ewasm = false;
 	bool optimize = false;
 	bool enforceViaYul = false;
+	bool disableIPC = false;
 	bool disableSMT = false;
 	bool useABIEncoderV1 = false;
 	bool showMessages = false;

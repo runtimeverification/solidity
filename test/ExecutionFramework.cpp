@@ -42,12 +42,28 @@ using namespace solidity;
 using namespace solidity::util;
 using namespace solidity::test;
 
+
+namespace // anonymous
+{
+
+string getIPCSocketPath()
+{
+    const boost::filesystem::path &ipcPath = solidity::test::CommonOptions::get().ipcPath;
+    if (ipcPath.empty())
+        BOOST_FAIL("ERROR: ipcPath not set! (use --ipcpath <path> or the environment variable ETH_TEST_IPC)");
+
+    return ipcPath.string();
+}
+
+}
+
 ExecutionFramework::ExecutionFramework():
 	ExecutionFramework(solidity::test::CommonOptions::get().evmVersion(), solidity::test::CommonOptions::get().vmPaths)
 {
 }
 
 ExecutionFramework::ExecutionFramework(langutil::EVMVersion _evmVersion, vector<boost::filesystem::path> const& _vmPaths):
+	m_rpc(RPCSession::instance(getIPCSocketPath())),
 	m_evmVersion(_evmVersion),
 	m_optimiserSettings(solidity::frontend::OptimiserSettings::minimal()),
 	m_showMessages(solidity::test::CommonOptions::get().showMessages),
@@ -56,11 +72,15 @@ ExecutionFramework::ExecutionFramework(langutil::EVMVersion _evmVersion, vector<
 	if (solidity::test::CommonOptions::get().optimize)
 		m_optimiserSettings = solidity::frontend::OptimiserSettings::standard();
 
+    m_rpc.test_rewindToBlock(0);
+
+/*
 	for (auto const& path: m_vmPaths)
 		if (EVMHost::getVM(path.string()).has_capability(EVMC_CAPABILITY_EWASM))
 			m_supportsEwasm = true;
 
 	selectVM(evmc_capabilities::EVMC_CAPABILITY_EVM1);
+*/
 }
 
 void ExecutionFramework::selectVM(evmc_capabilities _cap)
@@ -79,17 +99,7 @@ void ExecutionFramework::selectVM(evmc_capabilities _cap)
 	reset();
 }
 
-<<<<<<< ours
-ExecutionFramework::ExecutionFramework() :
-	m_rpc(RPCSession::instance(getIPCSocketPath())),
-	m_evmVersion(dev::test::Options::get().evmVersion()),
-	m_optimize(dev::test::Options::get().optimize),
-	m_showMessages(dev::test::Options::get().showMessages),
-	m_sender(m_rpc.account(0)),
-	m_timestamp(0)
-=======
 void ExecutionFramework::reset()
->>>>>>> theirs
 {
 	m_evmcHost->reset();
 	for (size_t i = 0; i < 10; i++)
@@ -117,9 +127,6 @@ std::pair<bool, string> ExecutionFramework::compareAndCreateMessage(
 	return make_pair(false, message);
 }
 
-<<<<<<< ours
-void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::string _function, bytes const& _data, bool _isCreation, u256 const& _value)
-=======
 bytes ExecutionFramework::panicData(util::PanicCode _code)
 {
 	return
@@ -153,11 +160,8 @@ u256 ExecutionFramework::blockNumber() const
 	return m_evmcHost->tx_context.block_number;
 }
 
-void ExecutionFramework::sendMessage(bytes const& _data, bool _isCreation, u256 const& _value)
->>>>>>> theirs
+void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::string _function, bytes const& _data, bool _isCreation, u256 const& _value)
 {
-	m_evmcHost->newBlock();
-
 	if (m_showMessages)
 	{
 	        if (_isCreation) {
@@ -176,7 +180,6 @@ void ExecutionFramework::sendMessage(bytes const& _data, bool _isCreation, u256 
 		}
 		cout << "]" << endl;
 	}
-<<<<<<< ours
 	RPCSession::TransactionData d;
 	d.data = "0x" + toHex(_data);
 	for (bytes const& arg : _arguments) {
@@ -192,7 +195,7 @@ void ExecutionFramework::sendMessage(bytes const& _data, bool _isCreation, u256 
 	m_rpc.test_modifyTimestamp(m_timestamp);
 	if (!_isCreation)
 	{
-	        d.to = dev::toString(m_contractAddress);
+	        d.to = toString(m_contractAddress);
 	        BOOST_REQUIRE(m_rpc.eth_getCode(d.to, "latest").size() > 2);
 		vector<string> const& outputs = m_rpc.iele_call(d);
 		m_rpc.test_modifyTimestamp(m_timestamp);
@@ -209,33 +212,10 @@ void ExecutionFramework::sendMessage(bytes const& _data, bool _isCreation, u256 
 
 	m_blockNumber = u256(receipt.blockNumber);
 	m_status = bigint(receipt.status);
-=======
-	evmc_message message = {};
-	message.input_data = _data.data();
-	message.input_size = _data.size();
-	message.sender = EVMHost::convertToEVMC(m_sender);
-	message.value = EVMHost::convertToEVMC(_value);
 
 	if (_isCreation)
 	{
-		message.kind = EVMC_CREATE;
-		message.destination = EVMHost::convertToEVMC(h160{});
-	}
-	else
-	{
-		message.kind = EVMC_CALL;
-		message.destination = EVMHost::convertToEVMC(m_contractAddress);
-	}
-	message.gas = m_gas.convert_to<int64_t>();
-
-	evmc::result result = m_evmcHost->call(message);
->>>>>>> theirs
-
-	m_output = bytes(result.output_data, result.output_data + result.output_size);
-	if (_isCreation)
-<<<<<<< ours
-	{
-	        m_contractAddress = Address(receipt.contractAddress);
+	        m_contractAddress = h160(receipt.contractAddress);
 	}
 
 	if (m_showMessages)
@@ -246,58 +226,23 @@ void ExecutionFramework::sendMessage(bytes const& _data, bool _isCreation, u256 
 		}
 		cout << "]" << endl;
 	        cout << " tx hash: " << txHash << endl;
-=======
-		m_contractAddress = EVMHost::convertFromEVMC(result.create_address);
-
-	m_gasUsed = m_gas - result.gas_left;
-	m_transactionSuccessful = (result.status_code == EVMC_SUCCESS);
-
-	if (m_showMessages)
-	{
-		cout << " out:     " << toHex(m_output) << endl;
-		cout << " result: " << static_cast<size_t>(result.status_code) << endl;
-		cout << " gas used: " << m_gasUsed.str() << endl;
->>>>>>> theirs
 	}
+
+    m_gasUsed = u256(receipt.gasUsed);
+    m_logs.clear();
+    for (auto const& log: receipt.logEntries)
+    {
+        LogEntry entry;
+        entry.address = h160(log.address);
+        for (auto const& topic: log.topics)
+            entry.topics.push_back(h256(topic));
+        entry.data = fromHex(log.data, WhenError::Throw);
+        m_logs.push_back(entry);
+    }
 }
 
-void ExecutionFramework::sendEther(h160 const& _addr, u256 const& _amount)
+void ExecutionFramework::sendEther(h160 const& _to, u256 const& _value)
 {
-	m_evmcHost->newBlock();
-
-	if (m_showMessages)
-	{
-<<<<<<< ours
-	        LogEntry entry;
-	        entry.address = Address(log.address);
-	        for (auto const& topic: log.topics)
-	                entry.topics.push_back(h256(topic));
-	        entry.data = fromHex(log.data, WhenError::Throw);
-	        m_logs.push_back(entry);
-=======
-		cout << "SEND_ETHER   " << m_sender.hex() << " -> " << _addr.hex() << ":" << endl;
-		if (_amount > 0)
-			cout << " value: " << _amount << endl;
->>>>>>> theirs
-	}
-	evmc_message message = {};
-	message.sender = EVMHost::convertToEVMC(m_sender);
-	message.value = EVMHost::convertToEVMC(_amount);
-	message.kind = EVMC_CALL;
-	message.destination = EVMHost::convertToEVMC(_addr);
-	message.gas = m_gas.convert_to<int64_t>();
-
-	m_evmcHost->call(message);
-}
-
-size_t ExecutionFramework::currentTimestamp()
-{
-	return static_cast<size_t>(m_evmcHost->tx_context.block_timestamp);
-}
-
-size_t ExecutionFramework::blockTimestamp(u256 _block)
-{
-<<<<<<< ours
 	RPCSession::TransactionData d;
 	d.data = "0x";
 	d.function = "deposit";
@@ -305,41 +250,38 @@ size_t ExecutionFramework::blockTimestamp(u256 _block)
 	d.gas = toHex(m_gas, HexPrefix::Add);
 	d.gasPrice = toHex(m_gasPrice, HexPrefix::Add);
 	d.value = toHex(_value, HexPrefix::Add);
-	d.to = dev::toString(_to);
+	d.to = toString(_to);
 
 	string txHash = m_rpc.iele_sendTransaction(d);
 	m_rpc.test_mineBlocks(1);
-=======
-	if (_block > blockNumber())
-		return 0;
-	else
-		return static_cast<size_t>((currentTimestamp() / blockNumber()) * _block);
 }
 
-h160 ExecutionFramework::account(size_t _idx)
+size_t ExecutionFramework::currentTimestamp()
 {
-	return h160(h256(u256{"0x1212121212121212121212121212120000000012"} + _idx * 0x1000), h160::AlignRight);
->>>>>>> theirs
+	auto timestamp = m_rpc.eth_getTimestamp("latest");
+	return size_t(u256(timestamp));
+}
+
+size_t ExecutionFramework::blockTimestamp(u256 _block)
+{
+	auto timestamp = m_rpc.eth_getTimestamp(toString(_block));
+	return size_t(u256(timestamp));
+}
+
+h160 ExecutionFramework::account(size_t _i)
+{
+	return h160(m_rpc.accountCreateIfNotExists(_i));;
 }
 
 bool ExecutionFramework::addressHasCode(h160 const& _addr)
 {
-<<<<<<< ours
-	auto timestamp = m_rpc.eth_getTimestamp("latest");
-	return size_t(u256(timestamp));
-=======
-	return m_evmcHost->get_code_size(EVMHost::convertToEVMC(_addr)) != 0;
->>>>>>> theirs
+    string code = m_rpc.eth_getCode(toString(_addr), "latest");
+    return !code.empty() && code != "0x";
 }
 
 size_t ExecutionFramework::numLogs() const
 {
-<<<<<<< ours
-	auto timestamp = m_rpc.eth_getTimestamp(toString(_number));
-	return size_t(u256(timestamp));
-=======
 	return m_evmcHost->recorded_logs.size();
->>>>>>> theirs
 }
 
 size_t ExecutionFramework::numLogTopics(size_t _logIdx) const
@@ -359,9 +301,6 @@ h160 ExecutionFramework::logAddress(size_t _logIdx) const
 
 bytes ExecutionFramework::logData(size_t _logIdx) const
 {
-<<<<<<< ours
-	return m_rpc.eth_isStorageEmpty(toString(_addr), "latest");
-=======
 	const auto& data = m_evmcHost->recorded_logs.at(_logIdx).data;
 	// TODO: Return a copy of log data, because this is expected from REQUIRE_LOG_DATA(),
 	//       but reference type like string_view would be preferable.
@@ -370,18 +309,10 @@ bytes ExecutionFramework::logData(size_t _logIdx) const
 
 u256 ExecutionFramework::balanceAt(h160 const& _addr)
 {
-	return u256(EVMHost::convertFromEVMC(m_evmcHost->get_balance(EVMHost::convertToEVMC(_addr))));
+	return u256(m_rpc.eth_getBalance(toString(_addr), "latest"));
 }
 
 bool ExecutionFramework::storageEmpty(h160 const& _addr)
 {
-	const auto it = m_evmcHost->accounts.find(EVMHost::convertToEVMC(_addr));
-	if (it != m_evmcHost->accounts.end())
-	{
-		for (auto const& entry: it->second.storage)
-			if (!(entry.second.value == evmc::bytes32{}))
-				return false;
-	}
-	return true;
->>>>>>> theirs
+	return m_rpc.eth_isStorageEmpty(toString(_addr), "latest");
 }

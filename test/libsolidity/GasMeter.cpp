@@ -48,17 +48,6 @@ public:
 		m_compiler.setOptimiserSettings(solidity::test::CommonOptions::get().optimize);
 		m_compiler.setEVMVersion(m_evmVersion);
 		BOOST_REQUIRE_MESSAGE(m_compiler.compile(), "Compiling contract failed");
-<<<<<<< ours
-
-		AssemblyItems const* items = nullptr; //m_compiler.runtimeAssemblyItems(m_compiler.lastContractName());
-		ASTNode const& sourceUnit = m_compiler.ast("");
-		BOOST_REQUIRE(items != nullptr);
-		m_gasCosts = GasEstimator::breakToStatementLevel(
-			GasEstimator(dev::test::Options::get().evmVersion()).structuralEstimation(*items, vector<ASTNode const*>({&sourceUnit})),
-			{&sourceUnit}
-		);
-=======
->>>>>>> theirs
 	}
 
 	void testCreationTimeGas(string const& _sourceCode, u256 const& _tolerance = u256(0))
@@ -74,12 +63,6 @@ public:
 		// costs for transaction
 		gas += gasForTransaction(m_compiler.object(m_compiler.lastContractName()).bytecode, vector<bytes>());
 
-<<<<<<< ours
-		BOOST_REQUIRE(!gas.isInfinite);
-		BOOST_CHECK_EQUAL(gas.value, m_gasUsed);
-*/
-		BOOST_REQUIRE(false);
-=======
 		// Skip the tests when we use ABIEncoderV2.
 		// TODO: We should enable this again once the yul optimizer is activated.
 		if (solidity::test::CommonOptions::get().useABIEncoderV1)
@@ -88,31 +71,20 @@ public:
 			BOOST_CHECK_LE(m_gasUsed, gas.value);
 			BOOST_CHECK_LE(gas.value - _tolerance, m_gasUsed);
 		}
->>>>>>> theirs
+*/
+		BOOST_REQUIRE(false);
 	}
 
 	/// Compares the gas computed by PathGasMeter for the given signature (but unknown arguments)
 	/// against the actual gas usage computed by the VM on the given set of argument variants.
-<<<<<<< ours
-	void testRunTimeGas(string const& _sig, vector<vector<bytes>> _argumentVariants)
-=======
-	void testRunTimeGas(string const& _sig, vector<bytes> _argumentVariants, u256 const& _tolerance = u256(0))
->>>>>>> theirs
+	void testRunTimeGas(string const& _sig, vector<vector<bytes>> _argumentVariants, u256 const& _tolerance = u256(0))
 	{
 /*
 		u256 gasUsed = 0;
 		GasMeter::GasConsumption gas;
-<<<<<<< ours
 		for (vector<bytes> const& arguments: _argumentVariants)
 		{
 			callContractFunctionNoEncoding(_sig, arguments);
-=======
-		util::FixedHash<4> hash(util::keccak256(_sig));
-		for (bytes const& arguments: _argumentVariants)
-		{
-			sendMessage(hash.asBytes() + arguments, false, 0);
-			BOOST_CHECK(m_transactionSuccessful);
->>>>>>> theirs
 			gasUsed = max(gasUsed, m_gasUsed);
 			gas = max(gas, gasForTransaction(_sig, arguments));
 		}
@@ -121,21 +93,6 @@ public:
 			*m_compiler.runtimeAssemblyItems(m_compiler.lastContractName()),
 			_sig
 		);
-<<<<<<< ours
-		BOOST_REQUIRE(!gas.isInfinite);
-		BOOST_CHECK_EQUAL(gas.value, m_gasUsed);
-*/
-		BOOST_REQUIRE(false);
-	}
-
-	static GasMeter::GasConsumption gasForTransaction(bytes const& _data, vector<bytes> const& _arguments)
-	{
-		GasMeter::GasConsumption gas = GasCosts::txCreateGas;
-		bytes txData = rlpEncode(_data, _arguments);	
-		for (auto i: txData)
-			gas += i != 0 ? GasCosts::txDataNonZeroGas : GasCosts::txDataZeroGas;
-		return gas;
-=======
 		// Skip the tests when we use ABIEncoderV2.
 		// TODO: We should enable this again once the yul optimizer is activated.
 		if (solidity::test::CommonOptions::get().useABIEncoderV1)
@@ -144,65 +101,34 @@ public:
 			BOOST_CHECK_LE(m_gasUsed, gas.value);
 			BOOST_CHECK_LE(gas.value - _tolerance, m_gasUsed);
 		}
->>>>>>> theirs
+*/
+		BOOST_REQUIRE(false);
+	}
+
+	static GasMeter::GasConsumption gasForTransaction(bytes const& _data, vector<bytes> const& _arguments)
+	{
+		auto evmVersion = solidity::test::CommonOptions::get().evmVersion();
+		GasMeter::GasConsumption gas = GasCosts::txCreateGas;
+		bytes txData = rlpEncode(_data, _arguments);	
+		for (auto i: txData)
+			gas += i != 0 ? GasCosts::txDataNonZeroGas(evmVersion) : GasCosts::txDataZeroGas;
+		return gas;
 	}
 
 	static GasMeter::GasConsumption gasForTransaction(string const& _sig, vector<bytes> const& _arguments)
 	{
-<<<<<<< ours
+		auto evmVersion = solidity::test::CommonOptions::get().evmVersion();
 		GasMeter::GasConsumption gas = GasCosts::txGas;
 		bytes txData = rlpEncode(asBytes(_sig), _arguments);
 		for (auto i: txData)
-			gas += i != 0 ? GasCosts::txDataNonZeroGas : GasCosts::txDataZeroGas;
-=======
-		auto evmVersion = solidity::test::CommonOptions::get().evmVersion();
-		GasMeter::GasConsumption gas = _isCreation ? GasCosts::txCreateGas : GasCosts::txGas;
-		for (auto i: _data)
 			gas += i != 0 ? GasCosts::txDataNonZeroGas(evmVersion) : GasCosts::txDataZeroGas;
->>>>>>> theirs
 		return gas;
 	}
 };
 
 BOOST_FIXTURE_TEST_SUITE(GasMeterTests, GasMeterTestFramework)
 
-<<<<<<< ours
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(non_overlapping_filtered_costs, 1)
-BOOST_AUTO_TEST_CASE(non_overlapping_filtered_costs)
-{
-	char const* sourceCode = R"(
-		contract test {
-			bytes x;
-			function f(uint a) returns (uint b) {
-				x.length = a;
-				for (; a < 200; ++a) {
-					x[a] = 9;
-					b = a * a;
-				}
-				return f(a - 1);
-			}
-		}
-	)";
-	compile(sourceCode);
-	for (auto first = m_gasCosts.cbegin(); first != m_gasCosts.cend(); ++first)
-	{
-		auto second = first;
-		for (++second; second != m_gasCosts.cend(); ++second)
-			if (first->first->location().intersects(second->first->location()))
-			{
-				BOOST_CHECK_MESSAGE(false, "Source locations should not overlap!");
-				auto scannerFromSource = [&](string const& _sourceName) -> Scanner const& { return m_compiler.scanner(_sourceName); };
-				SourceReferenceFormatter formatter(cout, scannerFromSource);
-
-				formatter.printSourceLocation(&first->first->location());
-				formatter.printSourceLocation(&second->first->location());
-			}
-	}
-}
-
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(simple_contract, 1)
-=======
->>>>>>> theirs
 BOOST_AUTO_TEST_CASE(simple_contract)
 {
 	// Tests a simple "deploy contract" code without constructor. The actual contract is not relevant.
@@ -329,14 +255,9 @@ BOOST_AUTO_TEST_CASE(exponent_size)
 		}
 	)";
 	testCreationTimeGas(sourceCode);
-<<<<<<< ours
+	testRunTimeGas("f(uint256)", vector<vector<bytes>>{encodeArgs(2)});
 	testRunTimeGas("g(uint256)", vector<vector<bytes>>{encodeArgs(2)});
 	testRunTimeGas("h(uint256)", vector<vector<bytes>>{encodeArgs(2)});
-=======
-	testRunTimeGas("f(uint256)", vector<bytes>{encodeArgs(2)});
-	testRunTimeGas("g(uint256)", vector<bytes>{encodeArgs(2)});
-	testRunTimeGas("h(uint256)", vector<bytes>{encodeArgs(2)});
->>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(balance_gas, 1)
@@ -422,7 +343,7 @@ BOOST_AUTO_TEST_CASE(complex_control_flow)
 	)";
 	testCreationTimeGas(sourceCode);
 	// max gas is used for small x
-	testRunTimeGas("ln(int128)", vector<bytes>{encodeArgs(0), encodeArgs(10), encodeArgs(105), encodeArgs(30000)});
+	testRunTimeGas("ln(int128)", vector<vector<bytes>>{encodeArgs(0), encodeArgs(10), encodeArgs(105), encodeArgs(30000)});
 }
 
 BOOST_AUTO_TEST_SUITE_END()

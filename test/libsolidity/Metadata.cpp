@@ -58,23 +58,6 @@ BOOST_AUTO_TEST_CASE(metadata_stamp)
 			function g(function(uint) external returns (uint) x) public {}
 		}
 	)";
-<<<<<<< ours
-	CompilerStack compilerStack;
-	compilerStack.addSource("", std::string(sourceCode));
-	compilerStack.setEVMVersion(dev::test::Options::get().evmVersion());
-	compilerStack.setOptimiserSettings(dev::test::Options::get().optimize);
-	BOOST_REQUIRE_MESSAGE(compilerStack.compile(), "Compiling contract failed");
-	bytes const& bytecode = compilerStack.object("test").bytecode;
-	std::string const& metadata = compilerStack.metadata("test");
-	BOOST_CHECK(dev::test::isValidMetadata(metadata));
-	bytes hash = dev::swarmHash(metadata).asBytes();
-	BOOST_REQUIRE(hash.size() == 32);
-	BOOST_REQUIRE(bytecode.size() >= 2);
-	size_t metadataCBORSize = (size_t(bytecode.end()[-2]) << 8) + size_t(bytecode.end()[-1]);
-	BOOST_REQUIRE(metadataCBORSize < bytecode.size() - 2);
-	bytes expectation = bytes{0xa1, 0x65, 'b', 'z', 'z', 'r', '0', 0x58, 0x20} + hash;
-	BOOST_CHECK(std::equal(expectation.begin(), expectation.end(), bytecode.end() - metadataCBORSize - 2));
-=======
 	for (auto release: std::set<bool>{true, VersionIsRelease})
 		for (auto metadataHash: set<CompilerStack::MetadataHash>{
 			CompilerStack::MetadataHash::IPFS,
@@ -89,7 +72,7 @@ BOOST_AUTO_TEST_CASE(metadata_stamp)
 			compilerStack.setOptimiserSettings(solidity::test::CommonOptions::get().optimize);
 			compilerStack.setMetadataHash(metadataHash);
 			BOOST_REQUIRE_MESSAGE(compilerStack.compile(), "Compiling contract failed");
-			bytes const& bytecode = compilerStack.runtimeObject("test").bytecode;
+			bytes const& bytecode = compilerStack.object("test").bytecode;
 			std::string const& metadata = compilerStack.metadata("test");
 			BOOST_CHECK(solidity::test::isValidMetadata(metadata));
 
@@ -124,7 +107,6 @@ BOOST_AUTO_TEST_CASE(metadata_stamp)
 			else
 				BOOST_CHECK(cborMetadata.at("solc") == VersionStringStrict);
 		}
->>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE(metadata_stamp_experimental)
@@ -137,26 +119,6 @@ BOOST_AUTO_TEST_CASE(metadata_stamp_experimental)
 			function g(function(uint) external returns (uint) x) public {}
 		}
 	)";
-<<<<<<< ours
-	CompilerStack compilerStack;
-	compilerStack.addSource("", std::string(sourceCode));
-	compilerStack.setEVMVersion(dev::test::Options::get().evmVersion());
-	compilerStack.setOptimiserSettings(dev::test::Options::get().optimize);
-	BOOST_REQUIRE_MESSAGE(compilerStack.compile(), "Compiling contract failed");
-	bytes const& bytecode = compilerStack.object("test").bytecode;
-	std::string const& metadata = compilerStack.metadata("test");
-	BOOST_CHECK(dev::test::isValidMetadata(metadata));
-	bytes hash = dev::swarmHash(metadata).asBytes();
-	BOOST_REQUIRE(hash.size() == 32);
-	BOOST_REQUIRE(bytecode.size() >= 2);
-	size_t metadataCBORSize = (size_t(bytecode.end()[-2]) << 8) + size_t(bytecode.end()[-1]);
-	BOOST_REQUIRE(metadataCBORSize < bytecode.size() - 2);
-	bytes expectation =
-		bytes{0xa2, 0x65, 'b', 'z', 'z', 'r', '0', 0x58, 0x20} +
-		hash +
-		bytes{0x6c, 'e', 'x', 'p', 'e', 'r', 'i', 'm', 'e', 'n', 't', 'a', 'l', 0xf5};
-	BOOST_CHECK(std::equal(expectation.begin(), expectation.end(), bytecode.end() - metadataCBORSize - 2));
-=======
 	for (auto release: set<bool>{true, VersionIsRelease})
 		for (auto metadataHash: set<CompilerStack::MetadataHash>{
 			CompilerStack::MetadataHash::IPFS,
@@ -171,7 +133,7 @@ BOOST_AUTO_TEST_CASE(metadata_stamp_experimental)
 			compilerStack.setOptimiserSettings(solidity::test::CommonOptions::get().optimize);
 			compilerStack.setMetadataHash(metadataHash);
 			BOOST_REQUIRE_MESSAGE(compilerStack.compile(), "Compiling contract failed");
-			bytes const& bytecode = compilerStack.runtimeObject("test").bytecode;
+			bytes const& bytecode = compilerStack.object("test").bytecode;
 			std::string const& metadata = compilerStack.metadata("test");
 			BOOST_CHECK(solidity::test::isValidMetadata(metadata));
 
@@ -208,7 +170,6 @@ BOOST_AUTO_TEST_CASE(metadata_stamp_experimental)
 			BOOST_CHECK(cborMetadata.count("experimental") == 1);
 			BOOST_CHECK(cborMetadata.at("experimental") == "true");
 		}
->>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE(metadata_relevant_sources)

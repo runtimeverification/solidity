@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(format_unsigned_singleline)
 
 	BOOST_REQUIRE_EQUAL(test.format(), "// f(uint8): 1 -> 1");
 
-	test.setRawBytes(toBigEndian(u256{2}));
+	test.setRawBytes(vector<bytes>(1, toBigEndian(u256{2})));
 	test.setFailure(false);
 
 	BOOST_REQUIRE_EQUAL(test.format("", true), "// f(uint8): 1 -> 2");
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(format_unsigned_singleline_signed_encoding)
 
 	BOOST_REQUIRE_EQUAL(test.format(), "// f(uint8): 1 -> 1");
 
-	test.setRawBytes(toBigEndian(u256{-1}));
+	test.setRawBytes(vector<bytes>(1, toBigEndian(u256{-1})));
 	test.setFailure(false);
 
 	BOOST_REQUIRE_EQUAL(test.format("", true), "// f(uint8): 1 -> -1");
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(format_signed_singleline)
 
 	BOOST_REQUIRE_EQUAL(test.format(), "// f(int8): -1 -> -1");
 
-	test.setRawBytes(toBigEndian(u256{-2}));
+	test.setRawBytes(vector<bytes>(1, toBigEndian(u256{-2})));
 	test.setFailure(false);
 
 	BOOST_REQUIRE_EQUAL(test.format("", true), "// f(int8): -1 -> -2");
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(format_hex_singleline)
 	bytes actualResult = fromHex("0x32");
 	bytes actualBytes = bytes(32 - actualResult.size(), 0) + actualResult;
 
-	test.setRawBytes(actualBytes);
+	test.setRawBytes(vector<bytes>(1, actualBytes));
 	test.setFailure(false);
 
 	BOOST_REQUIRE_EQUAL(test.format("", true), "// f(bytes32): 0x31 -> 0x32");
@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE(format_bool_true_singleline)
 
 	bytes actualResult = bytes{false};
 	bytes actualBytes = actualResult + bytes(32 - actualResult.size(), 0);
-	test.setRawBytes(actualBytes);
+	test.setRawBytes(vector<bytes>(1, actualBytes));
 	test.setFailure(false);
 
 	BOOST_REQUIRE_EQUAL(test.format("", true), "// f(bool): true -> false");

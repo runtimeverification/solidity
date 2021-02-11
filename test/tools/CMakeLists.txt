@@ -16,6 +16,8 @@ add_executable(isoltest
 	../Common.cpp
 	../CommonSyntaxTest.cpp
 	../EVMHost.cpp
+	../RPCSession.cpp
+	../RPCSession.h
 	../TestCase.cpp
 	../TestCaseReader.cpp
 	../libsolidity/util/BytesUtils.cpp

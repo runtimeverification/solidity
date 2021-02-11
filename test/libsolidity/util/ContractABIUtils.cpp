@@ -287,14 +287,17 @@ solidity::frontend::test::ParameterList ContractABIUtils::preferredParameters(
 	ErrorReporter& _errorReporter,
 	solidity::frontend::test::ParameterList const& _targetParameters,
 	solidity::frontend::test::ParameterList const& _sourceParameters,
-	bytes const& _bytes
+	vector<bytes> const& _bytes
 )
 {
 	if (_targetParameters.size() != _sourceParameters.size())
 	{
+		size_t totalBytesSize = 0;
+		for (const bytes &b : _bytes) totalBytesSize += b.size();
+
 		_errorReporter.warning(
 			"Encoding does not match byte range. The call returned " +
-			to_string(_bytes.size()) + " bytes, but " +
+			to_string(totalBytesSize) + " bytes, but " +
 			to_string(encodingSize(_targetParameters)) + " bytes were expected."
 		);
 		return _sourceParameters;
@@ -316,32 +319,42 @@ solidity::frontend::test::ParameterList ContractABIUtils::defaultParameters(size
 	return parameters;
 }
 
-solidity::frontend::test::ParameterList ContractABIUtils::failureParameters(bytes const& _bytes)
+solidity::frontend::test::ParameterList ContractABIUtils::failureParameters(vector<bytes> const& _bytes)
 {
 	if (_bytes.empty())
 		return {};
-	else if (_bytes.size() < 4)
-		return {Parameter{bytes(), "", ABIType{ABIType::HexString, ABIType::AlignNone, _bytes.size()}, FormatInfo{}}};
+	else if (_bytes.size() == 1 && _bytes[0].size() < 4)
+		return {Parameter{bytes(), "", ABIType{ABIType::HexString, ABIType::AlignNone, _bytes[0].size()}, FormatInfo{}}};
 	else
 	{
 		ParameterList parameters;
+		soltestAssert(_bytes[0].size() == 4, "");
 		parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::HexString, ABIType::AlignNone, 4}, FormatInfo{}});
 
-		uint64_t selector = fromBigEndian<uint64_t>(bytes{_bytes.begin(), _bytes.begin() + 4});
+		uint64_t selector = fromBigEndian<uint64_t>(_bytes[0]);
 		if (selector == selectorFromSignature32("Panic(uint256)"))
 			parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::Hex}, FormatInfo{}});
 		else if (selector == selectorFromSignature32("Error(string)"))
 		{
+			soltestAssert(_bytes.size() >= 3, "");
+			soltestAssert(_bytes[1].size() == 32, "");
+			soltestAssert(_bytes[2].size() == 32, "");
 			parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::Hex}, FormatInfo{}});
 			parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::UnsignedDec}, FormatInfo{}});
 			/// If _bytes contains at least a 1 byte message (function selector + tail pointer + message length + message)
 			/// append an additional string parameter to represent that message.
-			if (_bytes.size() > 68)
+			if (_bytes.size() > 3)
+			{
+				soltestAssert(_bytes[3].size() == 32, "");
 				parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::String}, FormatInfo{}});
+			}
 		}
 		else
-			for (size_t i = 4; i < _bytes.size(); i += 32)
+			for (size_t i = 1; i < _bytes.size(); ++i)
+			{
+				soltestAssert(_bytes[i].size() == 32, "");
 				parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::HexString, ABIType::AlignNone, 32}, FormatInfo{}});
+			}
 		return parameters;
 	}
 }

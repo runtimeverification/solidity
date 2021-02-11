@@ -78,7 +78,7 @@ public:
 	FunctionCall const& call() const { return m_call; }
 	void calledNonExistingFunction() { m_calledNonExistingFunction = true; }
 	void setFailure(const bool _failure) { m_failure = _failure; }
-	void setRawBytes(const bytes _rawBytes) { m_rawBytes = _rawBytes; }
+	void setRawBytes(const std::vector<bytes> _rawBytes) { m_rawBytes = _rawBytes; }
 	void setContractABI(Json::Value _contractABI) { m_contractABI = std::move(_contractABI); }
 
 private:
@@ -88,7 +88,7 @@ private:
 	/// Reports warnings and errors to the error reporter.
 	std::string formatBytesParameters(
 		ErrorReporter& _errorReporter,
-		bytes const& _bytes,
+		std::vector<bytes> const& _bytes,
 		std::string const& _signature,
 		ParameterList const& _params,
 		bool highlight = false,
@@ -105,7 +105,7 @@ private:
 	std::string formatFailure(
 		ErrorReporter& _errorReporter,
 		FunctionCall const& _call,
-		bytes const& _output,
+		std::vector<bytes> const& _output,
 		bool _renderResult,
 		bool _highlight
 	) const;
@@ -123,7 +123,7 @@ private:
 	/// Function call that has been parsed and which holds all parameters / expectations.
 	FunctionCall m_call;
 	/// Result of the actual call been made.
-	bytes m_rawBytes = bytes{};
+	std::vector<bytes> m_rawBytes = std::vector<bytes>{};
 	/// Transaction status of the actual call. False in case of a REVERT or any other failure.
 	bool m_failure = true;
 	/// JSON object which holds the contract ABI and that is used to set the output formatting

@@ -162,7 +162,7 @@ test_suite* init_unit_test_suite( int /*argc*/, char* /*argv*/[] )
 	bool disableSemantics = true;
 	try
 	{
-		disableSemantics = !solidity::test::EVMHost::checkVmPaths(solidity::test::CommonOptions::get().vmPaths);
+		disableSemantics = solidity::test::CommonOptions::get().disableIPC;
 	}
 	catch (std::runtime_error const& _exception)
 	{
@@ -197,14 +197,14 @@ test_suite* init_unit_test_suite( int /*argc*/, char* /*argv*/[] )
 	{
 		for (auto suite: {
 			"ABIDecoderTest",
-			"ABIEncoderTest",
-			"SolidityAuctionRegistrar",
-			"SolidityFixedFeeRegistrar",
-			"SolidityWallet",
+			//"ABIEncoderTest",
+			//"SolidityAuctionRegistrar",
+			//"SolidityFixedFeeRegistrar",
+			//"SolidityWallet",
 			"GasMeterTests",
 			"GasCostTests",
-			"SolidityEndToEndTest",
-			"SolidityOptimizer"
+			//"SolidityEndToEndTest",
+			//"SolidityOptimizer"
 		})
 			removeTestSuite(suite);
 	}

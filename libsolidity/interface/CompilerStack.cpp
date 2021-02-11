@@ -1213,10 +1213,11 @@ void CompilerStack::compileContract(
 /*
 	compiledContract.evmAssembly = compiler->assemblyPtr();
 	solAssert(compiledContract.evmAssembly, "");
+*/
 	try
 	{
 		// Assemble deployment (incl. runtime)  object.
-		compiledContract.object = compiledContract.evmAssembly->assemble();
+		compiledContract.object = compiler->assembledObject();
 	}
 	catch(evmasm::AssemblyException const&)
 	{
@@ -1224,6 +1225,7 @@ void CompilerStack::compileContract(
 	}
 	solAssert(compiledContract.object.immutableReferences.empty(), "Leftover immutables.");
 
+/*
 	compiledContract.evmRuntimeAssembly = compiler->runtimeAssemblyPtr();
 	solAssert(compiledContract.evmRuntimeAssembly, "");
 

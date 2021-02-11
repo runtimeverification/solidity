@@ -172,16 +172,16 @@ TestCase::TestResult SemanticTest::runTest(ostream& _stream, string const& _line
 				if (test.call().kind == FunctionCall::Kind::Constructor)
 					deploy("", test.call().value.value, test.call().arguments.rawBytes(), libraries);
 				else
-					soltestAssert(deploy("", 0, bytes(), libraries), "Failed to deploy contract.");
+					soltestAssert(deploy("", 0, vector<bytes>(), libraries), "Failed to deploy contract.");
 				constructed = true;
 			}
 
 			if (test.call().kind == FunctionCall::Kind::Storage)
 			{
 				test.setFailure(false);
-				bytes result(1, !storageEmpty(m_contractAddress));
+				vector<bytes> result(1, bytes(1, !storageEmpty(m_contractAddress)));
 				test.setRawBytes(result);
-				soltestAssert(test.call().expectations.rawBytes().size() == 1, "");
+				soltestAssert(test.call().expectations.rawBytes().size() == 1 && test.call().expectations.rawBytes()[0].size() == 1, "");
 				if (test.call().expectations.rawBytes() != result)
 					success = false;
 			}
@@ -191,13 +191,18 @@ TestCase::TestResult SemanticTest::runTest(ostream& _stream, string const& _line
 					success = false;
 
 				test.setFailure(!m_transactionSuccessful);
-				test.setRawBytes(bytes());
+				test.setRawBytes(vector<bytes>());
 			}
 			else
 			{
-				bytes output;
+				vector<bytes> output;
 				if (test.call().kind == FunctionCall::Kind::LowLevel)
-					output = callLowLevel(test.call().arguments.rawBytes(), test.call().value.value);
+				{
+					bytes raw;
+					for (auto arg : test.call().arguments.rawBytes())
+						raw += arg;
+					output = callLowLevel(raw, test.call().value.value);
+				}
 				else
 				{
 					soltestAssert(
@@ -369,8 +374,8 @@ void SemanticTest::parseExpectations(istream& _stream)
 	std::move(functionCalls.begin(), functionCalls.end(), back_inserter(m_tests));
 }
 
-bool SemanticTest::deploy(string const& _contractName, u256 const& _value, bytes const& _arguments, map<string, solidity::test::Address> const& _libraries)
+bool SemanticTest::deploy(string const& _contractName, u256 const& _value, vector<bytes> const& _arguments, map<string, solidity::test::Address> const& _libraries)
 {
-	auto output = compileAndRunWithoutCheck(m_sources.sources, _value, _contractName, _arguments, _libraries);
-	return !output.empty() && m_transactionSuccessful;
+	auto output = compileAndRunWithoutCheck(m_sources.sources, _value, _contractName, false, _arguments, _libraries);
+	return !output.empty() && m_status == 0;
 }

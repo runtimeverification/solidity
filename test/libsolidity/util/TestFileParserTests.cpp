@@ -54,8 +54,8 @@ void testFunctionCall(
 		FunctionCall::DisplayMode _mode,
 		string _signature = "",
 		bool _failure = true,
-		bytes _arguments = bytes{},
-		bytes _expectations = bytes{},
+		vector<bytes> _arguments = vector<bytes>{},
+		vector<bytes> _expectations = vector<bytes>{},
 		FunctionValue _value = { 0 },
 		string _argumentComment = "",
 		string _expectationComment = "",
@@ -188,7 +188,7 @@ BOOST_AUTO_TEST_CASE(simple_single_line_call_comment_success)
 		"",
 		" f(uint256) does not return a value. "
 	);
-	testFunctionCall(calls.at(1), Mode::SingleLine, "f(uint256)", false, fmt::encode(1), fmt::encode(1));
+	testFunctionCall(calls.at(1), Mode::SingleLine, "f(uint256)", false, fmt::encodeArgs(1), fmt::encodeArgs(1));
 }
 
 BOOST_AUTO_TEST_CASE(multiple_single_line)
@@ -242,7 +242,7 @@ BOOST_AUTO_TEST_CASE(call_revert_message)
 		"f()",
 		true,
 		fmt::encodeArgs(),
-		fromHex("08c379a0") + fmt::encodeDyn(string{"Revert"})
+		fmt::encodeArgs(fromHex("08c379a0"), fmt::encodeDyn(string{"Revert"}))
 	);
 }
 
@@ -413,8 +413,8 @@ BOOST_AUTO_TEST_CASE(call_arguments_hex_string)
 		Mode::SingleLine,
 		"f(bytes)",
 		false,
-		fromHex("4200ef"),
-		fromHex("ab0023")
+		fmt::encodeArgs(fromHex("4200ef")),
+		fmt::encodeArgs(fromHex("ab0023"))
 	);
 }
 
@@ -430,8 +430,8 @@ BOOST_AUTO_TEST_CASE(call_arguments_hex_string_lowercase)
 		Mode::SingleLine,
 		"f(bytes)",
 		false,
-		fromHex("4200EF"),
-		fromHex("23EF00")
+		fmt::encodeArgs(fromHex("4200EF")),
+		fmt::encodeArgs(fromHex("23EF00"))
 	);
 }
 
@@ -447,7 +447,7 @@ BOOST_AUTO_TEST_CASE(call_arguments_string)
 		Mode::SingleLine,
 		"f(string)",
 		false,
-		fmt::encodeDyn(string{"any"})
+		fmt::encodeArgs(fmt::encodeDyn(string{"any"}))
 	);
 }
 
@@ -485,7 +485,7 @@ BOOST_AUTO_TEST_CASE(call_return_string)
 		"f()",
 		false,
 		fmt::encodeArgs(),
-		fmt::encodeDyn(string{"any"})
+		fmt::encodeArgs(fmt::encodeDyn(string{"any"}))
 	);
 }
 

@@ -195,11 +195,11 @@ struct FunctionCallExpectations
 	std::string comment;
 	/// ABI encoded `bytes` of parsed expected return values. It is checked
 	/// against the actual result of a function call when used in test framework.
-	bytes rawBytes() const
+	std::vector<bytes> rawBytes() const
 	{
-		bytes raw;
+		std::vector<bytes> raw;
 		for (auto const& param: result)
-			raw += param.rawBytes;
+			raw.push_back(param.rawBytes);
 		return raw;
 	}
 };
@@ -221,11 +221,11 @@ struct FunctionCallArgs
 	std::string comment;
 	/// ABI encoded `bytes` of parsed parameters. These `bytes`
 	/// passed to the function call.
-	bytes rawBytes() const
+	std::vector<bytes> rawBytes() const
 	{
-		bytes raw;
+		std::vector<bytes> raw;
 		for (auto const& param: parameters)
-			raw += param.rawBytes;
+			raw.push_back(param.rawBytes);
 		return raw;
 	}
 };

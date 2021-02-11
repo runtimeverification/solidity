@@ -55,30 +55,17 @@ BOOST_AUTO_TEST_CASE(value_types)
 			event E(uint a, uint16 b, uint24 c, int24 d, bytes3 x, bool, C);
 			function f() public {
 				bytes6 x = hex"1bababababa2";
-<<<<<<< ours
 				bool b = true;
 				C c = C(-5);
-				E(10, uint16(uint256(-2)), uint24(0x12121212), int24(int256(-1)), bytes3(x), b, c);
-=======
-				bool b;
-				assembly { b := 7 }
-				C c;
-				assembly { c := sub(0, 5) }
-				emit E(10, uint16(type(uint).max - 1), uint24(uint(0x12121212)), int24(int256(-1)), bytes3(x), b, c);
->>>>>>> theirs
+				emit E(10, uint16(type(uint256).max - 1), uint24(uint(0x12121212)), int24(int256(-1)), bytes3(x), b, c);
 			}
 		}
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-<<<<<<< ours
 		REQUIRE_LOG_DATA(encodeLogs(
-			bigint(10), int16_t(65534), fromHex("121212"), fromHex("ffffff"), string("\x1b\xab\xab"), true, u160(u256(-5))
-=======
-		REQUIRE_LOG_DATA(encodeArgs(
-			10, u256(65534), u256(0x121212), u256(-1), string("\x1b\xab\xab"), true, h160("fffffffffffffffffffffffffffffffffffffffb")
->>>>>>> theirs
+			bigint(10), int16_t(65534), fromHex("121212"), fromHex("ffffff"), string("\x1b\xab\xab"), true, u160(h160("fffffffffffffffffffffffffffffffffffffffb"))
 		));
 	)
 }
@@ -116,15 +103,9 @@ BOOST_AUTO_TEST_CASE(enum_type_cleanup)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-<<<<<<< ours
 		BOOST_CHECK(callContractFunction("f(uint)", 0) == encodeArgs(0));
 		BOOST_CHECK(callContractFunction("f(uint)", 1) == encodeArgs(1));
-		BOOST_CHECK(callContractFunction("f(uint)", 2) == encodeArgs());
-=======
-		BOOST_CHECK(callContractFunction("f(uint256)", 0) == encodeArgs(0));
-		BOOST_CHECK(callContractFunction("f(uint256)", 1) == encodeArgs(1));
-		BOOST_CHECK(callContractFunction("f(uint256)", 2) == panicData(PanicCode::EnumConversionError));
->>>>>>> theirs
+		BOOST_CHECK(callContractFunction("f(uint)", 2) == panicData(PanicCode::EnumConversionError));
 	)
 }
 
@@ -134,21 +115,16 @@ BOOST_AUTO_TEST_CASE(conversion)
 		contract C {
 			event E(bytes4, bytes4, uint16, uint8, int16, int8);
 			function f() public {
-                                bytes4 x0 = 0xf1f2f3f4;
+                bytes4 x0 = 0xf1f2f3f4;
 				bytes2 x = bytes2(x0);
 				uint8 a;
 				uint16 b = 0x1ff;
 				int8 c;
 				int16 d;
-<<<<<<< ours
-                                a = uint8(0 - 1);
-                                c = int8(0x0101ff);
-                                d = int16(0xff01);
-				E(10, x, a, uint8(b), c, int8(d));
-=======
-				assembly { a := sub(0, 1) c := 0x0101ff d := 0xff01 }
+                a = uint8(0 - 1);
+                c = int8(0x0101ff);
+                d = int16(0xff01);
 				emit E(bytes4(uint32(10)), x, a, uint8(b), c, int8(d));
->>>>>>> theirs
 			}
 		}
 	)";
@@ -177,30 +153,19 @@ BOOST_AUTO_TEST_CASE(memory_array_one_dim)
 		}
 	)";
 
-<<<<<<< ours
-	compileAndRun(sourceCode);
-	callContractFunction("f()");
-	// The old encoder does not clean array elements.
-	REQUIRE_LOG_DATA(encodeLogs(bigint(10), 1, 3, int16_t(-2), int16_t(-1), int16_t(0), bigint(11)));
-
-	compileAndRun(NewEncoderPragma + sourceCode);
-	callContractFunction("f()");
-	REQUIRE_LOG_DATA(encodeLogs(bigint(10), 1, 3, int16_t(-2), int16_t(-1), int16_t(0), bigint(11)));
-=======
 	if (solidity::test::CommonOptions::get().useABIEncoderV1)
 	{
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
 		// The old encoder does not clean array elements.
-		REQUIRE_LOG_DATA(encodeArgs(10, 0x60, 11, 3, u256("0xfffffffe"), u256("0xffffffff"), u256("0x100000000")));
+		REQUIRE_LOG_DATA(encodeLogs(bigint(10), 1, 3, int16_t(-2), int16_t(-1), int16_t(0), bigint(11)));
 	}
 
 	NEW_ENCODER(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-		REQUIRE_LOG_DATA(encodeArgs(10, 0x60, 11, 3, u256(-2), u256(-1), u256(0)));
+		REQUIRE_LOG_DATA(encodeLogs(bigint(10), 1, 3, int16_t(-2), int16_t(-1), int16_t(0), bigint(11)));
 	)
->>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE(memory_array_two_dim)
@@ -284,34 +249,21 @@ BOOST_AUTO_TEST_CASE(storage_array)
 			address[3] addr;
 			event E(address[3] a);
 			function f() public {
-<<<<<<< ours
 				addr[0] = address(-1);
 				addr[1] = address(-2);
 				addr[2] = address(-3);
-				E(addr);
-=======
-				assembly {
-					sstore(0, sub(0, 1))
-					sstore(1, sub(0, 2))
-					sstore(2, sub(0, 3))
-				}
 				emit E(addr);
->>>>>>> theirs
 			}
 		}
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-<<<<<<< ours
-		REQUIRE_LOG_DATA(encodeLogs(u160(-1), u160(-2), u160(-3)));
-=======
-		REQUIRE_LOG_DATA(encodeArgs(
-			h160("ffffffffffffffffffffffffffffffffffffffff"),
-			h160("fffffffffffffffffffffffffffffffffffffffe"),
-			h160("fffffffffffffffffffffffffffffffffffffffd")
+		REQUIRE_LOG_DATA(encodeLogs(
+			u160(h160("ffffffffffffffffffffffffffffffffffffffff")),
+			u160(h160("fffffffffffffffffffffffffffffffffffffffe")),
+			u160(h160("fffffffffffffffffffffffffffffffffffffffd"))
 		));
->>>>>>> theirs
 	)
 }
 
@@ -332,17 +284,13 @@ BOOST_AUTO_TEST_CASE(storage_array_dyn)
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
 		callContractFunction("f()");
-<<<<<<< ours
-		REQUIRE_LOG_DATA(encodeLogs(1, 3, u160(1), u160(2), u160(3)));
-=======
-		REQUIRE_LOG_DATA(encodeArgs(
-			0x20,
+		REQUIRE_LOG_DATA(encodeLogs(
+			1,
 			3,
-			h160("0000000000000000000000000000000000000001"),
-			h160("0000000000000000000000000000000000000002"),
-			h160("0000000000000000000000000000000000000003")
+			u1660(h160("0000000000000000000000000000000000000001")),
+			u1660(h160("0000000000000000000000000000000000000002")),
+			u1660(h160("0000000000000000000000000000000000000003"))
 		));
->>>>>>> theirs
 	)
 }
 
@@ -388,14 +336,8 @@ BOOST_AUTO_TEST_CASE(external_function)
 	)";
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-<<<<<<< ours
 		callContractFunction("f(uint)", u256(0));
 		REQUIRE_LOG_DATA(encodeLogs(m_contractAddress, int16_t(1), m_contractAddress, int16_t(1)));
-=======
-		callContractFunction("f(uint256)", u256(0));
-		string functionIdF = asString(m_contractAddress.ref()) + asString(FixedHash<4>(keccak256("f(uint256)")).ref());
-		REQUIRE_LOG_DATA(encodeArgs(functionIdF, functionIdF));
->>>>>>> theirs
 	)
 }
 
@@ -436,18 +378,11 @@ BOOST_AUTO_TEST_CASE(calldata)
 	string t("abcdefgggggggggggggggggggggggggggggggggggggggghhheeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeggg");
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode);
-<<<<<<< ours
 		callContractFunction("f(bytes)", encodeArgs(encodeDyn(s)));
 		// The old encoder did not pad to multiples of 32 bytes
 		REQUIRE_LOG_DATA(encodeLogs(uint64_t(s.size()), s));
 		callContractFunction("f(bytes)", encodeArgs(encodeDyn(t)));
 		REQUIRE_LOG_DATA(encodeLogs(uint64_t(t.size()), t));
-=======
-		callContractFunction("f(bytes)", 0x20, s.size(), s);
-		REQUIRE_LOG_DATA(encodeArgs(0x20, s.size(), s));
-		callContractFunction("f(bytes)", 0x20, t.size(), t);
-		REQUIRE_LOG_DATA(encodeArgs(0x20, t.size(), t));
->>>>>>> theirs
 	)
 }
 
@@ -506,7 +441,6 @@ BOOST_AUTO_TEST_CASE(structs)
 
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
-<<<<<<< ours
 		std::vector<bytes> encoded = encodeArgs(
 			u256(7), encodeRefArgs(
 			int16_t(8), int16_t(9), 1, 3, uint64_t(11), uint64_t(0), uint64_t(12), uint64_t(0), uint64_t(0), uint64_t(13), byte(10)
@@ -514,42 +448,7 @@ BOOST_AUTO_TEST_CASE(structs)
 		bytes flattened = encodeLogs(int16_t(7), int16_t(8), int16_t(9), 1, 3, uint64_t(11), uint64_t(0), uint64_t(12), uint64_t(0), uint64_t(0), uint64_t(13), int16_t(10));
 		ABI_CHECK(callContractFunction("f()"), encoded);
 		REQUIRE_LOG_DATA(flattened);
-	)
-}
-
-BOOST_AUTO_TEST_CASE(empty_struct)
-{
-	string sourceCode = R"(
-		contract C {
-			struct S { }
-			S s;
-			event e(uint16, S, uint16);
-			function f() returns (uint, S, uint) {
-				e(7, s, 8);
-				return (7, s, 8);
-			}
-		}
-	)";
-
-	NEW_ENCODER(
-		compileAndRun(sourceCode, 0, "C");
-		std::vector<bytes> encoded = encodeArgs(7, 0, 8);
-                bytes flattened = encodeLogs(int16_t(7), int16_t(8));
-		BOOST_CHECK(callContractFunction("f()") == encoded);
-		REQUIRE_LOG_DATA(flattened);
-=======
-		bytes encoded = encodeArgs(
-			u256(7), 0x40,
-			8, 9, 0x80, 10,
-			3,
-			11, 0,
-			12, 0,
-			0, 13
-		);
-		BOOST_CHECK(callContractFunction("f()") == encoded);
-		REQUIRE_LOG_DATA(encoded);
 		BOOST_CHECK_EQUAL(logTopic(0, 0), keccak256(string("e(uint16,(uint16,uint16,(uint64[2])[],uint16))")));
->>>>>>> theirs
 	)
 }
 
@@ -584,12 +483,7 @@ BOOST_AUTO_TEST_CASE(structs2)
 			7, encodeRefArgs(
 			// S[2] s1
 			// S s1[0]
-<<<<<<< ours
 			u160(m_contractAddress),
-=======
-			m_contractAddress,
-			0x40,
->>>>>>> theirs
 			// T s1[0].t
 			1, 1, // length
 			// s1[0].t[0]

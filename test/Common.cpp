@@ -61,6 +61,14 @@ boost::filesystem::path testPath()
 	return {};
 }
 
+boost::filesystem::path ipcPath()
+{
+	if (auto path = getenv("ETH_TEST_IPC"))
+		return path;
+
+	return {};
+}
+
 std::string envOrDefaultPath(std::string const& env_name, std::string const& lib_name)
 {
 	if (auto path = getenv(env_name.c_str()))
@@ -97,9 +105,11 @@ CommonOptions::CommonOptions(std::string _caption):
 {
 	options.add_options()
 		("evm-version", po::value(&evmVersionString), "which evm version to use")
+		("ipcpath", po::value<fs::path>(&this->ipcPath)->default_value(solidity::test::ipcPath()), "path to IPC file")
 		("testpath", po::value<fs::path>(&this->testPath)->default_value(solidity::test::testPath()), "path to test files")
 		("vm", po::value<std::vector<fs::path>>(&vmPaths), "path to evmc library, can be supplied multiple times.")
 		("ewasm", po::bool_switch(&ewasm), "tries to automatically find an ewasm vm and enable ewasm test-execution.")
+		("no-ipc", po::bool_switch(&disableIPC), "disable IPC tests")
 		("no-smt", po::bool_switch(&disableSMT), "disable SMT checker")
 		("optimize", po::bool_switch(&optimize), "enables optimization")
 		("enforce-via-yul", po::bool_switch(&enforceViaYul), "Enforce compiling all tests via yul to see if additional tests can be activated.")
@@ -121,6 +131,18 @@ void CommonOptions::validate() const
 		"Invalid test path specified."
 	);
 
+	if (!disableIPC) {
+		assertThrow(
+			!ipcPath.empty(),
+			ConfigException,
+			"No IPC path specified. The --ipcpath argument is required, unless --no-ipc is used.."
+		);
+		assertThrow(
+			fs::exists(ipcPath),
+			ConfigException,
+			"Invalid IPC path specified."
+		);
+	}
 }
 
 bool CommonOptions::parse(int argc, char const* const* argv)

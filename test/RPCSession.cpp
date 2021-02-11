@@ -21,13 +21,11 @@
 
 #include <test/RPCSession.h>
 
-#include <test/Options.h>
+#include <test/Common.h>
 
-#include <libsolidity/interface/EVMVersion.h>
+#include <libsolutil/CommonData.h>
 
-#include <libdevcore/CommonData.h>
-
-#include <libdevcore/JSON.h>
+#include <libsolutil/JSON.h>
 
 #include <test/ExecutionFramework.h>
 
@@ -37,7 +35,9 @@
 #include <chrono>
 
 using namespace std;
-using namespace dev;
+using namespace solidity;
+using namespace solidity::util;
+using namespace solidity::test;
 
 IPCSocket::IPCSocket(string const& _path): m_path(_path)
 {
@@ -244,13 +244,13 @@ bool RPCSession::miner_setEtherbase(string const& _address)
 
 void RPCSession::test_setBalance(vector<string> _accounts, string _balance) {
 	string forks;
-	if (test::Options::get().evmVersion() >= solidity::EVMVersion::tangerineWhistle())
+	if (test::CommonOptions::get().evmVersion() >= langutil::EVMVersion::tangerineWhistle())
 		forks += "\"EIP150ForkBlock\": \"0x00\",\n";
-	if (test::Options::get().evmVersion() >= solidity::EVMVersion::spuriousDragon())
+	if (test::CommonOptions::get().evmVersion() >= langutil::EVMVersion::spuriousDragon())
 		forks += "\"EIP158ForkBlock\": \"0x00\",\n";
-	if (test::Options::get().evmVersion() >= solidity::EVMVersion::byzantium())
+	if (test::CommonOptions::get().evmVersion() >= langutil::EVMVersion::byzantium())
 		forks += "\"byzantiumForkBlock\": \"0x00\",\n";
-	if (test::Options::get().evmVersion() >= solidity::EVMVersion::constantinople())
+	if (test::CommonOptions::get().evmVersion() >= langutil::EVMVersion::constantinople())
 		forks += "\"constantinopleForkBlock\": \"0x00\",\n";
 	static string const c_configString = R"(
 	{

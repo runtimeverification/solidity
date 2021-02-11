@@ -39,97 +39,53 @@ class SolidityExecutionFramework: public solidity::test::ExecutionFramework
 {
 
 public:
-	SolidityExecutionFramework(): m_showMetadata(solidity::test::CommonOptions::get().showMetadata) {}
+	SolidityExecutionFramework(): m_showMetadata(solidity::test::CommonOptions::get().showMetadata), empty() {}
 	explicit SolidityExecutionFramework(langutil::EVMVersion _evmVersion, std::vector<boost::filesystem::path> const& _vmPaths):
-		ExecutionFramework(_evmVersion, _vmPaths), m_showMetadata(solidity::test::CommonOptions::get().showMetadata)
+		ExecutionFramework(_evmVersion, _vmPaths), m_showMetadata(solidity::test::CommonOptions::get().showMetadata), empty()
 	{}
 
 	bytes const& compileAndRunWithoutCheck(
 		std::map<std::string, std::string> const& _sourceCode,
 		u256 const& _value = 0,
 		std::string const& _contractName = "",
-<<<<<<< ours
 		bool compileFail = false,
-		std::vector<bytes> const& _arguments = std::vector<bytes>(),
-		std::map<std::string, dev::test::Address> const& _libraryAddresses = std::map<std::string, dev::test::Address>()
-	) override
-	{
-		bytes const& bytecode = compileContract(_sourceCode, _contractName, _libraryAddresses, compileFail);
-		sendMessage(_arguments, "", bytecode, true, _value);
-		m_output.clear();
-                m_output.push_back(bytecode);
-		return m_output[0];
-=======
-		bytes const& _arguments = {},
+		std::vector<bytes> const& _arguments = {},
 		std::map<std::string, solidity::test::Address> const& _libraryAddresses = {}
 	) override
 	{
-		bytes bytecode = multiSourceCompileContract(_sourceCode, _contractName, _libraryAddresses);
-		sendMessage(bytecode + _arguments, true, _value);
-		return m_output;
->>>>>>> theirs
+		bytes const& bytecode = multiSourceCompileContract(_sourceCode, _contractName, _libraryAddresses, compileFail);
+		sendMessage(_arguments, "", bytecode, true, _value);
+		m_output.clear();
+        m_output.push_back(bytecode);
+		return m_output[0];
 	}
 
 	bytes compileContract(
 		std::string const& _sourceCode,
 		std::string const& _contractName = "",
-<<<<<<< ours
-		std::map<std::string, dev::test::Address> const& _libraryAddresses = std::map<std::string, dev::test::Address>(),
+		std::map<std::string, solidity::test::Address> const& _libraryAddresses = {},
 		bool compileFail = false
-	)
-	{
-		// Silence compiler version warning
-		std::string sourceCode = "pragma solidity >=0.0;\n" + _sourceCode;
-		m_compiler.reset(false);
-		m_compiler.addSource("", sourceCode);
-		m_compiler.setLibraries(_libraryAddresses);
-		m_compiler.setEVMVersion(m_evmVersion);
-		m_compiler.setOptimiserSettings(m_optimize, m_optimizeRuns);
-		if (m_compiler.compile() == compileFail)
-		{
-			auto scannerFromSourceName = [&](std::string const& _sourceName) -> solidity::Scanner const& { return m_compiler.scanner(_sourceName); };
-			SourceReferenceFormatter formatter(std::cerr, scannerFromSourceName);
-
-			for (auto const& error: m_compiler.errors())
-				formatter.printExceptionInformation(
-					*error,
-					(error->type() == Error::Type::Warning) ? "Warning" : "Error"
-				);
-			BOOST_ERROR("Compiling contract failed");
-		}
-		eth::LinkerObject obj = m_compiler.object(_contractName.empty() ? m_compiler.lastContractName() : _contractName);
-		BOOST_REQUIRE(obj.linkReferences.empty());
-		BOOST_TEST_MESSAGE(obj.bytecode.size());
-		return obj.bytecode;
-	}
-=======
-		std::map<std::string, solidity::test::Address> const& _libraryAddresses = {}
 	);
->>>>>>> theirs
 
 	bytes multiSourceCompileContract(
 		std::map<std::string, std::string> const& _sources,
 		std::string const& _contractName = "",
-		std::map<std::string, solidity::test::Address> const& _libraryAddresses = {}
+		std::map<std::string, solidity::test::Address> const& _libraryAddresses = {},
+		bool compileFail = false
 	);
 
 	/// Returns @param _sourceCode prefixed with the version pragma and the abi coder v1 pragma,
 	/// the latter only if it is forced.
 	static std::string addPreamble(std::string const& _sourceCode);
 protected:
-<<<<<<< ours
-	dev::solidity::CompilerStack m_compiler;
-
-private:
-        bytes empty;
-=======
-
 	solidity::frontend::CompilerStack m_compiler;
 	bool m_compileViaYul = false;
 	bool m_compileToEwasm = false;
 	bool m_showMetadata = false;
 	RevertStrings m_revertStrings = RevertStrings::Default;
->>>>>>> theirs
+
+private:
+    bytes empty;
 };
 
 } // end namespaces

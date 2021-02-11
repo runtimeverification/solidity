@@ -102,7 +102,7 @@ public:
 	/// Returns a string representation of given _bytes in ranges of 32 bytes.
 	/// If _withSignature is true, the first 4 bytes will be formatted separately.
 	static std::string formatRawBytes(
-		bytes const& _bytes,
+		std::vector<bytes> const& _bytes,
 		ParameterList const& _parameters,
 		std::string _linePrefix = ""
 	);
@@ -115,7 +115,7 @@ public:
 	/// and prints the expected result otherwise.
 	/// Highlights parameter only if it does not match.
 	static std::string formatBytesRange(
-		bytes _bytes,
+		std::vector<bytes> _bytes,
 		ParameterList const& _parameters,
 		bool _highlight
 	);

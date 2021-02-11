@@ -34,17 +34,12 @@ using namespace solidity::frontend;
 using namespace solidity::frontend::test;
 using namespace std;
 
-<<<<<<< ours
-SolidityExecutionFramework::SolidityExecutionFramework() :
-	ExecutionFramework(),
-        empty()
-=======
 bytes SolidityExecutionFramework::multiSourceCompileContract(
 	map<string, string> const& _sourceCode,
 	string const& _contractName,
-	map<string, Address> const& _libraryAddresses
+	map<string, Address> const& _libraryAddresses,
+	bool compileFail
 )
->>>>>>> theirs
 {
 	map<string, string> sourcesWithPreamble = _sourceCode;
 	for (auto& entry: sourcesWithPreamble)
@@ -60,7 +55,7 @@ bytes SolidityExecutionFramework::multiSourceCompileContract(
 	m_compiler.enableEvmBytecodeGeneration(!m_compileViaYul);
 	m_compiler.enableIRGeneration(m_compileViaYul);
 	m_compiler.setRevertStringBehaviour(m_revertStrings);
-	if (!m_compiler.compile())
+	if (m_compiler.compile() == compileFail)
 	{
 		// The testing framework expects an exception for
 		// "unimplemented" yul IR generation.
@@ -119,6 +114,7 @@ bytes SolidityExecutionFramework::multiSourceCompileContract(
 	else
 		obj = m_compiler.object(contractName);
 	BOOST_REQUIRE(obj.linkReferences.empty());
+	BOOST_TEST_MESSAGE(obj.bytecode.size());
 	if (m_showMetadata)
 		cout << "metadata: " << m_compiler.metadata(contractName) << endl;
 	return obj.bytecode;
@@ -127,13 +123,15 @@ bytes SolidityExecutionFramework::multiSourceCompileContract(
 bytes SolidityExecutionFramework::compileContract(
 	string const& _sourceCode,
 	string const& _contractName,
-	map<string, Address> const& _libraryAddresses
+	map<string, Address> const& _libraryAddresses,
+	bool compileFail
 )
 {
 	return multiSourceCompileContract(
 		{{"", _sourceCode}},
 		_contractName,
-		_libraryAddresses
+		_libraryAddresses,
+		compileFail
 	);
 }
 

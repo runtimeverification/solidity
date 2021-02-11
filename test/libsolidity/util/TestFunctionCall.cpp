@@ -63,9 +63,9 @@ string TestFunctionCall::format(
 		else if (m_call.kind == FunctionCall::Kind::Storage)
 		{
 			stream << _linePrefix << newline << ws << "storage" << colon << ws;
-			soltestAssert(m_rawBytes.size() == 1, "");
-			soltestAssert(m_call.expectations.rawBytes().size() == 1, "");
-			bool isEmpty = _renderResult ? m_rawBytes.front() == 0 : m_call.expectations.rawBytes().front() == 0;
+			soltestAssert(m_rawBytes.size() == 1 && m_rawBytes[0].size() == 1, "");
+			soltestAssert(m_call.expectations.rawBytes().size() == 1 && m_call.expectations.rawBytes()[0].size() == 1, "");
+			bool isEmpty = _renderResult ? m_rawBytes[0].front() == 0 : m_call.expectations.rawBytes()[0].front() == 0;
 			string output = isEmpty ? "empty" : "nonempty";
 			if (_renderResult && !matchesExpectation())
 				AnsiColorized(stream, highlight, {util::formatting::RED_BACKGROUND}) << output;
@@ -138,7 +138,7 @@ string TestFunctionCall::format(
 			if (m_calledNonExistingFunction)
 				_errorReporter.warning("The function \"" + m_call.signature + "\" is not known to the compiler.");
 
-			bytes output = m_rawBytes;
+			vector<bytes> output = m_rawBytes;
 			bool const isFailure = m_failure;
 			result = isFailure ?
 				formatFailure(_errorReporter, m_call, output, _renderResult, highlight) :
@@ -212,7 +212,7 @@ string TestFunctionCall::format(
 
 string TestFunctionCall::formatBytesParameters(
 	ErrorReporter& _errorReporter,
-	bytes const& _bytes,
+	vector<bytes> const& _bytes,
 	string const& _signature,
 	solidity::frontend::test::ParameterList const& _parameters,
 	bool _highlight,
@@ -273,7 +273,7 @@ string TestFunctionCall::formatBytesParameters(
 string TestFunctionCall::formatFailure(
 	ErrorReporter& _errorReporter,
 	solidity::frontend::test::FunctionCall const& _call,
-	bytes const& _output,
+	vector<bytes> const& _output,
 	bool _renderResult,
 	bool _highlight
 ) const
@@ -321,7 +321,7 @@ string TestFunctionCall::formatRawParameters(
 
 void TestFunctionCall::reset()
 {
-	m_rawBytes = bytes{};
+	m_rawBytes = vector<bytes>{};
 	m_failure = true;
 	m_calledNonExistingFunction = false;
 }
