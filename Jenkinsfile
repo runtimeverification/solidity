@@ -42,6 +42,7 @@ pipeline {
             -k build/log.xml \
             -l all \
             -f XML  \
+            `cat test/failing-exec-tests` \
             -- \
             --ipcpath build/ipcfile \
             --testpath test
