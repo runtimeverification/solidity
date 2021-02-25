@@ -59,4 +59,11 @@ pipeline {
       }
     }
   }
+  post {
+    always {
+      archiveArtifacts artifacts: 'build/log.xml'
+      archiveArtifacts artifacts: 'build/report.xml'
+      archiveArtifacts artifacts: 'build/coverage.xml'
+    }
+  }
 }
