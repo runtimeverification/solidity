@@ -8,13 +8,13 @@ contract A {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// (): hex"d88e0b"
+// deposit():
 // x() -> 2
-// (): hex"d88e0b00"
+// fow(): hex"d88e0b00"
 // x() -> 3
-// (): hex"d88e"
+// deposit():
 // x() -> 2
-// (): hex"d88e0b00"
+// fow():
 // x() -> 3
-// (): hex"d8"
+// deposit(): hex"d8"
 // x() -> 2

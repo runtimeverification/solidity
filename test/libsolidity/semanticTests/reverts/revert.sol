@@ -5,13 +5,6 @@ contract C {
         a = 1;
         revert();
     }
-
-    function g() public {
-        a = 1;
-        assembly {
-            revert(0, 0)
-        }
-    }
 }
 
 // ====
@@ -19,6 +12,4 @@ contract C {
 // compileToEwasm: also
 // ----
 // f() -> FAILURE
-// a() -> 42
-// g() -> FAILURE
 // a() -> 42

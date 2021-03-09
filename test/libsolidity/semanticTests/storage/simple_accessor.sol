@@ -1,5 +1,5 @@
 contract test {
-    uint256 public data;
+    uint public data;
     constructor() {
         data = 8;
     }

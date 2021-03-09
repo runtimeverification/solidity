@@ -1,8 +1,8 @@
 // this test just checks that the copy loop does not mess up the stack
 contract C {
-    function save() public returns (uint256 r) {
+    function save(bytes data) public returns (uint r) {
         r = 23;
-        savedData = msg.data;
+        savedData = data;
         r = 24;
     }
 
@@ -11,5 +11,5 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// save() -> 24 # empty copy loop #
-// save(): "abcdefg" -> 24
+// save(bytes): 0 -> 24 # empty copy loop #
+// save(bytes): "abcdefg" -> 24

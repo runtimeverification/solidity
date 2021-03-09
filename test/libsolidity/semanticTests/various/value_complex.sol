@@ -12,7 +12,7 @@ contract test {
         h = new helper();
     }
 
-    function sendAmount(uint256 amount) public payable returns (uint256 bal) {
+    function sendAmount(uint amount) public payable returns (uint bal) {
         uint256 someStackElement = 20;
         return h.getBalance{value: amount + 3, gas: 1000}();
     }
@@ -22,4 +22,4 @@ contract test {
 // compileViaYul: also
 // ----
 // constructor(), 20 wei ->
-// sendAmount(uint256): 5 -> 8
+// sendAmount(uint): 5 -> 8

@@ -14,4 +14,4 @@ contract Main {
 // ====
 // compileViaYul: also
 // ----
-// f(bytes,uint256,uint256,uint256): 0x80, 3, 4, 5, 78, "abcdefghijklmnopqrstuvwxyzabcdef", "ghijklmnopqrstuvwxyzabcdefghijkl", "mnopqrstuvwxyz" -> "d", "e", "f"
+// f(bytes,uint,uint,uint): 0x80, 3, 4, 5, 78, "abcdefghijklmnopqrstuvwxyzabcdef", "ghijklmnopqrstuvwxyzabcdefghijkl", "mnopqrstuvwxyz" -> "d", "e", "f"

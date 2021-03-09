@@ -1,25 +1,25 @@
 contract Base {
-    uint256 data;
+    uint data;
 
-    function setData(uint256 i) public {
+    function setData(uint i) public {
         data = i;
     }
 
-    function getViaBase() public returns (uint256 i) {
+    function getViaBase() public returns (uint i) {
         return data;
     }
 }
 
 
 contract A is Base {
-    function setViaA(uint256 i) public {
+    function setViaA(uint i) public {
         setData(i);
     }
 }
 
 
 contract B is Base {
-    function getViaB() public returns (uint256 i) {
+    function getViaB() public returns (uint i) {
         return getViaBase();
     }
 }
@@ -32,5 +32,5 @@ contract Derived is Base, B, A {}
 // compileToEwasm: also
 // ----
 // getViaB() -> 0
-// setViaA(uint256): 23 ->
+// setViaA(uint): 23 ->
 // getViaB() -> 23

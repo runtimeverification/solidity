@@ -21,10 +21,10 @@ set(sources
 detect_stray_source_files("${sources}" ".")
 
 set(contracts_sources
-#    contracts/AuctionRegistrar.cpp
-#    contracts/ContractInterface.h
-#    contracts/FixedFeeRegistrar.cpp
-#    contracts/Wallet.cpp
+    contracts/AuctionRegistrar.cpp
+    contracts/ContractInterface.h
+    contracts/FixedFeeRegistrar.cpp
+    contracts/Wallet.cpp
 )
 #detect_stray_source_files("${contracts_sources}" "contracts/")
 

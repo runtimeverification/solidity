@@ -1,22 +1,22 @@
 contract Base {
-    uint256 dataBase;
+    uint dataBase;
 
-    function getViaBase() public returns (uint256 i) {
+    function getViaBase() public returns (uint i) {
         return dataBase;
     }
 }
 
 
 contract Derived is Base {
-    uint256 dataDerived;
+    uint dataDerived;
 
-    function setData(uint256 base, uint256 derived) public returns (bool r) {
+    function setData(uint base, uint derived) public returns (bool r) {
         dataBase = base;
         dataDerived = derived;
         return true;
     }
 
-    function getViaDerived() public returns (uint256 base, uint256 derived) {
+    function getViaDerived() public returns (uint base, uint derived) {
         base = dataBase;
         derived = dataDerived;
     }
@@ -26,6 +26,6 @@ contract Derived is Base {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// setData(uint256,uint256): 1, 2 -> true
+// setData(uint,uint): 1, 2 -> true
 // getViaBase() -> 1
 // getViaDerived() -> 1, 2

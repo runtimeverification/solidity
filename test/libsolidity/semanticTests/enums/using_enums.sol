@@ -5,8 +5,8 @@ contract test {
         choices = ActionChoices.GoStraight;
     }
 
-    function getChoice() public returns (uint256 d) {
-        d = uint256(choices);
+    function getChoice() public returns (uint d) {
+        d = uint(choices);
     }
 
     ActionChoices choices;

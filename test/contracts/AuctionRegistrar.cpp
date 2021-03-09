@@ -226,14 +226,8 @@ protected:
 			return compileContract(registrarCode, "GlobalRegistrar");
 		});
 
-<<<<<<< ours
-		sendMessage(std::vector<bytes>(), "", *s_compiledRegistrar, true);
+		sendMessage(std::vector<bytes>(), "", compiled, true);
 		BOOST_REQUIRE(m_status == 0);
-=======
-		sendMessage(compiled, true);
-		BOOST_REQUIRE(m_transactionSuccessful);
-		BOOST_REQUIRE(!m_output.empty());
->>>>>>> theirs
 	}
 
 	class RegistrarInterface: public ContractInterface
@@ -421,12 +415,8 @@ BOOST_AUTO_TEST_CASE(auction_simple)
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), h160());
 	// "wait" until auction end
-<<<<<<< ours
 	modifyTimestamp(currentTimestamp() + m_biddingTime + 10);
-=======
 
-	m_evmcHost->tx_context.block_timestamp += m_biddingTime + 10;
->>>>>>> theirs
 	// trigger auction again
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), m_sender);
@@ -438,11 +428,7 @@ BOOST_AUTO_TEST_CASE(auction_bidding)
 	string name = "x";
 
 	unsigned startTime = 0x776347e2;
-<<<<<<< ours
 	modifyTimestamp(startTime);
-=======
-	m_evmcHost->tx_context.block_timestamp = startTime;
->>>>>>> theirs
 
 	RegistrarInterface registrar(*this);
 	// initiate auction
@@ -450,70 +436,24 @@ BOOST_AUTO_TEST_CASE(auction_bidding)
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), h160());
 	// overbid self
-<<<<<<< ours
 	modifyTimestamp(startTime + m_biddingTime - 10);
-=======
-	m_evmcHost->tx_context.block_timestamp = startTime + m_biddingTime - 10;
->>>>>>> theirs
 	registrar.setNextValue(12);
 	registrar.reserve(name);
 	// another bid by someone else
 	sendEther(account(1), 10 * ether);
 	m_sender = account(1);
-<<<<<<< ours
 	modifyTimestamp(startTime + 2 * m_biddingTime - 50);
-=======
-	m_evmcHost->tx_context.block_timestamp = startTime + 2 * m_biddingTime - 50;
->>>>>>> theirs
 	registrar.setNextValue(13);
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), h160());
 	// end auction by first bidder (which is not highest) trying to overbid again (too late)
 	m_sender = account(0);
-<<<<<<< ours
 	modifyTimestamp(startTime + 4 * m_biddingTime);
-=======
-	m_evmcHost->tx_context.block_timestamp = startTime + 4 * m_biddingTime;
->>>>>>> theirs
 	registrar.setNextValue(20);
 	registrar.reserve(name);
 	BOOST_CHECK_EQUAL(registrar.owner(name), account(1));
 }
 
-<<<<<<< ours
-BOOST_AUTO_TEST_CASE(auction_renewal)
-{
-	deployRegistrar();
-
-	string name = "x";
-	RegistrarInterface registrar(*this);
-	size_t startTime = currentTimestamp();
-	// register name by auction
-	registrar.setNextValue(8);
-	registrar.reserve(name);
-	modifyTimestamp(startTime + 4 * m_biddingTime);
-	registrar.reserve(name);
-	BOOST_CHECK_EQUAL(registrar.owner(name), m_sender);
-
-	// try to re-register before interval end
-	sendEther(account(1), 10 * ether);
-	m_sender = account(1);
-	modifyTimestamp(currentTimestamp() + m_renewalInterval - 1);
-	registrar.setNextValue(80);
-	registrar.reserve(name);
-	modifyTimestamp(currentTimestamp() + m_biddingTime);
-	// if there is a bug in the renewal logic, this would transfer the ownership to account(1),
-	// but if there is no bug, this will initiate the auction, albeit with a zero bid
-	registrar.reserve(name);
-	BOOST_CHECK_EQUAL(registrar.owner(name), account(0));
-
-	registrar.setNextValue(80);
-	registrar.reserve(name);
-	BOOST_CHECK_EQUAL(registrar.owner(name), account(1));
-}
-
-=======
->>>>>>> theirs
 BOOST_AUTO_TEST_SUITE_END()
 
 } // end namespaces

@@ -10,7 +10,7 @@ contract test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(uint256): 1001 -> 1000
-// f(uint256): 500 -> 100
-// f(uint256): 80 -> 50
-// f(uint256): 40 -> 10
+// f(uint): 1001 -> 1000
+// f(uint): 500 -> 100
+// f(uint): 80 -> 50
+// f(uint): 40 -> 10

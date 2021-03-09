@@ -5,8 +5,4 @@ contract C {
     }
 }
 // ----
-<<<<<<< ours
-// TypeError: (94-101): Member "value" not found or not visible after argument-dependent lookup in function (uint) external returns (uint) - did you forget the "payable" modifier?
-=======
 // TypeError 7006: (94-105): Cannot set option "value" on a non-payable function type.
->>>>>>> theirs

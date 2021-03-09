@@ -118,23 +118,13 @@ BOOST_AUTO_TEST_CASE(storage_layout_mapping)
 
 BOOST_AUTO_TEST_CASE(storage_layout_arrays)
 {
-<<<<<<< ours
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(1), 32).storageSize() == 32);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(1), 33).storageSize() == 33);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(2), 31).storageSize() == 31);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(7), 8).storageSize() == 8);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(7), 9).storageSize() == 9);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(31), 9).storageSize() == 9);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, make_shared<FixedBytesType>(32), 9).storageSize() == 9);
-=======
-	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(1), 32).storageSize() == 1);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(1), 33).storageSize() == 2);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(2), 31).storageSize() == 2);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(7), 8).storageSize() == 2);
-	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(7), 9).storageSize() == 3);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(1), 32).storageSize() == 32);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(1), 33).storageSize() == 33);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(2), 31).storageSize() == 31);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(7), 8).storageSize() == 8);
+	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(7), 9).storageSize() == 9);
 	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(31), 9).storageSize() == 9);
 	BOOST_CHECK(ArrayType(DataLocation::Storage, TypeProvider::fixedBytes(32), 9).storageSize() == 9);
->>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE(type_identifier_escaping)

@@ -1,11 +1,11 @@
 contract c {
-    function f(uint256 a) public returns (uint256) {
+    function f(uint a) public returns (uint) {
         return a;
     }
 
-    function test(uint256 a, uint256 b)
+    function test(uint a, uint b)
         external
-        returns (uint256 r_a, uint256 r_b)
+        returns (uint r_a, uint r_b)
     {
         r_a = f(a + 7);
         r_b = b;
@@ -16,4 +16,4 @@ contract c {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// test(uint256,uint256): 2, 3 -> 9, 3
+// test(uint,uint): 2, 3 -> 9, 3

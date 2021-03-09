@@ -2,10 +2,7 @@ contract C {
     enum X {A, B}
 
     function test_eq() public returns (bool) {
-        X garbled;
-        assembly {
-            garbled := 5
-        }
+        X garbled = X(5);
         return garbled == garbled;
     }
 
@@ -15,10 +12,7 @@ contract C {
     }
 
     function test_neq() public returns (bool) {
-        X garbled;
-        assembly {
-            garbled := 5
-        }
+        X garbled = X(5);
         return garbled != garbled;
     }
 }

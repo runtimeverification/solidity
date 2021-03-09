@@ -6,11 +6,7 @@ contract C {
     }
 
     function test() public returns (uint256) {
-        X garbled;
-
-        assembly {
-            garbled := 5
-        }
+        X garbled = X(5);
 
         return this.tested(garbled);
     }

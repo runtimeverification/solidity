@@ -9,7 +9,7 @@ contract c {
         data1[1] = bytes8(uint64(2));
         data1[2] = bytes8(uint64(3));
         data1[3] = bytes8(uint64(4));
-        for (uint256 i = 0; i < data2.length; ++i)
+        for (uint i = 0; i < data2.length; ++i)
             data2[i] = bytes10(uint80(0xffff00 | (1 + i)));
         data2 = data1;
         r1 = data2[3];

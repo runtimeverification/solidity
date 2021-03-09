@@ -269,9 +269,6 @@ BOOST_AUTO_TEST_CASE(smoke_test)
 	BOOST_CHECK(containsAtMostWarnings(result));
 }
 
-<<<<<<< ours
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(basic_compilation, 2)
-=======
 BOOST_AUTO_TEST_CASE(error_recovery_field)
 {
 	auto input = R"(
@@ -374,7 +371,7 @@ BOOST_AUTO_TEST_CASE(optimizer_runs_not_an_unsigned_number)
 	BOOST_CHECK(containsError(result, "JSONError", "The \"runs\" setting must be an unsigned number."));
 }
 
->>>>>>> theirs
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(basic_compilation, 2)
 BOOST_AUTO_TEST_CASE(basic_compilation)
 {
 	char const* input = R"(
@@ -410,8 +407,7 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
 	BOOST_CHECK(contract["evm"]["bytecode"].isObject());
 	BOOST_CHECK(contract["evm"]["bytecode"]["object"].isString());
 	BOOST_CHECK_EQUAL(
-<<<<<<< ours
-		dev::test::bytecodeSansMetadata(contract["evm"]["bytecode"]["object"].asString()),
+		solidity::test::bytecodeSansMetadata(contract["evm"]["bytecode"]["object"].asString()),
 		"0000000d63006700000000660000f60000"
 	);
 	BOOST_CHECK(contract["evm"]["assembly"].isString());
@@ -424,25 +420,6 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
                 "}\n"
                 "\n"
                 "}\n"
-=======
-		solidity::test::bytecodeSansMetadata(contract["evm"]["bytecode"]["object"].asString()),
-		string("6080604052348015600f57600080fd5b5060") +
-		(VersionIsRelease ? "3f" : util::toHex(bytes{uint8_t(61 + VersionStringStrict.size())})) +
-		"80601d6000396000f3fe6080604052600080fdfe"
-	);
-	BOOST_CHECK(contract["evm"]["assembly"].isString());
-	BOOST_CHECK(contract["evm"]["assembly"].asString().find(
-		"    /* \"fileA\":0:14  contract A { } */\n  mstore(0x40, 0x80)\n  "
-		"callvalue\n  dup1\n  "
-		"iszero\n  tag_1\n  jumpi\n  "
-		"0x00\n  "
-		"dup1\n  revert\n"
-		"tag_1:\n  pop\n  dataSize(sub_0)\n  dup1\n  "
-		"dataOffset(sub_0)\n  0x00\n  codecopy\n  0x00\n  return\nstop\n\nsub_0: assembly {\n        "
-		"/* \"fileA\":0:14  contract A { } */\n      mstore(0x40, 0x80)\n      "
-		"0x00\n      "
-		"dup1\n      revert\n\n    auxdata: 0xa26469706673582212"
->>>>>>> theirs
 	) == 0);
 	BOOST_CHECK(contract["evm"]["gasEstimates"].isObject());
 	BOOST_CHECK_EQUAL(contract["evm"]["gasEstimates"].size(), 1);
@@ -772,13 +749,9 @@ BOOST_AUTO_TEST_CASE(library_filename_with_colon)
 	BOOST_CHECK(containsAtMostWarnings(result));
 	Json::Value contract = getContractResult(result, "fileA", "A");
 	BOOST_CHECK(contract.isObject());
-<<<<<<< ours
 	BOOST_CHECK(contract["evm"]["bytecode"].isObject());
 	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"].isObject());
 	BOOST_CHECK(!contract["evm"]["bytecode"]["linkReferences"]["git:library.sol"].isObject());
-=======
-	expectLinkReferences(contract, {{"git:library.sol", {"L"}}});
->>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE(libraries_invalid_top_level)
@@ -924,18 +897,13 @@ BOOST_AUTO_TEST_CASE(library_linking)
 	}
 	)";
 	Json::Value result = compile(input);
-<<<<<<< ours
-	BOOST_CHECK(containsAtMostWarnings(result));
-	Json::Value contract = getContractResult(result, "fileA", "A");
-	BOOST_CHECK(contract.isObject());
-	BOOST_CHECK(contract["evm"]["bytecode"].isObject());
-	BOOST_CHECK(contract["evm"]["bytecode"]["linkReferences"].isObject());
-	BOOST_CHECK(!contract["evm"]["bytecode"]["linkReferences"]["library.sol"].isObject());
-	BOOST_CHECK(!contract["evm"]["bytecode"]["linkReferences"]["library2.sol"].isObject());
-=======
 	BOOST_TEST(containsAtMostWarnings(result));
 	Json::Value contractResult = getContractResult(result, "fileA", "A");
-	expectLinkReferences(contractResult, {{"library2.sol", {"L2"}}});
+	BOOST_CHECK(contractResult.isObject());
+	BOOST_CHECK(contractResult["evm"]["bytecode"].isObject());
+	BOOST_CHECK(contractResult["evm"]["bytecode"]["linkReferences"].isObject());
+	BOOST_CHECK(!contractResult["evm"]["bytecode"]["linkReferences"]["library.sol"].isObject());
+	BOOST_CHECK(!contractResult["evm"]["bytecode"]["linkReferences"]["library2.sol"].isObject());
 }
 
 BOOST_AUTO_TEST_CASE(linking_yul)
@@ -1064,7 +1032,6 @@ BOOST_AUTO_TEST_CASE(linking_yul_same_library_name_different_files)
 	BOOST_TEST(containsAtMostWarnings(result));
 	Json::Value contractResult = getContractResult(result, "fileA", "a");
 	expectLinkReferences(contractResult, {{"fileC", {"L"}}});
->>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE(evm_version)

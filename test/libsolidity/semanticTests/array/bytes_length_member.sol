@@ -1,6 +1,6 @@
 contract c {
-    function set() public returns (bool) {
-        data = msg.data;
+    function set(bytes b) public returns (bool) {
+        data = b;
         return true;
     }
 
@@ -14,5 +14,5 @@ contract c {
 // compileViaYul: also
 // ----
 // getLength() -> 0
-// set(): 1, 2 -> true
-// getLength() -> 68
+// set(bytes): "12" -> true
+// getLength() -> 2

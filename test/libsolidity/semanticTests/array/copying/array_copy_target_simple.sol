@@ -6,7 +6,7 @@ contract c {
         public
         returns (bytes17 a, bytes17 b, bytes17 c, bytes17 d, bytes17 e)
     {
-        for (uint256 i = 0; i < data1.length; ++i) data1[i] = bytes8(uint64(i));
+        for (uint i = 0; i < data1.length; ++i) data1[i] = bytes8(uint64(i));
         data2[8] = data2[9] = bytes8(uint64(2));
         data2 = data1;
         a = data2[1];

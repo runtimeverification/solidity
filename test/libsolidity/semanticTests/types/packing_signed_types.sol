@@ -8,4 +8,4 @@ contract test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// run() -> 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffa
+// run() -> 0xfa

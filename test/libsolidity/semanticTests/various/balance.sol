@@ -1,7 +1,7 @@
 contract test {
     constructor() payable {}
 
-    function getBalance() public returns (uint256 balance) {
+    function getBalance() public returns (uint balance) {
         return address(this).balance;
     }
 }

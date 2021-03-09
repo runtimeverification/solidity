@@ -1,5 +1,5 @@
 contract test {
-    uint256 public data;
+    uint public data;
     bytes6 public name;
     bytes32 public a_hash;
     address public an_address;
@@ -10,7 +10,7 @@ contract test {
         an_address = address(0x1337);
         super_secret_data = 42;
     }
-    uint256 super_secret_data;
+    uint super_secret_data;
 }
 // ====
 // compileViaYul: also

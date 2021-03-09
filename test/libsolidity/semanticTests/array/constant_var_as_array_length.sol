@@ -11,6 +11,6 @@ contract C {
 // compileViaYul: also
 // ----
 // constructor(): 1, 2, 3 ->
-// a(uint256): 0 -> 1
-// a(uint256): 1 -> 2
-// a(uint256): 2 -> 3
+// a(uint): 0 -> 1
+// a(uint): 1 -> 2
+// a(uint): 2 -> 3
