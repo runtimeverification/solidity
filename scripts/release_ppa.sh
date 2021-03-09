@@ -106,13 +106,8 @@ git clone --depth 2 --recursive https://github.com/ethereum/solidity.git -b "$br
 mv solidity isolc
 
 # Fetch jsoncpp dependency
-<<<<<<< ours
 mkdir -p ./isolc/deps/downloads/ 2>/dev/null || true
-wget -O ./isolc/deps/downloads/jsoncpp-1.7.7.tar.gz https://github.com/open-source-parsers/jsoncpp/archive/1.7.7.tar.gz
-=======
-mkdir -p ./solc/deps/downloads/ 2>/dev/null || true
-wget -O ./solc/deps/downloads/jsoncpp-1.9.3.tar.gz https://github.com/open-source-parsers/jsoncpp/archive/1.9.3.tar.gz
->>>>>>> theirs
+wget -O ./isolc/deps/downloads/jsoncpp-1.9.3.tar.gz https://github.com/open-source-parsers/jsoncpp/archive/1.9.3.tar.gz
 
 # Determine version
 cd isolc
@@ -161,13 +156,8 @@ Homepage: https://ethereum.org
 Vcs-Git: git://github.com/ethereum/solidity.git
 Vcs-Browser: https://github.com/ethereum/solidity
 
-<<<<<<< ours
 Package: isolc
-Architecture: any-i386 any-amd64
-=======
-Package: solc
 Architecture: any-amd64
->>>>>>> theirs
 Multi-Arch: same
 Depends: \${shlibs:Depends}, \${misc:Depends}
 Conflicts: libethereum (<= 1.2.9)

@@ -34,10 +34,5 @@ FOR /d %%d IN ("C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\V
     "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\*") DO set "DLLS=%%d\x86\Microsoft.VC141.CRT\msvc*.dll"
 
 7z a solidity-windows.zip ^
-<<<<<<< ours
     .\build\solc\%CONFIGURATION%\isolc.exe .\build\test\%CONFIGURATION%\soltest.exe ^
-    "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x86\Microsoft.VC140.CRT\msvc*.dll"
-=======
-    .\build\solc\%CONFIGURATION%\solc.exe .\build\test\%CONFIGURATION%\soltest.exe ^
     "%DLLS%"
->>>>>>> theirs

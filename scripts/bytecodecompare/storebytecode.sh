@@ -42,17 +42,11 @@ TMPDIR=$(mktemp -d)
 
     if [[ "$SOLC_EMSCRIPTEN" = "On" ]]
     then
-<<<<<<< ours
-        cp "$REPO_ROOT/build/libsolc/soljson.js" .
-        npm install isolc
-        cat > isolc <<EOF
-=======
-        # npm install solc
+        # npm install isolc
         git clone --depth 1 https://github.com/ethereum/solc-js.git solc-js
         ( cd solc-js; npm install )
         cp "$REPO_ROOT/emscripten_build/libsolc/soljson.js" solc-js/
-        cat > solc <<EOF
->>>>>>> theirs
+        cat > isolc <<EOF
 #!/usr/bin/env node
 var process = require('process')
 var fs = require('fs')
@@ -103,19 +97,12 @@ for (var optimize of [false, true])
     }
 }
 EOF
-<<<<<<< ours
+        echo "Running the compiler..."
         chmod +x isolc
         ./isolc *.sol > report.txt
-    else
-        $REPO_ROOT/scripts/bytecodecompare/prepare_report.py $REPO_ROOT/build/solc/isolc
-=======
-        echo "Running the compiler..."
-        chmod +x solc
-        ./solc *.sol > report.txt
         echo "Finished running the compiler."
     else
-        "$REPO_ROOT/scripts/bytecodecompare/prepare_report.py" "$BUILD_DIR/solc/solc"
->>>>>>> theirs
+        "$REPO_ROOT/scripts/bytecodecompare/prepare_report.py" "$BUILD_DIR/solc/isolc"
     fi
 
     cp report.txt "$REPO_ROOT"

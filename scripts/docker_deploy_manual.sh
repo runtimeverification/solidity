@@ -7,7 +7,7 @@ then
     echo "Usage: $0 <tag/branch>"
     exit 1
 fi
-image="ethereum/solc"
+image="ethereum/isolc"
 branch="$1"
 
 #docker login
@@ -35,22 +35,6 @@ tag_and_push()
 }
 
 rm -rf .git
-<<<<<<< ours
-docker build -t ethereum/isolc:build -f scripts/Dockerfile .
-tmp_container=$(docker create ethereum/isolc:build sh)
-if [ "$branch" = "develop" ]
-then
-    docker tag ethereum/isolc:build ethereum/isolc:nightly;
-    docker tag ethereum/isolc:build ethereum/isolc:nightly-"$version"-"$commithash"
-    docker push ethereum/isolc:nightly-"$version"-"$commithash";
-    docker push ethereum/isolc:nightly;
-elif [ "$branch" = v"$version" ]
-then
-    docker tag ethereum/isolc:build ethereum/isolc:stable;
-    docker tag ethereum/isolc:build ethereum/isolc:"$version";
-    docker push ethereum/isolc:stable;
-    docker push ethereum/isolc:"$version";
-=======
 docker build -t "$image":build -f scripts/Dockerfile .
 tmp_container=$(docker create "$image":build sh)
 
@@ -71,7 +55,6 @@ then
     tag_and_push build "$version"
     tag_and_push build-alpine stable-alpine
     tag_and_push build-alpine "$version"-alpine
->>>>>>> theirs
 else
     echo "Not publishing docker image from branch or tag $branch"
 fi

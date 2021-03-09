@@ -55,11 +55,7 @@ detect_linux_distro() {
         DISTRO=$(lsb_release -is)
     elif [ -f /etc/os-release ]; then
         # extract 'foo' from NAME=foo, only on the line with NAME=foo
-<<<<<<< ours
-        DISTRO=$(sed -n -e 's/^NAME=\"\?\([^"]*\)\"\?/\1/p' /etc/os-release)
-=======
         DISTRO=$(sed -n -e 's/^NAME="\?\([^"]*\)"\?$/\1/p' /etc/os-release)
->>>>>>> theirs
     elif [ -f /etc/centos-release ]; then
         DISTRO=CentOS
     else
@@ -152,12 +148,8 @@ case $(uname -s) in
                     boost \
                     cmake \
                     git \
-<<<<<<< ours
                     llvm \
-                    ethereum-git \
-=======
                     cvc4
->>>>>>> theirs
                 ;;
 
 #------------------------------------------------------------------------------
@@ -169,15 +161,9 @@ case $(uname -s) in
 
                 # All our dependencies can be found in the Alpine Linux official repositories.
                 # See https://pkgs.alpinelinux.org/
-<<<<<<< ours
+
                 sudo apk update
-                sudo apk add llvm llvm-dev llvm-static zlib zlib-dev boost-dev build-base cmake
-=======
-
-                apk update
-                apk add boost-dev boost-static build-base cmake git
-
->>>>>>> theirs
+                sudo apk add llvm llvm-dev llvm-static zlib zlib-dev boost-dev boost-static build-base cmake git
                 ;;
 
 #------------------------------------------------------------------------------

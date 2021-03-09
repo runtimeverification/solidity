@@ -20,13 +20,7 @@ cd "${BUILDDIR}"
 cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" "${@:2}"
 make -j2
 
-<<<<<<< ours
-if [ -z $CI ]; then
-	echo "Installing isolc and soltest"
-	install solc/isolc /usr/local/bin && install test/soltest /usr/local/bin
-=======
 if [[ "${CI}" == "" ]]; then
 	echo "Installing ..."
 	sudo make install
->>>>>>> theirs
 fi
