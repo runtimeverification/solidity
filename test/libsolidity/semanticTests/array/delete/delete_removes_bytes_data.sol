@@ -1,12 +1,12 @@
 contract c {
-    fallback() external { data = msg.data; }
+    function save(bytes b) external { data = b; }
     function del() public returns (bool) { delete data; return true; }
     bytes data;
 }
 // ====
 // compileViaYul: also
 // ----
-// (): 7 ->
+// save(): "1234" ->
 // storage: nonempty
-// del(): 7 -> true
+// del() -> true
 // storage: empty

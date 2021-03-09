@@ -15,10 +15,10 @@ contract c {
 // ====
 // compileViaYul: also
 // ----
-// setData1(uint256,uint256,uint256): 10, 5, 4 ->
+// setData1(uint,uint,uint): 10, 5, 4 ->
 // copyStorageStorage() ->
-// getData2(uint256): 5 -> 10, 4
-// setData1(uint256,uint256,uint256): 0, 0, 0 ->
+// getData2(uint): 5 -> 10, 4
+// setData1(uint,uint,uint): 0, 0, 0 ->
 // copyStorageStorage() ->
-// getData2(uint256): 0 -> 0, 0
+// getData2(uint): 0 -> 0, 0
 // storage: empty

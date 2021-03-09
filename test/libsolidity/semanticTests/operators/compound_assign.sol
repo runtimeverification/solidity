@@ -13,11 +13,11 @@ contract test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(uint256,uint256): 0, 6 -> 7
-// f(uint256,uint256): 1, 3 -> 0x23
-// f(uint256,uint256): 2, 25 -> 0x0746
-// f(uint256,uint256): 3, 69 -> 396613
-// f(uint256,uint256): 4, 84 -> 137228105
-// f(uint256,uint256): 5, 2 -> 0xcc7c5e28
-// f(uint256,uint256): 6, 51 -> 1121839760671
-// f(uint256,uint256): 7, 48 -> 408349672884251
+// f(uint,uint): 0, 6 -> 7
+// f(uint,uint): 1, 3 -> 0x23
+// f(uint,uint): 2, 25 -> 0x0746
+// f(uint,uint): 3, 69 -> 396613
+// f(uint,uint): 4, 84 -> 137228105
+// f(uint,uint): 5, 2 -> 0xcc7c5e28
+// f(uint,uint): 6, 51 -> 1121839760671
+// f(uint,uint): 7, 48 -> 408349672884251

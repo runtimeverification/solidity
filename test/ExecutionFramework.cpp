@@ -108,6 +108,14 @@ void ExecutionFramework::reset()
 }
 
 std::pair<bool, string> ExecutionFramework::compareAndCreateMessage(
+	bytes const& _result,
+	bytes const& _expectation
+)
+{
+	return compareAndCreateMessage(std::vector<bytes>(1, _result), std::vector<bytes>(1, _expectation));
+}
+
+std::pair<bool, string> ExecutionFramework::compareAndCreateMessage(
 	std::vector<bytes> const& _result,
 	std::vector<bytes> const& _expectation
 )

@@ -40,4 +40,4 @@ contract C {
 // i(bool): true -> false
 // j(bytes32): 0x10001 -> 0x10001, 0x10001
 // k(): hex"4200efef" -> 8
-// l(uint256): 99 -> 693
+// l(uint): 99 -> 693

@@ -83,9 +83,6 @@ protected:
 
 BOOST_FIXTURE_TEST_SUITE(SolidityNatspecJSON, DocumentationChecker)
 
-<<<<<<< ours
-BOOST_AUTO_TEST_CASE(user_basic_test_with_uint256)
-=======
 BOOST_AUTO_TEST_CASE(user_empty_natspec_test)
 {
 	char const* sourceCode = R"(
@@ -161,17 +158,12 @@ BOOST_AUTO_TEST_CASE(user_multiline_empty_lines)
 }
 
 
-BOOST_AUTO_TEST_CASE(user_basic_test)
->>>>>>> theirs
+BOOST_AUTO_TEST_CASE(user_basic_test_with_uint256)
 {
 	char const* sourceCode = R"(
 		contract test {
 			/// @notice Multiplies `a` by 7
-<<<<<<< ours
-			function mul(uint256 a) returns(uint256 d) { return a * 7; }
-=======
-			function mul(uint a) public returns(uint d) { return a * 7; }
->>>>>>> theirs
+			function mul(uint256 a) public returns(uint256 d) { return a * 7; }
 		}
 	)";
 
@@ -197,7 +189,7 @@ BOOST_AUTO_TEST_CASE(user_basic_test_with_uint)
 	"    \"mul(uint)\":{ \"notice\": \"Multiplies `a` by 7\"}"
 	"}}";
 
-	checkNatspec(sourceCode, natspec, true);
+	checkNatspec(sourceCode, "test", natspec, true);
 }
 
 BOOST_AUTO_TEST_CASE(dev_and_user_basic_test)
@@ -233,11 +225,7 @@ BOOST_AUTO_TEST_CASE(user_multiline_comment)
 		contract test {
 			/// @notice Multiplies `a` by 7
 			/// and then adds `b`
-<<<<<<< ours
-			function mul_and_add(uint a, uint b) returns(uint d) {
-=======
-			function mul_and_add(uint a, uint256 b) public returns (uint256 d) {
->>>>>>> theirs
+			function mul_and_add(uint a, uint b) public returns(uint d) {
 				return (a * 7) + b;
 			}
 		}
@@ -256,11 +244,7 @@ BOOST_AUTO_TEST_CASE(user_multiple_functions)
 	char const* sourceCode = R"(
 		contract test {
 			/// @notice Multiplies `a` by 7 and then adds `b`
-<<<<<<< ours
-			function mul_and_add(uint a, uint b) returns(uint d) {
-=======
-			function mul_and_add(uint a, uint256 b) public returns (uint256 d) {
->>>>>>> theirs
+			function mul_and_add(uint a, uint b) public returns(uint d) {
 				return (a * 7) + b;
 			}
 
@@ -951,22 +935,7 @@ BOOST_AUTO_TEST_CASE(dev_author_at_function)
 		}
 	)";
 
-<<<<<<< ours
-	char const* natspec = "{"
-	"    \"author\": \"Lefteris\","
-	"    \"title\": \"Just a test contract\","
-	"    \"methods\":{"
-	"        \"mul(uint,uint)\":{ \n"
-	"            \"details\": \"Mul function\",\n"
-	"            \"author\": \"John Doe\",\n"
-	"        }\n"
-	"    }\n"
-	"}";
-
-	checkNatspec(sourceCode, natspec, false);
-=======
 	expectNatspecError(sourceCode);
->>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE(natspec_notice_without_tag)

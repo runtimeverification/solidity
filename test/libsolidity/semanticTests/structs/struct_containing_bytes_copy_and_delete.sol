@@ -16,7 +16,7 @@ contract c {
         delete data1;
         return true;
     }
-    function test(uint256 i) public returns (bytes1) {
+    function test(uint i) public returns (bytes1) {
         return data1.data[i];
     }
 }
@@ -24,12 +24,12 @@ contract c {
 // compileViaYul: also
 // ----
 // storage: empty
-// set(uint256,bytes,uint256): 12, 0x60, 13, 33, "12345678901234567890123456789012", "3" -> true
-// test(uint256): 32 -> "3"
+// set(uint,bytes,uint): 12, 0x60, 13, 33, "12345678901234567890123456789012", "3" -> true
+// test(uint): 32 -> "3"
 // storage: nonempty
 // copy() -> true
 // storage: empty
-// set(uint256,bytes,uint256): 12, 0x60, 13, 33, "12345678901234567890123456789012", "3" -> true
+// set(uint,bytes,uint): 12, 0x60, 13, 33, "12345678901234567890123456789012", "3" -> true
 // storage: nonempty
 // del() -> true
 // storage: empty

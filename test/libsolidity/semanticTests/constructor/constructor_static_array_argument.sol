@@ -13,6 +13,6 @@ contract C {
 // ----
 // constructor(): 1, 2, 3, 4 ->
 // a() -> 1
-// b(uint256): 0 -> 2
-// b(uint256): 1 -> 3
-// b(uint256): 2 -> 4
+// b(uint): 0 -> 2
+// b(uint): 1 -> 3
+// b(uint): 2 -> 4

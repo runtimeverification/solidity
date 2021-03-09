@@ -3,7 +3,7 @@ contract test {
     uint[] public dynamicData;
     uint24[] public smallTypeData;
     struct st { uint a; uint[] finalArray; }
-    mapping(uint256 => mapping(uint256 => st[5])) public multiple_map;
+    mapping(uint => mapping(uint => st[5])) public multiple_map;
 
     constructor() {
         data[0] = 8;
@@ -25,11 +25,11 @@ contract test {
 // ====
 // compileViaYul: also
 // ----
-// data(uint256): 0 -> 8
-// data(uint256): 8 -> FAILURE
-// dynamicData(uint256): 2 -> 8
-// dynamicData(uint256): 8 -> FAILURE
-// smallTypeData(uint256): 1 -> 22
-// smallTypeData(uint256): 127 -> 2
-// smallTypeData(uint256): 128 -> FAILURE
-// multiple_map(uint256,uint256,uint256): 2, 1, 2 -> 3
+// data(uint): 0 -> 8
+// data(uint): 8 -> FAILURE
+// dynamicData(uint): 2 -> 8
+// dynamicData(uint): 8 -> FAILURE
+// smallTypeData(uint): 1 -> 22
+// smallTypeData(uint): 127 -> 2
+// smallTypeData(uint): 128 -> FAILURE
+// multiple_map(uint,uint,uint): 2, 1, 2 -> 3

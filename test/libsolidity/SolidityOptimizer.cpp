@@ -72,15 +72,9 @@ public:
 	{
 		m_nonOptimizedBytecode = compileAndRunWithOptimizer("pragma solidity >=0.0;\n" + _sourceCode, _value, _contractName, false, _optimizeRuns);
 		m_nonOptimizedContract = m_contractAddress;
-<<<<<<< ours
-		m_optimizedBytecode = compileAndRunWithOptimizer(_sourceCode, _value, _contractName, true, _optimizeRuns);
+		m_optimizedBytecode = compileAndRunWithOptimizer("pragma solidity >=0.0;\n" + _sourceCode, _value, _contractName, true, _optimizeRuns);
 		size_t nonOptimizedSize = m_nonOptimizedBytecode.size();
 		size_t optimizedSize = m_optimizedBytecode.size();
-=======
-		m_optimizedBytecode = compileAndRunWithOptimizer("pragma solidity >=0.0;\n" + _sourceCode, _value, _contractName, true, _optimizeRuns);
-		size_t nonOptimizedSize = numInstructions(m_nonOptimizedBytecode);
-		size_t optimizedSize = numInstructions(m_optimizedBytecode);
->>>>>>> theirs
 		BOOST_CHECK_MESSAGE(
 			_optimizeRuns < 50 || optimizedSize < nonOptimizedSize,
 			string("Optimizer did not reduce bytecode size. Non-optimized size: ") +
@@ -213,18 +207,12 @@ BOOST_AUTO_TEST_CASE(array_copy)
 		contract test {
 			bytes2[] data1;
 			bytes5[] data2;
-<<<<<<< ours
-			function f(uint x, bytes data) returns (uint l, uint y) {
+			function f(uint x, bytes data) public returns (uint l, uint y) {
 				data1.length = data.length;
+				for (uint i = 0; i < data.length; i++)
+					data1.push();
 				for (uint i = 0; i < data.length; ++i)
 					data1[i] = data[i];
-=======
-			function f(uint x) public returns (uint l, uint y) {
-				for (uint i = 0; i < msg.data.length; i++)
-					data1.push();
-				for (uint i = 0; i < msg.data.length; ++i)
-					data1[i] = msg.data[i];
->>>>>>> theirs
 				data2 = data1;
 				l = data2.length;
 				y = uint(uint40(data2[x]));
@@ -242,13 +230,8 @@ BOOST_AUTO_TEST_CASE(function_calls)
 {
 	char const* sourceCode = R"(
 		contract test {
-<<<<<<< ours
-			function f1(uint256 x) returns (uint256) { return x*x; }
-			function f(uint256 x) returns (uint256) { return f1(7+x) - this.f1(x**9); }
-=======
-			function f1(uint x) public returns (uint) { unchecked { return x*x; } }
-			function f(uint x) public returns (uint) { unchecked { return f1(7+x) - this.f1(x**9); } }
->>>>>>> theirs
+			function f1(uint256 x) public returns (uint256) { unchecked { return x*x; } }
+			function f(uint256 x) public returns (uint256) { unchecked { return f1(7+x) - this.f1(x**9); } }
 		}
 	)";
 	compileBothVersions(sourceCode);
@@ -371,21 +354,12 @@ BOOST_AUTO_TEST_CASE(incorrect_storage_access_bug)
 	char const* sourceCode = R"(
 		contract C
 		{
-<<<<<<< ours
 			mapping(uint256 => uint) data;
-			function f() returns (uint)
-			{
-				if(data[now] == 0)
-					data[uint256(-7)] = 5;
-				return data[now];
-=======
-			mapping(uint => uint) data;
 			function f() public returns (uint)
 			{
 				if (data[block.timestamp] == 0)
-					data[type(uint).max - 6] = 5;
+					data[type(uint256).max - 6] = 5;
 				return data[block.timestamp];
->>>>>>> theirs
 			}
 		}
 	)";
@@ -475,13 +449,8 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 	// indefinitely but instead stops after some number of iterations.
 	char const* sourceCode = R"(
 	contract HexEncoding {
-<<<<<<< ours
-		function hexEncodeTest(address addr) returns (bytes32 ret) {
-			uint256 x = uint256(addr) / 2**32;
-=======
 		function hexEncodeTest(address addr) public returns (bytes32 ret) {
-			uint x = uint(uint160(addr)) / 2**32;
->>>>>>> theirs
+			uint256 x = uint256(uint160(addr)) / 2**32;
 
 			// Nibble interleave
 			x = x & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
@@ -497,17 +466,9 @@ BOOST_AUTO_TEST_CASE(constant_optimization_early_exit)
 			uint256 j = (x & 0x0202020202020202020202020202020202020202020202020202020202020202) / 2;
 			x = x + (h & (i | j)) * 0x27 + 0x3030303030303030303030303030303030303030303030303030303030303030;
 
-<<<<<<< ours
 			uint256[2] memory arr;
 			arr[0] = x;
-			x = uint256(addr) * 2**96;
-=======
-			// Store and load next batch
-			assembly {
-				mstore(0, x)
-			}
 			x = uint160(addr) * 2**96;
->>>>>>> theirs
 
 			// Nibble interleave
 			x = x & 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
@@ -629,13 +590,8 @@ BOOST_AUTO_TEST_CASE(invalid_state_at_control_flow_join)
 {
 	char const* sourceCode = R"(
 		contract Test {
-<<<<<<< ours
 			uint public totalSupply = 100;
-			function f() returns (uint r) {
-=======
-			uint256 public totalSupply = 100;
 			function f() public returns (uint r) {
->>>>>>> theirs
 				if (false)
 					r = totalSupply;
 				totalSupply -= 10;

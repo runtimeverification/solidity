@@ -1,5 +1,5 @@
 contract Test {
-    function bytesToUint(bytes32 s) public returns (uint256 h) {
+    function bytesToUint(bytes32 s) public returns (uint h) {
         return uint(s);
     }
 }

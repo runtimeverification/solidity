@@ -1,7 +1,8 @@
 contract A {
     constructor() {
-        address(this).call("123");
+        address(this).send(0);
     }
+    function() payable { throw; }
 }
 
 

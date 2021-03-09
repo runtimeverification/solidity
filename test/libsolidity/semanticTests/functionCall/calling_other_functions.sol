@@ -16,8 +16,8 @@ contract collatz {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// run(uint256): 0 -> 0
-// run(uint256): 1 -> 1
-// run(uint256): 2 -> 1
-// run(uint256): 8 -> 1
-// run(uint256): 127 -> 1
+// run(uint): 0 -> 0
+// run(uint): 1 -> 1
+// run(uint): 2 -> 1
+// run(uint): 8 -> 1
+// run(uint): 127 -> 1

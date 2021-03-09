@@ -187,6 +187,7 @@ public:
 			return u72(c_end + _u);
 	}
 
+	static std::pair<bool, std::string> compareAndCreateMessage(bytes const& _result, bytes const& _expectation);
 	static std::pair<bool, std::string> compareAndCreateMessage(std::vector<bytes> const& _result, std::vector<bytes> const& _expectation);
 
 	static bytes encode(bool _value) { return encode(uint8_t(_value)); }
@@ -237,6 +238,8 @@ public:
 			ret += encode(v);
 		return ret;
 	}
+	template <class T>
+	static bytes encodeLog(std::vector<T> const& _value) { return encode(_value); }
 
 	template <class FirstArg, class... Args>
 	static std::vector<bytes> encodeArgs(FirstArg const& _firstArg, Args const&... _followingArgs)
