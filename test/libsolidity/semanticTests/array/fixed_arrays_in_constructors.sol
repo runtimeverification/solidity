@@ -1,8 +1,8 @@
 contract Creator {
-    uint256 public r;
+    uint public r;
     address public ch;
 
-    constructor(address[3] memory s, uint256 x) {
+    constructor(address[3] memory s, uint x) {
         r = x;
         ch = s[2];
     }

@@ -1,5 +1,5 @@
 contract test {
-    function f(uint256 k) public returns (uint256) {
+    function f(uint k) public returns (uint) {
         return k;
     }
 }
@@ -8,4 +8,4 @@ contract test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(uint256): 9 -> 9
+// f(uint): 9 -> 9

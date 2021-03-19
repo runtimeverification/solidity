@@ -1,9 +1,9 @@
 contract C {
-    function gasleft() public returns (uint256) {
+    function gasleft() public returns (uint) {
         return 0;
     }
 
-    function f() public returns (uint256) {
+    function f() public returns (uint) {
         return gasleft();
     }
 }

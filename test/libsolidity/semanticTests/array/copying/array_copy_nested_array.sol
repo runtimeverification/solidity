@@ -1,9 +1,9 @@
 contract c {
-    uint256[4][] a;
-    uint256[10][] b;
-    uint256[][] c;
+    uint[4][] a;
+    uint[10][] b;
+    uint[][] c;
 
-    function test(uint256[2][] calldata d) external returns (uint256) {
+    function test(uint[2][] calldata d) external returns (uint) {
         a = d;
         b = a;
         c = b;
@@ -14,4 +14,4 @@ contract c {
 // ====
 // compileViaYul: also
 // ----
-// test(uint256[2][]): 32, 3, 7, 8, 9, 10, 11, 12 -> 10
+// test(uint[2][]): 32, 3, 7, 8, 9, 10, 11, 12 -> 10

@@ -1,16 +1,16 @@
 contract c {
     struct Nested {
-        uint256 x;
-        uint256 y;
+        uint x;
+        uint y;
     }
     struct Struct {
-        uint256 a;
+        uint a;
         Nested nested;
-        uint256 c;
+        uint c;
     }
-    mapping(uint256 => Struct) data;
+    mapping(uint => Struct) data;
 
-    function set(uint256 k) public returns (bool) {
+    function set(uint k) public returns (bool) {
         data[k].a = 1;
         data[k].nested.x = 3;
         data[k].nested.y = 4;
@@ -18,14 +18,14 @@ contract c {
         return true;
     }
 
-    function copy(uint256 from, uint256 to) public returns (bool) {
+    function copy(uint from, uint to) public returns (bool) {
         data[to] = data[from];
         return true;
     }
 
-    function retrieve(uint256 k)
+    function retrieve(uint k)
         public
-        returns (uint256 a, uint256 x, uint256 y, uint256 c)
+        returns (uint a, uint x, uint y, uint c)
     {
         a = data[k].a;
         x = data[k].nested.x;
@@ -37,13 +37,13 @@ contract c {
 // ====
 // compileViaYul: also
 // ----
-// set(uint256): 7 -> true
-// retrieve(uint256): 7 -> 1, 3, 4, 2
-// copy(uint256,uint256): 7, 8 -> true
-// retrieve(uint256): 7 -> 1, 3, 4, 2
-// retrieve(uint256): 8 -> 1, 3, 4, 2
-// copy(uint256,uint256): 0, 7 -> true
-// retrieve(uint256): 7 -> 0, 0, 0, 0
-// retrieve(uint256): 8 -> 1, 3, 4, 2
-// copy(uint256,uint256): 7, 8 -> true
-// retrieve(uint256): 8 -> 0, 0, 0, 0
+// set(uint): 7 -> true
+// retrieve(uint): 7 -> 1, 3, 4, 2
+// copy(uint,uint): 7, 8 -> true
+// retrieve(uint): 7 -> 1, 3, 4, 2
+// retrieve(uint): 8 -> 1, 3, 4, 2
+// copy(uint,uint): 0, 7 -> true
+// retrieve(uint): 7 -> 0, 0, 0, 0
+// retrieve(uint): 8 -> 1, 3, 4, 2
+// copy(uint,uint): 7, 8 -> true
+// retrieve(uint): 8 -> 0, 0, 0, 0

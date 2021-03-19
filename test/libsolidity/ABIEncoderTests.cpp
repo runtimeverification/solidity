@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(enum_type_cleanup)
 		compileAndRun(sourceCode);
 		BOOST_CHECK(callContractFunction("f(uint)", 0) == encodeArgs(0));
 		BOOST_CHECK(callContractFunction("f(uint)", 1) == encodeArgs(1));
-		BOOST_CHECK(callContractFunction("f(uint)", 2) == panicData(PanicCode::EnumConversionError));
+		BOOST_CHECK(callContractFunction("f(uint)", 2) == vector<bytes>(1, panicData(PanicCode::EnumConversionError)));
 	)
 }
 
@@ -287,9 +287,9 @@ BOOST_AUTO_TEST_CASE(storage_array_dyn)
 		REQUIRE_LOG_DATA(encodeLogs(
 			1,
 			3,
-			u1660(h160("0000000000000000000000000000000000000001")),
-			u1660(h160("0000000000000000000000000000000000000002")),
-			u1660(h160("0000000000000000000000000000000000000003"))
+			u160(h160("0000000000000000000000000000000000000001")),
+			u160(h160("0000000000000000000000000000000000000002")),
+			u160(h160("0000000000000000000000000000000000000003"))
 		));
 	)
 }
@@ -356,7 +356,7 @@ BOOST_AUTO_TEST_CASE(external_function_cleanup)
 		}
 	)";
 	BOTH_ENCODERS(
-		compileAndRunWithoutCheck(sourceCode, 0, "C", true);
+		compileAndRunWithoutCheck({{"", sourceCode}}, 0, "C", true);
 		if (false) {
 			callContractFunction("f(uint256)", u256(0));
 			REQUIRE_LOG_DATA(encodeLogs(string(24, char(-1)), string(24, char(-1))));
@@ -406,7 +406,7 @@ BOOST_AUTO_TEST_CASE(function_name_collision)
 		}
 	)";
 	BOTH_ENCODERS(
-		compileAndRunWithoutCheck(sourceCode, 0, "C", true);
+		compileAndRunWithoutCheck({{"", sourceCode}}, 0, "C", true);
 		if (false) {
 			BOOST_CHECK(callContractFunction("f(uint256)", encodeArgs(0)) == encodeArgs(7));
 			BOOST_CHECK(callContractFunction("f(uint256)", encodeArgs(1)) == encodeArgs(1));
@@ -443,7 +443,7 @@ BOOST_AUTO_TEST_CASE(structs)
 		compileAndRun(sourceCode, 0, "C");
 		std::vector<bytes> encoded = encodeArgs(
 			u256(7), encodeRefArgs(
-			int16_t(8), int16_t(9), 1, 3, uint64_t(11), uint64_t(0), uint64_t(12), uint64_t(0), uint64_t(0), uint64_t(13), byte(10)
+			int16_t(8), int16_t(9), 1, 3, uint64_t(11), uint64_t(0), uint64_t(12), uint64_t(0), uint64_t(0), uint64_t(13), uint8_t(10)
 		));
 		bytes flattened = encodeLogs(int16_t(7), int16_t(8), int16_t(9), 1, 3, uint64_t(11), uint64_t(0), uint64_t(12), uint64_t(0), uint64_t(0), uint64_t(13), int16_t(10));
 		ABI_CHECK(callContractFunction("f()"), encoded);
@@ -532,12 +532,16 @@ BOOST_AUTO_TEST_CASE(bool_arrays)
 
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode, 0, "C");
-		bytes encoded = encodeArgs(
-			0xa0, 1, 0, 1, 0,
-			4, 1, 0, 1, 0
+		vector<bytes> encoded = encodeArgs(
+			encodeRefArgs(1, 1, true, false, true, false),
+			encodeRefArgs(true, false, true, false)
+		);
+		bytes flattened = encodeLogs(
+			1, 1, true, false, true, false,
+			true, false, true, false
 		);
 		ABI_CHECK(callContractFunction("f()"), encoded);
-		REQUIRE_LOG_DATA(encoded);
+		REQUIRE_LOG_DATA(flattened);
 	)
 }
 
@@ -567,13 +571,17 @@ BOOST_AUTO_TEST_CASE(bool_arrays_split)
 
 	BOTH_ENCODERS(
 		compileAndRun(sourceCode, 0, "C");
-		bytes encoded = encodeArgs(
-			0xa0, 1, 0, 1, 0,
-			4, 1, 0, 1, 0
+		vector<bytes> encoded = encodeArgs(
+			encodeRefArgs(1, 1, true, false, true, false),
+			encodeRefArgs(true, false, true, false)
 		);
-		ABI_CHECK(callContractFunction("store()"), bytes{});
+		bytes flattened = encodeLogs(
+			1, 1, true, false, true, false,
+			true, false, true, false
+		);
+		ABI_CHECK(callContractFunction("store()"), vector<bytes>{});
 		ABI_CHECK(callContractFunction("f()"), encoded);
-		REQUIRE_LOG_DATA(encoded);
+		REQUIRE_LOG_DATA(flattened);
 	)
 }
 
@@ -607,16 +615,23 @@ BOOST_AUTO_TEST_CASE(bytesNN_arrays)
 				source = boost::algorithm::replace_all_copy(source, "UINTWIDTH", to_string(width * 8));
 				source = boost::algorithm::replace_all_copy(source, "WIDTH", to_string(width));
 				compileAndRun(source, 0, "C");
-				ABI_CHECK(callContractFunction("store()"), bytes{});
+				ABI_CHECK(callContractFunction("store()"), vector<bytes>{});
 				vector<u256> arr;
 				for (size_t i = 0; i < size; i ++)
 					arr.emplace_back(u256(i + 1) << (8 * (32 - width)));
-				bytes encoded = encodeArgs(
-					0x20 * (1 + size), arr,
-					2, "abc", "def"
+				vector<uint8_t> flat_arr;
+				for (size_t i = 0; i < size; i ++)
+					flat_arr.emplace_back(uint8_t(arr[i]));
+				vector<bytes> encoded = encodeArgs(
+					encodeRefArgs(arr),
+					encodeRefArgs(1, 2, "abc", "def")
+				);
+				bytes flattened = encodeLogs(
+					flat_arr,
+					1, 2, "abc", "def"
 				);
 				ABI_CHECK(callContractFunction("f()"), encoded);
-				REQUIRE_LOG_DATA(encoded);
+				REQUIRE_LOG_DATA(flattened);
 			}
 		}
 	)
@@ -652,17 +667,23 @@ BOOST_AUTO_TEST_CASE(bytesNN_arrays_dyn)
 				source = boost::algorithm::replace_all_copy(source, "UINTWIDTH", to_string(width * 8));
 				source = boost::algorithm::replace_all_copy(source, "WIDTH", to_string(width));
 				compileAndRun(source, 0, "C");
-				ABI_CHECK(callContractFunction("store()"), bytes{});
+				ABI_CHECK(callContractFunction("store()"), vector<bytes>{});
 				vector<u256> arr;
 				for (size_t i = 0; i < size; i ++)
 					arr.emplace_back(u256(i + 1) << (8 * (32 - width)));
-				bytes encoded = encodeArgs(
-					0x20 * 2, 0x20 * (3 + size),
-					size, arr,
-					2, "abc", "def"
+				vector<uint8_t> flat_arr;
+				for (size_t i = 0; i < size; i ++)
+					flat_arr.emplace_back(uint8_t(arr[i]));
+				vector<bytes> encoded = encodeArgs(
+					encodeRefArgs(1, size, arr),
+					encodeRefArgs(1, 2, "abc", "def")
+				);
+				bytes flattened = encodeLogs(
+					1, size, flat_arr,
+					1, 2, "abc", "def"
 				);
 				ABI_CHECK(callContractFunction("f()"), encoded);
-				REQUIRE_LOG_DATA(encoded);
+				REQUIRE_LOG_DATA(flattened);
 			}
 		}
 	)
@@ -692,13 +713,16 @@ BOOST_AUTO_TEST_CASE(packed_structs)
 
 	NEW_ENCODER(
 		compileAndRun(sourceCode, 0, "C");
-		ABI_CHECK(callContractFunction("store()"), bytes{});
+		ABI_CHECK(callContractFunction("store()"), vector<bytes>{});
 		bytes fun = m_contractAddress.asBytes() + fromHex("0xe2179b8e");
-		bytes encoded = encodeArgs(
-			0, u256(-5), asString(fun), "\x01\x02\x03", u256(-3)
+		vector<bytes> encoded = encodeArgs(
+			false, u256(-5), asString(fun), "\x01\x02\x03", u256(-3)
+		);
+		bytes flattened = encodeLogs(
+			false, uint8_t(-5), asString(fun), "\x01\x02\x03", uint8_t(-3)
 		);
 		ABI_CHECK(callContractFunction("f()"), encoded);
-		REQUIRE_LOG_DATA(encoded);
+		REQUIRE_LOG_DATA(flattened);
 	)
 }
 
@@ -772,7 +796,7 @@ BOOST_AUTO_TEST_CASE(struct_in_constructor_data_short)
 
 	NEW_ENCODER(
 		BOOST_CHECK(
-			compileAndRunWithoutCheck({{"", sourceCode}}, 0, "C", encodeArgs(0x20, 0x60, 0x03, 0x80, 0x00)).empty()
+			compileAndRunWithoutCheck({{"", sourceCode}}, 0, "C", true, encodeArgs(0x20, 0x60, 0x03, 0x80, 0x00)).empty()
 		);
 	)
 }

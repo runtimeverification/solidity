@@ -72,54 +72,35 @@ protected:
 
 	util::h160 callStringReturnsAddress(std::string const& _name, std::string const& _arg)
 	{
-<<<<<<< ours
 		bytes const& ret = callReturning(_name + "(string)", m_framework.encodeDyn(_arg));
-		return u160(u256(h256(ret, h256::AlignRight)));
-=======
-		bytes const& ret = call(_name + "(string)", u256(0x20), _arg.length(), _arg);
-		BOOST_REQUIRE(ret.size() == 0x20);
-		BOOST_CHECK(std::count(ret.begin(), ret.begin() + 12, 0) == 12);
-		bytes const addr{ret.begin() + 12, ret.end()};
-		return util::h160(addr);
->>>>>>> theirs
+		return util::h160(ret, util::h160::AlignRight);
 	}
 
 	std::string callAddressReturnsString(std::string const& _name, util::h160 const& _arg)
 	{
-<<<<<<< ours
 		bytesConstRef const ret(&callReturning(_name + "(address)", _arg));
-		u256 len(h256(ret.cropped(ret.size() - 8, 0x08), h256::AlignRight));
+		u256 len(util::h256(ret.cropped(ret.size() - 8, 0x08), util::h256::AlignRight));
 		return ret.cropped(0x00, size_t(len)).toString();
-=======
-		bytesConstRef const ret(&call(_name + "(address)", _arg));
-		BOOST_REQUIRE(ret.size() >= 0x40);
-		u256 offset(util::h256(ret.cropped(0, 0x20)));
-		BOOST_REQUIRE_EQUAL(offset, 0x20);
-		u256 len(util::h256(ret.cropped(0x20, 0x20)));
-		BOOST_REQUIRE_EQUAL(ret.size(), 0x40 + ((len + 0x1f) / 0x20) * 0x20);
-		return ret.cropped(0x40, size_t(len)).toString();
->>>>>>> theirs
 	}
 
 	util::h256 callStringReturnsBytes32(std::string const& _name, std::string const& _arg)
 	{
-<<<<<<< ours
 		bytes const& ret = callReturning(_name + "(string)", m_framework.encodeDyn(_arg));
-		return h256(ret, h256::AlignRight);
+		return util::h256(ret, util::h256::AlignRight);
 	}
 
 	u256 callVoidReturnsUInt256(std::string const& _name)
 	{
 		bytes const& ret = callReturning(_name + "()");
 		BOOST_REQUIRE(ret.size() > 0 && ret.size() <= 32);
-		return fromBigEndian<u256>(ret);
+		return util::fromBigEndian<u256>(ret);
 	}
 
 	u256 callAddressReturnsUInt256(std::string const& _name, u160 const& _arg)
 	{
 		bytes const& ret = callReturning(_name + "(address)", _arg);
 		BOOST_REQUIRE(ret.size() > 0 && ret.size() <= 32);
-		return fromBigEndian<u256>(ret);
+		return util::fromBigEndian<u256>(ret);
 	}
 
 	bool callAddressUInt256ReturnsBool(std::string const& _name, u160 const& _arg1, u256 const& _arg2)
@@ -140,12 +121,7 @@ protected:
 	{
 		bytes const& ret = callReturning(_name + "(address,address)", _arg1, _arg2);
 		BOOST_REQUIRE(ret.size() > 0 && ret.size() <= 32);
-		return fromBigEndian<u256>(ret);
-=======
-		bytes const& ret = call(_name + "(string)", u256(0x20), _arg.length(), _arg);
-		BOOST_REQUIRE(ret.size() == 0x20);
-		return util::h256(ret);
->>>>>>> theirs
+		return util::fromBigEndian<u256>(ret);
 	}
 
 private:

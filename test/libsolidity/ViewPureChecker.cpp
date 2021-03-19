@@ -51,10 +51,7 @@ BOOST_AUTO_TEST_CASE(environment_access)
 		"tx.gasprice",
 		"this",
 		"address(1).balance",
-<<<<<<< ours
-		"address(1).codesize"
-=======
->>>>>>> theirs
+		"address(1).codesize",
 	};
 	if (solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
 		view.emplace_back("address(0x4242).staticcall(\"\")");
@@ -97,219 +94,6 @@ BOOST_AUTO_TEST_CASE(environment_access)
 		TypeError,
 		"\"block.blockhash()\" has been deprecated in favor of \"blockhash()\""
 	);
-<<<<<<< ours
-
-}
-
-BOOST_AUTO_TEST_CASE(modifiers)
-{
-	string text = R"(
-		contract D {
-			uint x;
-			modifier purem(uint) { _; }
-			modifier viewm(uint) { uint a = x; _; a; }
-			modifier nonpayablem(uint) { x = 2; _; }
-		}
-		contract C is D {
-			function f() purem(0) pure public {}
-			function g() viewm(0) view public {}
-			function h() nonpayablem(0) public {}
-			function i() purem(x) view public {}
-			function j() viewm(x) view public {}
-			function k() nonpayablem(x) public {}
-			function l() purem(x = 2) public {}
-			function m() viewm(x = 2) public {}
-			function n() nonpayablem(x = 2) public {}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(interface)
-{
-	string text = R"(
-		interface D {
-			function f() view external;
-		}
-		contract C is D {
-			function f() view external {}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(overriding)
-{
-	string text = R"(
-		contract D {
-			uint x;
-			function f() public { x = 2; }
-		}
-		contract C is D {
-			function f() public {}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(returning_structs)
-{
-	string text = R"(
-		contract C {
-			struct S { uint x; }
-			S s;
-			function f() view internal returns (S storage) {
-				return s;
-			}
-			function g() public {
-				f().x = 2;
-			}
-			function h() view public {
-				f();
-				f().x;
-			}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(mappings)
-{
-	string text = R"(
-		contract C {
-			mapping(uint => uint) a;
-			function f() view public {
-				a;
-			}
-			function g() view public {
-				a[2];
-			}
-			function h() public {
-				a[2] = 3;
-			}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(local_storage_variables)
-{
-	string text = R"(
-		contract C {
-			struct S { uint a; }
-			S s;
-			function f() view public {
-				S storage x = s;
-				x;
-			}
-			function g() view public {
-				S storage x = s;
-				x = s;
-			}
-			function i() public {
-				s.a = 2;
-			}
-			function h() public {
-				S storage x = s;
-				x.a = 2;
-			}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(builtin_functions)
-{
-	string text = R"(
-		contract C {
-			function f() public {
-				address(this).transfer(1);
-				require(address(this).send(2));
-				selfdestruct(address(this));
-			//	require(address(this).delegatecall());
-			//	require(address(this).call());
-			}
-			function g() pure public {
-				bytes32 x = keccak256("abc");
-				bytes32 y = sha256("abc");
-				address z = ecrecover(1, 2, 3, 4);
-				uint256 val = 0;
-				uint256[2] memory a = ecadd([val, val], [val, val]);
-				uint256[2] memory b = ecmul([val, val], val);
-				uint256[2][] memory p1;
-				uint256[4][] memory p2;
-				bool c = ecpairing(p1, p2);
-				require(true);
-				assert(true);
-				x; y; z; a; b; c;
-			}
-			function() payable public {}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(function_types)
-{
-	string text = R"(
-		contract C {
-			function f() pure public {
-				function () external nonpayFun;
-				function () external view viewFun;
-				function () external pure pureFun;
-
-				nonpayFun;
-				viewFun;
-				pureFun;
-				pureFun();
-			}
-			function g() view public {
-				function () external view viewFun;
-
-				viewFun();
-			}
-			function h() public {
-				function () external nonpayFun;
-
-				nonpayFun();
-			}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(selector)
-{
-	string text = R"(
-		contract C {
-			uint public x;
-			function f() payable public {
-			}
-			function g() pure public returns (bytes4) {
-				return this.f.selector ^ this.x.selector;
-			}
-		}
-	)";
-	std::vector<string> msgs{"Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md", "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md"};
-	CHECK_ERROR_ALLOW_MULTI(text, TypeError, msgs);
-}
-
-BOOST_AUTO_TEST_CASE(selector_complex)
-{
-	string text = R"(
-		contract C {
-			function f(C c) pure public returns (C) {
-				return c;
-			}
-			function g() pure public returns (bytes4) {
-				// By passing `this`, we read from the state, even if f itself is pure.
-				return f(this).f.selector;
-			}
-		}
-	)";
-	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
-=======
->>>>>>> theirs
 }
 
 BOOST_AUTO_TEST_CASE(address_staticcall)
@@ -322,60 +106,12 @@ BOOST_AUTO_TEST_CASE(address_staticcall)
 			}
 		}
 	)";
-<<<<<<< ours
-	CHECK_ERROR(text, TypeError, "Member \"selector\" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
-}
-
-BOOST_AUTO_TEST_CASE(creation)
-{
-	string text = R"(
-		contract D {}
-		contract C {
-			function f() public { new D(); }
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-BOOST_AUTO_TEST_CASE(assembly)
-{
-	string text = R"(
-		contract C {
-			struct S { uint x; }
-			S s;
-			function e() pure public {
-				assembly { mstore(keccak256(0, 20), mul(s_slot, 2)) }
-			}
-			function f() pure public {
-				uint x;
-				assembly { x := 7 }
-			}
-			function g() view public {
-				assembly { for {} 1 { pop(sload(0)) } { } pop(gas) }
-			}
-			function h() view public {
-				assembly { function g() { pop(blockhash(20)) } }
-			}
-			function j() public {
-				assembly { pop(call(0, 1, 2, 3, 4, 5, 6)) }
-			}
-			function k() public {
-				assembly { pop(call(gas, 1, 2, 3, 4, 5, 6)) }
-			}
-		}
-	)";
-	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
-	std::vector<std::string> msgs{msg,msg,msg,msg,msg,msg};
-	CHECK_ERROR_ALLOW_MULTI(text, SyntaxError, msgs);
-}
-=======
 	if (!solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
 		CHECK_ERROR(text, TypeError, "\"staticcall\" is not supported by the VM version.");
 	else
 		CHECK_SUCCESS_NO_WARNINGS(text);
 }
 
->>>>>>> theirs
 
 BOOST_AUTO_TEST_CASE(assembly_staticcall)
 {
@@ -386,43 +122,10 @@ BOOST_AUTO_TEST_CASE(assembly_staticcall)
 			}
 		}
 	)";
-<<<<<<< ours
 	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
 	CHECK_ERROR(text, SyntaxError, msg);
 }
 
-BOOST_AUTO_TEST_CASE(assembly_jump)
-{
-	string text = R"(
-		contract C {
-			function k() public {
-				assembly { jump(2) }
-			}
-		}
-	)";
-	std::string msg = "Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md";
-	CHECK_ERROR(text, SyntaxError, msg);
-}
-
-BOOST_AUTO_TEST_CASE(constant)
-{
-	string text = R"(
-		contract C {
-			uint constant x = 2;
-			function k() pure public returns (uint) {
-				return x;
-			}
-		}
-	)";
-	CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
-=======
-	if (solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
-		CHECK_SUCCESS_NO_WARNINGS(text);
-}
-
->>>>>>> theirs
 BOOST_AUTO_TEST_SUITE_END()
 
 }

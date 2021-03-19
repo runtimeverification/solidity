@@ -11,4 +11,4 @@ contract test {
 // ====
 // compileViaYul: also
 // ----
-// data(uint256): 7 -> 1, 2, true
+// data(uint): 7 -> 1, 2, true

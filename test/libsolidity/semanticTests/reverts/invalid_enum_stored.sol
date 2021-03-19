@@ -4,9 +4,7 @@ contract C {
 
     function test_store() public returns (uint256) {
         X garbled = X.A;
-        assembly {
-            garbled := 5
-        }
+        garbled = X(5);
         x = garbled;
         return 1;
     }
