@@ -20,6 +20,7 @@
 
 #include <test/libsolidity/util/ContractABIUtils.h>
 #include <test/libsolidity/util/SoltestErrors.h>
+#include <test/ExecutionFramework.h>
 
 #include <liblangutil/Common.h>
 
@@ -77,9 +78,9 @@ bytes BytesUtils::applyAlign(
 bytes BytesUtils::convertBoolean(string const& _literal)
 {
 	if (_literal == "true")
-		return bytes{true};
+		return solidity::test::ExecutionFramework::encode(true);
 	else if (_literal == "false")
-		return bytes{false};
+		return solidity::test::ExecutionFramework::encode(false);
 	else
 		throw TestParserError("Boolean literal invalid.");
 }
@@ -88,7 +89,7 @@ bytes BytesUtils::convertNumber(string const& _literal)
 {
 	try
 	{
-		return toCompactBigEndian(u256{_literal});
+		return solidity::test::ExecutionFramework::encode(u256{_literal});
 	}
 	catch (std::exception const&)
 	{

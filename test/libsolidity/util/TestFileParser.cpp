@@ -311,28 +311,24 @@ Parameter TestFileParser::parseParameter()
 		if (isSigned)
 			throw TestParserError("Invalid boolean literal.");
 
-		parameter.abiType = ABIType{ABIType::Boolean, ABIType::AlignRight, 32};
 		string parsed = parseBoolean();
+		parameter.rawBytes = BytesUtils::convertBoolean(parsed);
 		parameter.rawString += parsed;
-		parameter.rawBytes = BytesUtils::applyAlign(
-			parameter.alignment,
-			parameter.abiType,
-			BytesUtils::convertBoolean(parsed)
-		);
+		parameter.abiType = ABIType{
+			ABIType::Boolean, ABIType::AlignRight, parameter.rawBytes.size()
+		};
 	}
 	else if (accept(Token::HexNumber))
 	{
 		if (isSigned)
 			throw TestParserError("Invalid hex number literal.");
 
-		parameter.abiType = ABIType{ABIType::Hex, ABIType::AlignRight, 32};
 		string parsed = parseHexNumber();
 		parameter.rawString += parsed;
-		parameter.rawBytes = BytesUtils::applyAlign(
-			parameter.alignment,
-			parameter.abiType,
-			BytesUtils::convertHexNumber(parsed)
-		);
+		parameter.rawBytes = BytesUtils::convertHexNumber(parsed);
+		parameter.abiType = ABIType{
+			ABIType::Hex, ABIType::AlignRight, parameter.rawBytes.size()
+		};
 	}
 	else if (accept(Token::Hex, true))
 	{
@@ -368,17 +364,13 @@ Parameter TestFileParser::parseParameter()
 	{
 		auto type = isSigned ? ABIType::SignedDec : ABIType::UnsignedDec;
 
-		parameter.abiType = ABIType{type, ABIType::AlignRight, 32};
 		string parsed = parseDecimalNumber();
 		parameter.rawString += parsed;
 		if (isSigned)
 			parsed = "-" + parsed;
 
-		parameter.rawBytes = BytesUtils::applyAlign(
-			parameter.alignment,
-			parameter.abiType,
-			BytesUtils::convertNumber(parsed)
-		);
+		parameter.rawBytes = BytesUtils::convertNumber(parsed);
+		parameter.abiType = ABIType{type, ABIType::AlignRight, parameter.rawBytes.size()};
 	}
 	else if (accept(Token::Failure, true))
 	{

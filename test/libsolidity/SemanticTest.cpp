@@ -124,12 +124,14 @@ TestCase::TestResult SemanticTest::runTest(ostream& _stream, string const& _line
 	{
 		bool success = true;
 
+/*
 		if (_compileViaYul && _compileToEwasm)
 			selectVM(evmc_capabilities::EVMC_CAPABILITY_EWASM);
 		else
 			selectVM(evmc_capabilities::EVMC_CAPABILITY_EVM1);
 
 		reset();
+*/
 
 		m_compileViaYul = _compileViaYul;
 		if (_compileToEwasm)
@@ -377,5 +379,5 @@ void SemanticTest::parseExpectations(istream& _stream)
 bool SemanticTest::deploy(string const& _contractName, u256 const& _value, vector<bytes> const& _arguments, map<string, solidity::test::Address> const& _libraries)
 {
 	auto output = compileAndRunWithoutCheck(m_sources.sources, _value, _contractName, false, _arguments, _libraries);
-	return !output.empty() && m_status == 0;
+	return !output.empty() && m_transactionSuccessful;
 }
