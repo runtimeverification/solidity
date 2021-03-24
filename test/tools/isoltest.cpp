@@ -162,7 +162,8 @@ TestTool::Result TestTool::process()
 				m_path.string(),
 				m_options.evmVersion(),
 				m_options.vmPaths,
-				m_options.enforceViaYul
+				m_options.enforceViaYul,
+				m_options.enforceNoYulEwasm
 			});
 			if (m_test->shouldRun())
 				switch (TestCase::TestResult result = m_test->run(outputMessages, "  ", formatted))
