@@ -171,7 +171,7 @@ bool CommonOptions::parse(int argc, char const* const* argv)
 			throw std::runtime_error(errorMessage.str());
 		}
 
-	if (vmPaths.empty())
+	if (disableIPC && vmPaths.empty())
 	{
 		std::string evmone = envOrDefaultPath("ETH_EVMONE", evmoneFilename);
 		if (!evmone.empty())
