@@ -224,7 +224,7 @@ string BytesUtils::formatRawBytes(
 	}
 
 	if (!sizesAgree)
-		parameters = ContractABIUtils::defaultParameters((_bytes.size() + 31) / 32);
+		parameters = ContractABIUtils::defaultParameters(_bytes.size());
 	else {
 		soltestAssert(totalBytesSize == ContractABIUtils::encodingSize(_parameters), "");
 		parameters = _parameters;
@@ -336,7 +336,7 @@ string BytesUtils::formatBytesRange(
 	}
 
 	if (!sizesAgree)
-		parameters = ContractABIUtils::defaultParameters((_bytes.size() + 31) / 32);
+		parameters = ContractABIUtils::defaultParameters(_bytes.size());
 	else {
 		soltestAssert(totalBytesSize == ContractABIUtils::encodingSize(_parameters), "");
 		parameters = _parameters;
