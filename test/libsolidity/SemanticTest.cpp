@@ -39,15 +39,22 @@ using namespace boost::unit_test;
 namespace fs = boost::filesystem;
 
 
-SemanticTest::SemanticTest(string const& _filename, langutil::EVMVersion _evmVersion, vector<boost::filesystem::path> const& _vmPaths, bool enforceViaYul):
+SemanticTest::SemanticTest(string const& _filename, langutil::EVMVersion _evmVersion, vector<boost::filesystem::path> const& _vmPaths, bool enforceViaYul, bool enforceNoYulEwasm):
 	SolidityExecutionFramework(_evmVersion, _vmPaths),
 	EVMVersionRestrictedTestCase(_filename),
 	m_sources(m_reader.sources()),
 	m_lineOffset(m_reader.lineNumber()),
-	m_enforceViaYul(enforceViaYul)
+	m_enforceViaYul(enforceViaYul),
+	m_enforceNoYulEwasm(enforceNoYulEwasm)
 {
 	string choice = m_reader.stringSetting("compileViaYul", "default");
-	if (choice == "also")
+	if (m_enforceNoYulEwasm)
+	{
+		m_runWithYul = false;
+		m_runWithoutYul = true;
+		m_enforceViaYul = false;
+	}
+	else if (choice == "also")
 	{
 		m_runWithYul = true;
 		m_runWithoutYul = true;
@@ -73,7 +80,9 @@ SemanticTest::SemanticTest(string const& _filename, langutil::EVMVersion _evmVer
 		BOOST_THROW_EXCEPTION(runtime_error("Invalid compileViaYul value: " + choice + "."));
 
 	string compileToEwasm = m_reader.stringSetting("compileToEwasm", "false");
-	if (compileToEwasm == "also")
+	if (m_enforceNoYulEwasm)
+		m_runWithEwasm = false;
+	else if (compileToEwasm == "also")
 		m_runWithEwasm = true;
 	else if (compileToEwasm == "false")
 		m_runWithEwasm = false;
@@ -124,12 +133,14 @@ TestCase::TestResult SemanticTest::runTest(ostream& _stream, string const& _line
 	{
 		bool success = true;
 
+/*
 		if (_compileViaYul && _compileToEwasm)
 			selectVM(evmc_capabilities::EVMC_CAPABILITY_EWASM);
 		else
 			selectVM(evmc_capabilities::EVMC_CAPABILITY_EVM1);
 
 		reset();
+*/
 
 		m_compileViaYul = _compileViaYul;
 		if (_compileToEwasm)
@@ -377,5 +388,5 @@ void SemanticTest::parseExpectations(istream& _stream)
 bool SemanticTest::deploy(string const& _contractName, u256 const& _value, vector<bytes> const& _arguments, map<string, solidity::test::Address> const& _libraries)
 {
 	auto output = compileAndRunWithoutCheck(m_sources.sources, _value, _contractName, false, _arguments, _libraries);
-	return !output.empty() && m_status == 0;
+	return !output.empty() && m_transactionSuccessful;
 }

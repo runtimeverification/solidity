@@ -221,6 +221,9 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 	m_blockNumber = u256(receipt.blockNumber);
 	m_status = bigint(receipt.status);
 
+	m_gasUsed = u256(receipt.gasUsed);
+	m_transactionSuccessful = m_status == 0;
+
 	if (_isCreation)
 	{
 	        m_contractAddress = h160(receipt.contractAddress);
@@ -234,9 +237,9 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 		}
 		cout << "]" << endl;
 	        cout << " tx hash: " << txHash << endl;
+		cout << " gas used: " << m_gasUsed.str() << endl;
 	}
 
-    m_gasUsed = u256(receipt.gasUsed);
     m_logs.clear();
     for (auto const& log: receipt.logEntries)
     {

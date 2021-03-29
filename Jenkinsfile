@@ -43,6 +43,7 @@ pipeline {
                                --log_format=XML  \
                                `cat test/failing-exec-tests` \
                                -- \
+                               --enforce-no-yul-ewasm \
                                --ipcpath build/ipcfile \
                                --testpath test
           iconv --from-code iso-8859-1 \

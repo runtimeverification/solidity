@@ -799,8 +799,8 @@ string CompilerStack::assemblyString(string const& _contractName, StringMap _sou
 		BOOST_THROW_EXCEPTION(CompilerError() << errinfo_comment("Compilation was not successful."));
 
 	Contract const& currentContract = contract(_contractName);
-	if (currentContract.evmAssembly)
-		return currentContract.evmAssembly->assemblyString(_sourceCodes);
+	if (currentContract.compiler)
+		return currentContract.compiler->assemblyString(_sourceCodes);
 	else
 		return string();
 }
