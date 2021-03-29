@@ -6,19 +6,6 @@ To learn more about the supported Solidity features and the main differences bet
 
 Solidity is a statically typed, contract-oriented, high-level language for implementing smart contracts on the Ethereum platform.
 
-## Table of Contents
-
-- [Background](#background)
-- [Build and Install](#build-and-install)
-- [Example](#example)
-- [Documentation](#documentation)
-- [Development](#development)
-- [Maintainers](#maintainers)
-- [License](#license)
-- [Security](#security)
-
-## Background
-
 ## Building
 
 ### Prerequisites
@@ -69,3 +56,25 @@ Failed tests reported are stored in `test/failed`, clean them before rerunning:
 ```
 rm -rf test/failed
 ```
+
+To run the execution test suite, first start an IELE vm in separate terminal (this assumes that IELE binaries are found in the system's PATH):
+```
+kiele vm --port 9001
+```
+
+Then, start the `iele-test-client` script in a separate terminal:
+```
+iele-test-client <path to Solidity-to-IELE build directory>/ipcfile 9001
+```
+Note that, you may need to delete an existing `ipcfile` before you restart this script.
+
+Finally, you can run the whole execution test suite with:
+```
+./build/test/soltest --no_result_code --report_level=short `cat test/failing-exec-tests` -- --enforce-no-yul-ewasm --ipcpath build/ipcfile --testpath test
+```
+
+Alternatively, you can run a specific test with:
+```
+./build/test/soltest --no_result_code -t <test name> -- --enforce-no-yul-ewasm --ipcpath build/ipcfile --testpath test
+```
+where `<test name>` is the name with which the test is registered in the test suite. For example, the test found in `test/libsolidity/semanticTests/operators/shifts/shift_right.sol`, is registered in the test suite with the name `semanticTests/operators/shifts/shift_right`.
