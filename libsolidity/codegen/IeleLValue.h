@@ -40,7 +40,7 @@ protected:
 
   IeleRValue *Value;
 public:
-  ReadOnlyLValue(const RegisterLValue&) = delete;
+  ReadOnlyLValue(const ReadOnlyLValue&) = delete;
   void operator=(const ReadOnlyLValue&) = delete;
 
   ~ReadOnlyLValue() = default;

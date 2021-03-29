@@ -4017,7 +4017,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     break;
   }
   case FunctionType::Kind::ByteArrayPush: {
-    IeleRValue *PushedValue = compileExpression(*arguments.front());
+    IeleRValue *PushedValue =
+      arguments.size() ? compileExpression(*arguments.front()) : nullptr;
     iele::IeleValue *ArrayValue = compileExpression(functionCall.expression())->getValue();
     IeleLValue *SizeLValue = AddressLValue::Create(this, ArrayValue, CompilingLValueArrayType->location());
     iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock)->getValue();
@@ -4028,7 +4029,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
     IeleLValue *ElementLValue = ByteArrayLValue::Create(this, StringAddress, SizeValue, CompilingLValueArrayType->location());
-    ElementLValue->write(PushedValue, CompilingBlock);
+    if (PushedValue) {
+      ElementLValue->write(PushedValue, CompilingBlock);
+    }
 
     iele::IeleLocalVariable *NewSize =
       iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
@@ -4036,20 +4039,24 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::Add, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
-
     IeleRValue *rvalue = IeleRValue::Create({NewSize});
     SizeLValue->write(rvalue, CompilingBlock);
-    CompilingExpressionResult.push_back(rvalue);
+
+    if (PushedValue) {
+      CompilingExpressionResult.push_back(rvalue);
+    } else {
+      CompilingExpressionResult.push_back(ElementLValue);
+    }
     break;
   }
   case FunctionType::Kind::ArrayPush: {
-    IeleRValue *PushedValue = compileExpression(*arguments.front());
+    IeleRValue *PushedValue =
+      arguments.size() ? compileExpression(*arguments.front()) : nullptr;
     iele::IeleValue *ArrayValue = compileExpression(functionCall.expression())->getValue();
     IeleLValue *SizeLValue = AddressLValue::Create(this, ArrayValue, CompilingLValueArrayType->location());
     iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock)->getValue();
 
     TypePointer elementType = CompilingLValueArrayType->baseType();
-    TypePointer RHSType = arguments.front()->annotation().type;
 
     bigint elementSize;
     switch (CompilingLValueArrayType->location()) {
@@ -4079,26 +4086,38 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::Add, AddressValue, AddressValue, ArrayValue,
       CompilingBlock);
 
-    IeleLValue *ElementLValue = makeLValue(AddressValue, elementType, CompilingLValueArrayType->location());
-    if (shouldCopyStorageToStorage(*elementType, ElementLValue, *RHSType))
-      appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
-    else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))
-      appendCopyFromMemoryToStorage(ElementLValue, elementType, PushedValue, RHSType);
-    else if (shouldCopyMemoryToMemory(*elementType, ElementLValue, *RHSType))
-      appendCopyFromMemoryToMemory(ElementLValue, elementType, PushedValue, RHSType);
-    else
-      ElementLValue->write(PushedValue, CompilingBlock);
+    // new element lvalue
+    IeleLValue *ElementLValue =
+      makeLValue(AddressValue, elementType, CompilingLValueArrayType->location());
 
+    // write the pushed value (if available)
+    if (PushedValue) {
+      TypePointer RHSType = arguments.front()->annotation().type;
+      if (shouldCopyStorageToStorage(*elementType, ElementLValue, *RHSType))
+        appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
+      else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))
+        appendCopyFromMemoryToStorage(ElementLValue, elementType, PushedValue, RHSType);
+      else if (shouldCopyMemoryToMemory(*elementType, ElementLValue, *RHSType))
+        appendCopyFromMemoryToMemory(ElementLValue, elementType, PushedValue, RHSType);
+      else
+        ElementLValue->write(PushedValue, CompilingBlock);
+    }
+
+    // update array length
     iele::IeleLocalVariable *NewSize =
       iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Add, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
-
     IeleRValue *rvalue = IeleRValue::Create({NewSize});
     SizeLValue->write(rvalue, CompilingBlock);
-    CompilingExpressionResult.push_back(rvalue);
+
+    if (PushedValue) {
+      CompilingExpressionResult.push_back(rvalue);
+    } else {
+      CompilingExpressionResult.push_back(ElementLValue);
+    }
     break;
   }
   case FunctionType::Kind::ABIEncode:
