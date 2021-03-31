@@ -198,8 +198,10 @@ struct FunctionCallExpectations
 	std::vector<bytes> rawBytes() const
 	{
 		std::vector<bytes> raw;
-		for (auto const& param: result)
-			raw.push_back(param.rawBytes);
+		for (auto const& param: result) {
+			if (param.abiType.type != ABIType::Failure)
+				raw.push_back(param.rawBytes);
+		}
 		return raw;
 	}
 };

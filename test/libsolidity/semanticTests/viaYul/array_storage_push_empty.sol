@@ -14,4 +14,4 @@ contract C {
 // ----
 // pushEmpty(uint256): 128
 // pushEmpty(uint256): 256
-// pushEmpty(uint256): 32768 -> FAILURE # out-of-gas #
+// pushEmpty(uint256): 32768 -> FAILURE, 5 # out-of-gas #

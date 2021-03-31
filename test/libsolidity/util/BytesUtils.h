@@ -62,6 +62,10 @@ public:
 	/// representation of the string literal. Throws if conversion fails.
 	static bytes convertString(std::string const& _literal);
 
+	/// Tries to convert \param _literal to an unpadded `bytes`
+	/// representation of the error message. Throws if conversion fails.
+	static bytes convertErrorMessage(std::string const& _literal);
+
 	/// Converts \param _bytes to a soltest-compliant and human-readable
 	/// string representation of a byte array which is assumed to hold
 	/// an unsigned value.

@@ -155,7 +155,7 @@ private:
 	/// Returns invalid ABI type for empty literal. This is needed in order
 	/// to detect empty expectations. Throws a ParserError if data is encoded incorrectly or
 	/// if data type is not supported.
-	Parameter parseParameter();
+	Parameter parseParameter(bool isErrorMesage=false);
 
 	/// Recursively parses an identifier or a tuple definition that contains identifiers
 	/// and / or parentheses like `((uint, uint), (uint, (uint, uint)), uint)`.

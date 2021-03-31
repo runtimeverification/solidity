@@ -34,12 +34,12 @@ contract C {
 // EVMVersion: >=byzantium
 // ----
 // f(bool): true -> true
-// f(bool): false -> FAILURE
-// fail() -> FAILURE
+// f(bool): false -> FAILURE, 255
+// fail() -> FAILURE, 255
 // succeed() -> true
 // f2(bool): true -> true
-// f2(bool): false -> FAILURE, hex"08c379a0", 0x20, 14, "fancy message!"
+// f2(bool): false -> FAILURE, "fancy message!"
 // f3(bool): true -> true
-// f3(bool): false -> FAILURE, hex"08c379a0", 0x20, 3, "msg"
+// f3(bool): false -> FAILURE, "msg"
 // f4(bool): true -> true
-// f4(bool): false -> FAILURE, hex"08c379a0", 0x20, 0
+// f4(bool): false
