@@ -9,5 +9,5 @@ contract C {
     }
 }
 // ----
-// f(uint16,uint16,uint16): 0xe000, 0xe500, 2 -> 58626
-// f(uint16,uint16,uint16): 0x1000, 0xe500, 0xe000 -> FAILURE, hex"4e487b71", 0x11
+// f(uint16,uint16,uint16): 0x00e000, 0x00e500, 2 -> 58626
+// f(uint16,uint16,uint16): 0x001000, 0x00e500, 0x00e000 -> FAILURE, 255

@@ -13,5 +13,5 @@ contract C {
 // compileViaYul: also
 // ----
 // f(uint16): 7 -> 0x0207
-// f(uint16): 0xffff -> 511
-// f(uint16): 0xfeff -> FAILURE, hex"4e487b71", 0x11
+// f(uint16): 0x00ffff -> 511
+// f(uint16): 0x00feff -> FAILURE, 255
