@@ -2513,6 +2513,7 @@ void IeleCompiler::doEncode(
       break;
     case FunctionType::Kind::ArrayPush:
     case FunctionType::Kind::ByteArrayPush:
+    case FunctionType::Kind::ArrayPop:
       solAssert(false, "not implemented yet");
     default:
       break;
@@ -2927,6 +2928,7 @@ void IeleCompiler::doDecode(
       break;
     case FunctionType::Kind::ArrayPush:
     case FunctionType::Kind::ByteArrayPush:
+    case FunctionType::Kind::ArrayPop:
       solAssert(false, "not implemented yet");
     default:
       break;
@@ -4073,8 +4075,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     }
  
     iele::IeleLocalVariable *AddressValue =
-      iele::IeleLocalVariable::Create(&Context, "array.last.element", CompilingFunction);
-    // compute the data offset of the last element
+      iele::IeleLocalVariable::Create(&Context, "array.end.address", CompilingFunction);
+    // compute the data offset of the end of the array
     appendMul(AddressValue, SizeValue, elementSize);
     // add one for the length slot
     iele::IeleInstruction::CreateBinOp(
@@ -4118,6 +4120,69 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     } else {
       CompilingExpressionResult.push_back(ElementLValue);
     }
+    break;
+  }
+  case FunctionType::Kind::ArrayPop: {
+    iele::IeleValue *ArrayValue = compileExpression(functionCall.expression())->getValue();
+    IeleLValue *SizeLValue = AddressLValue::Create(this, ArrayValue, CompilingLValueArrayType->location());
+    iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock)->getValue();
+
+    TypePointer elementType = CompilingLValueArrayType->baseType();
+
+    bigint elementSize;
+    switch (CompilingLValueArrayType->location()) {
+    case DataLocation::Storage: {
+      elementSize = elementType->storageSize();
+      break;
+    }
+    case DataLocation::Memory: {
+      elementSize = elementType->memorySize();
+      break;
+    }
+    case DataLocation::CallData:
+      solAssert(false, "not supported by IELE.");
+    }
+
+    iele::IeleLocalVariable *PopEmpty =
+      iele::IeleLocalVariable::Create(&Context, "pop.empty", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::CmpLe, PopEmpty, SizeValue,
+        iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+    appendRevert(PopEmpty);
+
+    iele::IeleLocalVariable *AddressValue =
+      iele::IeleLocalVariable::Create(&Context, "array.last.element", CompilingFunction);
+    // compute the data offset of the last element
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Sub, AddressValue, SizeValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+    appendMul(AddressValue, AddressValue, elementSize);
+    // add one for the length slot
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, AddressValue, AddressValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+    // compute the address of the last element
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, AddressValue, AddressValue, ArrayValue,
+      CompilingBlock);
+
+    // delete the last element
+    appendLValueDelete(
+      makeLValue(AddressValue, elementType, CompilingLValueArrayType->location()),
+      elementType);
+
+    // update array length
+    iele::IeleLocalVariable *NewSize =
+      iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Sub, NewSize, SizeValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+    IeleRValue *rvalue = IeleRValue::Create({NewSize});
+    SizeLValue->write(rvalue, CompilingBlock);
+
     break;
   }
   case FunctionType::Kind::ABIEncode:
@@ -4583,6 +4648,11 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       CompilingExpressionResult.push_back(ExprValue);
       CompilingLValueArrayType = &type;
       break;
+    } else if (member == "pop") {
+      solAssert(type.isDynamicallySized(), "Invalid pop on fixed length array");
+      CompilingExpressionResult.push_back(ExprValue);
+      CompilingLValueArrayType = &type;
+      break;
     } else {
       solAssert(false, "not implemented yet");
     }
@@ -4955,6 +5025,7 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
       break;
     case FunctionType::Kind::ArrayPush:
     case FunctionType::Kind::ByteArrayPush:
+    case FunctionType::Kind::ArrayPop:
       solAssert(false, "not implemented yet");
     default:
       break;
