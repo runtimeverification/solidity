@@ -46,27 +46,6 @@ function compileFull()
     fi
 }
 
-printTask "Compiling all examples in std..."
-examples=0
-examples_success=0
-examples_excluded=0
-cd "$REPO_ROOT"
-for f in std/*.sol
-do
-    grep -q $f test/should-skip-tests
-    skipped=$?
-    [ $skipped -eq 0 ] && continue
-    compileFull "$f"
-    failed=$?
-    grep -q $f test/failing-tests
-    excluded=$?
-    examples=$((examples+1))
-    [ $failed -eq 0 ] && [ $excluded -ne 0 ] && examples_success=$((examples_success+1))
-    [ $failed -ne 0 ] && [ $excluded -eq 0 ] && examples_excluded=$((examples_excluded+1))
-    [ $failed -eq 0 ] && [ $excluded -eq 0 ] && echo "Error: test passed but was expected to fail: $f" && cat "$f"
-    [ $failed -ne 0 ] && [ $excluded -ne 0 ] && echo "Error: test failed but was expected to pass: $f" && cat "$f"
-done
-
 printTask "Compiling various contracts and libraries..."
 contracts=0
 contracts_success=0

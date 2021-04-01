@@ -521,11 +521,14 @@ BoolResult IntegerType::isExplicitlyConvertibleTo(Type const& _convertTo) const
 	if (isImplicitlyConvertibleTo(_convertTo))
 		return true;
 	else if (auto integerType = dynamic_cast<IntegerType const*>(&_convertTo))
-		return (numBits() == integerType->numBits()) || (isSigned() == integerType->isSigned());
+		return (isUnbound() && integerType->isUnbound())
+               || (!isUnbound() && !integerType->isUnbound() &&
+                   (numBits() == integerType->numBits()))
+               || (isSigned() == integerType->isSigned());
 	else if (auto addressType = dynamic_cast<AddressType const*>(&_convertTo))
 		return
 			(addressType->stateMutability() != StateMutability::Payable) &&
-			!isSigned() &&
+			!isSigned() && !isUnbound() &&
 			(numBits() == 160);
 	else if (auto fixedBytesType = dynamic_cast<FixedBytesType const*>(&_convertTo))
 		return (!isSigned() && (numBits() == fixedBytesType->numBytes() * 8));
