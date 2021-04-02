@@ -475,7 +475,7 @@ protected:
 	util::h160 m_contractAddress;
 	u256 m_blockNumber;
 	u256 const m_gasPrice = 10 * gwei;
-	u256 const m_gas = 30000000;
+	u256 const m_gas = 100000000;
 	std::vector<bytes> m_output;
 	bigint m_status;
     std::vector<LogEntry> m_logs;
