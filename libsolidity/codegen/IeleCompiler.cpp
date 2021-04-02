@@ -4242,6 +4242,45 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   return false;
 }
 
+
+bool IeleCompiler::visit(const FunctionCallOptions &functionCallOptions) {
+  IeleRValue *CalleeValue = compileExpression(functionCallOptions.expression());
+  std::vector<iele::IeleValue *> values;
+  values.insert(values.end(), CalleeValue->getValues().begin(),
+                CalleeValue->getValues().end());
+  FunctionTypePointer functionType =
+    dynamic_cast<FunctionTypePointer>(
+                 functionCallOptions.expression().annotation().type);
+
+  int numOptions = functionCallOptions.options().size() ;
+  solAssert(numOptions <= 2, "");
+
+  for (int i = 0; i < numOptions; i++) {
+    if (functionCallOptions.names()[i]->compare("gas") == 0) {
+      IeleRValue *OptionValue =
+        compileExpression(*functionCallOptions.options()[i]);
+      OptionValue =
+        appendTypeConversion(OptionValue,
+                             functionCallOptions.options()[i]->annotation().type,
+                             UInt);
+      values.insert(values.begin() + functionType->gasIndex(), OptionValue->getValue());
+    } else if (functionCallOptions.names()[i]->compare("value") == 0) {
+      IeleRValue *OptionValue =
+        compileExpression(*functionCallOptions.options()[i]);
+      OptionValue =
+        appendTypeConversion(OptionValue,
+                             functionCallOptions.options()[i]->annotation().type,
+                             UInt);
+      values.insert(values.begin() + functionType->valueIndex(), OptionValue->getValue());
+    } else {
+      solAssert(false, "not implemented yet");
+    }
+  }
+
+  CompilingExpressionResult.push_back(IeleRValue::Create(values));
+  return false;
+} 
+
 template <typename ExpressionClass>
 void IeleCompiler::compileFunctionArguments(
       llvm::SmallVectorImpl<iele::IeleValue *> &Arguments,

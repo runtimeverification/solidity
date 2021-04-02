@@ -110,6 +110,7 @@ public:
   virtual bool visit(const UnaryOperation &unaryOperation) override;
   virtual bool visit(const BinaryOperation &binaryOperation) override;
   virtual bool visit(const FunctionCall &functionCall) override;
+  virtual bool visit(const FunctionCallOptions &functionCallOptions) override;
   virtual bool visit(const NewExpression &newExpression) override;
   virtual bool visit(const MemberAccess &memberAccess) override;
   virtual bool visit(const IndexAccess &indexAccess) override;
