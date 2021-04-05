@@ -6501,12 +6501,15 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     case Token::Add:
     case Token::Sub:
     case Token::Div:
-    case Token::Mod:
-    case Token::SHL: {
+    case Token::Mod: {
       if (unchecked)
         appendMask(Result, Result, nbytes, issigned);
       else
         appendRangeCheck(IeleRValue::Create(Result), *ResultType);
+      break;
+    }
+    case Token::SHL: {
+      appendMask(Result, Result, nbytes, issigned);
       break;
     }
     case Token::Mul:
