@@ -89,7 +89,7 @@ bytes BytesUtils::convertNumber(string const& _literal)
 {
 	try
 	{
-		return solidity::test::ExecutionFramework::encode(u256{_literal});
+		return solidity::test::ExecutionFramework::encode(bigint(_literal));
 	}
 	catch (std::exception const&)
 	{
@@ -114,6 +114,18 @@ bytes BytesUtils::convertString(string const& _literal)
 	try
 	{
 		return asBytes(_literal);
+	}
+	catch (std::exception const&)
+	{
+		throw TestParserError("String encoding invalid.");
+	}
+}
+
+bytes BytesUtils::convertErrorMessage(string const& _literal)
+{
+	try
+	{
+		return solidity::test::ExecutionFramework::encodeLogs(_literal);
 	}
 	catch (std::exception const&)
 	{

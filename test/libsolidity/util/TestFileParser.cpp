@@ -265,17 +265,24 @@ FunctionCallExpectations TestFileParser::parseFunctionCallExpectations()
 	}
 	expectations.result.emplace_back(param);
 
+	if (param.abiType.type == ABIType::Failure)
+	{
+		expect(Token::Comma);
+		expectations.result.emplace_back(parseParameter(true));
+		return expectations;
+	}
+
 	while (accept(Token::Comma, true))
 		expectations.result.emplace_back(parseParameter());
 
 	/// We have always one virtual parameter in the parameter list.
 	/// If its type is FAILURE, the expected result is also a REVERT etc.
-	if (expectations.result.at(0).abiType.type != ABIType::Failure)
-		expectations.failure = false;
+	assert(expectations.result.at(0).abiType.type != ABIType::Failure);
+	expectations.failure = false;
 	return expectations;
 }
 
-Parameter TestFileParser::parseParameter()
+Parameter TestFileParser::parseParameter(bool isErrorMessage)
 {
 	Parameter parameter;
 	if (accept(Token::Newline, true))
@@ -352,13 +359,14 @@ Parameter TestFileParser::parseParameter()
 			throw TestParserError("String literals cannot be aligned or padded.");
 
 		string parsed = parseString();
-		parameter.abiType = ABIType{ABIType::String, ABIType::AlignLeft, parsed.size()};
 		parameter.rawString += "\"" + parsed + "\"";
-		parameter.rawBytes = BytesUtils::applyAlign(
-			Parameter::Alignment::Left,
-			parameter.abiType,
-			BytesUtils::convertString(parsed)
-		);
+		if (isErrorMessage)
+			parameter.rawBytes = BytesUtils::convertErrorMessage(parsed);
+		else
+			parameter.rawBytes = BytesUtils::convertString(parsed);
+		parameter.abiType = ABIType{
+			ABIType::String, ABIType::AlignRight, parameter.rawBytes.size()
+		};
 	}
 	else if (accept(Token::Number))
 	{

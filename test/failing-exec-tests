@@ -190,6 +190,7 @@
 -t !semanticTests/abiEncoderV2/struct/validation_function_type_inside_struct
 -t !semanticTests/arithmetics/addmod_mulmod_zero
 -t !semanticTests/arithmetics/block_inside_unchecked
+-t !semanticTests/arithmetics/checked_add
 -t !semanticTests/arithmetics/checked_called_by_unchecked
 -t !semanticTests/arithmetics/checked_modifier_called_by_unchecked
 -t !semanticTests/arithmetics/check_var_init
@@ -410,6 +411,7 @@
 -t !semanticTests/ecrecover/failing_ecrecover_invalid_input_proper
 -t !semanticTests/empty_contract
 -t !semanticTests/enums/enum_explicit_overflow
+-t !semanticTests/enums/enum_explicit_overflow_homestead
 -t !semanticTests/enums/enum_with_256_members
 -t !semanticTests/enums/using_enums
 -t !semanticTests/exponentiation/literal_base
@@ -647,12 +649,18 @@
 -t !semanticTests/revertStrings/calldata_array_invalid_length
 -t !semanticTests/revertStrings/calldata_arrays_too_large
 -t !semanticTests/revertStrings/calldata_tail_short
+-t !semanticTests/revertStrings/calldata_too_short
 -t !semanticTests/revertStrings/called_contract_has_code
+-t !semanticTests/revertStrings/empty_v1
+-t !semanticTests/revertStrings/empty_v1_yul
 -t !semanticTests/revertStrings/empty_v2
+-t !semanticTests/revertStrings/enum
 -t !semanticTests/revertStrings/ether_non_payable_function
 -t !semanticTests/revertStrings/function_entry_checks_v1
 -t !semanticTests/revertStrings/function_entry_checks_v1_abiv2
 -t !semanticTests/revertStrings/function_entry_checks_v2
+-t !semanticTests/revertStrings/invalid_abi_decoding_calldata_v1
+-t !semanticTests/revertStrings/invalid_abi_decoding_memory_v1
 -t !semanticTests/revertStrings/library_non_view_call
 -t !semanticTests/revertStrings/short_input_array
 -t !semanticTests/revertStrings/short_input_bytes
@@ -778,7 +786,10 @@
 -t !semanticTests/types/mapping_contract_key
 -t !semanticTests/types/mapping_contract_key_getter
 -t !semanticTests/types/mapping_contract_key_library
+-t !semanticTests/types/mapping_enum_key
+-t !semanticTests/types/mapping_enum_key_getter
 -t !semanticTests/types/mapping_enum_key_getter_v2
+-t !semanticTests/types/mapping_enum_key_library
 -t !semanticTests/types/mapping_enum_key_library_encoderV2
 -t !semanticTests/types/mapping_enum_key_v2
 -t !semanticTests/types/mapping_simple
@@ -839,10 +850,6 @@
 -t !semanticTests/viaYul/array_storage_index_boundary_test
 -t !semanticTests/viaYul/array_storage_index_zeroed_test
 -t !semanticTests/viaYul/array_storage_length_access
--t !semanticTests/viaYul/array_storage_pop_zero_length
--t !semanticTests/viaYul/array_storage_push_empty
--t !semanticTests/viaYul/array_storage_push_empty_length_address
--t !semanticTests/viaYul/array_storage_push_pop
 -t !semanticTests/viaYul/assert
 -t !semanticTests/viaYul/assert_and_require
 -t !semanticTests/viaYul/calldata_array_access
