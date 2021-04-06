@@ -1,4 +1,4 @@
-{ lib, gccStdenv, cleanGitSubtree, fetchzip
+{ lib, gccStdenv, cleanGitSubtree, cleanSourceWith, fetchzip
 , boost
 , cmake
 , coreutils
@@ -12,6 +12,7 @@
 , cln ? null
 , gmp ? null
 , llvm
+, kiele
 }:
 
 # compiling source/libsmtutil/CVC4Interface.cpp breaks on clang on Darwin,
@@ -28,11 +29,19 @@ let
     sha256 = "1vbhi503rgwarf275ajfdb8vpdcbn1f7917wjkf8jghqwb1c24lq";
   };
 
-  solc = gccStdenv.mkDerivation rec {
-    pname = "solc";
+  isolc = gccStdenv.mkDerivation rec {
+    pname = "isolc";
     version = "0.8.2";
 
-    src = cleanGitSubtree { src = ./..; name = "solidity"; };
+    src =
+      cleanSourceWith {
+        name = "solidity";
+        src = cleanGitSubtree { src = ./..; name = "solidity"; };
+        ignore = [
+          "nix/"
+          "*.nix"
+        ];
+      };
 
     prePatch = ''
       echo "0000000000000000000000000000000000000000" >commit_hash.txt
@@ -61,25 +70,20 @@ let
     buildInputs = [ boost llvm ]
       ++ lib.optionals z3Support [ z3 ]
       ++ lib.optionals cvc4Support [ cvc4 cln gmp ];
-    checkInputs = [ ncurses python3 ];
 
     doInstallCheck = true;
     installCheckPhase = ''
       $out/bin/isolc --version > /dev/null
     '';
 
-    passthru.tests = {
-      solcWithTests = solc.overrideAttrs (attrs: {
-        doCheck = true;
-        checkPhase = ''
-          TERM=xterm ./build/test/soltest \
-            $(cat test/failing-exec-tests) \
-            -- \
-            --no-ipc \
-            --testpath test
-        '';
-      });
-    };
+    doCheck = true;
+    checkInputs = [ kiele ncurses python3 ];
+    checkPhase = ''
+      (
+        cd "$NIX_BUILD_TOP/$sourceRoot"
+        ./test/ieleCmdlineTests.sh
+      )
+    '';
 
     meta = with lib; {
       description = "Compiler for Ethereum smart contract language Solidity";
@@ -90,4 +94,5 @@ let
     };
   };
 in
-  solc
+
+isolc
