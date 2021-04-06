@@ -63,7 +63,12 @@ foreach (BOOST_COMPONENT IN LISTS BOOST_COMPONENTS)
 endforeach()
 
 ## We use some of LLVM's libraries for the IELE backend
-## Ideally, we look for version 11. 
+## Ideally, we look for version 11 or newer.
+set(LLVM_MIN_VERSION "11.0.0")
 set(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
-find_package(LLVM 11.0.0 QUIET CONFIG)
+SET(CMAKE_FIND_PACKAGE_SORT_DIRECTION DEC)
+find_package(LLVM REQUIRED CONFIG)
+if (${LLVM_VERSION} STRLESS ${LLVM_MIN_VERSION})
+	message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}, which is older than the minimum supported version ${LLVM_MIN_VERSION}")
+endif()
 message(STATUS "Found LLVM version ${LLVM_VERSION}")
