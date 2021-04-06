@@ -873,6 +873,21 @@ void IeleCompiler::appendRevertBlocks(void) {
   }
 }
 
+bool IeleCompiler::visit(const Block &block) {
+  if (block.unchecked()) {
+    solAssert(getArithmetic() == Arithmetic::Checked, "");
+    setArithmetic(Arithmetic::Wrapping);
+  }
+  return true;
+}
+
+void IeleCompiler::endVisit(const Block &block) {
+  if (block.unchecked()) {
+    solAssert(getArithmetic() == Arithmetic::Wrapping, "");
+    setArithmetic(Arithmetic::Checked);
+  }
+}
+
 bool IeleCompiler::visit(const IfStatement &ifStatement) {
   // Check if we have an if-false block. Our compilation strategy depends on
   // that.
@@ -4227,6 +4242,45 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   return false;
 }
 
+
+bool IeleCompiler::visit(const FunctionCallOptions &functionCallOptions) {
+  IeleRValue *CalleeValue = compileExpression(functionCallOptions.expression());
+  std::vector<iele::IeleValue *> values;
+  values.insert(values.end(), CalleeValue->getValues().begin(),
+                CalleeValue->getValues().end());
+  FunctionTypePointer functionType =
+    dynamic_cast<FunctionTypePointer>(
+                 functionCallOptions.expression().annotation().type);
+
+  int numOptions = functionCallOptions.options().size() ;
+  solAssert(numOptions <= 2, "");
+
+  for (int i = 0; i < numOptions; i++) {
+    if (functionCallOptions.names()[i]->compare("gas") == 0) {
+      IeleRValue *OptionValue =
+        compileExpression(*functionCallOptions.options()[i]);
+      OptionValue =
+        appendTypeConversion(OptionValue,
+                             functionCallOptions.options()[i]->annotation().type,
+                             UInt);
+      values.insert(values.begin() + functionType->gasIndex(), OptionValue->getValue());
+    } else if (functionCallOptions.names()[i]->compare("value") == 0) {
+      IeleRValue *OptionValue =
+        compileExpression(*functionCallOptions.options()[i]);
+      OptionValue =
+        appendTypeConversion(OptionValue,
+                             functionCallOptions.options()[i]->annotation().type,
+                             UInt);
+      values.insert(values.begin() + functionType->valueIndex(), OptionValue->getValue());
+    } else {
+      solAssert(false, "not implemented yet");
+    }
+  }
+
+  CompilingExpressionResult.push_back(IeleRValue::Create(values));
+  return false;
+} 
+
 template <typename ExpressionClass>
 void IeleCompiler::compileFunctionArguments(
       llvm::SmallVectorImpl<iele::IeleValue *> &Arguments,
@@ -6314,6 +6368,8 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   // Find corresponding IELE binary opcode.
   iele::IeleInstruction::IeleOps BinOpcode;
 
+  bool unchecked = getArithmetic() == Arithmetic::Wrapping;
+
   bool fixed = false, issigned = false;
   int nbytes = 0;
   switch (ResultType->category()) {
@@ -6351,7 +6407,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     BinOpcode = iele::IeleInstruction::Sub; break;
   }
   case Token::Mul: {
-    if (fixed) {
+    if (fixed && unchecked) {
       // In case of fixed-width multiplication, create the instruction as a
       // mulmod.
       iele::IeleValue *ModulusValue =
@@ -6378,7 +6434,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   case Token::Div:                BinOpcode = iele::IeleInstruction::Div; break;
   case Token::Mod:                BinOpcode = iele::IeleInstruction::Mod; break;
   case Token::Exp: {
-    if (fixed) {
+    if (fixed && unchecked) {
       // In case of fixed-width exponentiation, create the instruction as an
       // expmod.
       iele::IeleValue *ModulusValue =
@@ -6445,10 +6501,23 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     case Token::Add:
     case Token::Sub:
     case Token::Div:
-    case Token::Mod:
-    case Token::SHL: appendMask(Result, Result, nbytes, issigned); break;
+    case Token::Mod: {
+      if (unchecked)
+        appendMask(Result, Result, nbytes, issigned);
+      else
+        appendRangeCheck(IeleRValue::Create(Result), *ResultType);
+      break;
+    }
+    case Token::SHL: {
+      appendMask(Result, Result, nbytes, issigned);
+      break;
+    }
     case Token::Mul:
-    case Token::Exp: break; //handled above
+    case Token::Exp: {
+      solAssert(!unchecked, "");
+      appendRangeCheck(IeleRValue::Create(Result), *ResultType);
+      break;
+    }
     case Token::Equal:
     case Token::NotEqual:
     case Token::GreaterThanOrEqual:

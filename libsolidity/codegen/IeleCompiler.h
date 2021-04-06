@@ -36,6 +36,7 @@ public:
     RevertBlock(nullptr),
     RevertStatusBlock(nullptr),
     AssertFailBlock(nullptr),
+    CompilingBlockArithmetic(Arithmetic::Checked),
     CompilingLValue(false),
     NextStorageAddress(1),
     CompilingContractASTNode(nullptr),
@@ -87,6 +88,7 @@ public:
 
   // Visitor interface.
   virtual bool visit(const FunctionDefinition &function) override;
+  virtual bool visit(const Block &block) override;
   virtual bool visit(const IfStatement &ifStatement) override;
   virtual bool visit(const WhileStatement &whileStatement) override;
   virtual bool visit(const ForStatement &forStatement) override;
@@ -108,10 +110,12 @@ public:
   virtual bool visit(const UnaryOperation &unaryOperation) override;
   virtual bool visit(const BinaryOperation &binaryOperation) override;
   virtual bool visit(const FunctionCall &functionCall) override;
+  virtual bool visit(const FunctionCallOptions &functionCallOptions) override;
   virtual bool visit(const NewExpression &newExpression) override;
   virtual bool visit(const MemberAccess &memberAccess) override;
   virtual bool visit(const IndexAccess &indexAccess) override;
   virtual bool visit(const ElementaryTypeNameExpression &typeName) override;
+  virtual void endVisit(const Block &block) override;
   virtual void endVisit(const Identifier &identifier) override;
   virtual void endVisit(const Literal &literal) override;
 
@@ -133,6 +137,12 @@ private:
   iele::IeleBlock *RevertBlock;
   iele::IeleBlock *RevertStatusBlock;
   iele::IeleBlock *AssertFailBlock;
+
+  Arithmetic CompilingBlockArithmetic;
+  void setArithmetic(Arithmetic arithmetic) {
+    CompilingBlockArithmetic = arithmetic;
+  }
+  Arithmetic getArithmetic() const { return CompilingBlockArithmetic; }
 
   struct Value {
   private:

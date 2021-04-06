@@ -12,6 +12,6 @@ contract C {
 // compileToEwasm: also
 // ----
 // div(uint256,uint256): 7, 2 -> 3
-// div(uint256,uint256): 7, 0 -> FAILURE, hex"4e487b71", 0x12 # throws #
+// div(uint256,uint256): 7, 0 -> FAILURE, 4 # throws #
 // mod(uint256,uint256): 7, 2 -> 1
-// mod(uint256,uint256): 7, 0 -> FAILURE, hex"4e487b71", 0x12 # throws #
+// mod(uint256,uint256): 7, 0 -> FAILURE, 4 # throws #
