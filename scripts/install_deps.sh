@@ -224,7 +224,7 @@ case $(uname -s) in
                     git \
                     libboost-all-dev \
                     unzip \
-                    llvm-5.0\
+                    llvm-11.0\
                     zlib1g-dev\
                     "$install_z3"
 
@@ -343,7 +343,7 @@ case $(uname -s) in
                     cmake \
                     git \
                     libboost-all-dev \
-                    llvm-5.0\
+                    llvm-11.0\
                     "$install_z3"
                 if [ "$CI" = true ]; then
                     # install Z3 from PPA if the distribution does not provide it
