@@ -188,9 +188,6 @@
 -t !semanticTests/abiEncoderV2/struct/struct_simple
 -t !semanticTests/abiEncoderV2/struct/struct_validation
 -t !semanticTests/abiEncoderV2/struct/validation_function_type_inside_struct
--t !semanticTests/arithmetics/block_inside_unchecked
--t !semanticTests/arithmetics/exp_associativity
--t !semanticTests/arithmetics/signed_mod
 -t !semanticTests/array/arrays_complex_from_and_to_storage
 -t !semanticTests/array/byte_array_storage_layout
 -t !semanticTests/array/byte_array_transitional_2
