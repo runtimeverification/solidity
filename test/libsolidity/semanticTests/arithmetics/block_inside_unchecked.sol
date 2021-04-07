@@ -1,8 +1,8 @@
 contract C {
-  function f() public returns (uint y) {
+  function f() public returns (uint256 y) {
     unchecked{{
-        uint max = type(uint).max;
-        uint x = max + 1;
+        uint256 max = type(uint256).max;
+        uint256 x = max + 1;
         y = x;
     }}
   }
