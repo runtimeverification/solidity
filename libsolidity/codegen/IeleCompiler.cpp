@@ -4235,6 +4235,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
     break;
   }
+  case FunctionType::Kind::MetaType:
+    solAssert(false, "IeleCompiler: Function calls of kind MetaType should not "
+                     "be reached by the visitor.");
+    break;
   default:
       solAssert(false, "IeleCompiler: Invalid function type.");
   }
@@ -4575,6 +4579,21 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleInstruction::Beneficiary, BeneficiaryValue, EmptyArguments,
         CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create({BeneficiaryValue}));
+    } else if (member == "min" || member == "max") {
+      MagicType const* arg =
+        dynamic_cast<MagicType const*>(actualType);
+      IntegerType const* integerType =
+        dynamic_cast<IntegerType const*>(arg->typeArgument());
+
+      iele::IeleValue *MinMaxConstant =
+        iele::IeleIntConstant::Create(&Context,
+                                      member == "min" ? integerType->min()
+                                                      : integerType->max());
+      iele::IeleLocalVariable *TypeSizeValue =
+        iele::IeleLocalVariable::Create(&Context, "typesize", CompilingFunction);
+      iele::IeleInstruction::CreateAssign(
+          TypeSizeValue, MinMaxConstant, CompilingBlock);
+      CompilingExpressionResult.push_back(IeleRValue::Create({TypeSizeValue}));
     } else if (member == "data")
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else if (member == "sig")
