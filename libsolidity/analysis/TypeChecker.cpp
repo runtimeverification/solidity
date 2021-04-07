@@ -2926,7 +2926,20 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 			magicType->kind() == MagicType::Kind::MetaType &&
 			(memberName == "min" ||	memberName == "max")
 		)
+		{
 			annotation.isPure = true;
+			IntegerType const* integerType =
+				dynamic_cast<IntegerType const*>(magicType->typeArgument());
+			if (integerType->isUnbound() && (integerType->isSigned() || memberName == "max"))
+			{
+				m_errorReporter.typeError(
+					8302_error,
+					_memberAccess.location(),
+					"Requested " + memberName + " value of unbounded " +
+					(integerType->isSigned() ? "signed" : "unsigned") + " integer type."
+				);
+			}
+		}
 		else if (magicType->kind() == MagicType::Kind::Block && memberName == "chainid" && !m_evmVersion.hasChainID())
 			m_errorReporter.typeError(
 				3081_error,
