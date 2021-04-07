@@ -4587,8 +4587,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
 
       iele::IeleValue *MinMaxConstant =
         iele::IeleIntConstant::Create(&Context,
-                                      member == "min" ? integerType->min()
-                                                      : integerType->max());
+                                      member == "min" ? integerType->minValue()
+                                                      : integerType->maxValue());
       iele::IeleLocalVariable *TypeSizeValue =
         iele::IeleLocalVariable::Create(&Context, "typesize", CompilingFunction);
       iele::IeleInstruction::CreateAssign(
