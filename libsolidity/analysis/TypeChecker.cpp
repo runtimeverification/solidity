@@ -1625,8 +1625,10 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 		if (
 			commonType->category() == Type::Category::Integer &&
 			rightType->category() == Type::Category::Integer &&
-			dynamic_cast<IntegerType const&>(*commonType).numBits() <
-			dynamic_cast<IntegerType const&>(*rightType).numBits()
+			!dynamic_cast<IntegerType const&>(*commonType).isUnbound() &&
+			(dynamic_cast<IntegerType const&>(*rightType).isUnbound() ||
+			 dynamic_cast<IntegerType const&>(*commonType).numBits() <
+			 dynamic_cast<IntegerType const&>(*rightType).numBits())
 		)
 			m_errorReporter.warning(
 				3149_error,
