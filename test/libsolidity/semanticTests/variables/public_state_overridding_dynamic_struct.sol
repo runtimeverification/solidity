@@ -19,6 +19,6 @@ contract X is A
 
 
 // ----
-// test() -> 0, 64, 0
+// test() -> 0, ""
 // set() ->
-// test() -> 2, 0x40, 8, "statevar"
+// test() -> 2, "statevar"
