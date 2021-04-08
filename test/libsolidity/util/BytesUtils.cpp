@@ -113,7 +113,7 @@ bytes BytesUtils::convertString(string const& _literal)
 {
 	try
 	{
-		return asBytes(_literal);
+		return solidity::test::ExecutionFramework::encodeDyn(_literal);
 	}
 	catch (std::exception const&)
 	{
