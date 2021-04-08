@@ -4580,10 +4580,10 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create({BeneficiaryValue}));
     } else if (member == "min" || member == "max") {
-      MagicType const* arg =
-        dynamic_cast<MagicType const*>(actualType);
-      IntegerType const* integerType =
-        dynamic_cast<IntegerType const*>(arg->typeArgument());
+      const MagicType *arg =
+        dynamic_cast<const MagicType *>(actualType);
+      const IntegerType *integerType =
+        dynamic_cast<const IntegerType *>(arg->typeArgument());
 
       iele::IeleValue *MinMaxConstant =
         iele::IeleIntConstant::Create(&Context,
