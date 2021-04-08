@@ -407,9 +407,6 @@
 -t !semanticTests/exponentiation/signed_base
 -t !semanticTests/exponentiation/small_exp
 -t !semanticTests/expressions/bit_operators
--t !semanticTests/expressions/conditional_expression_different_types
--t !semanticTests/expressions/exp_operator_const_signed
--t !semanticTests/expressions/uncalled_address_transfer_send
 -t !semanticTests/externalContracts/deposit_contract
 -t !semanticTests/fallback/falback_return
 -t !semanticTests/fallback/fallback_argument

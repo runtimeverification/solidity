@@ -9,5 +9,5 @@ contract test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(bool): true -> 0xcd
-// f(bool): false -> 0xabab
+// f(bool): true -> 0x00cd
+// f(bool): false -> 0x00abab
