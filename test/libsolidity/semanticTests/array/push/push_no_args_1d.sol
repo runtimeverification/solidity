@@ -23,12 +23,12 @@ contract C {
 // compileViaYul: also
 // ----
 // l() -> 0
-// lv(uint256): 42 ->
+// lv(uint): 42 ->
 // l() -> 1
-// a(uint256): 0 -> 42
+// a(uint): 0 -> 42
 // f() -> 0
 // l() -> 2
-// a(uint256): 1 -> 0
-// lv(uint256): 111 ->
+// a(uint): 1 -> 0
+// lv(uint): 111 ->
 // l() -> 3
-// a(uint256): 2 -> 111
+// a(uint): 2 -> 111

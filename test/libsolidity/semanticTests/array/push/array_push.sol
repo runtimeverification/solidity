@@ -1,9 +1,9 @@
 contract c {
-    uint256[] data;
+    uint[] data;
 
     function test()
         public
-        returns (uint256 x, uint256 y, uint256 z, uint256 l)
+        returns (uint x, uint y, uint z, uint l)
     {
         data.push(5);
         x = data[0];

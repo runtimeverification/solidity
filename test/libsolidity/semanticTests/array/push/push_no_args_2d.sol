@@ -28,14 +28,14 @@ contract C {
 // compileViaYul: also
 // ----
 // l() -> 0
-// f(uint256,uint256): 42, 64 ->
+// f(uint,uint): 42, 64 ->
 // l() -> 1
-// ll(uint256): 0 -> 43
-// a(uint256,uint256): 0, 42 -> 64
-// f(uint256,uint256): 84, 128 ->
+// ll(uint): 0 -> 43
+// a(uint,uint): 0, 42 -> 64
+// f(uint,uint): 84, 128 ->
 // l() -> 2
-// ll(uint256): 1 -> 85
-// a(uint256,uint256): 0, 42 -> 64
-// a(uint256,uint256): 1, 84 -> 128
-// lv(uint256): 512 ->
-// a(uint256,uint256): 2, 0 -> 512
+// ll(uint): 1 -> 85
+// a(uint,uint): 0, 42 -> 64
+// a(uint,uint): 1, 84 -> 128
+// lv(uint): 512 ->
+// a(uint,uint): 2, 0 -> 512
