@@ -16,5 +16,5 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// to_little_endian_64(uint64): 0 -> 0x20, 8, 0x00
-// to_little_endian_64(uint64): 0x0102030405060708 -> 0x20, 8, 0x0807060504030201000000000000000000000000000000000000000000000000
+// to_little_endian_64(uint64): 0 -> "\x00\x00\x00\x00\x00\x00\x00\x00"
+// to_little_endian_64(uint64): 0x0102030405060708 -> "\x08\x07\x06\x05\x04\x03\x02\x01"

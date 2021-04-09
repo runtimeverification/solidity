@@ -12,4 +12,4 @@ contract C {
 
 // ----
 // test() ->
-// tester() -> 0x20, 0x3, "abc"
+// tester() -> "abc"
