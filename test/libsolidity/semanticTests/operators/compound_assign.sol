@@ -18,6 +18,6 @@ contract test {
 // f(uint,uint): 2, 25 -> 0x0746
 // f(uint,uint): 3, 69 -> 396613
 // f(uint,uint): 4, 84 -> 137228105
-// f(uint,uint): 5, 2 -> 0xcc7c5e28
+// f(uint,uint): 5, 2 -> 0x00cc7c5e28
 // f(uint,uint): 6, 51 -> 1121839760671
 // f(uint,uint): 7, 48 -> 408349672884251
