@@ -1,13 +1,13 @@
 contract C {
     // (2**3)**4 = 4096
     // 2**(3**4) = 2417851639229258349412352
-    function test_hardcode1(uint a, uint b, uint c) public returns (uint256) {
+    function test_hardcode1(uint a, uint b, uint c) public returns (uint) {
         return a**b**c;
     }
 
     // (3**2)**2)**2 = 6561
     // 3**(2**(2**2) = 43046721
-    function test_hardcode2(uint a, uint b, uint c, uint d) public returns (uint256) {
+    function test_hardcode2(uint a, uint b, uint c, uint d) public returns (uint) {
         return a**b**c**d;
     }
 
@@ -33,9 +33,9 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// test_hardcode1(uint256,uint256,uint256): 2, 3, 4 -> 2417851639229258349412352
-// test_hardcode2(uint256,uint256,uint256,uint256): 3, 2, 2, 2 -> 43046721
-// test_invariant(uint256,uint256,uint256): 2, 3, 4 -> true
-// test_invariant(uint256,uint256,uint256): 3, 4, 2 -> true
-// test_literal_mix(uint256,uint256): 2, 3 -> true
-// test_other_operators(uint256,uint256): 2, 4 -> true
+// test_hardcode1(uint,uint,uint): 2, 3, 4 -> 2417851639229258349412352
+// test_hardcode2(uint,uint,uint,uint): 3, 2, 2, 2 -> 43046721
+// test_invariant(uint,uint,uint): 2, 3, 4 -> true
+// test_invariant(uint,uint,uint): 3, 4, 2 -> true
+// test_literal_mix(uint,uint): 2, 3 -> true
+// test_other_operators(uint,uint): 2, 4 -> true

@@ -33,6 +33,8 @@ std::string IeleCompiler::getIeleNameForFunction(
     IeleFunctionName = "init";
   else if (function.isFallback())
     IeleFunctionName = "deposit";
+  else if (function.isReceive())
+    IeleFunctionName = "receive";
   else if (function.isPublic())
     IeleFunctionName = function.externalSignature();
   else
@@ -743,7 +745,9 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     appendRevert();
   }
 
-  if (function.isPublic() && !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) && !contractFor(&function)->isLibrary()) {
+  if ((function.isConstructor() || function.isPublic()) &&
+      !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) &&
+      !contractFor(&function)->isLibrary()) {
     if (!function.isPayable() && isMostDerived(&function)) {
       appendPayableCheck();
     }
@@ -866,6 +870,21 @@ void IeleCompiler::appendRevertBlocks(void) {
   if (AssertFailBlock) {
     AssertFailBlock->insertInto(CompilingFunction);
     AssertFailBlock = nullptr;
+  }
+}
+
+bool IeleCompiler::visit(const Block &block) {
+  if (block.unchecked()) {
+    solAssert(getArithmetic() == Arithmetic::Checked, "");
+    setArithmetic(Arithmetic::Wrapping);
+  }
+  return true;
+}
+
+void IeleCompiler::endVisit(const Block &block) {
+  if (block.unchecked()) {
+    solAssert(getArithmetic() == Arithmetic::Wrapping, "");
+    setArithmetic(Arithmetic::Checked);
   }
 }
 
@@ -2509,6 +2528,7 @@ void IeleCompiler::doEncode(
       break;
     case FunctionType::Kind::ArrayPush:
     case FunctionType::Kind::ByteArrayPush:
+    case FunctionType::Kind::ArrayPop:
       solAssert(false, "not implemented yet");
     default:
       break;
@@ -2923,6 +2943,7 @@ void IeleCompiler::doDecode(
       break;
     case FunctionType::Kind::ArrayPush:
     case FunctionType::Kind::ByteArrayPush:
+    case FunctionType::Kind::ArrayPop:
       solAssert(false, "not implemented yet");
     default:
       break;
@@ -4013,7 +4034,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     break;
   }
   case FunctionType::Kind::ByteArrayPush: {
-    IeleRValue *PushedValue = compileExpression(*arguments.front());
+    IeleRValue *PushedValue =
+      arguments.size() ? compileExpression(*arguments.front()) : nullptr;
     iele::IeleValue *ArrayValue = compileExpression(functionCall.expression())->getValue();
     IeleLValue *SizeLValue = AddressLValue::Create(this, ArrayValue, CompilingLValueArrayType->location());
     iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock)->getValue();
@@ -4024,7 +4046,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
     IeleLValue *ElementLValue = ByteArrayLValue::Create(this, StringAddress, SizeValue, CompilingLValueArrayType->location());
-    ElementLValue->write(PushedValue, CompilingBlock);
+    if (PushedValue) {
+      ElementLValue->write(PushedValue, CompilingBlock);
+    }
 
     iele::IeleLocalVariable *NewSize =
       iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
@@ -4032,20 +4056,24 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::Add, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
-
     IeleRValue *rvalue = IeleRValue::Create({NewSize});
     SizeLValue->write(rvalue, CompilingBlock);
-    CompilingExpressionResult.push_back(rvalue);
+
+    if (PushedValue) {
+      CompilingExpressionResult.push_back(rvalue);
+    } else {
+      CompilingExpressionResult.push_back(ElementLValue);
+    }
     break;
   }
   case FunctionType::Kind::ArrayPush: {
-    IeleRValue *PushedValue = compileExpression(*arguments.front());
+    IeleRValue *PushedValue =
+      arguments.size() ? compileExpression(*arguments.front()) : nullptr;
     iele::IeleValue *ArrayValue = compileExpression(functionCall.expression())->getValue();
     IeleLValue *SizeLValue = AddressLValue::Create(this, ArrayValue, CompilingLValueArrayType->location());
     iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock)->getValue();
 
     TypePointer elementType = CompilingLValueArrayType->baseType();
-    TypePointer RHSType = arguments.front()->annotation().type;
 
     bigint elementSize;
     switch (CompilingLValueArrayType->location()) {
@@ -4062,8 +4090,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     }
  
     iele::IeleLocalVariable *AddressValue =
-      iele::IeleLocalVariable::Create(&Context, "array.last.element", CompilingFunction);
-    // compute the data offset of the last element
+      iele::IeleLocalVariable::Create(&Context, "array.end.address", CompilingFunction);
+    // compute the data offset of the end of the array
     appendMul(AddressValue, SizeValue, elementSize);
     // add one for the length slot
     iele::IeleInstruction::CreateBinOp(
@@ -4075,26 +4103,101 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::Add, AddressValue, AddressValue, ArrayValue,
       CompilingBlock);
 
-    IeleLValue *ElementLValue = makeLValue(AddressValue, elementType, CompilingLValueArrayType->location());
-    if (shouldCopyStorageToStorage(*elementType, ElementLValue, *RHSType))
-      appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
-    else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))
-      appendCopyFromMemoryToStorage(ElementLValue, elementType, PushedValue, RHSType);
-    else if (shouldCopyMemoryToMemory(*elementType, ElementLValue, *RHSType))
-      appendCopyFromMemoryToMemory(ElementLValue, elementType, PushedValue, RHSType);
-    else
-      ElementLValue->write(PushedValue, CompilingBlock);
+    // new element lvalue
+    IeleLValue *ElementLValue =
+      makeLValue(AddressValue, elementType, CompilingLValueArrayType->location());
 
+    // write the pushed value (if available)
+    if (PushedValue) {
+      TypePointer RHSType = arguments.front()->annotation().type;
+      if (shouldCopyStorageToStorage(*elementType, ElementLValue, *RHSType))
+        appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
+      else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))
+        appendCopyFromMemoryToStorage(ElementLValue, elementType, PushedValue, RHSType);
+      else if (shouldCopyMemoryToMemory(*elementType, ElementLValue, *RHSType))
+        appendCopyFromMemoryToMemory(ElementLValue, elementType, PushedValue, RHSType);
+      else
+        ElementLValue->write(PushedValue, CompilingBlock);
+    }
+
+    // update array length
     iele::IeleLocalVariable *NewSize =
       iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Add, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
-
     IeleRValue *rvalue = IeleRValue::Create({NewSize});
     SizeLValue->write(rvalue, CompilingBlock);
-    CompilingExpressionResult.push_back(rvalue);
+
+    if (PushedValue) {
+      CompilingExpressionResult.push_back(rvalue);
+    } else {
+      CompilingExpressionResult.push_back(ElementLValue);
+    }
+    break;
+  }
+  case FunctionType::Kind::ArrayPop: {
+    iele::IeleValue *ArrayValue = compileExpression(functionCall.expression())->getValue();
+    IeleLValue *SizeLValue = AddressLValue::Create(this, ArrayValue, CompilingLValueArrayType->location());
+    iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock)->getValue();
+
+    TypePointer elementType = CompilingLValueArrayType->baseType();
+
+    bigint elementSize;
+    switch (CompilingLValueArrayType->location()) {
+    case DataLocation::Storage: {
+      elementSize = elementType->storageSize();
+      break;
+    }
+    case DataLocation::Memory: {
+      elementSize = elementType->memorySize();
+      break;
+    }
+    case DataLocation::CallData:
+      solAssert(false, "not supported by IELE.");
+    }
+
+    iele::IeleLocalVariable *PopEmpty =
+      iele::IeleLocalVariable::Create(&Context, "pop.empty", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::CmpLe, PopEmpty, SizeValue,
+        iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+    appendRevert(PopEmpty);
+
+    iele::IeleLocalVariable *AddressValue =
+      iele::IeleLocalVariable::Create(&Context, "array.last.element", CompilingFunction);
+    // compute the data offset of the last element
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Sub, AddressValue, SizeValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+    appendMul(AddressValue, AddressValue, elementSize);
+    // add one for the length slot
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, AddressValue, AddressValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+    // compute the address of the last element
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, AddressValue, AddressValue, ArrayValue,
+      CompilingBlock);
+
+    // delete the last element
+    appendLValueDelete(
+      makeLValue(AddressValue, elementType, CompilingLValueArrayType->location()),
+      elementType);
+
+    // update array length
+    iele::IeleLocalVariable *NewSize =
+      iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Sub, NewSize, SizeValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+    IeleRValue *rvalue = IeleRValue::Create({NewSize});
+    SizeLValue->write(rvalue, CompilingBlock);
+
     break;
   }
   case FunctionType::Kind::ABIEncode:
@@ -4132,12 +4235,55 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
     break;
   }
+  case FunctionType::Kind::MetaType:
+    solAssert(false, "IeleCompiler: Function calls of kind MetaType should not "
+                     "be reached by the visitor.");
+    break;
   default:
       solAssert(false, "IeleCompiler: Invalid function type.");
   }
 
   return false;
 }
+
+
+bool IeleCompiler::visit(const FunctionCallOptions &functionCallOptions) {
+  IeleRValue *CalleeValue = compileExpression(functionCallOptions.expression());
+  std::vector<iele::IeleValue *> values;
+  values.insert(values.end(), CalleeValue->getValues().begin(),
+                CalleeValue->getValues().end());
+  FunctionTypePointer functionType =
+    dynamic_cast<FunctionTypePointer>(
+                 functionCallOptions.expression().annotation().type);
+
+  int numOptions = functionCallOptions.options().size() ;
+  solAssert(numOptions <= 2, "");
+
+  for (int i = 0; i < numOptions; i++) {
+    if (functionCallOptions.names()[i]->compare("gas") == 0) {
+      IeleRValue *OptionValue =
+        compileExpression(*functionCallOptions.options()[i]);
+      OptionValue =
+        appendTypeConversion(OptionValue,
+                             functionCallOptions.options()[i]->annotation().type,
+                             UInt);
+      values.insert(values.begin() + functionType->gasIndex(), OptionValue->getValue());
+    } else if (functionCallOptions.names()[i]->compare("value") == 0) {
+      IeleRValue *OptionValue =
+        compileExpression(*functionCallOptions.options()[i]);
+      OptionValue =
+        appendTypeConversion(OptionValue,
+                             functionCallOptions.options()[i]->annotation().type,
+                             UInt);
+      values.insert(values.begin() + functionType->valueIndex(), OptionValue->getValue());
+    } else {
+      solAssert(false, "not implemented yet");
+    }
+  }
+
+  CompilingExpressionResult.push_back(IeleRValue::Create(values));
+  return false;
+} 
 
 template <typename ExpressionClass>
 void IeleCompiler::compileFunctionArguments(
@@ -4433,6 +4579,21 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleInstruction::Beneficiary, BeneficiaryValue, EmptyArguments,
         CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create({BeneficiaryValue}));
+    } else if (member == "min" || member == "max") {
+      const MagicType *arg =
+        dynamic_cast<const MagicType *>(actualType);
+      const IntegerType *integerType =
+        dynamic_cast<const IntegerType *>(arg->typeArgument());
+
+      iele::IeleValue *MinMaxConstant =
+        iele::IeleIntConstant::Create(&Context,
+                                      member == "min" ? integerType->minValue()
+                                                      : integerType->maxValue());
+      iele::IeleLocalVariable *TypeSizeValue =
+        iele::IeleLocalVariable::Create(&Context, "typesize", CompilingFunction);
+      iele::IeleInstruction::CreateAssign(
+          TypeSizeValue, MinMaxConstant, CompilingBlock);
+      CompilingExpressionResult.push_back(IeleRValue::Create({TypeSizeValue}));
     } else if (member == "data")
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else if (member == "sig")
@@ -4442,8 +4603,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     else
       solAssert(false, "IeleCompiler: Unknown magic member.");
     break;
-  case Type::Category::Contract:
-  case Type::Category::Integer: {
+  case Type::Category::Address: {
     // Visit accessed exression (skip in case of magic base expression).
     IeleRValue *ExprValue = compileExpression(memberAccess.expression());
     solAssert(ExprValue,
@@ -4558,6 +4718,11 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       }
     } else if (member == "push") {
       solAssert(type.isDynamicallySized(), "Invalid push on fixed length array");
+      CompilingExpressionResult.push_back(ExprValue);
+      CompilingLValueArrayType = &type;
+      break;
+    } else if (member == "pop") {
+      solAssert(type.isDynamicallySized(), "Invalid pop on fixed length array");
       CompilingExpressionResult.push_back(ExprValue);
       CompilingLValueArrayType = &type;
       break;
@@ -4874,6 +5039,11 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
     }
     break;
   }
+  case Type::Category::Address: {
+    min = 0;
+    max = (bigint(1) << 160) - 1;
+    break;
+  }
   case Type::Category::Bool: {
     min = 0;
     max = 1;
@@ -4928,6 +5098,7 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
       break;
     case FunctionType::Kind::ArrayPush:
     case FunctionType::Kind::ByteArrayPush:
+    case FunctionType::Kind::ArrayPop:
       solAssert(false, "not implemented yet");
     default:
       break;
@@ -6216,6 +6387,8 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   // Find corresponding IELE binary opcode.
   iele::IeleInstruction::IeleOps BinOpcode;
 
+  bool unchecked = getArithmetic() == Arithmetic::Wrapping;
+
   bool fixed = false, issigned = false;
   int nbytes = 0;
   switch (ResultType->category()) {
@@ -6253,7 +6426,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     BinOpcode = iele::IeleInstruction::Sub; break;
   }
   case Token::Mul: {
-    if (fixed) {
+    if (fixed && unchecked) {
       // In case of fixed-width multiplication, create the instruction as a
       // mulmod.
       iele::IeleValue *ModulusValue =
@@ -6280,7 +6453,7 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
   case Token::Div:                BinOpcode = iele::IeleInstruction::Div; break;
   case Token::Mod:                BinOpcode = iele::IeleInstruction::Mod; break;
   case Token::Exp: {
-    if (fixed) {
+    if (fixed && unchecked) {
       // In case of fixed-width exponentiation, create the instruction as an
       // expmod.
       iele::IeleValue *ModulusValue =
@@ -6347,10 +6520,23 @@ iele::IeleLocalVariable *IeleCompiler::appendBinaryOperator(
     case Token::Add:
     case Token::Sub:
     case Token::Div:
-    case Token::Mod:
-    case Token::SHL: appendMask(Result, Result, nbytes, issigned); break;
+    case Token::Mod: {
+      if (unchecked)
+        appendMask(Result, Result, nbytes, issigned);
+      else
+        appendRangeCheck(IeleRValue::Create(Result), *ResultType);
+      break;
+    }
+    case Token::SHL: {
+      appendMask(Result, Result, nbytes, issigned);
+      break;
+    }
     case Token::Mul:
-    case Token::Exp: break; //handled above
+    case Token::Exp: {
+      solAssert(!unchecked, "");
+      appendRangeCheck(IeleRValue::Create(Result), *ResultType);
+      break;
+    }
     case Token::Equal:
     case Token::NotEqual:
     case Token::GreaterThanOrEqual:
@@ -6450,6 +6636,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       return IeleRValue::Create({appendCopyFromStorageToMemory(TargetType, Value, SourceType)});
     return Value;
   case Type::Category::Integer:
+  case Type::Category::Address:
   case Type::Category::RationalNumber:
   case Type::Category::Contract: {
     switch(TargetType->category()) {
@@ -6476,6 +6663,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       solUnimplemented("Not yet implemented - FixedPointType.");
       break;
     case Type::Category::Integer:
+    case Type::Category::Address:
     case Type::Category::Contract: {
       IntegerType const& targetType = TargetType->category() == Type::Category::Integer
         ? dynamic_cast<const IntegerType &>(*TargetType) : *TypeProvider::uint(160);

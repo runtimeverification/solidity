@@ -100,7 +100,7 @@ set(libsolidity_sources
     libsolidity/SyntaxTest.h
     libsolidity/ViewPureChecker.cpp
 )
-#detect_stray_source_files("${libsolidity_sources}" "libsolidity/")
+detect_stray_source_files("${libsolidity_sources}" "libsolidity/")
 
 set(libsolidity_util_sources
     libsolidity/util/BytesUtils.cpp

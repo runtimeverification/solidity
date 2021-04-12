@@ -20,6 +20,7 @@
 
 #include <test/libsolidity/util/ContractABIUtils.h>
 #include <test/libsolidity/util/SoltestErrors.h>
+#include <test/ExecutionFramework.h>
 
 #include <liblangutil/Common.h>
 
@@ -77,9 +78,9 @@ bytes BytesUtils::applyAlign(
 bytes BytesUtils::convertBoolean(string const& _literal)
 {
 	if (_literal == "true")
-		return bytes{true};
+		return solidity::test::ExecutionFramework::encode(true);
 	else if (_literal == "false")
-		return bytes{false};
+		return solidity::test::ExecutionFramework::encode(false);
 	else
 		throw TestParserError("Boolean literal invalid.");
 }
@@ -88,7 +89,7 @@ bytes BytesUtils::convertNumber(string const& _literal)
 {
 	try
 	{
-		return toCompactBigEndian(u256{_literal});
+		return solidity::test::ExecutionFramework::encode(bigint(_literal));
 	}
 	catch (std::exception const&)
 	{
@@ -113,6 +114,18 @@ bytes BytesUtils::convertString(string const& _literal)
 	try
 	{
 		return asBytes(_literal);
+	}
+	catch (std::exception const&)
+	{
+		throw TestParserError("String encoding invalid.");
+	}
+}
+
+bytes BytesUtils::convertErrorMessage(string const& _literal)
+{
+	try
+	{
+		return solidity::test::ExecutionFramework::encodeLogs(_literal);
 	}
 	catch (std::exception const&)
 	{
@@ -223,7 +236,7 @@ string BytesUtils::formatRawBytes(
 	}
 
 	if (!sizesAgree)
-		parameters = ContractABIUtils::defaultParameters((_bytes.size() + 31) / 32);
+		parameters = ContractABIUtils::defaultParameters(_bytes.size());
 	else {
 		soltestAssert(totalBytesSize == ContractABIUtils::encodingSize(_parameters), "");
 		parameters = _parameters;
@@ -335,7 +348,7 @@ string BytesUtils::formatBytesRange(
 	}
 
 	if (!sizesAgree)
-		parameters = ContractABIUtils::defaultParameters((_bytes.size() + 31) / 32);
+		parameters = ContractABIUtils::defaultParameters(_bytes.size());
 	else {
 		soltestAssert(totalBytesSize == ContractABIUtils::encodingSize(_parameters), "");
 		parameters = _parameters;

@@ -1,6 +1,6 @@
 contract C {
     uint[] storageArray;
-    function set_get_length(uint256 len) public returns (uint256) {
+    function set_get_length(uint len) public returns (uint) {
         while(storageArray.length < len)
             storageArray.push();
         while(storageArray.length > 0)
@@ -11,10 +11,10 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// set_get_length(uint256): 0 -> 0
-// set_get_length(uint256): 1 -> 0
-// set_get_length(uint256): 10 -> 0
-// set_get_length(uint256): 20 -> 0
-// set_get_length(uint256): 0xFF -> 0
-// set_get_length(uint256): 0xFFF -> 0
-// set_get_length(uint256): 0xFFFF -> FAILURE # Out-of-gas #
+// set_get_length(uint): 0 -> 0
+// set_get_length(uint): 1 -> 0
+// set_get_length(uint): 10 -> 0
+// set_get_length(uint): 20 -> 0
+// set_get_length(uint): 0x00FF -> 0
+// set_get_length(uint): 0x0FFF -> 0
+// set_get_length(uint): 0x00FFFF -> FAILURE, 5 # Out-of-gas #

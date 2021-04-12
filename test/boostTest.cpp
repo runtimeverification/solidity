@@ -65,13 +65,14 @@ int registerTests(
 	boost::filesystem::path const& _basepath,
 	boost::filesystem::path const& _path,
 	bool _enforceViaYul,
+	bool _enforceNoYulEwasm,
 	vector<string> const& _labels,
 	TestCase::TestCaseCreator _testCaseCreator
 )
 {
 	int numTestsAdded = 0;
 	fs::path fullpath = _basepath / _path;
-	TestCase::Config config{fullpath.string(), solidity::test::CommonOptions::get().evmVersion(), solidity::test::CommonOptions::get().vmPaths, _enforceViaYul};
+	TestCase::Config config{fullpath.string(), solidity::test::CommonOptions::get().evmVersion(), solidity::test::CommonOptions::get().vmPaths, _enforceViaYul, _enforceNoYulEwasm};
 	if (fs::is_directory(fullpath))
 	{
 		test_suite* sub_suite = BOOST_TEST_SUITE(_path.filename().string());
@@ -84,6 +85,7 @@ int registerTests(
 					*sub_suite,
 					_basepath, _path / entry.path().filename(),
 					_enforceViaYul,
+					_enforceNoYulEwasm,
 					_labels,
 					_testCaseCreator
 				);
@@ -188,6 +190,7 @@ test_suite* init_unit_test_suite( int /*argc*/, char* /*argv*/[] )
 			options.testPath / ts.path,
 			ts.subpath,
 			options.enforceViaYul,
+			options.enforceNoYulEwasm,
 			ts.labels,
 			ts.testCaseCreator
 		) > 0, std::string("no ") + ts.title + " tests found");
@@ -197,14 +200,14 @@ test_suite* init_unit_test_suite( int /*argc*/, char* /*argv*/[] )
 	{
 		for (auto suite: {
 			"ABIDecoderTest",
-			//"ABIEncoderTest",
-			//"SolidityAuctionRegistrar",
-			//"SolidityFixedFeeRegistrar",
-			//"SolidityWallet",
+			"ABIEncoderTest",
+			"SolidityAuctionRegistrar",
+			"SolidityFixedFeeRegistrar",
+			"SolidityWallet",
 			"GasMeterTests",
 			"GasCostTests",
-			//"SolidityEndToEndTest",
-			//"SolidityOptimizer"
+			"SolidityEndToEndTest",
+			"SolidityOptimizer"
 		})
 			removeTestSuite(suite);
 	}

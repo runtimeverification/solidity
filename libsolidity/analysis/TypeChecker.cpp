@@ -1625,8 +1625,10 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 		if (
 			commonType->category() == Type::Category::Integer &&
 			rightType->category() == Type::Category::Integer &&
-			dynamic_cast<IntegerType const&>(*commonType).numBits() <
-			dynamic_cast<IntegerType const&>(*rightType).numBits()
+			!dynamic_cast<IntegerType const&>(*commonType).isUnbound() &&
+			(dynamic_cast<IntegerType const&>(*rightType).isUnbound() ||
+			 dynamic_cast<IntegerType const&>(*commonType).numBits() <
+			 dynamic_cast<IntegerType const&>(*rightType).numBits())
 		)
 			m_errorReporter.warning(
 				3149_error,
@@ -2924,7 +2926,20 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 			magicType->kind() == MagicType::Kind::MetaType &&
 			(memberName == "min" ||	memberName == "max")
 		)
+		{
 			annotation.isPure = true;
+			IntegerType const* integerType =
+				dynamic_cast<IntegerType const*>(magicType->typeArgument());
+			if (integerType->isUnbound() && (integerType->isSigned() || memberName == "max"))
+			{
+				m_errorReporter.typeError(
+					8302_error,
+					_memberAccess.location(),
+					"Requested " + memberName + " value of unbounded " +
+					(integerType->isSigned() ? "signed" : "unsigned") + " integer type."
+				);
+			}
+		}
 		else if (magicType->kind() == MagicType::Kind::Block && memberName == "chainid" && !m_evmVersion.hasChainID())
 			m_errorReporter.typeError(
 				3081_error,

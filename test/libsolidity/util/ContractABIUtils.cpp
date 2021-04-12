@@ -323,39 +323,9 @@ solidity::frontend::test::ParameterList ContractABIUtils::failureParameters(vect
 {
 	if (_bytes.empty())
 		return {};
-	else if (_bytes.size() == 1 && _bytes[0].size() < 4)
+	else {
+		soltestAssert(_bytes.size() == 1, "");
 		return {Parameter{bytes(), "", ABIType{ABIType::HexString, ABIType::AlignNone, _bytes[0].size()}, FormatInfo{}}};
-	else
-	{
-		ParameterList parameters;
-		soltestAssert(_bytes[0].size() == 4, "");
-		parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::HexString, ABIType::AlignNone, 4}, FormatInfo{}});
-
-		uint64_t selector = fromBigEndian<uint64_t>(_bytes[0]);
-		if (selector == selectorFromSignature32("Panic(uint256)"))
-			parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::Hex}, FormatInfo{}});
-		else if (selector == selectorFromSignature32("Error(string)"))
-		{
-			soltestAssert(_bytes.size() >= 3, "");
-			soltestAssert(_bytes[1].size() == 32, "");
-			soltestAssert(_bytes[2].size() == 32, "");
-			parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::Hex}, FormatInfo{}});
-			parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::UnsignedDec}, FormatInfo{}});
-			/// If _bytes contains at least a 1 byte message (function selector + tail pointer + message length + message)
-			/// append an additional string parameter to represent that message.
-			if (_bytes.size() > 3)
-			{
-				soltestAssert(_bytes[3].size() == 32, "");
-				parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::String}, FormatInfo{}});
-			}
-		}
-		else
-			for (size_t i = 1; i < _bytes.size(); ++i)
-			{
-				soltestAssert(_bytes[i].size() == 32, "");
-				parameters.push_back(Parameter{bytes(), "", ABIType{ABIType::HexString, ABIType::AlignNone, 32}, FormatInfo{}});
-			}
-		return parameters;
 	}
 }
 

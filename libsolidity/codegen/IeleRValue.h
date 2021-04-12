@@ -16,6 +16,10 @@ public:
     return new IeleRValue(Var);
   }
 
+  static IeleRValue *Create(iele::IeleValue *Var) {
+    return new IeleRValue(std::vector<iele::IeleValue *>(1, Var));
+  }
+
   static IeleRValue *CreateZero(iele::IeleContext *Ctx, unsigned Num) {
     std::vector<iele::IeleValue *> Values;
     for (unsigned i = 0; i < Num; i++) {

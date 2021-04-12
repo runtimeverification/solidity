@@ -1,6 +1,6 @@
 contract C {
     uint256[] storageArray;
-    function pushEmpty(uint256 len) public {
+    function pushEmpty(uint len) public {
         while(storageArray.length < len)
             storageArray.push();
 
@@ -12,6 +12,6 @@ contract C {
 // compileViaYul: also
 // EVMVersion: >=petersburg
 // ----
-// pushEmpty(uint256): 128
-// pushEmpty(uint256): 256
-// pushEmpty(uint256): 32768 -> FAILURE # out-of-gas #
+// pushEmpty(uint): 128
+// pushEmpty(uint): 256
+// pushEmpty(uint): 32768 -> FAILURE, 5 # out-of-gas #

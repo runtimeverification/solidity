@@ -265,7 +265,6 @@ void DeclarationTypeChecker::endVisit(ArrayTypeName const& _typeName)
 		return;
 	}
 
-	solAssert(baseType->storageBytes() != 0, "Illegal base type of storage size zero for array.");
 	if (Expression const* length = _typeName.length())
 	{
 		optional<rational> lengthValue;
