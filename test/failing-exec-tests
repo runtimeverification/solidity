@@ -258,7 +258,6 @@
 -t !semanticTests/array/create_memory_byte_array
 -t !semanticTests/array/delete/delete_bytes_array
 -t !semanticTests/array/delete/delete_memory_array
--t !semanticTests/array/delete/delete_on_array_of_structs
 -t !semanticTests/array/delete/delete_removes_bytes_data
 -t !semanticTests/array/delete/delete_storage_array
 -t !semanticTests/array/delete/delete_storage_array_packed
