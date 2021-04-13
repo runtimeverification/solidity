@@ -19,4 +19,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f() -> "A", 8, 4, "B"
+// f() -> 0x41, 8, 4, 0x42
