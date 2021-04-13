@@ -13,6 +13,7 @@
 , gmp ? null
 , llvm
 , kiele
+, makeWrapper
 }:
 
 # compiling source/libsmtutil/CVC4Interface.cpp breaks on clang on Darwin,
@@ -28,6 +29,8 @@ let
     url = jsoncppUrl;
     sha256 = "1vbhi503rgwarf275ajfdb8vpdcbn1f7917wjkf8jghqwb1c24lq";
   };
+
+  host-PATH = lib.makeBinPath [ kiele ];
 
   isolc = gccStdenv.mkDerivation rec {
     pname = "isolc";
@@ -66,21 +69,23 @@ let
       "-DUSE_CVC4=OFF"
     ];
 
-    nativeBuildInputs = [ cmake ];
+    nativeBuildInputs = [ cmake makeWrapper ];
     buildInputs = [ boost llvm ]
       ++ lib.optionals z3Support [ z3 ]
       ++ lib.optionals cvc4Support [ cvc4 cln gmp ];
 
-    doInstallCheck = true;
-    installCheckPhase = ''
-      $out/bin/isolc --version > /dev/null
+    postFixup = ''
+      wrapProgram $out/bin/isolc --prefix PATH : '${host-PATH}'
     '';
 
-    doCheck = true;
-    checkInputs = [ kiele ncurses python3 ];
-    checkPhase = ''
+    doInstallCheck = true;
+    installCheckInputs = [ ncurses python3 ];
+    installCheckPhase = ''
+      $out/bin/isolc --version > /dev/null
       (
-        cd "$NIX_BUILD_TOP/$sourceRoot"
+        export REPO_ROOT="$NIX_BUILD_TOP/$sourceRoot"
+        cd "$REPO_ROOT"
+        export SOLC="$out/bin/isolc"
         ./test/ieleCmdlineTests.sh
       )
     '';
