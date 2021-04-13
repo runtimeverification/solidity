@@ -19,4 +19,4 @@ contract c {
 // ====
 // compileViaYul: also
 // ----
-// test() -> 0x20, 0x8, -1, -1, 8, -16, -2, 6, 8, -1
+// test() -> dynarray 16  [ -1, -1, 8, -16, -2, 6, 8, -1 ]

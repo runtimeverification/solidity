@@ -3,7 +3,7 @@ contract c {
     uint[10][] b;
     uint[][] c;
 
-    function test(uint[2][] calldata d) external returns (uint) {
+    function test(uint[2][] memory d) external returns (uint) {
         a = d;
         b = a;
         c = b;
@@ -14,4 +14,4 @@ contract c {
 // ====
 // compileViaYul: also
 // ----
-// test(uint[2][]): 32, 3, 7, 8, 9, 10, 11, 12 -> 10
+// test(uint[2][]): refargs { 0x01, 0x03, 7, 8, 9, 10, 11, 12 } -> 10

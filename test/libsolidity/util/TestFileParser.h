@@ -177,6 +177,12 @@ private:
 	/// Parses the current string literal.
 	std::string parseString();
 
+	/// Parses the current array literal.
+	std::vector<std::pair<std::string, soltest::Token>> parseArray(bool isDynamic);
+
+	/// Parses the current refargs literal.
+	std::vector<std::pair<std::string, soltest::Token>> parseRefArgs();
+
 	/// A scanner instance
 	Scanner m_scanner;
 

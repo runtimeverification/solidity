@@ -278,7 +278,7 @@ public:
 
 	static bytes encodeRefArray(std::vector<u256> args, size_t size) {
 		bytes encoded;
-                std::reverse(args.begin(), args.end());
+		std::reverse(args.begin(), args.end());
 		for (u256 arg : args) {
 			if (size > 0) {
 				bytes encodedArg(size);
@@ -289,6 +289,9 @@ public:
 			}
 		}
 		while (encoded.size() >= 2 && encoded[0] == 0 && encoded[1] <= 0x7f) {
+			encoded.erase(encoded.begin());
+		}
+		while (encoded.size() >= 2 && encoded[0] == 0xff && encoded[1] >= 0x80) {
 			encoded.erase(encoded.begin());
 		}
 		return encoded;

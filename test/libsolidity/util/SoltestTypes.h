@@ -53,8 +53,11 @@ namespace solidity::frontend::test
 	K(Hex, "hex", 0)               \
 	K(Boolean, "boolean", 0)       \
 	/* special keywords */         \
+	K(Array, "array", 0)           \
+	K(DynArray, "dynarray", 0)     \
 	K(Left, "left", 0)             \
 	K(Library, "library", 0)       \
+	K(RefArgs, "refargs", 0)       \
 	K(Right, "right", 0)           \
 	K(Failure, "FAILURE", 0)       \
 	K(Storage, "storage", 0) \

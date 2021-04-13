@@ -39,6 +39,7 @@ using namespace solidity;
 using namespace solidity::util;
 using namespace solidity::frontend;
 using namespace solidity::frontend::test;
+using namespace soltest;
 using namespace std;
 
 bytes BytesUtils::alignLeft(bytes _bytes)
@@ -129,8 +130,67 @@ bytes BytesUtils::convertErrorMessage(string const& _literal)
 	}
 	catch (std::exception const&)
 	{
-		throw TestParserError("String encoding invalid.");
+		throw TestParserError("Error message encoding invalid.");
 	}
+}
+
+bytes BytesUtils::convertArray(vector<pair<string, Token>> const& _literal, bool isDynamic)
+{
+	size_t elemSize = (size_t) u256(_literal[0].first) / 8;
+	vector<u256> elems;
+	for (auto it = _literal.begin()+1; it != _literal.end(); ++it)
+	{
+		switch (it->second)
+		{
+		case Token::Boolean:
+			elems.push_back(it->first == "true" ? u256(1) : u256(0));
+			break;
+		case Token::HexNumber:
+		case Token::Number:
+			elems.push_back(u256(it->first));
+			break;
+		default:
+			throw TestParserError("Array encoding invalid.");
+		}
+	}
+	if (isDynamic)
+		return solidity::test::ExecutionFramework::encodeRefArray(elems, elems.size(), elemSize);
+	else
+		return solidity::test::ExecutionFramework::encodeRefArray(elems, elemSize);
+}
+
+bytes BytesUtils::convertRefArgs(vector<pair<string, Token>> const& _literal)
+{
+	bytes result;
+	for (auto &p : _literal)
+	{
+		switch (p.second)
+		{
+		case Token::Boolean:
+		{
+			bytes encoded =
+				solidity::test::ExecutionFramework::encodeLog(p.first == "true" ? true : false);
+			result = encoded + result;
+			break;
+		}
+		case Token::Hex:
+		case Token::HexNumber:
+		{
+			bytes encoded = fromHex(p.first);
+			result = encoded + result;
+			break;
+		}
+		case Token::Number:
+		{
+			bytes encoded = solidity::test::ExecutionFramework::encodeLog(bigint(p.first));
+			result = encoded + result;
+			break;
+		}
+		default:
+			throw TestParserError("RefArgs encoding invalid.");
+		}
+	}
+	return result;
 }
 
 string BytesUtils::formatUnsigned(bytes const& _bytes)

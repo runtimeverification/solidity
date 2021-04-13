@@ -66,6 +66,14 @@ public:
 	/// representation of the error message. Throws if conversion fails.
 	static bytes convertErrorMessage(std::string const& _literal);
 
+	/// Tries to convert \param _literal to an unpadded `bytes`
+	/// representation of the array. Throws if conversion fails.
+	static bytes convertArray(std::vector<std::pair<std::string, soltest::Token>> const& _literal, bool isDynamic);
+
+	/// Tries to convert \param _literal to an unpadded `bytes`
+	/// representation of the refargs. Throws if conversion fails.
+	static bytes convertRefArgs(std::vector<std::pair<std::string, soltest::Token>> const& _literal);
+
 	/// Converts \param _bytes to a soltest-compliant and human-readable
 	/// string representation of a byte array which is assumed to hold
 	/// an unsigned value.
