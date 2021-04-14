@@ -10,4 +10,4 @@ contract Test {
 // ====
 // compileViaYul: also
 // ----
-// set(bytes,uint): 0x40, 0x03, 0x08, "abcdefgh" -> 0x08, "d"
+// set(bytes,uint): "abcdefgh", 0x03 -> 0x08, 0x64

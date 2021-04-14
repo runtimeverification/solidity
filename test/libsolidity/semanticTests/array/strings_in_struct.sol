@@ -32,4 +32,4 @@ contract buggystruct {
 // getFirst() -> 0x0a
 // getSecond() -> 0x14
 // getThird() -> 0x1e
-// getLast() -> 0x20, 0x09, "asdfghjkl"
+// getLast() -> "asdfghjkl"

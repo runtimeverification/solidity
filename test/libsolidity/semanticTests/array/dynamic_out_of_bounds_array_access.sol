@@ -24,11 +24,11 @@ contract c {
 // compileViaYul: also
 // ----
 // length() -> 0
-// get(uint): 3 -> FAILURE, hex"4e487b71", 0x32
+// get(uint): 3 -> FAILURE, 255
 // enlarge(uint): 4 -> 4
 // length() -> 4
 // set(uint,uint): 3, 4 -> true
 // get(uint): 3 -> 4
 // length() -> 4
-// set(uint,uint): 4, 8 -> FAILURE, hex"4e487b71", 0x32
+// set(uint,uint): 4, 8 -> FAILURE, 255
 // length() -> 4

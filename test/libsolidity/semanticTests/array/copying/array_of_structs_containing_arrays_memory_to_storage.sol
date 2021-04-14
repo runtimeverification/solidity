@@ -9,7 +9,7 @@ contract C {
 
     S[] s;
 
-    function f() external returns (uint256, uint256, uint128, uint128) {
+    function f() external returns (uint256, uint, uint128, uint128) {
         S[] memory m = new S[](3);
         m[1] = S(0, [uint128(1), 2, 3], new uint128[](3));
         m[1].c[0] = 1;
