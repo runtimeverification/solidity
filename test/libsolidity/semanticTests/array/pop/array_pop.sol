@@ -1,7 +1,7 @@
 contract c {
-    uint256[] data;
+    uint[] data;
 
-    function test() public returns (uint256 x, uint256 l) {
+    function test() public returns (uint x, uint l) {
         data.push(7);
         data.push(3);
         x = data.length;

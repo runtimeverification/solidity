@@ -22,9 +22,9 @@ contract C {
 // compileViaYul: also
 // ----
 // l() -> 0
-// g(uint256): 70 ->
+// g(uint): 70 ->
 // l() -> 70
-// a(uint256): 69 -> left(69)
+// a(uint): 69 -> left(69)
 // f() ->
 // l() -> 71
-// a(uint256): 70 -> 0
+// a(uint): 70 -> 0

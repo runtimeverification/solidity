@@ -2,7 +2,7 @@ contract c {
     uint64[] data1;
     uint256[] data2;
 
-    function test() public returns (uint256 x, uint256 y) {
+    function test() public returns (uint x, uint256 y) {
         data2.push(11);
         data1.push(0);
         data1.push(1);

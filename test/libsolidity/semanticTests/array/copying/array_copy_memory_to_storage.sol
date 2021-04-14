@@ -2,7 +2,7 @@ contract C {
     uint128[13] unused;
     uint32[] a;
     uint32[3] b;
-    function f() public returns (uint32, uint256) {
+    function f() public returns (uint32, uint) {
         uint32[] memory m = new uint32[](3);
         m[0] = 1;
         m[1] = 2;
