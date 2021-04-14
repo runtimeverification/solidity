@@ -315,16 +315,16 @@ BOOST_AUTO_TEST_CASE(store_tags_as_unions)
 	char const* sourceCode = R"(
 		contract test {
 			bytes32 data;
-			function f(uint x, bytes32 y) external returns (uint r_a, bytes32 r_d) {
+			function f(uint256 x, bytes32 y) external returns (uint256 r_a, bytes32 r_d) {
 				r_d = keccak256(abi.encodePacked(y));
 				shared(y);
 				r_d = keccak256(abi.encodePacked(y));
 				r_a = 5;
 			}
-			function g(uint x, bytes32 y) external returns (uint r_a, bytes32 r_d) {
+			function g(uint256 x, bytes32 y) external returns (uint256 r_a, bytes32 r_d) {
 				r_d = keccak256(abi.encodePacked(y));
 				shared(y);
-				r_d = bytes32(uint(keccak256(abi.encodePacked(y))) + 2);
+				r_d = bytes32(uint256(keccak256(abi.encodePacked(y))) + 2);
 				r_a = 7;
 			}
 			function shared(bytes32 y) internal {
@@ -333,7 +333,7 @@ BOOST_AUTO_TEST_CASE(store_tags_as_unions)
 		}
 	)";
 	compileBothVersions(sourceCode);
-	compareVersions("f(uint,bytes32)", 7, "abc");
+	compareVersions("f(uint256,bytes32)", 7, "abc");
 
 	bytes optimizedBytecode = compileAndRunWithOptimizer(sourceCode, 0, "test", true);
 	size_t numSHA3s = 0;

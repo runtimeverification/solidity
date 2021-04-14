@@ -531,7 +531,7 @@ BoolResult IntegerType::isExplicitlyConvertibleTo(Type const& _convertTo) const
 			!isSigned() && !isUnbound() &&
 			(numBits() == 160);
 	else if (auto fixedBytesType = dynamic_cast<FixedBytesType const*>(&_convertTo))
-		return (!isSigned() && (numBits() == fixedBytesType->numBytes() * 8));
+		return (!isSigned() && !isUnbound() && (numBits() == fixedBytesType->numBytes() * 8));
 	else if (dynamic_cast<EnumType const*>(&_convertTo))
 		return true;
 	else if (auto fixedPointType = dynamic_cast<FixedPointType const*>(&_convertTo))
