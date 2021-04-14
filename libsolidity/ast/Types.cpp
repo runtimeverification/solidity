@@ -1249,7 +1249,9 @@ BoolResult FixedBytesType::isExplicitlyConvertibleTo(Type const& _convertTo) con
 	if (_convertTo.category() == category())
 		return true;
 	else if (auto integerType = dynamic_cast<IntegerType const*>(&_convertTo))
-		return (!integerType->isSigned() && integerType->numBits() == numBytes() * 8);
+		return (!integerType->isSigned() &&
+				!integerType->isUnbound() &&
+				integerType->numBits() == numBytes() * 8);
 	else if (auto addressType = dynamic_cast<AddressType const*>(&_convertTo))
 		return
 			(addressType->stateMutability() != StateMutability::Payable) &&

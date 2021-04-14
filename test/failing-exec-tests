@@ -253,7 +253,6 @@
 -t !semanticTests/array/memory
 -t !semanticTests/array/pop/byte_array_pop_long_storage_empty_garbage_ref
 -t !semanticTests/array/push/array_push_nested
--t !semanticTests/array/reusing_memory
 -t !semanticTests/array/slices/array_slice_calldata_as_argument_of_external_calls
 -t !semanticTests/array/slices/array_slice_calldata_to_calldata
 -t !semanticTests/array/slices/array_slice_calldata_to_memory
