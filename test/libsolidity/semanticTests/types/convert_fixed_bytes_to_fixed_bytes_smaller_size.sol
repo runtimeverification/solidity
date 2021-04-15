@@ -7,4 +7,4 @@ contract Test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// bytesToBytes(bytes4): "abcd" -> "ab"
+// bytesToBytes(bytes4): 0x61626364 -> 0x6162
