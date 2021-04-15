@@ -705,7 +705,6 @@
 -t !semanticTests/types/mapping_enum_key_v2
 -t !semanticTests/types/mapping_simple
 -t !semanticTests/types/nested_tuples
--t !semanticTests/types/strings
 -t !semanticTests/types/tuple_assign_multi_slot_grow
 -t !semanticTests/types/type_conversion_cleanup
 -t !semanticTests/uninitializedFunctionPointer/invalidInConstructor
