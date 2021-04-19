@@ -257,7 +257,6 @@
 -t !semanticTests/array/slices/array_slice_calldata_to_calldata
 -t !semanticTests/array/slices/array_slice_calldata_to_memory
 -t !semanticTests/array/slices/array_slice_calldata_to_storage
--t !semanticTests/array/storage_array_ref
 -t !semanticTests/asmForLoop/for_loop_break
 -t !semanticTests/asmForLoop/for_loop_continue
 -t !semanticTests/asmForLoop/for_loop_nested
