@@ -14,6 +14,9 @@
 #include <iostream>
 #include "llvm/Support/raw_ostream.h"
 
+#define BOOST_STACKTRACE_USE_ADDR2LINE
+#include <boost/stacktrace.hpp>
+
 using namespace solidity;
 using namespace solidity::frontend;
 
@@ -1464,10 +1467,56 @@ bool IeleCompiler::visit(const Assignment &assignment) {
               "IeleCompiler: found assignment from tuple to variable");
     const TupleType &RHSTupleType = dynamic_cast<const TupleType &>(*RHSType);
     const TupleType &LHSTupleType = dynamic_cast<const TupleType &>(*LHSType);
-    RHSTypes.insert(RHSTypes.end(), RHSTupleType.components().begin(),
-                    RHSTupleType.components().end());
-    LHSTypes.insert(LHSTypes.end(), LHSTupleType.components().begin(),
-                    LHSTupleType.components().end());
+
+    std::vector<TypePointer> FinalComponents;
+    std::vector<TypePointer> MyComponents(RHSTupleType.components());
+    std::reverse(MyComponents.begin(), MyComponents.end());
+
+    unsigned myComponentsSize = MyComponents.size();
+    while (myComponentsSize > 0) {
+      unsigned i = myComponentsSize - 1;
+      TypePointer CType = MyComponents[i];
+      if (CType && CType->category() == Type::Category::Tuple) {
+        if (const TupleType *TmpTupleType = dynamic_cast<const TupleType *>(CType)) {
+          auto NestedComponents = TmpTupleType->components();
+          MyComponents.pop_back();
+          for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
+            MyComponents.push_back(*rit);
+        }
+      } else {
+        FinalComponents.push_back(CType);
+        MyComponents.pop_back();
+      }
+      myComponentsSize = MyComponents.size();
+    }
+
+    RHSTypes.insert(RHSTypes.end(), FinalComponents.begin(),
+                    FinalComponents.end());
+
+    FinalComponents.clear(); MyComponents.clear();
+    MyComponents = LHSTupleType.components();
+    std::reverse(MyComponents.begin(), MyComponents.end());
+
+    myComponentsSize = MyComponents.size();
+    while (myComponentsSize > 0) {
+      unsigned i = myComponentsSize - 1;
+      TypePointer CType = MyComponents[i];
+      if (CType && CType->category() == Type::Category::Tuple) {
+        if (const TupleType *TmpTupleType = dynamic_cast<const TupleType *>(CType)) {
+          auto NestedComponents = TmpTupleType->components();
+          MyComponents.pop_back();
+          for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
+            MyComponents.push_back(*rit);
+        }
+      } else {
+        FinalComponents.push_back(CType);
+        MyComponents.pop_back();
+      }
+      myComponentsSize = MyComponents.size();
+    }
+
+    LHSTypes.insert(LHSTypes.end(), FinalComponents.begin(),
+                    FinalComponents.end());
   } else {
     solAssert(LHSType->category() != Type::Category::Tuple,
               "IeleCompiler: found assignment from variable to tuple");
@@ -1478,6 +1527,9 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   // Visit RHS.
   llvm::SmallVector<IeleRValue *, 4> RHSValues;
   compileTuple(RHS, RHSValues);
+  // Visit LHS.
+  llvm::SmallVector<IeleLValue *, 4> LHSValues;
+  compileLValues(LHS, LHSValues);
 
   // Save RHS elements that are named variables (locals and formal/return
   // aguments) into temporaries to ensure correct behavior of tuple assignment.
@@ -1487,7 +1539,36 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   if (RHSType->category() == Type::Category::Tuple) {
     if (const TupleExpression *RHSTuple =
           dynamic_cast<const TupleExpression *>(&RHS)) {
-      const auto &Components = RHSTuple->components();
+     // auto &Components = RHSTuple->components();
+
+      std::vector<ASTPointer<Expression>> FinalComponents;
+      std::vector<ASTPointer<Expression>> MyComponents(RHSTuple->components());
+      std::reverse(MyComponents.begin(), MyComponents.end());
+
+     unsigned myComponentsSize = MyComponents.size();
+     while (myComponentsSize > 0) {
+       unsigned i = myComponentsSize - 1;
+       TypePointer CType = (MyComponents[i])->annotation().type;
+       //std::cout << "MyComponents.size: " << myComponentsSize << std::endl;
+       //std::cout << "FinalComponents.size: " << FinalComponents.size() << std::endl;
+       //std::cout << "CType: " << CType->toString() << std::endl;
+       if (CType->category() == Type::Category::Tuple) {
+         if (TupleExpression *TmpTuple = dynamic_cast<TupleExpression *>(&*MyComponents[i])) {
+           //std::cout << "In tuple" << std::endl;
+           auto NestedComponents = TmpTuple->components();
+           MyComponents.pop_back();
+           for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
+             MyComponents.push_back(*rit);
+         }
+       } else {
+         //std::cout << "In else" << std::endl;
+         FinalComponents.push_back(MyComponents[i]);
+         MyComponents.pop_back();
+       }
+       myComponentsSize = MyComponents.size();
+     }
+
+      auto &Components = FinalComponents;
 
       // Here, we also check the case of (x,) in the rhs of the assignment. We
       // need to extend RHSValues in this case to maintain the invariant that
@@ -1497,6 +1578,10 @@ bool IeleCompiler::visit(const Assignment &assignment) {
         RHSTypes.push_back(nullptr);
       }
 
+      // Here, we also check the case of (x,) in the rhs of the assignment. We
+      std::cout << "Components.size(): " << Components.size() << std::endl
+                << "RHSValues.size() : " << RHSValues.size() << std::endl
+                << "LHSValues.size() : " << LHSValues.size() << std::endl;
       solAssert(Components.size() == RHSValues.size(),
                 "IeleCompiler: failed to compile all elements of rhs of "
                 "tuple assignement");
@@ -1517,10 +1602,6 @@ bool IeleCompiler::visit(const Assignment &assignment) {
       }
     }
   }
-
-  // Visit LHS.
-  llvm::SmallVector<IeleLValue *, 4> LHSValues;
-  compileLValues(LHS, LHSValues);
 
   // At this point the following invariants should be true:
   solAssert(LHSValues.size() <= RHSValues.size(),
@@ -1666,11 +1747,15 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
   for (unsigned i = 0; i < Components.size(); i++) {
     const ASTPointer<Expression> &component = Components[i];
     if (CompilingLValue && component) {
-      Results.push_back(compileLValue(*component));
+      llvm::SmallVector<IeleLValue *, 4> tmp;
+      compileLValues(*component, tmp);
+      Results.insert(Results.end(), tmp.begin(), tmp.end());
     } else if (CompilingLValue) {
       Results.push_back((IeleLValue *)nullptr);
     } else if (component) {
-      Results.push_back(compileExpression(*component));
+      llvm::SmallVector<IeleRValue *, 4> tmp;
+      compileTuple(*component, tmp);
+      Results.insert(Results.end(), tmp.begin(), tmp.end());
     } else {
       // this the special (x,) rvalue tuple, the only case where an rvalue tuple
       // is allowed to skip a component.
@@ -5291,6 +5376,11 @@ IeleRValue *IeleCompiler::compileExpression(const Expression &expression) {
   // field. This helper should only be used when a scalar value (or void) is
   // expected as the result of the corresponding expression computation.
   IeleRValue *Result = nullptr;
+  if (CompilingExpressionResult.size() != 1) {
+    std::cout << "CompilingExpressionResult.size() = "
+              << CompilingExpressionResult.size() << std::endl ;
+    std::cout << boost::stacktrace::stacktrace() << std::endl;
+  }
   solAssert(CompilingExpressionResult.size() == 1,
             "IeleCompiler: Expression visitor did not set enough result values");
   Result = CompilingExpressionResult[0].rval(CompilingBlock);
@@ -5337,6 +5427,11 @@ IeleLValue *IeleCompiler::compileLValue(const Expression &expression) {
   // field. This helper should only be used when a scalar lvalue is expected as
   // the result of the corresponding expression computation.
   IeleLValue *Result = nullptr;
+  if (CompilingExpressionResult.size() != 1) {
+    std::cout << "CompilingExpressionResult.size() = "
+              << CompilingExpressionResult.size() << std::endl ;
+    std::cout << boost::stacktrace::stacktrace() << std::endl;
+  }
   solAssert(CompilingExpressionResult.size() == 1,
             "IeleCompiler: Expression visitor did not set a result value");
   Result = CompilingExpressionResult[0].lval();
