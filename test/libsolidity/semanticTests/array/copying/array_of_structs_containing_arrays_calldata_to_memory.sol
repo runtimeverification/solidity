@@ -2,10 +2,10 @@ pragma abicoder v2;
 
 contract C {
     struct S {
-        uint256[] a;
+        uint[] a;
     }
 
-    function f(S[] calldata c) external returns (uint256, uint256) {
+    function f(S[] memory c) external returns (uint, uint) {
         S[] memory s = c;
         assert(s.length == c.length);
         for (uint i = 0; i < s.length; i++) {
@@ -20,4 +20,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f((uint256[])[]): 0x20, 3, 0x60, 0x60, 0x60, 0x20, 3, 1, 2, 3 -> 3, 1
+// f((uint[])[]): refargs { 0x01, 0x03, 0x01, 0x03, 1, 2, 3, 0x01, 0x03, 1, 2, 3, 0x01, 0x03, 1, 2, 3 } -> 3, 1

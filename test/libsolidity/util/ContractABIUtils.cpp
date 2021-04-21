@@ -313,7 +313,7 @@ solidity::frontend::test::ParameterList ContractABIUtils::defaultParameters(size
 	fill_n(
 		back_inserter(parameters),
 		count,
-		Parameter{bytes(), "", ABIType{ABIType::UnsignedDec}, FormatInfo{}}
+		Parameter{bytes(), "", ABIType{ABIType::HexString}, FormatInfo{}}
 	);
 
 	return parameters;

@@ -380,6 +380,78 @@ Parameter TestFileParser::parseParameter(bool isErrorMessage)
 		parameter.rawBytes = BytesUtils::convertNumber(parsed);
 		parameter.abiType = ABIType{type, ABIType::AlignRight, parameter.rawBytes.size()};
 	}
+	else if (accept(Token::Array))
+	{
+		if (isSigned)
+			throw TestParserError("Invalid array literal.");
+		if (parameter.alignment != Parameter::Alignment::None)
+			throw TestParserError("Array literals cannot be aligned or padded.");
+
+		vector<pair<string, Token>> parsed = parseArray(false);
+		parameter.rawString += "array" + parsed[0].first + "[";
+		bool first = true;;
+		for (auto it = parsed.begin()+1; it != parsed.end(); ++it)
+		{
+			if (!first) parameter.rawString += ",";
+			parameter.rawString += it->first;
+			first = false;
+		}
+		parameter.rawString += "]";
+
+		parameter.rawBytes = BytesUtils::convertArray(parsed, false);
+		parameter.abiType = ABIType{
+			ABIType::HexString, ABIType::AlignNone, parameter.rawBytes.size()
+		};
+	}
+	else if (accept(Token::DynArray))
+	{
+		if (isSigned)
+			throw TestParserError("Invalid array literal.");
+		if (parameter.alignment != Parameter::Alignment::None)
+			throw TestParserError("Array literals cannot be aligned or padded.");
+
+		vector<pair<string, Token>> parsed = parseArray(true);
+		parameter.rawString += "array" + parsed[0].first + "[";
+		bool first = true;;
+		for (auto it = parsed.begin()+1; it != parsed.end(); ++it)
+		{
+			if (!first) parameter.rawString += ",";
+			parameter.rawString += it->first;
+			first = false;
+		}
+		parameter.rawString += "]";
+
+		parameter.rawBytes = BytesUtils::convertArray(parsed, true);
+		parameter.abiType = ABIType{
+			ABIType::HexString, ABIType::AlignNone, parameter.rawBytes.size()
+		};
+	}
+	else if (accept(Token::RefArgs))
+	{
+		if (isSigned)
+			throw TestParserError("Invalid refargs literal.");
+		if (parameter.alignment != Parameter::Alignment::None)
+			throw TestParserError("Refargs literals cannot be aligned or padded.");
+
+		vector<pair<string, Token>> parsed = parseRefArgs();
+		parameter.rawString += "refargs {";
+		bool first = true;;
+		for (auto &p : parsed)
+		{
+			if (!first) parameter.rawString += ",";
+			if (p.second == Token::Hex)
+				parameter.rawString += "hex\"" + p.first + "\"";
+			else
+				parameter.rawString += p.first;
+			first = false;
+		}
+		parameter.rawString += "}";
+
+		parameter.rawBytes = BytesUtils::convertRefArgs(parsed);
+		parameter.abiType = ABIType{
+			ABIType::HexString, ABIType::AlignNone, parameter.rawBytes.size()
+		};
+	}
 	else if (accept(Token::Failure, true))
 	{
 		if (isSigned)
@@ -474,6 +546,114 @@ string TestFileParser::parseString()
 	return literal;
 }
 
+vector<pair<string, Token>> TestFileParser::parseArray(bool isDynamic)
+{
+	expect(isDynamic ? Token::DynArray : Token::Array);
+
+	vector<pair<string, Token>> result;
+	string elemsizeLiteral = m_scanner.currentLiteral();
+	expect(Token::Number);
+	result.push_back(make_pair(elemsizeLiteral, Token::Number));
+
+	expect(Token::LBrack);
+	bool first = true;;
+	while (!accept(Token::RBrack))
+	{
+		if (!first) expect(Token::Comma);
+
+		bool isSigned = false;
+		if (accept(Token::Sub, true))
+			isSigned = true;
+
+		if (accept(Token::Boolean))
+		{
+			if (isSigned)
+				throw TestParserError("Invalid boolean literal.");
+
+			string literal = parseBoolean();
+			result.push_back(make_pair(literal, Token::Boolean));
+		}
+		else if (accept(Token::Number))
+		{
+			string literal = parseDecimalNumber();
+			if (isSigned)
+				literal = "-" + literal;
+			result.push_back(make_pair(literal, Token::Number));
+		}
+		else if (accept(Token::HexNumber))
+		{
+			if (isSigned)
+				throw TestParserError("Invalid hex number literal.");
+
+			string literal = parseHexNumber();
+			result.push_back(make_pair(literal, Token::HexNumber));
+		}
+		else
+			throw TestParserError("Invalid array literal");
+
+		first = false;
+	}
+	expect(Token::RBrack);
+
+	return result;
+}
+
+vector<pair<string, Token>> TestFileParser::parseRefArgs()
+{
+	expect(Token::RefArgs);
+
+	vector<pair<string, Token>> result;
+	expect(Token::LBrace);
+	bool first = true;;
+	while (!accept(Token::RBrace))
+	{
+		if (!first) expect(Token::Comma);
+
+		bool isSigned = false;
+		if (accept(Token::Sub, true))
+			isSigned = true;
+
+		if (accept(Token::Boolean))
+		{
+			if (isSigned)
+				throw TestParserError("Invalid boolean literal.");
+
+			string literal = parseBoolean();
+			result.push_back(make_pair(literal, Token::Boolean));
+		}
+		else if (accept(Token::Number))
+		{
+			string literal = parseDecimalNumber();
+			if (isSigned)
+				literal = "-" + literal;
+			result.push_back(make_pair(literal, Token::Number));
+		}
+		else if (accept(Token::HexNumber))
+		{
+			if (isSigned)
+				throw TestParserError("Invalid hex number literal.");
+
+			string literal = parseHexNumber();
+			result.push_back(make_pair(literal, Token::HexNumber));
+		}
+		else if (accept(Token::Hex, true))
+		{
+			if (isSigned)
+				throw TestParserError("Invalid hex string literal.");
+
+			string literal = parseString();
+			result.push_back(make_pair(literal, Token::Hex));
+		}
+		else
+			throw TestParserError("Invalid array literal");
+
+		first = false;
+	}
+	expect(Token::RBrace);
+
+	return result;
+}
+
 void TestFileParser::Scanner::readStream(istream& _stream)
 {
 	std::string line;
@@ -492,8 +672,11 @@ void TestFileParser::Scanner::scanNextToken()
 		if (_literal == "false") return {Token::Boolean, "false"};
 		if (_literal == "ether") return {Token::Ether, ""};
 		if (_literal == "wei") return {Token::Wei, ""};
+		if (_literal == "array") return {Token::Array, ""};
+		if (_literal == "dynarray") return {Token::DynArray, ""};
 		if (_literal == "left") return {Token::Left, ""};
 		if (_literal == "library") return {Token::Library, ""};
+		if (_literal == "refargs") return {Token::RefArgs, ""};
 		if (_literal == "right") return {Token::Right, ""};
 		if (_literal == "hex") return {Token::Hex, ""};
 		if (_literal == "FAILURE") return {Token::Failure, ""};
@@ -549,6 +732,12 @@ void TestFileParser::Scanner::scanNextToken()
 			break;
 		case ']':
 			selectToken(Token::RBrack);
+			break;
+		case '{':
+			selectToken(Token::LBrace);
+			break;
+		case '}':
+			selectToken(Token::RBrace);
 			break;
 		case '\"':
 			selectToken(Token::String, scanString());
