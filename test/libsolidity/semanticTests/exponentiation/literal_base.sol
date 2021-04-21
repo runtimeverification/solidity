@@ -1,8 +1,8 @@
 contract test {
-    function f(uint x) public pure returns (uint, int) {
+    function f(uint256 x) public pure returns (uint256, int256) {
         unchecked {
-            uint a = 2 ** x;
-            int b = -2 ** x;
+            uint256 a = uint256(2) ** x;
+            int256 b = int256(-2) ** x;
             return (a, b);
         }
     }

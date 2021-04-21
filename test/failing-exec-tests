@@ -331,7 +331,6 @@
 -t !semanticTests/enums/enum_explicit_overflow_homestead
 -t !semanticTests/enums/enum_with_256_members
 -t !semanticTests/enums/using_enums
--t !semanticTests/exponentiation/literal_base
 -t !semanticTests/exponentiation/signed_base
 -t !semanticTests/exponentiation/small_exp
 -t !semanticTests/expressions/bit_operators
