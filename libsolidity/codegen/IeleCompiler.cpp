@@ -4109,7 +4109,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     // write the pushed value (if available)
     if (PushedValue) {
-      TypePointer RHSType = arguments.front()->annotation().type;
+      TypePointer RHSType = arguments.front()->annotation().type->mobileType();
       if (shouldCopyStorageToStorage(*elementType, ElementLValue, *RHSType))
         appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
       else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))

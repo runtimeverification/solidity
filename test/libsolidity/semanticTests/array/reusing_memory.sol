@@ -1,28 +1,28 @@
 // Invoke some features that use memory and test that they do not interfere with each other.
 contract Helper {
-    uint public flag;
+    uint256 public flag;
 
-    constructor(uint x) {
+    constructor(uint256 x) {
         flag = x;
     }
 }
 
 
 contract Main {
-    mapping(uint => uint) map;
+    mapping(uint256 => uint256) map;
 
-    function f(uint x) public returns (uint) {
+    function f(uint256 x) public returns (uint256) {
         map[x] = x;
         return
-            (new Helper(uint(keccak256(abi.encodePacked(this.g(map[x]))))))
+            (new Helper(uint256(keccak256(abi.encodePacked(this.g(map[x]))))))
                 .flag();
     }
 
-    function g(uint a) public returns (uint) {
+    function g(uint256 a) public returns (uint256) {
         return map[a];
     }
 }
 // ====
 // compileViaYul: also
 // ----
-// f(uint): 0x34 -> 0x46bddb1178e94d7f2892ff5f366840eb658911794f2c3a44c450aa2c505186c1
+// f(uint256): 0x34 -> 0x46bddb1178e94d7f2892ff5f366840eb658911794f2c3a44c450aa2c505186c1

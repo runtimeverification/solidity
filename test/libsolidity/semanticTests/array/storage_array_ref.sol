@@ -42,7 +42,7 @@ contract Store is BinarySearch {
 // ====
 // compileViaYul: also
 // ----
-// find(uint): 7 -> -1
+// find(uint): 7 -> 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 // add(uint): 7 ->
 // find(uint): 7 -> 0
 // add(uint): 11 ->
@@ -55,6 +55,6 @@ contract Store is BinarySearch {
 // find(uint): 7 -> 0
 // find(uint): 27 -> 3
 // find(uint): 32 -> 5
-// find(uint): 176 -> -1
-// find(uint): 0 -> -1
-// find(uint): 400 -> -1
+// find(uint): 176 -> 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// find(uint): 0 -> 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+// find(uint): 400 -> 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff

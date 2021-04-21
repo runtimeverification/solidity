@@ -531,7 +531,7 @@ BoolResult IntegerType::isExplicitlyConvertibleTo(Type const& _convertTo) const
 			!isSigned() && !isUnbound() &&
 			(numBits() == 160);
 	else if (auto fixedBytesType = dynamic_cast<FixedBytesType const*>(&_convertTo))
-		return (!isSigned() && (numBits() == fixedBytesType->numBytes() * 8));
+		return (!isSigned() && !isUnbound() && (numBits() == fixedBytesType->numBytes() * 8));
 	else if (dynamic_cast<EnumType const*>(&_convertTo))
 		return true;
 	else if (auto fixedPointType = dynamic_cast<FixedPointType const*>(&_convertTo))
@@ -1249,7 +1249,9 @@ BoolResult FixedBytesType::isExplicitlyConvertibleTo(Type const& _convertTo) con
 	if (_convertTo.category() == category())
 		return true;
 	else if (auto integerType = dynamic_cast<IntegerType const*>(&_convertTo))
-		return (!integerType->isSigned() && integerType->numBits() == numBytes() * 8);
+		return (!integerType->isSigned() &&
+				!integerType->isUnbound() &&
+				integerType->numBits() == numBytes() * 8);
 	else if (auto addressType = dynamic_cast<AddressType const*>(&_convertTo))
 		return
 			(addressType->stateMutability() != StateMutability::Payable) &&

@@ -5,4 +5,4 @@ contract Test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// test() -> 0xffffffffffffffffffffffffffffffff
+// test() -> 0x00ffffffffffffffffffffffffffffffff

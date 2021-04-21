@@ -7,4 +7,4 @@ contract Test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// UintToBytes(uint8): 0x61 -> "a"
+// UintToBytes(uint8): 0x61 -> 0x61
