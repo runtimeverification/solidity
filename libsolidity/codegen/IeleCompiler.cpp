@@ -1539,34 +1539,27 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   if (RHSType->category() == Type::Category::Tuple) {
     if (const TupleExpression *RHSTuple =
           dynamic_cast<const TupleExpression *>(&RHS)) {
-     // auto &Components = RHSTuple->components();
-
       std::vector<ASTPointer<Expression>> FinalComponents;
       std::vector<ASTPointer<Expression>> MyComponents(RHSTuple->components());
       std::reverse(MyComponents.begin(), MyComponents.end());
 
-     unsigned myComponentsSize = MyComponents.size();
-     while (myComponentsSize > 0) {
-       unsigned i = myComponentsSize - 1;
-       TypePointer CType = (MyComponents[i])->annotation().type;
-       //std::cout << "MyComponents.size: " << myComponentsSize << std::endl;
-       //std::cout << "FinalComponents.size: " << FinalComponents.size() << std::endl;
-       //std::cout << "CType: " << CType->toString() << std::endl;
-       if (CType->category() == Type::Category::Tuple) {
-         if (TupleExpression *TmpTuple = dynamic_cast<TupleExpression *>(&*MyComponents[i])) {
-           //std::cout << "In tuple" << std::endl;
-           auto NestedComponents = TmpTuple->components();
-           MyComponents.pop_back();
-           for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
-             MyComponents.push_back(*rit);
-         }
-       } else {
-         //std::cout << "In else" << std::endl;
-         FinalComponents.push_back(MyComponents[i]);
-         MyComponents.pop_back();
-       }
-       myComponentsSize = MyComponents.size();
-     }
+      unsigned myComponentsSize = MyComponents.size();
+      while (myComponentsSize > 0) {
+        unsigned i = myComponentsSize - 1;
+        if (MyComponents[i] &&
+            MyComponents[i]->annotation().type->category() == Type::Category::Tuple) {
+          if (TupleExpression *TmpTuple = dynamic_cast<TupleExpression *>(&*MyComponents[i])) {
+            auto NestedComponents = TmpTuple->components();
+            MyComponents.pop_back();
+            for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
+              MyComponents.push_back(*rit);
+          }
+        } else {
+          FinalComponents.push_back(MyComponents[i]);
+          MyComponents.pop_back();
+        }
+        myComponentsSize = MyComponents.size();
+      }
 
       auto &Components = FinalComponents;
 
@@ -1579,9 +1572,6 @@ bool IeleCompiler::visit(const Assignment &assignment) {
       }
 
       // Here, we also check the case of (x,) in the rhs of the assignment. We
-      std::cout << "Components.size(): " << Components.size() << std::endl
-                << "RHSValues.size() : " << RHSValues.size() << std::endl
-                << "LHSValues.size() : " << LHSValues.size() << std::endl;
       solAssert(Components.size() == RHSValues.size(),
                 "IeleCompiler: failed to compile all elements of rhs of "
                 "tuple assignement");
