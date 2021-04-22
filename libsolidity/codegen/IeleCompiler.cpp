@@ -1469,50 +1469,50 @@ bool IeleCompiler::visit(const Assignment &assignment) {
     const TupleType &LHSTupleType = dynamic_cast<const TupleType &>(*LHSType);
 
     std::vector<TypePointer> FinalComponents;
-    std::vector<TypePointer> MyComponents(RHSTupleType.components());
-    std::reverse(MyComponents.begin(), MyComponents.end());
+    std::vector<TypePointer> ComponentsWL(RHSTupleType.components());
+    std::reverse(ComponentsWL.begin(), ComponentsWL.end());
 
-    unsigned myComponentsSize = MyComponents.size();
-    while (myComponentsSize > 0) {
-      unsigned i = myComponentsSize - 1;
-      TypePointer CType = MyComponents[i];
+    unsigned componentsWLSize = ComponentsWL.size();
+    while (componentsWLSize > 0) {
+      unsigned i = componentsWLSize - 1;
+      TypePointer CType = ComponentsWL[i];
       if (CType && CType->category() == Type::Category::Tuple) {
-        if (const TupleType *TmpTupleType = dynamic_cast<const TupleType *>(CType)) {
-          auto NestedComponents = TmpTupleType->components();
-          MyComponents.pop_back();
+        if (const TupleType *NestedTupleType = dynamic_cast<const TupleType *>(CType)) {
+          auto NestedComponents = NestedTupleType->components();
+          ComponentsWL.pop_back();
           for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
-            MyComponents.push_back(*rit);
+            ComponentsWL.push_back(*rit);
         }
       } else {
         FinalComponents.push_back(CType);
-        MyComponents.pop_back();
+        ComponentsWL.pop_back();
       }
-      myComponentsSize = MyComponents.size();
+      componentsWLSize = ComponentsWL.size();
     }
 
     RHSTypes.insert(RHSTypes.end(), FinalComponents.begin(),
                     FinalComponents.end());
 
-    FinalComponents.clear(); MyComponents.clear();
-    MyComponents = LHSTupleType.components();
-    std::reverse(MyComponents.begin(), MyComponents.end());
+    FinalComponents.clear(); ComponentsWL.clear();
+    ComponentsWL = LHSTupleType.components();
+    std::reverse(ComponentsWL.begin(), ComponentsWL.end());
 
-    myComponentsSize = MyComponents.size();
-    while (myComponentsSize > 0) {
-      unsigned i = myComponentsSize - 1;
-      TypePointer CType = MyComponents[i];
+    componentsWLSize = ComponentsWL.size();
+    while (componentsWLSize > 0) {
+      unsigned i = componentsWLSize - 1;
+      TypePointer CType = ComponentsWL[i];
       if (CType && CType->category() == Type::Category::Tuple) {
-        if (const TupleType *TmpTupleType = dynamic_cast<const TupleType *>(CType)) {
-          auto NestedComponents = TmpTupleType->components();
-          MyComponents.pop_back();
+        if (const TupleType *NestedTupleType = dynamic_cast<const TupleType *>(CType)) {
+          auto NestedComponents = NestedTupleType->components();
+          ComponentsWL.pop_back();
           for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
-            MyComponents.push_back(*rit);
+            ComponentsWL.push_back(*rit);
         }
       } else {
         FinalComponents.push_back(CType);
-        MyComponents.pop_back();
+        ComponentsWL.pop_back();
       }
-      myComponentsSize = MyComponents.size();
+      componentsWLSize = ComponentsWL.size();
     }
 
     LHSTypes.insert(LHSTypes.end(), FinalComponents.begin(),
@@ -1540,25 +1540,25 @@ bool IeleCompiler::visit(const Assignment &assignment) {
     if (const TupleExpression *RHSTuple =
           dynamic_cast<const TupleExpression *>(&RHS)) {
       std::vector<ASTPointer<Expression>> FinalComponents;
-      std::vector<ASTPointer<Expression>> MyComponents(RHSTuple->components());
-      std::reverse(MyComponents.begin(), MyComponents.end());
+      std::vector<ASTPointer<Expression>> ComponentsWL(RHSTuple->components());
+      std::reverse(ComponentsWL.begin(), ComponentsWL.end());
 
-      unsigned myComponentsSize = MyComponents.size();
-      while (myComponentsSize > 0) {
-        unsigned i = myComponentsSize - 1;
-        if (MyComponents[i] &&
-            MyComponents[i]->annotation().type->category() == Type::Category::Tuple) {
-          if (TupleExpression *TmpTuple = dynamic_cast<TupleExpression *>(&*MyComponents[i])) {
-            auto NestedComponents = TmpTuple->components();
-            MyComponents.pop_back();
+      unsigned componentsWLSize = ComponentsWL.size();
+      while (componentsWLSize > 0) {
+        unsigned i = componentsWLSize - 1;
+        if (ComponentsWL[i] &&
+            ComponentsWL[i]->annotation().type->category() == Type::Category::Tuple) {
+          if (TupleExpression *NestedTuple = dynamic_cast<TupleExpression *>(&*ComponentsWL[i])) {
+            auto NestedComponents = NestedTuple->components();
+            ComponentsWL.pop_back();
             for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
-              MyComponents.push_back(*rit);
+              ComponentsWL.push_back(*rit);
           }
         } else {
-          FinalComponents.push_back(MyComponents[i]);
-          MyComponents.pop_back();
+          FinalComponents.push_back(ComponentsWL[i]);
+          ComponentsWL.pop_back();
         }
-        myComponentsSize = MyComponents.size();
+        componentsWLSize = ComponentsWL.size();
       }
 
       auto &Components = FinalComponents;
