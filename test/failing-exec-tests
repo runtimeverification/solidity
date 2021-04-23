@@ -688,8 +688,6 @@
 -t !semanticTests/types/mapping_enum_key_library_encoderV2
 -t !semanticTests/types/mapping_enum_key_v2
 -t !semanticTests/types/mapping_simple
--t !semanticTests/types/nested_tuples
--t !semanticTests/types/tuple_assign_multi_slot_grow
 -t !semanticTests/uninitializedFunctionPointer/invalidInConstructor
 -t !semanticTests/uninitializedFunctionPointer/invalidStoredInConstructor
 -t !semanticTests/uninitializedFunctionPointer/store2
