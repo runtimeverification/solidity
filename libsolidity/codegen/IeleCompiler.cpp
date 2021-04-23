@@ -1447,6 +1447,63 @@ static bool isLocalVariable(const Identifier *Id) {
   return false;
 }
 
+/* Helper functions to collect the component types and expressions of nested
+ * tuples. The first argument corresponds to the list of types/expressions of
+ * the tuple to expand. The list of "flattened" types/expressions of all, if
+ * any, contained nested tuples is returned in FinalComponents.
+ */
+static void getTupleComponents(
+    const std::vector<TypePointer> &Components,
+    std::vector<TypePointer> &FinalComponents) {
+
+  std::vector<TypePointer> ComponentsWL(Components);
+  std::reverse(ComponentsWL.begin(), ComponentsWL.end());
+
+  unsigned componentsWLSize = ComponentsWL.size();
+  while (componentsWLSize > 0) {
+    unsigned i = componentsWLSize - 1;
+    TypePointer CType = ComponentsWL[i];
+    if (CType && CType->category() == Type::Category::Tuple) {
+      if (const TupleType *NestedTupleType = dynamic_cast<const TupleType *>(CType)) {
+        auto NestedComponents = NestedTupleType->components();
+        ComponentsWL.pop_back();
+        for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
+          ComponentsWL.push_back(*rit);
+      }
+    } else {
+      FinalComponents.push_back(CType);
+      ComponentsWL.pop_back();
+    }
+    componentsWLSize = ComponentsWL.size();
+  }
+}
+
+static void getTupleComponents(
+    const std::vector<ASTPointer<Expression>> &Components,
+    std::vector<ASTPointer<Expression>> &FinalComponents) {
+
+  std::vector<ASTPointer<Expression>> ComponentsWL(Components);
+  std::reverse(ComponentsWL.begin(), ComponentsWL.end());
+
+  unsigned componentsWLSize = ComponentsWL.size();
+  while (componentsWLSize > 0) {
+    unsigned i = componentsWLSize - 1;
+    if (ComponentsWL[i] &&
+        ComponentsWL[i]->annotation().type->category() == Type::Category::Tuple) {
+      if (TupleExpression *NestedTuple = dynamic_cast<TupleExpression *>(&*ComponentsWL[i])) {
+        auto NestedComponents = NestedTuple->components();
+        ComponentsWL.pop_back();
+        for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
+          ComponentsWL.push_back(*rit);
+      }
+    } else {
+      FinalComponents.push_back(ComponentsWL[i]);
+      ComponentsWL.pop_back();
+    }
+    componentsWLSize = ComponentsWL.size();
+  }
+}
+
 bool IeleCompiler::visit(const Assignment &assignment) {
   Token op = assignment.assignmentOperator();
   const Expression &RHS = assignment.rightHandSide();
@@ -1469,54 +1526,15 @@ bool IeleCompiler::visit(const Assignment &assignment) {
     const TupleType &LHSTupleType = dynamic_cast<const TupleType &>(*LHSType);
 
     std::vector<TypePointer> FinalComponents;
-    std::vector<TypePointer> ComponentsWL(RHSTupleType.components());
-    std::reverse(ComponentsWL.begin(), ComponentsWL.end());
-
-    unsigned componentsWLSize = ComponentsWL.size();
-    while (componentsWLSize > 0) {
-      unsigned i = componentsWLSize - 1;
-      TypePointer CType = ComponentsWL[i];
-      if (CType && CType->category() == Type::Category::Tuple) {
-        if (const TupleType *NestedTupleType = dynamic_cast<const TupleType *>(CType)) {
-          auto NestedComponents = NestedTupleType->components();
-          ComponentsWL.pop_back();
-          for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
-            ComponentsWL.push_back(*rit);
-        }
-      } else {
-        FinalComponents.push_back(CType);
-        ComponentsWL.pop_back();
-      }
-      componentsWLSize = ComponentsWL.size();
-    }
-
+    getTupleComponents(RHSTupleType.components(), FinalComponents);
     RHSTypes.insert(RHSTypes.end(), FinalComponents.begin(),
                     FinalComponents.end());
+    FinalComponents.clear();
 
-    FinalComponents.clear(); ComponentsWL.clear();
-    ComponentsWL = LHSTupleType.components();
-    std::reverse(ComponentsWL.begin(), ComponentsWL.end());
-
-    componentsWLSize = ComponentsWL.size();
-    while (componentsWLSize > 0) {
-      unsigned i = componentsWLSize - 1;
-      TypePointer CType = ComponentsWL[i];
-      if (CType && CType->category() == Type::Category::Tuple) {
-        if (const TupleType *NestedTupleType = dynamic_cast<const TupleType *>(CType)) {
-          auto NestedComponents = NestedTupleType->components();
-          ComponentsWL.pop_back();
-          for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
-            ComponentsWL.push_back(*rit);
-        }
-      } else {
-        FinalComponents.push_back(CType);
-        ComponentsWL.pop_back();
-      }
-      componentsWLSize = ComponentsWL.size();
-    }
-
+    getTupleComponents(LHSTupleType.components(), FinalComponents);
     LHSTypes.insert(LHSTypes.end(), FinalComponents.begin(),
                     FinalComponents.end());
+    FinalComponents.clear();
   } else {
     solAssert(LHSType->category() != Type::Category::Tuple,
               "IeleCompiler: found assignment from variable to tuple");
@@ -1540,26 +1558,7 @@ bool IeleCompiler::visit(const Assignment &assignment) {
     if (const TupleExpression *RHSTuple =
           dynamic_cast<const TupleExpression *>(&RHS)) {
       std::vector<ASTPointer<Expression>> FinalComponents;
-      std::vector<ASTPointer<Expression>> ComponentsWL(RHSTuple->components());
-      std::reverse(ComponentsWL.begin(), ComponentsWL.end());
-
-      unsigned componentsWLSize = ComponentsWL.size();
-      while (componentsWLSize > 0) {
-        unsigned i = componentsWLSize - 1;
-        if (ComponentsWL[i] &&
-            ComponentsWL[i]->annotation().type->category() == Type::Category::Tuple) {
-          if (TupleExpression *NestedTuple = dynamic_cast<TupleExpression *>(&*ComponentsWL[i])) {
-            auto NestedComponents = NestedTuple->components();
-            ComponentsWL.pop_back();
-            for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
-              ComponentsWL.push_back(*rit);
-          }
-        } else {
-          FinalComponents.push_back(ComponentsWL[i]);
-          ComponentsWL.pop_back();
-        }
-        componentsWLSize = ComponentsWL.size();
-      }
+      getTupleComponents(RHSTuple->components(), FinalComponents);
 
       auto &Components = FinalComponents;
 
