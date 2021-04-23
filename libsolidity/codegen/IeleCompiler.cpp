@@ -14,9 +14,6 @@
 #include <iostream>
 #include "llvm/Support/raw_ostream.h"
 
-#define BOOST_STACKTRACE_USE_ADDR2LINE
-#include <boost/stacktrace.hpp>
-
 using namespace solidity;
 using namespace solidity::frontend;
 
@@ -1545,9 +1542,6 @@ bool IeleCompiler::visit(const Assignment &assignment) {
   // Visit RHS.
   llvm::SmallVector<IeleRValue *, 4> RHSValues;
   compileTuple(RHS, RHSValues);
-  // Visit LHS.
-  llvm::SmallVector<IeleLValue *, 4> LHSValues;
-  compileLValues(LHS, LHSValues);
 
   // Save RHS elements that are named variables (locals and formal/return
   // aguments) into temporaries to ensure correct behavior of tuple assignment.
@@ -1560,7 +1554,7 @@ bool IeleCompiler::visit(const Assignment &assignment) {
       std::vector<ASTPointer<Expression>> FinalComponents;
       getTupleComponents(RHSTuple->components(), FinalComponents);
 
-      auto &Components = FinalComponents;
+      const auto &Components = FinalComponents;
 
       // Here, we also check the case of (x,) in the rhs of the assignment. We
       // need to extend RHSValues in this case to maintain the invariant that
@@ -1570,7 +1564,6 @@ bool IeleCompiler::visit(const Assignment &assignment) {
         RHSTypes.push_back(nullptr);
       }
 
-      // Here, we also check the case of (x,) in the rhs of the assignment. We
       solAssert(Components.size() == RHSValues.size(),
                 "IeleCompiler: failed to compile all elements of rhs of "
                 "tuple assignement");
@@ -1591,6 +1584,10 @@ bool IeleCompiler::visit(const Assignment &assignment) {
       }
     }
   }
+
+  // Visit LHS.
+  llvm::SmallVector<IeleLValue *, 4> LHSValues;
+  compileLValues(LHS, LHSValues);
 
   // At this point the following invariants should be true:
   solAssert(LHSValues.size() <= RHSValues.size(),
@@ -1736,15 +1733,15 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
   for (unsigned i = 0; i < Components.size(); i++) {
     const ASTPointer<Expression> &component = Components[i];
     if (CompilingLValue && component) {
-      llvm::SmallVector<IeleLValue *, 4> tmp;
-      compileLValues(*component, tmp);
-      Results.insert(Results.end(), tmp.begin(), tmp.end());
+      llvm::SmallVector<IeleLValue *, 4> LVals;
+      compileLValues(*component, LVals);
+      Results.insert(Results.end(), LVals.begin(), LVals.end());
     } else if (CompilingLValue) {
       Results.push_back((IeleLValue *)nullptr);
     } else if (component) {
-      llvm::SmallVector<IeleRValue *, 4> tmp;
-      compileTuple(*component, tmp);
-      Results.insert(Results.end(), tmp.begin(), tmp.end());
+      llvm::SmallVector<IeleRValue *, 4> RVals;
+      compileTuple(*component, RVals);
+      Results.insert(Results.end(), RVals.begin(), RVals.end());
     } else {
       // this the special (x,) rvalue tuple, the only case where an rvalue tuple
       // is allowed to skip a component.
@@ -5365,11 +5362,6 @@ IeleRValue *IeleCompiler::compileExpression(const Expression &expression) {
   // field. This helper should only be used when a scalar value (or void) is
   // expected as the result of the corresponding expression computation.
   IeleRValue *Result = nullptr;
-  if (CompilingExpressionResult.size() != 1) {
-    std::cout << "CompilingExpressionResult.size() = "
-              << CompilingExpressionResult.size() << std::endl ;
-    std::cout << boost::stacktrace::stacktrace() << std::endl;
-  }
   solAssert(CompilingExpressionResult.size() == 1,
             "IeleCompiler: Expression visitor did not set enough result values");
   Result = CompilingExpressionResult[0].rval(CompilingBlock);
@@ -5416,11 +5408,6 @@ IeleLValue *IeleCompiler::compileLValue(const Expression &expression) {
   // field. This helper should only be used when a scalar lvalue is expected as
   // the result of the corresponding expression computation.
   IeleLValue *Result = nullptr;
-  if (CompilingExpressionResult.size() != 1) {
-    std::cout << "CompilingExpressionResult.size() = "
-              << CompilingExpressionResult.size() << std::endl ;
-    std::cout << boost::stacktrace::stacktrace() << std::endl;
-  }
   solAssert(CompilingExpressionResult.size() == 1,
             "IeleCompiler: Expression visitor did not set a result value");
   Result = CompilingExpressionResult[0].lval();
