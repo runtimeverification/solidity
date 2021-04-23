@@ -786,7 +786,6 @@
 -t !semanticTests/viaYul/if
 -t !semanticTests/viaYul/local_address_assignment
 -t !semanticTests/viaYul/local_assignment
--t !semanticTests/viaYul/local_tuple_assignment
 -t !semanticTests/viaYul/mapping_enum_key_getter
 -t !semanticTests/viaYul/mapping_getters
 -t !semanticTests/viaYul/mapping_string_key
