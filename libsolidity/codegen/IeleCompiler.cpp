@@ -1444,11 +1444,10 @@ static bool isLocalVariable(const Identifier *Id) {
   return false;
 }
 
-/* Helper functions to collect the component types and expressions of nested
- * tuples. The first argument corresponds to the list of types/expressions of
- * the tuple to expand. The list of "flattened" types/expressions of all, if
- * any, contained nested tuples is returned in FinalComponents.
- */
+// Helper functions to collect the component types and expressions of nested
+// tuples. The first argument corresponds to the list of types/expressions of
+// the tuple to expand. The list of "flattened" types/expressions of all, if
+// any, contained nested tuples is returned in FinalComponents.
 static void getTupleComponents(
     const std::vector<TypePointer> &Components,
     std::vector<TypePointer> &FinalComponents) {
@@ -1456,10 +1455,8 @@ static void getTupleComponents(
   std::vector<TypePointer> ComponentsWL(Components);
   std::reverse(ComponentsWL.begin(), ComponentsWL.end());
 
-  unsigned componentsWLSize = ComponentsWL.size();
-  while (componentsWLSize > 0) {
-    unsigned i = componentsWLSize - 1;
-    TypePointer CType = ComponentsWL[i];
+  while (ComponentsWL.size() > 0) {
+    TypePointer CType = ComponentsWL.back();
     if (CType && CType->category() == Type::Category::Tuple) {
       if (const TupleType *NestedTupleType = dynamic_cast<const TupleType *>(CType)) {
         auto NestedComponents = NestedTupleType->components();
@@ -1471,7 +1468,6 @@ static void getTupleComponents(
       FinalComponents.push_back(CType);
       ComponentsWL.pop_back();
     }
-    componentsWLSize = ComponentsWL.size();
   }
 }
 
@@ -1482,22 +1478,19 @@ static void getTupleComponents(
   std::vector<ASTPointer<Expression>> ComponentsWL(Components);
   std::reverse(ComponentsWL.begin(), ComponentsWL.end());
 
-  unsigned componentsWLSize = ComponentsWL.size();
-  while (componentsWLSize > 0) {
-    unsigned i = componentsWLSize - 1;
-    if (ComponentsWL[i] &&
-        ComponentsWL[i]->annotation().type->category() == Type::Category::Tuple) {
-      if (TupleExpression *NestedTuple = dynamic_cast<TupleExpression *>(&*ComponentsWL[i])) {
+  while (ComponentsWL.size() > 0) {
+    if (ComponentsWL.back() &&
+        ComponentsWL.back()->annotation().type->category() == Type::Category::Tuple) {
+      if (TupleExpression *NestedTuple = dynamic_cast<TupleExpression *>(&*ComponentsWL.back())) {
         auto NestedComponents = NestedTuple->components();
         ComponentsWL.pop_back();
         for (auto rit = NestedComponents.crbegin() ; rit != NestedComponents.crend(); ++rit)
           ComponentsWL.push_back(*rit);
       }
     } else {
-      FinalComponents.push_back(ComponentsWL[i]);
+      FinalComponents.push_back(ComponentsWL.back());
       ComponentsWL.pop_back();
     }
-    componentsWLSize = ComponentsWL.size();
   }
 }
 
@@ -1522,16 +1515,15 @@ bool IeleCompiler::visit(const Assignment &assignment) {
     const TupleType &RHSTupleType = dynamic_cast<const TupleType &>(*RHSType);
     const TupleType &LHSTupleType = dynamic_cast<const TupleType &>(*LHSType);
 
-    std::vector<TypePointer> FinalComponents;
-    getTupleComponents(RHSTupleType.components(), FinalComponents);
-    RHSTypes.insert(RHSTypes.end(), FinalComponents.begin(),
-                    FinalComponents.end());
-    FinalComponents.clear();
+    std::vector<TypePointer> RHSFinalComponents;
+    getTupleComponents(RHSTupleType.components(), RHSFinalComponents);
+    RHSTypes.insert(RHSTypes.end(), RHSFinalComponents.begin(),
+                    RHSFinalComponents.end());
 
-    getTupleComponents(LHSTupleType.components(), FinalComponents);
-    LHSTypes.insert(LHSTypes.end(), FinalComponents.begin(),
-                    FinalComponents.end());
-    FinalComponents.clear();
+    std::vector<TypePointer> LHSFinalComponents;
+    getTupleComponents(LHSTupleType.components(), LHSFinalComponents);
+    LHSTypes.insert(LHSTypes.end(), LHSFinalComponents.begin(),
+                    LHSFinalComponents.end());
   } else {
     solAssert(LHSType->category() != Type::Category::Tuple,
               "IeleCompiler: found assignment from variable to tuple");
@@ -1553,7 +1545,6 @@ bool IeleCompiler::visit(const Assignment &assignment) {
           dynamic_cast<const TupleExpression *>(&RHS)) {
       std::vector<ASTPointer<Expression>> FinalComponents;
       getTupleComponents(RHSTuple->components(), FinalComponents);
-
       const auto &Components = FinalComponents;
 
       // Here, we also check the case of (x,) in the rhs of the assignment. We
