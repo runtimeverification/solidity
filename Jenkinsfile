@@ -14,6 +14,7 @@ pipeline {
     stage('Build') {
       steps {
         sh '''
+          touch prerelease.txt
           mkdir build
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Debug
@@ -24,6 +25,28 @@ pipeline {
     }
     stage('Compilation Tests') {
       steps { sh './test/ieleCmdlineTests.sh' }
+    }
+    stage('Regression Tests') {
+      stages {
+        stage('Checkout code') { steps { dir('iog-pm') { git branch: 'milestone4', url: 'git@github.com:runtimeverification/iog-pm.git' } } }
+        stage('Milestone4 Tests') {
+          environment {
+            CONTRACTLIST = "${env.WORKSPACE}/test/milestone4-contracts.txt"
+            FAILING = "${env.WORKSPACE}/test/milestone4-contracts.failing"
+          }
+          steps {
+            dir('iog-pm') {
+              sh '''
+                git submodule init
+                git submodule update --depth 1
+                grep -v -x -F -f ${FAILING} ${CONTRACTLIST} > contracts.txt
+                export SOLC=${WORKSPACE}/build/solc/isolc
+                ./run-all-scripts.sh --filter contracts.txt --verbose --verbose
+              '''
+            }
+          }
+        }
+      }
     }
     stage('Execution Tests') {
       steps {
