@@ -236,7 +236,8 @@ optional<TypedRational> convertType(rational const& _value, Type const& _type)
 		return TypedRational{TypeProvider::rationalNumber(_value), _value};
 	else if (auto const* integerType = dynamic_cast<IntegerType const*>(&_type))
 	{
-		if (_value > integerType->maxValue() || _value < integerType->minValue())
+		if ((!integerType->isUnbound() && _value > integerType->maxValue()) ||
+		    (!(integerType->isUnbound() && integerType->isSigned()) && _value < integerType->minValue()))
 			return nullopt;
 		else
 			return TypedRational{&_type, _value.numerator() / _value.denominator()};
