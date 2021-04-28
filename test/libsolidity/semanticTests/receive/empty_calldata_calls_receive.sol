@@ -11,6 +11,6 @@ contract A {
 // x() -> 1
 // (), 1 wei
 // x() -> 2
-// x(), 1 wei -> FAILURE
-// (): hex"00" -> FAILURE
-// (), 1 ether: hex"00" -> FAILURE
+// x(), 1 wei -> FAILURE, 255
+// (): hex"00" -> FAILURE, 2
+// (), 1 ether: hex"00" -> FAILURE, 2

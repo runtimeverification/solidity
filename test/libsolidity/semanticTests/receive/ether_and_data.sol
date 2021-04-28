@@ -6,4 +6,4 @@ contract C {
 // compileToEwasm: also
 // ----
 // (), 1 ether
-// (), 1 ether: 1 -> FAILURE
+// (), 1 ether: 1 -> FAILURE, 2
