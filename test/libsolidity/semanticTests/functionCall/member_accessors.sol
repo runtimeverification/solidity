@@ -18,7 +18,7 @@ contract test {
 // allowNonExistingFunctions: true
 // ----
 // data() -> 8
-// name() -> "Celina"
-// a_hash() -> 0xa91eddf639b0b768929589c1a9fd21dcb0107199bdd82e55c5348018a1572f52
+// name() -> 0x43656c696e61
+// a_hash() -> 0x00a91eddf639b0b768929589c1a9fd21dcb0107199bdd82e55c5348018a1572f52
 // an_address() -> 0x1337
-// super_secret_data() -> FAILURE
+// super_secret_data() -> FAILURE, 1
