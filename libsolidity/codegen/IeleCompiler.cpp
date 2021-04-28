@@ -32,7 +32,7 @@ std::string IeleCompiler::getIeleNameForFunction(
   if (function.isConstructor())
     IeleFunctionName = "init";
   else if (function.isFallback())
-    IeleFunctionName = "deposit";
+    IeleFunctionName = "fallback";
   else if (function.isReceive())
     IeleFunctionName = "receive";
   else if (function.isPublic())
@@ -253,6 +253,8 @@ void IeleCompiler::compileContract(
   // Store the current contract.
   CompilingContractInheritanceHierarchy = bases;
   bool most_derived = true;
+  const FunctionDefinition *MostDerivedFallback = nullptr;
+  const FunctionDefinition *MostDerivedReceive = nullptr;
   
   // Compute and store info for handling multiple inheritance
   computeCtorsAuxParams();
@@ -283,7 +285,7 @@ void IeleCompiler::compileContract(
     // inheritance hierarchy.
     if (base->constructor()) {
       if (most_derived) {
-        // This is the actual constructo, add it to the symbol table.
+        // This is the actual constructor, add it to the symbol table.
         iele::IeleFunction::CreateInit(&Context, CompilingContract);
       } else {
         // Generate a proxy function for the base contract's constructor and add
@@ -296,9 +298,12 @@ void IeleCompiler::compileContract(
     // Add the rest of the functions found in the current contract of the
     // inheritance hierarchy.
     for (const FunctionDefinition *function : base->definedFunctions()) {
-      if (function->isConstructor() || function->isFallback() ||
-          !function->isImplemented())
+      if (function->isConstructor() || !function->isImplemented())
         continue;
+      if (!MostDerivedFallback && function->isFallback())
+        MostDerivedFallback = function;
+      if (!MostDerivedReceive && function->isReceive())
+        MostDerivedReceive = function;
       std::string FunctionName = getIeleNameForFunction(*function);
       iele::IeleFunction::Create(&Context, function->isPublic(),
                                  FunctionName, CompilingContract);
@@ -326,21 +331,49 @@ void IeleCompiler::compileContract(
     }
   }
 
+  // Finally add the default deposit function to the contract's symbol table.
+  if (MostDerivedFallback || MostDerivedReceive) {
+    CompilingFunction =
+      iele::IeleFunction::CreateDeposit(&Context, true, CompilingContract);
+    CompilingBlock =
+      iele::IeleBlock::Create(&Context, "entry", CompilingFunction);
 
-  // Finally add the fallback function to the contract's symbol table.
-  if (const FunctionDefinition *fallback = contract.fallbackFunction()) {
-    // First add the fallback to the symbol table, since it is not added by the
-    // previous loop.
-    iele::IeleFunction::CreateDeposit(&Context,
-                                      fallback->isPublic(),
-                                      CompilingContract);
+    // Choose between receive and fallback as the implmentation of the
+    // deposit function
+    const FunctionDefinition *DepositFunction =
+      MostDerivedReceive ? MostDerivedReceive : MostDerivedFallback;
+    std::string name = getIeleNameForFunction(*DepositFunction);
+
+    // Lookup function in the contract's symbol table.
+    iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
+    solAssert(ST,
+              "IeleCompiler: failed to access compiling contract's symbol table.");
+    iele::IeleFunction *Callee = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(name));
+
+    // Append check for payable
+    if (!DepositFunction->isPayable()) {
+      appendPayableCheck();
+    }
+
+    // Create the function call to the fallback/receive internal function.
+    llvm::SmallVector<iele::IeleValue *, 4> paramValues;
+    llvm::SmallVector<iele::IeleLocalVariable *, 4> ReturnParameterRegisters;
+    solAssert(DepositFunction->parameters().size() == 0,
+              "IeleCompiler: fallback/receive function with non-zero number"
+              "of arguments is not currently supported.");
+    solAssert(DepositFunction->returnParameters().size() == 0,
+              "IeleCompiler: fallback/receive function with non-zero number"
+              "of return values is not currently supported.");
+    iele::IeleInstruction::CreateInternalCall(
+      ReturnParameterRegisters, Callee, paramValues, CompilingBlock);
+
+    // Create ret void
+    iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+    appendRevertBlocks();
+
+    CompilingBlock = nullptr;
+    CompilingFunction = nullptr;
   }
-
-  CompilingContractASTNode = &contract;
-
-  // Visit fallback.
-  if (const FunctionDefinition *fallback = contract.fallbackFunction())
-    fallback->accept(*this);
 
   // Visit base constructors. If any don't exist create an
   // @<base-contract-name>init function that contains only state variable
@@ -431,7 +464,8 @@ void IeleCompiler::compileContract(
     if (dep->isLibrary()) {
       for (const FunctionDefinition *function : dep->definedFunctions()) {
         VarNameMap.clear();
-        if (function->isConstructor() || function->isFallback() || !function->isImplemented())
+        if (function->isConstructor() || function->isFallback() ||
+            function->isReceive() || !function->isImplemented())
           continue;
         function->accept(*this);
       }
@@ -443,7 +477,7 @@ void IeleCompiler::compileContract(
     CompilingContractASTNode = base;
     for (const FunctionDefinition *function : base->definedFunctions()) {
       VarNameMap.clear();
-      if (function->isConstructor() || function->isFallback() || !function->isImplemented())
+      if (function->isConstructor() || !function->isImplemented())
         continue;
       function->accept(*this);
     }

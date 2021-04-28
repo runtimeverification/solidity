@@ -8,5 +8,5 @@ contract B is A {}
 // compileViaYul: also
 // ----
 // getData() -> 0
-// (): 42 ->
+// ()
 // getData() -> 1

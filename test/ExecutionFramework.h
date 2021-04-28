@@ -102,7 +102,14 @@ public:
 
 	std::vector<bytes> const& callLowLevel(bytes const& _data, u256 const& _value)
 	{
-		sendMessage(std::vector<bytes>(), "", _data, false, _value);
+		if (_data.size() > 0)
+		{
+			sendMessage(std::vector<bytes>(1, _data), "deposit", bytes(), false, _value);
+		}
+		else
+		{
+			sendMessage(std::vector<bytes>(), "deposit", bytes(), false, _value);
+		}
 		return m_output;
 	}
 
