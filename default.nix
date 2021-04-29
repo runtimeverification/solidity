@@ -15,7 +15,6 @@ let
     isolc = pkgs.callPackage ./nix/isolc.nix {
       inherit (ttuegel) cleanGitSubtree cleanSourceWith;
       inherit (iele-semantics) kiele;
-      gccStdenv = pkgs.gcc9Stdenv;
     };
   };
 in
