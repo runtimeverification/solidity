@@ -2795,6 +2795,7 @@ void IeleCompiler::doDecode(
   case Type::Category::FixedBytes:
   case Type::Category::Enum:
   case Type::Category::Bool:
+  case Type::Category::Address:
   case Type::Category::Integer: {
     AllocedValue = iele::IeleLocalVariable::Create(&Context, "loaded.value", CompilingFunction);
     // width of given type, in bits, or 0 arbitrary precision
