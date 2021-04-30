@@ -2365,6 +2365,7 @@ void IeleCompiler::doEncode(
   IeleRValue *ArgValue = LValue->read(CompilingBlock);
   switch (type->category()) {
   case Type::Category::Contract:
+  case Type::Category::Address:
   case Type::Category::FixedBytes:
   case Type::Category::Enum:
   case Type::Category::Bool:
