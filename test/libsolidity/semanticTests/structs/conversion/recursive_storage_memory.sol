@@ -15,7 +15,7 @@ contract CopyTest {
             storageTree.children[1].children.push();
     }
 
-    function run() public returns (uint256, uint256, uint256) {
+    function run() public returns (uint, uint, uint) {
         Tree memory memoryTree;
         memoryTree = storageTree;
         return (memoryTree.children.length, memoryTree.children[0].children.length, memoryTree.children[1].children.length);

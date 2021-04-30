@@ -233,7 +233,6 @@
 -t !semanticTests/array/delete/delete_storage_array
 -t !semanticTests/array/delete/delete_storage_array_packed
 -t !semanticTests/array/delete/memory_arrays_delete
--t !semanticTests/array/dynamic_multi_array_cleanup
 -t !semanticTests/array/external_array_args
 -t !semanticTests/array/fixed_arrays_as_return_type
 -t !semanticTests/array/fixed_arrays_in_constructors
@@ -246,7 +245,6 @@
 -t !semanticTests/array/invalid_encoding_for_storage_byte_array
 -t !semanticTests/array/memory
 -t !semanticTests/array/pop/byte_array_pop_long_storage_empty_garbage_ref
--t !semanticTests/array/push/array_push_nested
 -t !semanticTests/array/slices/array_slice_calldata_as_argument_of_external_calls
 -t !semanticTests/array/slices/array_slice_calldata_to_calldata
 -t !semanticTests/array/slices/array_slice_calldata_to_memory
@@ -460,7 +458,6 @@
 -t !semanticTests/libraries/bound_to_calldata_external
 -t !semanticTests/libraries/internal_library_function_bound_to_address
 -t !semanticTests/libraries/internal_library_function_bound_to_address_named_send_transfer
--t !semanticTests/libraries/internal_library_function_bound_to_array_named_pop_push
 -t !semanticTests/libraries/internal_library_function_bound_to_dynamic_array
 -t !semanticTests/libraries/internal_library_function_bound_to_enum
 -t !semanticTests/libraries/internal_library_function_bound_to_external_function
@@ -588,13 +585,9 @@
 -t !semanticTests/state_variables_init_order_2
 -t !semanticTests/state_variables_init_order_3
 -t !semanticTests/state_var_initialization
--t !semanticTests/storage/accessors_mapping_for_array
--t !semanticTests/storage/array_accessor
 -t !semanticTests/storage/chop_sign_bits
 -t !semanticTests/storage/complex_accessors
 -t !semanticTests/storage/empty_nonempty_empty
--t !semanticTests/storage/mappings_array2d_pop_delete
--t !semanticTests/storage/mappings_array_pop_delete
 -t !semanticTests/storage/mapping_state
 -t !semanticTests/storage/packed_functions
 -t !semanticTests/storage/packed_storage_overflow
@@ -625,7 +618,6 @@
 -t !semanticTests/structs/calldata/calldata_struct_with_nested_array_to_storage
 -t !semanticTests/structs/calldata/dynamically_encoded
 -t !semanticTests/structs/calldata/dynamic_nested
--t !semanticTests/structs/conversion/recursive_storage_memory
 -t !semanticTests/structs/conversion/recursive_storage_memory_complex
 -t !semanticTests/structs/delete_struct
 -t !semanticTests/structs/global
@@ -646,7 +638,6 @@
 -t !semanticTests/structs/struct_named_constructor
 -t !semanticTests/structs/struct_reference
 -t !semanticTests/structs/structs
--t !semanticTests/structs/struct_storage_push_zero_value
 -t !semanticTests/structs/struct_storage_to_memory
 -t !semanticTests/structs/struct_storage_to_memory_function_ptr
 -t !semanticTests/tryCatch/assert
@@ -719,12 +710,7 @@
 -t !semanticTests/viaYul/array_memory_as_parameter
 -t !semanticTests/viaYul/array_memory_create
 -t !semanticTests/viaYul/array_memory_index_access
--t !semanticTests/viaYul/array_push_return_reference
--t !semanticTests/viaYul/array_push_with_arg
--t !semanticTests/viaYul/array_storage_index_access
--t !semanticTests/viaYul/array_storage_index_boundary_test
 -t !semanticTests/viaYul/array_storage_index_zeroed_test
--t !semanticTests/viaYul/array_storage_length_access
 -t !semanticTests/viaYul/assert
 -t !semanticTests/viaYul/assert_and_require
 -t !semanticTests/viaYul/calldata_array_access

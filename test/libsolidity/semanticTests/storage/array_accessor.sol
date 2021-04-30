@@ -26,10 +26,10 @@ contract test {
 // compileViaYul: also
 // ----
 // data(uint): 0 -> 8
-// data(uint): 8 -> FAILURE
+// data(uint): 8 -> FAILURE, 255
 // dynamicData(uint): 2 -> 8
-// dynamicData(uint): 8 -> FAILURE
+// dynamicData(uint): 8 -> FAILURE, 255
 // smallTypeData(uint): 1 -> 22
 // smallTypeData(uint): 127 -> 2
-// smallTypeData(uint): 128 -> FAILURE
+// smallTypeData(uint): 128 -> FAILURE, 255
 // multiple_map(uint,uint,uint): 2, 1, 2 -> 3
