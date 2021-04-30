@@ -24,11 +24,11 @@ contract C {
 	}
 }
 // ----
-// n1(uint256,uint256): 42, 64 ->
-// map(uint256): 42 -> 64
+// n1(uint,uint): 42, 64 ->
+// map(uint): 42 -> 64
 // p() ->
 // n2() ->
-// map(uint256): 42 -> 64
+// map(uint): 42 -> 64
 // d() -> 0
 // n2() ->
-// map(uint256): 42 -> 64
+// map(uint): 42 -> 64
