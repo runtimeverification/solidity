@@ -1,4 +1,4 @@
-{ lib, stdenv, cleanGitSubtree, cleanSourceWith, fetchzip
+{ lib, gccStdenv, cleanGitSubtree, cleanSourceWith, fetchzip
 , boost
 , cmake
 , coreutils
@@ -26,7 +26,7 @@ let
 
   host-PATH = lib.makeBinPath [ kiele ];
 
-  isolc = stdenv.mkDerivation rec {
+  isolc = gccStdenv.mkDerivation rec {
     pname = "isolc";
     version = "0.8.2";
 
