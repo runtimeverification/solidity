@@ -4155,9 +4155,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     IeleRValue *rvalue = IeleRValue::Create({NewSize});
     SizeLValue->write(rvalue, CompilingBlock);
 
-    if (PushedValue) {
-      CompilingExpressionResult.push_back(rvalue);
-    } else {
+    if (!PushedValue) {
       CompilingExpressionResult.push_back(ElementLValue);
     }
     break;
@@ -4226,9 +4224,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     IeleRValue *rvalue = IeleRValue::Create({NewSize});
     SizeLValue->write(rvalue, CompilingBlock);
 
-    if (PushedValue) {
-      CompilingExpressionResult.push_back(rvalue);
-    } else {
+    if (!PushedValue) {
       CompilingExpressionResult.push_back(ElementLValue);
     }
     break;

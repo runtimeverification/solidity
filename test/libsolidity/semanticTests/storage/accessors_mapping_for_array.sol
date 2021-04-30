@@ -12,6 +12,6 @@ contract test {
 // compileViaYul: also
 // ----
 // data(uint,uint): 2, 2 -> 8
-// data(uint,uint): 2, 8 -> FAILURE # NB: the original code contained a bug here #
+// data(uint,uint): 2, 8 -> FAILURE, 255 # NB: the original code contained a bug here #
 // dynamicData(uint,uint): 2, 2 -> 8
-// dynamicData(uint,uint): 2, 8 -> FAILURE
+// dynamicData(uint,uint): 2, 8 -> FAILURE, 255
