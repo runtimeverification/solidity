@@ -17,13 +17,10 @@ enzymefinance-protocol/contracts/./release/utils/MakerDaoMath.sol
 enzymefinance-protocol/contracts/./release/utils/MathHelpers.sol
 enzymefinance-protocol/contracts/./release/utils/Proxy.sol
 evolutionland-furnace/src/./common/ECDSA.sol
-evolutionland-furnace/src/./DrillBaseAuthority.sol
 evolutionland-furnace/src/./DrillBaseProxy.sol
 evolutionland-furnace/src/./FormulaProxy.sol
 evolutionland-furnace/src/./ItemBaseProxy.sol
 evolutionland-furnace/src/./MetaDataTellerProxy.sol
-evolutionland-furnace/src/./ObjectOwnershipAuthorityV3.sol
-evolutionland-furnace/src/./ObjectOwnershipAuthorityV4.sol
 evolutionland-governance/contracts/./LPTokenWithReward.sol
 evolutionland-governance/contracts/./LPTokenWrapper.sol
 evolutionland-governance/contracts/./SnapshotProxy.sol
