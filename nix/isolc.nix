@@ -49,6 +49,7 @@ let
         then [
           "-Wno-error=unused-private-field"
           "-Wno-error=unused-variable"
+          "-Wno-error=braced-scalar-init"
         ]
         else [
           "-Wno-error=maybe-uninitialized"
