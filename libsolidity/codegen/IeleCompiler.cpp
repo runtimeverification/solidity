@@ -5345,6 +5345,7 @@ void IeleCompiler::endVisit(const Literal &literal) {
   switch (type->category()) {
   case Type::Category::Bool:
   case Type::Category::RationalNumber:
+  case Type::Category::Address:
   case Type::Category::Integer: {
     iele::IeleIntConstant *LiteralValue =
       iele::IeleIntConstant::Create(
