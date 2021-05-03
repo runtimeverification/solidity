@@ -1,4 +1,4 @@
-{ lib, gccStdenv, cleanGitSubtree, cleanSourceWith, fetchzip
+{ lib, stdenv, cleanGitSubtree, cleanSourceWith, fetchzip
 , boost
 , cmake
 , coreutils
@@ -26,7 +26,7 @@ let
 
   host-PATH = lib.makeBinPath [ kiele ];
 
-  isolc = gccStdenv.mkDerivation rec {
+  isolc = stdenv.mkDerivation rec {
     pname = "isolc";
     version = "0.8.2";
 
@@ -44,7 +44,8 @@ let
       echo "0000000000000000000000000000000000000000" >commit_hash.txt
     '';
 
-    NIX_CFLAGS_COMPILE = "-Wno-error=maybe-uninitialized";
+    NIX_CFLAGS_COMPILE =
+      lib.optional (!stdenv.cc.isClang) "-Wno-error=maybe-uninitialized";
 
     postPatch = ''
       substituteInPlace cmake/jsoncpp.cmake \
