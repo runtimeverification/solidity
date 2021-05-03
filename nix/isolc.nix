@@ -48,6 +48,7 @@ let
       if stdenv.cc.isClang
         then [
           "-Wno-error=unused-private-field"
+          "-Wno-error=unused-variable"
         ]
         else [
           "-Wno-error=maybe-uninitialized"
