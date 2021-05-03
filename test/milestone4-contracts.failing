@@ -9,7 +9,6 @@ enzymefinance-protocol/contracts/./release/core/fund/comptroller/ComptrollerProx
 enzymefinance-protocol/contracts/./release/core/fund-deployer/FundDeployer.sol
 enzymefinance-protocol/contracts/./release/extensions/policy-manager/policies/utils/AddressListPolicyMixin.sol
 enzymefinance-protocol/contracts/./release/infrastructure/price-feeds/derivatives/feeds/WdgldPriceFeed.sol
-enzymefinance-protocol/contracts/./release/infrastructure/value-interpreter/ValueInterpreter.sol
 enzymefinance-protocol/contracts/./release/peripheral/shares-requestors/AuthUserExecutedSharesRequestorProxy.sol
 enzymefinance-protocol/contracts/./release/utils/AddressArrayLib.sol
 enzymefinance-protocol/contracts/./release/utils/MakerDaoMath.sol
@@ -30,13 +29,10 @@ fortube-bond/contracts/./ACL.sol
 fortube-bond/contracts/./Config.sol
 fortube-bond/contracts/./Router.sol
 fortube-bond/contracts/./SafeERC20.sol
-fortube-bond/contracts/./Verify.sol
 fortube/contracts/./library/Address.sol
 fortube/contracts/./library/SafeERC20.sol
 idex-contracts/contracts/./libraries/Signatures.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/GasHelper.sol
-kybernetwork-smart-contracts/contracts/sol6/./mock/MaliciousStorage.sol
-kybernetwork-smart-contracts/contracts/sol6/./mock/MockGasHelper.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/MockWithdrawable3.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/MockWithdrawableNoModifiers.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/ReentrancyAttack.sol
@@ -45,7 +41,6 @@ kybernetwork-smart-contracts/contracts/sol6/./utils/WithdrawableNoModifiers.sol
 kybernetwork-smart-contracts/contracts/sol6/./utils/zeppelin/Address.sol
 kybernetwork-smart-contracts/contracts/sol6/./utils/zeppelin/SafeERC20.sol
 loopring-protocols/packages/loopring_v3/contracts/./aux/access/SelectorBasedAccessManager.sol
-loopring-protocols/packages/loopring_v3/contracts/./aux/agents/AgentRegistry.sol
 loopring-protocols/packages/loopring_v3/contracts/./aux/agents/ForcedWithdrawalAgent.sol
 loopring-protocols/packages/loopring_v3/contracts/./aux/compression/LzDecompressor.sol
 loopring-protocols/packages/loopring_v3/contracts/./aux/compression/ZeroDecompressor.sol
@@ -158,7 +153,6 @@ uFragments/contracts/./UFragments.sol
 uniswap-v3-core/contracts/./libraries/TransferHelper.sol
 uniswap-v3-core/contracts/./libraries/UnsafeMath.sol
 uniswap-v3-core/contracts/./test/OracleEchidnaTest.sol
-uniswap-v3-core/contracts/./test/OracleTest.sol
 uniswap-v3-core/contracts/./test/TestUniswapV3SwapPay.sol
 uniswap-v3-core/contracts/./test/UniswapV3PoolSwapTest.sol
 uniswap-v3-core/contracts/./test/UnsafeMathEchidnaTest.sol
