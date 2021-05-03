@@ -45,7 +45,13 @@ let
     '';
 
     NIX_CFLAGS_COMPILE =
-      lib.optional (!stdenv.cc.isClang) "-Wno-error=maybe-uninitialized";
+      if stdenv.cc.isClang
+        then [
+          "-Wno-error=unused-private-field"
+        ]
+        else [
+          "-Wno-error=maybe-uninitialized"
+        ];
 
     postPatch = ''
       substituteInPlace cmake/jsoncpp.cmake \
