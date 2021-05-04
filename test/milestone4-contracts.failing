@@ -1,5 +1,4 @@
 2key/contracts/2key/./libraries/PriceDiscovery.sol
-aave-protocol/contracts/./libraries/EthAddressLib.sol
 enzymefinance-protocol/contracts/./mocks/MockVaultLib.sol
 enzymefinance-protocol/contracts/./persistent/dispatcher/Dispatcher.sol
 enzymefinance-protocol/contracts/./persistent/vault/utils/ProxiableVaultLib.sol
@@ -33,13 +32,11 @@ fortube-bond/contracts/./Router.sol
 fortube-bond/contracts/./SafeERC20.sol
 fortube-bond/contracts/./Verify.sol
 fortube/contracts/./library/Address.sol
-fortube/contracts/./library/EthAddressLib.sol
 fortube/contracts/./library/SafeERC20.sol
 idex-contracts/contracts/./libraries/Signatures.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/GasHelper.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/MaliciousStorage.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/MockGasHelper.sol
-kybernetwork-smart-contracts/contracts/sol6/./mock/MockTrader.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/MockWithdrawable3.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/MockWithdrawableNoModifiers.sol
 kybernetwork-smart-contracts/contracts/sol6/./mock/ReentrancyAttack.sol
