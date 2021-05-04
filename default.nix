@@ -15,6 +15,10 @@ let
     isolc = pkgs.callPackage ./nix/isolc.nix {
       inherit (ttuegel) cleanGitSubtree cleanSourceWith;
       inherit (iele-semantics) kiele;
+      stdenv =
+        if pkgs.stdenv.cc.isClang
+          then pkgs.llvmPackages_10.stdenv
+          else pkgs.stdenv;
     };
   };
 in
