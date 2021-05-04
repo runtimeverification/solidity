@@ -16,7 +16,7 @@ let
       inherit (ttuegel) cleanGitSubtree cleanSourceWith;
       inherit (iele-semantics) kiele;
       stdenv = pkgs.gccStdenv;
-      boost = pkgs.boost.override { stdenv = pkgs.gccStdenv; };
+      boost = pkgs.boost17x.override { stdenv = pkgs.gccStdenv; };
     };
   };
 in
