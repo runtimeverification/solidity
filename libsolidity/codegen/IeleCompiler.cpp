@@ -2095,11 +2095,10 @@ void IeleCompiler::appendStructDelete(
       offset = offsets.first;
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       offset = type.memoryOffsetOfMember(member.name);
       break;
-    case DataLocation::CallData:
-      solAssert(false, "Call data not supported in IELE");
     }
     }
 
@@ -2142,12 +2141,11 @@ void IeleCompiler::appendArrayDeleteLoop(
     elementSize = elementType->storageSize();
     break;
   }
+  case DataLocation::CallData:
   case DataLocation::Memory: {
     elementSize = elementType->memorySize();
     break;
   }
-  case DataLocation::CallData:
-    solAssert(false, "not supported by IELE.");
   }
 
   appendLValueDelete(
@@ -2547,12 +2545,11 @@ void IeleCompiler::doEncode(
         elementSize = elementType->storageSize();
         break;
       }
+      case DataLocation::CallData:
       case DataLocation::Memory: {
         elementSize = elementType->memorySize();
         break;
       }
-      case DataLocation::CallData:
-        solAssert(false, "not supported by IELE.");
       }
   
       elementType = TypeProvider::withLocationIfReference(arrayType.location(), elementType);
@@ -2735,11 +2732,10 @@ void IeleCompiler::appendStructEncode(
       offset = offsets.first;
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       offset = type.memoryOffsetOfMember(decl->name());
       break;
-    case DataLocation::CallData:
-      solAssert(false, "Call data not supported in IELE");
     }
     }
 
@@ -2953,12 +2949,11 @@ void IeleCompiler::doDecode(
         elementSize = elementType->storageSize();
         break;
       }
+      case DataLocation::CallData:
       case DataLocation::Memory: {
         elementSize = elementType->memorySize();
         break;
       }
-      case DataLocation::CallData:
-        solAssert(false, "not supported by IELE.");
       }
   
       doDecode(NextFree, CrntPos, makeLValue(Element, elementType, DataLocation::Memory), ArgTypeSize, ArgLen, elementType);
@@ -3142,11 +3137,10 @@ void IeleCompiler::appendStructDecode(
       offset = offsets.first;
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       offset = type.memoryOffsetOfMember(decl->name());
       break;
-    case DataLocation::CallData:
-      solAssert(false, "Call data not supported in IELE");
     }
     }
 
@@ -4177,12 +4171,11 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       elementSize = elementType->storageSize();
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       elementSize = elementType->memorySize();
       break;
     }
-    case DataLocation::CallData:
-      solAssert(false, "not supported by IELE.");
     }
  
     iele::IeleLocalVariable *AddressValue =
@@ -4244,12 +4237,11 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       elementSize = elementType->storageSize();
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       elementSize = elementType->memorySize();
       break;
     }
-    case DataLocation::CallData:
-      solAssert(false, "not supported by IELE.");
     }
 
     iele::IeleLocalVariable *PopEmpty =
@@ -4793,12 +4785,11 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       elementSize = elementType.storageSize();
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       elementSize = elementType.memorySize();
       break;
     }
-    case DataLocation::CallData:
-      solAssert(false, "not supported by IELE.");
     }
  
     if (member == "length") {
@@ -4949,13 +4940,12 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
     size = type.storageSize();
     break;
   }
+  case DataLocation::CallData:
   case DataLocation::Memory: {
     elementSize = elementType->memorySize();
     size = type.memorySize();
     break;
   }
-  case DataLocation::CallData:
-    solAssert(false, "not supported by IELE.");
   }
   // First compute the offset from the start of the array.
   iele::IeleLocalVariable *OffsetValue =
@@ -5062,12 +5052,11 @@ IeleLValue *IeleCompiler::appendStructAccess(const StructType &type, iele::IeleV
     offset = offsets.first;
     break;
   }
+  case DataLocation::CallData:
   case DataLocation::Memory: {
     offset = type.memoryOffsetOfMember(member);
     break;
   }
-  default:
-    solAssert(false, "IeleCompiler: Illegal data location for struct.");
   }
   iele::IeleValue *OffsetValue =
     iele::IeleIntConstant::Create(&Context, offset);
@@ -5851,12 +5840,11 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
         elementSize = elementType.storageSize();
         break;
       }
+      case DataLocation::CallData:
       case DataLocation::Memory: {
         elementSize = elementType.memorySize();
         break;
       }
-      case DataLocation::CallData:
-        solAssert(false, "not supported by IELE.");
       }
  
       appendMul(SizeVariable, SizeValue, elementSize);
@@ -5903,12 +5891,11 @@ iele::IeleLocalVariable *IeleCompiler::appendArrayAllocation(
       elementSize = elementType.storageSize();
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       elementSize = elementType.memorySize();
       break;
     }
-    case DataLocation::CallData:
-      solAssert(false, "not supported by IELE.");
     }
 
     SizeValue =
@@ -6109,12 +6096,11 @@ void IeleCompiler::appendCopy(
       elementSize = elementType->storageSize();
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       elementSize = elementType->memorySize();
       break;
     }
-    case DataLocation::CallData:
-      solAssert(false, "not supported by IELE.");
     }
 
     switch (ToLoc) {
@@ -6122,12 +6108,11 @@ void IeleCompiler::appendCopy(
       toElementSize = toElementType->storageSize();
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       toElementSize = toElementType->memorySize();
       break;
     }
-    case DataLocation::CallData:
-      solAssert(false, "not supported by IELE.");
     }
 
     iele::IeleValue *FromElementSizeValue =
@@ -6319,11 +6304,10 @@ void IeleCompiler::appendStructCopy(
       fromOffset = offsets.first;
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       fromOffset = type.memoryOffsetOfMember(member.name);
       break;
-    case DataLocation::CallData:
-      solAssert(false, "Call data not supported in IELE");
     }
     }
     switch (ToLoc) {
@@ -6332,11 +6316,10 @@ void IeleCompiler::appendStructCopy(
       toOffset = offsets.first;
       break;
     }
+    case DataLocation::CallData:
     case DataLocation::Memory: {
       toOffset = toType.memoryOffsetOfMember(member.name);
       break;
-    case DataLocation::CallData:
-      solAssert(false, "Call data not supported in IELE");
     }
     }
 
@@ -6914,11 +6897,9 @@ void IeleCompiler::appendIeleRuntimeFill(
   case DataLocation::Storage:
     name = "ielert.storage.fill";
     break;
+  case DataLocation::CallData:
   case DataLocation::Memory:
     name = "ielert.memory.fill";
-    break;
-  case DataLocation::CallData:
-    solAssert(false, "not implemented in IELE");
     break;
   }
   CompilingContract->setIncludeMemoryRuntime(true);
