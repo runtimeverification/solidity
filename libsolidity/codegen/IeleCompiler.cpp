@@ -4680,6 +4680,14 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateAssign(
           TypeSizeValue, MinMaxConstant, CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create({TypeSizeValue}));
+    } else if (member == "interfaceId") {
+      TypePointer arg = dynamic_cast<const MagicType *>(actualType)->typeArgument();
+      ContractDefinition const& contract =
+        dynamic_cast<ContractType const&>(*arg).contractDefinition();
+      bigint interfaceId = bigint(u256{contract.interfaceId()} << (256 - 32));
+      iele::IeleValue *InterfaceIDValue =
+        iele::IeleIntConstant::Create(&Context, interfaceId, true);
+      CompilingExpressionResult.push_back(IeleRValue::Create(InterfaceIDValue));
     } else if (member == "data")
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else if (member == "sig")
