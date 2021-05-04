@@ -51,6 +51,7 @@ let
           "-Wno-error=unused-variable"
           "-Wno-error=braced-scalar-init"
           "-Wno-error=pessimizing-move"
+          "-Wno-error=range-loop-construct"
         ]
         else [
           "-Wno-error=maybe-uninitialized"
