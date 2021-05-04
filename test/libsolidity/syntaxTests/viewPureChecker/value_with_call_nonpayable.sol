@@ -8,5 +8,4 @@ contract C {
 	}
 }
 // ----
-// TypeError 8961: (90-111): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
-// TypeError 8961: (182-201): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
+// TypeError 6198: (90-111): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
