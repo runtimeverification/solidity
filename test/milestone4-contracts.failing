@@ -123,7 +123,6 @@ safe-contracts/contracts/./GnosisSafeL2.sol
 safe-contracts/contracts/./GnosisSafe.sol
 safe-contracts/contracts/./guards/DelegateCallTransactionGuard.sol
 safe-contracts/contracts/./handler/CompatibilityFallbackHandler.sol
-safe-contracts/contracts/./handler/DefaultCallbackHandler.sol
 safe-contracts/contracts/./handler/HandlerContext.sol
 safe-contracts/contracts/./libraries/CreateCall.sol
 safe-contracts/contracts/./libraries/MultiSendCallOnly.sol
