@@ -18,3 +18,4 @@ contract C is B, A {
 // EVMVersion: >=byzantium
 // ----
 // TypeError 6480: (229-420): Derived contract must override function "". Two or more base classes define function with same name and parameter types.
+// TypeError 6198: (352-377): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

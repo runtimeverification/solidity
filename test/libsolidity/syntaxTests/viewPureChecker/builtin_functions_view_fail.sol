@@ -20,8 +20,5 @@ contract C {
     }
 }
 // ----
-// TypeError 8961: (52-77): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
-// TypeError 8961: (132-153): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
-// TypeError 8961: (201-228): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
-// TypeError 8961: (293-323): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
-// TypeError 8961: (414-436): Function declared as view, but this expression (potentially) modifies the state and thus requires non-payable (the default) or payable.
+// TypeError 6198: (293-323): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 6198: (414-436): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

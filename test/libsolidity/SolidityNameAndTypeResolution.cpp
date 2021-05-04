@@ -494,10 +494,7 @@ BOOST_AUTO_TEST_CASE(address_call_full_return_type)
 		}
 	)";
 
-	if (solidity::test::CommonOptions::get().evmVersion().supportsReturndata())
-		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
-	else
-		CHECK_ERROR(sourceCode, TypeError, "Type inaccessible dynamic type is not implicitly convertible to expected type bytes memory.");
+	CHECK_ERROR(sourceCode, TypeError, "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 BOOST_AUTO_TEST_CASE(address_delegatecall_full_return_type)
@@ -511,10 +508,7 @@ BOOST_AUTO_TEST_CASE(address_delegatecall_full_return_type)
 		}
 	)";
 
-	if (solidity::test::CommonOptions::get().evmVersion().supportsReturndata())
-		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
-	else
-		CHECK_ERROR(sourceCode, TypeError, "Type inaccessible dynamic type is not implicitly convertible to expected type bytes memory.");
+	CHECK_ERROR(sourceCode, TypeError, "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 

@@ -1809,6 +1809,13 @@ void TypeChecker::typeCheckFunctionCall(
 			"\"staticcall\" is not supported by the VM version."
 		);
 
+	if (
+		_functionType->kind() == FunctionType::Kind::BareCall ||
+		_functionType->kind() == FunctionType::Kind::BareCallCode ||
+		_functionType->kind() == FunctionType::Kind::BareDelegateCall
+	)
+		m_errorReporter.typeError(6198_error, _functionCall.location(), "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+
 	// Perform standard function call type checking
 	typeCheckFunctionGeneralChecks(_functionCall, _functionType);
 }
@@ -1941,13 +1948,6 @@ void TypeChecker::typeCheckABIEncodeFunctions(
 		);
 		return;
 	}
-
-	if (
-		_functionType->kind() == FunctionType::Kind::BareCall ||
-		_functionType->kind() == FunctionType::Kind::BareCallCode ||
-		_functionType->kind() == FunctionType::Kind::BareDelegateCall
-	)
-		m_errorReporter.typeError(6198_error, _functionCall.location(), "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 
 	if (_functionType->kind() == FunctionType::Kind::ABIEncodeWithSelector)
 		m_errorReporter.typeError(2038_error, _functionCall.location(), "abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
