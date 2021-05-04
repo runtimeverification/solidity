@@ -50,6 +50,7 @@ let
           "-Wno-error=unused-private-field"
           "-Wno-error=unused-variable"
           "-Wno-error=braced-scalar-init"
+          "-Wno-error=pessimizing-move"
         ]
         else [
           "-Wno-error=maybe-uninitialized"
