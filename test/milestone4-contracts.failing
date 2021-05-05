@@ -152,6 +152,4 @@ uFragments/contracts/./UFragments.sol
 uniswap-v3-core/contracts/./libraries/TransferHelper.sol
 uniswap-v3-core/contracts/./libraries/UnsafeMath.sol
 uniswap-v3-core/contracts/./test/OracleEchidnaTest.sol
-uniswap-v3-core/contracts/./test/TestUniswapV3SwapPay.sol
-uniswap-v3-core/contracts/./test/UniswapV3PoolSwapTest.sol
 uniswap-v3-core/contracts/./test/UnsafeMathEchidnaTest.sol
