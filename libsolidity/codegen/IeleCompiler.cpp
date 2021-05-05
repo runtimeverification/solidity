@@ -6880,20 +6880,24 @@ bool IeleCompiler::shouldCopyStorageToStorage(const Type &ToType, const IeleLVal
 bool IeleCompiler::shouldCopyMemoryToStorage(const Type &ToType, const IeleLValue *To,
                                              const Type &FromType) const {
   return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         FromType.dataStoredIn(DataLocation::Memory) &&
+         (FromType.dataStoredIn(DataLocation::Memory) ||
+          FromType.dataStoredIn(DataLocation::CallData)) &&
          ToType.dataStoredIn(DataLocation::Storage);
 }
 
 bool IeleCompiler::shouldCopyMemoryToMemory(const Type &ToType, const IeleLValue *To,
                                              const Type &FromType) const {
   return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         FromType.dataStoredIn(DataLocation::Memory) &&
-         ToType.dataStoredIn(DataLocation::Memory);
+         (FromType.dataStoredIn(DataLocation::Memory) ||
+          FromType.dataStoredIn(DataLocation::CallData)) &&
+         (ToType.dataStoredIn(DataLocation::Memory) ||
+          ToType.dataStoredIn(DataLocation::CallData));
 }
 
 bool IeleCompiler::shouldCopyStorageToMemory(const Type &ToType,
                                              const Type &FromType) const {
-  return ToType.dataStoredIn(DataLocation::Memory) &&
+  return (ToType.dataStoredIn(DataLocation::Memory) ||
+          ToType.dataStoredIn(DataLocation::CallData)) &&
          FromType.dataStoredIn(DataLocation::Storage);
 }
 
