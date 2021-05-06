@@ -2754,6 +2754,30 @@ void IeleCompiler::appendStructEncode(
   }
 }
 
+void IeleCompiler::decoding(IeleRValue *encoded, TypePointers types,
+                            llvm::SmallVectorImpl<IeleRValue *> &results) {
+  iele::IeleLocalVariable *NextFree = appendMemorySpill();
+  iele::IeleInstruction::CreateStore(
+    encoded->getValue(), NextFree, CompilingBlock);
+
+  iele::IeleLocalVariable *CrntPos =
+    iele::IeleLocalVariable::Create(&Context, "crnt.pos", CompilingFunction);
+  iele::IeleLocalVariable *ArgTypeSize =
+    iele::IeleLocalVariable::Create(&Context, "arg.type.size",
+                                    CompilingFunction);
+  iele::IeleLocalVariable *ArgLen =
+    iele::IeleLocalVariable::Create(&Context, "arg.len", CompilingFunction);
+  iele::IeleInstruction::CreateAssign(
+    CrntPos, iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+
+  for (TypePointer type : types) {
+    iele::IeleLocalVariable *Result =
+      iele::IeleLocalVariable::Create(&Context, "arg.value", CompilingFunction);
+    doDecode(NextFree, CrntPos, RegisterLValue::Create({Result}), ArgTypeSize, ArgLen, type);
+    results.push_back(IeleRValue::Create(Result));
+  }
+}
+
 IeleRValue *IeleCompiler::decoding(IeleRValue *encoded, TypePointer type) {
   if (type->isValueType() || type->category() == Type::Category::Mapping) {
     return encoded;
@@ -4319,6 +4343,24 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       ByteWidth, Return, CompilingBlock);
 
     CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
+    break;
+  }
+  case FunctionType::Kind::ABIDecode: {
+    IeleRValue *ArgValue = compileExpression(*arguments.front());
+    TypePointer ArgType = arguments.front()->annotation().type;
+    ArgValue = appendTypeConversion(ArgValue, ArgType, TypeProvider::bytesMemory());
+
+    TypePointers TargetTypes;
+    if (TupleType const* TargetTupleType =
+          dynamic_cast<TupleType const*>(functionCall.annotation().type))
+      TargetTypes = TargetTupleType->components();
+    else
+      TargetTypes = TypePointers{functionCall.annotation().type};
+
+    llvm::SmallVector<IeleRValue *, 4> DecodedValues;
+    decoding(ArgValue, TargetTypes, DecodedValues);
+    CompilingExpressionResult.insert(
+      CompilingExpressionResult.end(), DecodedValues.begin(), DecodedValues.end());
     break;
   }
   case FunctionType::Kind::MetaType:
@@ -6880,20 +6922,24 @@ bool IeleCompiler::shouldCopyStorageToStorage(const Type &ToType, const IeleLVal
 bool IeleCompiler::shouldCopyMemoryToStorage(const Type &ToType, const IeleLValue *To,
                                              const Type &FromType) const {
   return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         FromType.dataStoredIn(DataLocation::Memory) &&
+         (FromType.dataStoredIn(DataLocation::Memory) ||
+          FromType.dataStoredIn(DataLocation::CallData)) &&
          ToType.dataStoredIn(DataLocation::Storage);
 }
 
 bool IeleCompiler::shouldCopyMemoryToMemory(const Type &ToType, const IeleLValue *To,
                                              const Type &FromType) const {
   return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         FromType.dataStoredIn(DataLocation::Memory) &&
-         ToType.dataStoredIn(DataLocation::Memory);
+         (FromType.dataStoredIn(DataLocation::Memory) ||
+          FromType.dataStoredIn(DataLocation::CallData)) &&
+         (ToType.dataStoredIn(DataLocation::Memory) ||
+          ToType.dataStoredIn(DataLocation::CallData));
 }
 
 bool IeleCompiler::shouldCopyStorageToMemory(const Type &ToType,
                                              const Type &FromType) const {
-  return ToType.dataStoredIn(DataLocation::Memory) &&
+  return (ToType.dataStoredIn(DataLocation::Memory) ||
+          ToType.dataStoredIn(DataLocation::CallData)) &&
          FromType.dataStoredIn(DataLocation::Storage);
 }
 

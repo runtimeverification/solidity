@@ -394,7 +394,7 @@ private:
     TypePointer type,
     bool hash = false);
   iele::IeleValue *encoding(
-    llvm::SmallVectorImpl<IeleRValue *> &arguments, 
+    llvm::SmallVectorImpl<IeleRValue *> &arguments,
     TypePointers types,
     iele::IeleLocalVariable *NextFree,
     bool appendWidths);
@@ -402,6 +402,10 @@ private:
   IeleRValue *decoding(
     IeleRValue *encoded,
     TypePointer type);
+  void decoding(
+    IeleRValue *encoded,
+    TypePointers types,
+    llvm::SmallVectorImpl<IeleRValue *> &results);
 
   void doEncode(
     iele::IeleValue *NextFree,
