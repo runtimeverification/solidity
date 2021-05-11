@@ -3280,7 +3280,7 @@ bool TypeChecker::visit(Identifier const& _identifier)
 		VirtualLookup::Virtual : VirtualLookup::Static;
 
 	if (auto contract = dynamic_cast<ContractDefinition const*>(&dereference(_identifier)))
-		if (contract->isLibrary())
+		if (contract->isLibrary() && contract != m_currentContract)
 			m_currentContract->annotation().contractDependencies.insert(contract);
 
 	// Check for deprecated function names.
@@ -3412,7 +3412,7 @@ void TypeChecker::endVisit(UsingForDirective const& _usingFor)
 	ContractDefinition const* library = dynamic_cast<ContractDefinition const*>(
 		_usingFor.libraryName().annotation().referencedDeclaration
 	);
-	if (library && library->isLibrary())
+	if (library && library->isLibrary() && library != m_currentContract)
 	    m_currentContract->annotation().contractDependencies.insert(library);
 }
 
