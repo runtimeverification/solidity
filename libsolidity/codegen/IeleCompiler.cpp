@@ -179,7 +179,10 @@ iele::IeleValue *IeleCompiler::convertFunctionToInternal(iele::IeleValue *Callee
     solAssert(ST,
               "IeleCompiler: failed to access compiling contract's symbol table.");
     std::string name = function->getName().str();
-    return llvm::dyn_cast<iele::IeleGlobalValue>(ST->lookup(name + ".internal"));
+    iele::IeleValue *internalName = ST->lookup(name + ".internal");
+    if (internalName) {
+      return llvm::dyn_cast<iele::IeleGlobalValue>(internalName);
+    }
   }
   return Callee;
 }
