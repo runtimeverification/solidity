@@ -28,7 +28,7 @@ pipeline {
     }
     stage('Regression Tests') {
       stages {
-        stage('Checkout code') { steps { dir('iog-pm') { git branch: 'milestone4', url: 'git@github.com:runtimeverification/iog-pm.git' } } }
+        stage('Checkout code') { steps { dir('iog-pm') { git branch: 'separate-fetch', url: 'git@github.com:runtimeverification/iog-pm.git' } } }
         stage('Milestone4 Tests') {
           environment {
             CONTRACTLIST = "${env.WORKSPACE}/test/milestone4-contracts.txt"
@@ -40,6 +40,7 @@ pipeline {
               sh '''
                 git submodule init
                 git submodule update --depth 1
+                ./fetch-all-modules.sh --verbose
                 patch -p1 < ${PATCH}
                 grep -v -x -F -f ${FAILING} ${CONTRACTLIST} > contracts.txt
                 export SOLC=${WORKSPACE}/build/solc/isolc
