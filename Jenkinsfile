@@ -28,7 +28,7 @@ pipeline {
     }
     stage('Regression Tests') {
       stages {
-        stage('Checkout code') { steps { dir('iog-pm') { git branch: 'separate-fetch', url: 'git@github.com:runtimeverification/iog-pm.git' } } }
+        stage('Checkout code') { steps { dir('iog-pm') { git branch: 'milestone4', url: 'git@github.com:runtimeverification/iog-pm.git' } } }
         stage('Milestone4 Tests') {
           environment {
             CONTRACTLIST = "${env.WORKSPACE}/test/milestone4-contracts.txt"
