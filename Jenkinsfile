@@ -33,12 +33,15 @@ pipeline {
           environment {
             CONTRACTLIST = "${env.WORKSPACE}/test/milestone4-contracts.txt"
             FAILING = "${env.WORKSPACE}/test/milestone4-contracts.failing"
+            PATCH = "${env.WORKSPACE}/test/milestone4-types.patch"
           }
           steps {
             dir('iog-pm') {
               sh '''
                 git submodule init
                 git submodule update --depth 1
+                ./fetch-all-modules.sh --verbose
+                patch -p1 < ${PATCH}
                 grep -v -x -F -f ${FAILING} ${CONTRACTLIST} > contracts.txt
                 export SOLC=${WORKSPACE}/build/solc/isolc
                 ./run-all-scripts.sh --filter contracts.txt --verbose --verbose
