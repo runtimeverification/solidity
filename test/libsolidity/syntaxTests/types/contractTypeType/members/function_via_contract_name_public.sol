@@ -7,3 +7,5 @@ contract B {
         return A.f.selector;
     }
 }
+// ----
+// TypeError 2524: (120-132): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
