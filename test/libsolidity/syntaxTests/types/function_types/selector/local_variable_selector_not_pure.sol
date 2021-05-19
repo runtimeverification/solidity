@@ -7,4 +7,4 @@ contract C {
     }
 }
 // ----
-// Warning 6321: (51-57): Unnamed return variable can remain unassigned. Add an explicit return with value to all non-reverting code paths or name the variable.
+// TypeError 2524: (247-257): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
