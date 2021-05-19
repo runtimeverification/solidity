@@ -644,8 +644,16 @@ vector<pair<string, Token>> TestFileParser::parseRefArgs()
 			string literal = parseString();
 			result.push_back(make_pair(literal, Token::Hex));
 		}
+		else if (accept(Token::String))
+		{
+			if (isSigned)
+				throw TestParserError("Invalid string literal.");
+
+			string literal = parseString();
+			result.push_back(make_pair(literal, Token::String));
+		}
 		else
-			throw TestParserError("Invalid array literal");
+			throw TestParserError("Invalid refargs literal");
 
 		first = false;
 	}
