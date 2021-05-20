@@ -946,6 +946,7 @@ BoolResult RationalNumberType::isExplicitlyConvertibleTo(Type const& _convertTo)
 			!isNegative() &&
 			!isFractional() &&
 			integerType() &&
+			!integerType()->isUnbound() &&
 			(integerType()->numBits() <= 160));
 	else if (category == Category::Integer)
 		return false;
