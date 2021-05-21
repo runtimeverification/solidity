@@ -6742,6 +6742,13 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
         return Result;
       }
       return Value;
+    } else if (TargetType->category() == Type::Category::Address) {
+      AddressType const& targetType = dynamic_cast<const AddressType &>(*TargetType);
+      if (targetType.storageBytes() * 8 < srcType.numBytes() * 8) {
+        appendMask(convertedValue, Value->getValue(), targetType.storageBytes(), false);
+        return Result;
+      }
+      return Value;
     } else {
       solAssert(TargetType->category() == Type::Category::FixedBytes, "Invalid type conversion requested.");
       const FixedBytesType &targetType = dynamic_cast<const FixedBytesType &>(*TargetType);
@@ -6772,11 +6779,21 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
   case Type::Category::Contract: {
     switch(TargetType->category()) {
     case Type::Category::FixedBytes: {
-      solAssert(SourceType->category() == Type::Category::Integer || SourceType->category() == Type::Category::RationalNumber,
+      solAssert(SourceType->category() == Type::Category::Integer ||
+                SourceType->category() == Type::Category::Address ||
+                SourceType->category() == Type::Category::RationalNumber,
         "Invalid conversion to FixedBytesType requested.");
-      if (auto srcType = dynamic_cast<const IntegerType *>(&*SourceType)) {
+      if (SourceType->category() == Type::Category::Integer) {
+        IntegerType const& sourceType = dynamic_cast<const IntegerType &>(*SourceType);
         const FixedBytesType &targetType = dynamic_cast<const FixedBytesType &>(*TargetType);
-        if (srcType->isUnbound() || targetType.numBytes() * 8 < srcType->numBits()) {
+        if (sourceType.isUnbound() || targetType.numBytes() * 8 < sourceType.numBits()) {
+          appendMask(convertedValue, Value->getValue(), targetType.numBytes(), false);
+          return Result;
+        }
+      } else if (SourceType->category() == Type::Category::Address) {
+        AddressType const& sourceType = dynamic_cast<const AddressType &>(*SourceType);
+        const FixedBytesType &targetType = dynamic_cast<const FixedBytesType &>(*TargetType);
+        if (targetType.numBytes() * 8 < sourceType.storageBytes() * 8) {
           appendMask(convertedValue, Value->getValue(), targetType.numBytes(), false);
           return Result;
         }
