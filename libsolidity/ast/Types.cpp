@@ -384,7 +384,8 @@ BoolResult AddressType::isExplicitlyConvertibleTo(Type const& _convertTo) const
 	else if (m_stateMutability == StateMutability::NonPayable)
 	{
 		if (auto integerType = dynamic_cast<IntegerType const*>(&_convertTo))
-			return (!integerType->isSigned() && integerType->numBits() == 160);
+			return (!integerType->isUnbound() && !integerType->isSigned() &&
+                    integerType->numBits() == 160);
 		else if (auto fixedBytesType = dynamic_cast<FixedBytesType const*>(&_convertTo))
 			return (fixedBytesType->numBytes() == 20);
 	}
