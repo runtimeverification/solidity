@@ -23,7 +23,7 @@ contract C {
     }
 }
 // ----
-// TypeError 3464: (87-98): This variable is of storage pointer type and can be returned without prior assignment, which would lead to undefined behaviour.
-// TypeError 3464: (228-239): This variable is of storage pointer type and can be returned without prior assignment, which would lead to undefined behaviour.
-// TypeError 3464: (369-380): This variable is of storage pointer type and can be returned without prior assignment, which would lead to undefined behaviour.
-// TypeError 3464: (510-521): This variable is of storage pointer type and can be returned without prior assignment, which would lead to undefined behaviour.
+// SyntaxError 1184: (110-181): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (251-322): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (392-463): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (533-604): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
