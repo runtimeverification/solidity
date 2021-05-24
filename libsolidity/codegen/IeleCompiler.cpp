@@ -4786,8 +4786,14 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     if (member == "value" || member == "gas") {
       IeleRValue *CalleeValue = compileExpression(memberAccess.expression());
       CompilingExpressionResult.push_back(CalleeValue);
-    }
-    else if (member == "selector")
+    } else if (member == "address") {
+      IeleRValue *FunctionValue = compileExpression(memberAccess.expression());
+      IeleRValue *Result =
+        appendTypeConversion(FunctionValue,
+                             memberAccess.expression().annotation().type,
+                             Address);
+      CompilingExpressionResult.push_back(Result);
+    } else if (member == "selector")
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else
       solAssert(false, "IeleCompiler: invalid member for function value");
