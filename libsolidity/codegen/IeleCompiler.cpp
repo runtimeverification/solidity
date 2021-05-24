@@ -6743,9 +6743,8 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       }
       return Value;
     } else if (TargetType->category() == Type::Category::Address) {
-      AddressType const& targetType = dynamic_cast<const AddressType &>(*TargetType);
-      if (targetType.storageBytes() * 8 < srcType.numBytes() * 8) {
-        appendMask(convertedValue, Value->getValue(), targetType.storageBytes(), false);
+      if (160 < srcType.numBytes() * 8) {
+        appendMask(convertedValue, Value->getValue(), 160 / 8, false);
         return Result;
       }
       return Value;
@@ -6791,9 +6790,8 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
           return Result;
         }
       } else if (SourceType->category() == Type::Category::Address) {
-        AddressType const& sourceType = dynamic_cast<const AddressType &>(*SourceType);
         const FixedBytesType &targetType = dynamic_cast<const FixedBytesType &>(*TargetType);
-        if (targetType.numBytes() * 8 < sourceType.storageBytes() * 8) {
+        if (targetType.numBytes() * 8 < 160) {
           appendMask(convertedValue, Value->getValue(), targetType.numBytes(), false);
           return Result;
         }
