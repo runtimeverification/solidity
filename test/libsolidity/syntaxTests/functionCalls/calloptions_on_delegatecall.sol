@@ -5,4 +5,4 @@ contract C {
 }
 // ----
 // TypeError 6189: (56-98): Cannot set option "value" for delegatecall.
-// Warning 9302: (56-102): Return value of low-level calls not used.
+// TypeError 6198: (56-102): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
