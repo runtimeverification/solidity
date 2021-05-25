@@ -5,4 +5,4 @@ contract C {
     }
 }
 // ----
-// DeclarationError 8678: (87-96): Variable count does not match number of values (2 vs. 1)
+// SyntaxError 1184: (76-98): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

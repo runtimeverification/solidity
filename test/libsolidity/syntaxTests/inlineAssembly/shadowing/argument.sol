@@ -6,4 +6,4 @@ contract C {
     }
 }
 // ----
-// DeclarationError 3859: (85-86): This declaration shadows a declaration outside the inline assembly block.
+// SyntaxError 1184: (58-101): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

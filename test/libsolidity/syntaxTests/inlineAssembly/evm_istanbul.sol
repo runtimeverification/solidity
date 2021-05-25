@@ -13,3 +13,5 @@ contract C {
 // ====
 // EVMVersion: >=istanbul
 // ----
+// SyntaxError 1184: (72-120): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (186-238): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

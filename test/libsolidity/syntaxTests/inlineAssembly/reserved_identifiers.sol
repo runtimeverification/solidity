@@ -8,6 +8,4 @@ contract C {
   }
 }
 // ----
-// DeclarationError 5017: (67-79): The identifier "linkersymbol" is reserved and can not be used.
-// DeclarationError 5017: (95-103): The identifier "datacopy" is reserved and can not be used.
-// DeclarationError 5017: (119-125): The identifier "swap16" is reserved and can not be used.
+// SyntaxError 1184: (46-136): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

@@ -9,5 +9,4 @@ contract C {
     }
 }
 // ----
-// TypeError 3622: (117-123): The suffix ".slot" is not supported by this variable or type.
-// TypeError 3622: (141-149): The suffix ".offset" is not supported by this variable or type.
+// SyntaxError 1184: (90-160): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

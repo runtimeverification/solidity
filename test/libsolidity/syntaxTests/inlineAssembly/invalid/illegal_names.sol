@@ -39,17 +39,7 @@ contract C {
     }
 }
 // ----
-// DeclarationError 4113: (105-136): The identifier name "this" is reserved.
-// DeclarationError 4113: (149-181): The identifier name "super" is reserved.
-// DeclarationError 4113: (194-222): The identifier name "_" is reserved.
-// DeclarationError 4113: (323-327): The identifier name "this" is reserved.
-// DeclarationError 4113: (368-373): The identifier name "super" is reserved.
-// DeclarationError 4113: (414-415): The identifier name "_" is reserved.
-// DeclarationError 4113: (546-550): The identifier name "this" is reserved.
-// DeclarationError 4113: (595-600): The identifier name "super" is reserved.
-// DeclarationError 4113: (645-646): The identifier name "_" is reserved.
-// DeclarationError 4113: (759-763): The identifier name "this" is reserved.
-// DeclarationError 3859: (759-763): This declaration shadows a declaration outside the inline assembly block.
-// DeclarationError 4113: (785-790): The identifier name "super" is reserved.
-// DeclarationError 3859: (785-790): This declaration shadows a declaration outside the inline assembly block.
-// DeclarationError 4113: (812-813): The identifier name "_" is reserved.
+//  SyntaxError 1184: (82-232): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+//  SyntaxError 1184: (289-442): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+//  SyntaxError 1184: (507-672): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+//  SyntaxError 1184: (732-828): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

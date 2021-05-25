@@ -9,4 +9,4 @@ contract C {
     }
 }
 // ----
-// TypeError 9739: (138-146): Only .slot can be assigned to.
+// SyntaxError 1184: (91-161): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

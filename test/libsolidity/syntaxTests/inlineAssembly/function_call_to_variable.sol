@@ -8,4 +8,4 @@ contract C {
   }
 }
 // ----
-// TypeError 4202: (81-82): Attempt to call variable instead of function.
+// SyntaxError 1184: (46-90): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

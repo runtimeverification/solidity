@@ -9,5 +9,4 @@ contract C {
     }
 }
 // ----
-// DeclarationError 9467: (118-124): Identifier not found. Use ".slot" and ".offset" to access storage variables.
-// DeclarationError 9467: (142-150): Identifier not found. Use ".slot" and ".offset" to access storage variables.
+// SyntaxError 1184: (91-161): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

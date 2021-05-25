@@ -6,4 +6,4 @@ contract C {
     }
 }
 // ----
-// DeclarationError 4619: (75-79): Function not found.
+// SyntaxError 1184: (52-92): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
