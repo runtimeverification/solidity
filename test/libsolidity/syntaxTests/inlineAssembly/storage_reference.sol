@@ -8,4 +8,4 @@ contract C {
     }
 }
 // ----
-// TypeError 9068: (118-119): You have to use the ".slot" or ".offset" suffix to access storage reference variables.
+// SyntaxError 1184: (91-130): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

@@ -19,13 +19,13 @@ contract C
         int8 g = int8(uint8(e));
         g;
 
-        address h = address(uint160(uint(type(uint).max)));
+        address h = address(uint160(uint(type(uint256).max)));
         h;
 
         uint i = uint(uint160(address(0)));
         i;
 
-        uint j = type(uint).max;
+        uint j = type(uint256).max;
         j;
         address k = address(uint160(j));
         k;

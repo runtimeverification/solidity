@@ -6,4 +6,4 @@ contract C {
   }
 }
 // ----
-// TypeError 4977: (72-73): Expected a library.
+// SyntaxError 1184: (46-79): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

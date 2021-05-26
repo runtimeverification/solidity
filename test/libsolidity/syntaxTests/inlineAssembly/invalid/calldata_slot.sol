@@ -6,4 +6,4 @@ contract C {
     }
 }
 // ----
-// TypeError 1536: (111-131): Calldata variables only support ".offset" and ".length".
+// SyntaxError 1184: (79-141): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

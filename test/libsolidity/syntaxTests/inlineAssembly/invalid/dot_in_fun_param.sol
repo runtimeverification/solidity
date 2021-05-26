@@ -6,7 +6,4 @@ contract C {
   }
 }
 // ----
-// DeclarationError 3927: (74-76): User-defined identifiers in inline assembly cannot contain '.'.
-// DeclarationError 3927: (78-81): User-defined identifiers in inline assembly cannot contain '.'.
-// DeclarationError 3927: (86-89): User-defined identifiers in inline assembly cannot contain '.'.
-// DeclarationError 3927: (91-94): User-defined identifiers in inline assembly cannot contain '.'.
+// SyntaxError 1184: (46-103): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

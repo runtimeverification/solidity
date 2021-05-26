@@ -8,4 +8,4 @@ contract test {
     }
 }
 // ----
-// DeclarationError 6578: (142-150): Cannot access local Solidity variables from inside an inline assembly function.
+// SyntaxError 1184: (94-162): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

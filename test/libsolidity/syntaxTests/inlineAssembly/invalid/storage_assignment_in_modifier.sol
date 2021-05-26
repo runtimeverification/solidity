@@ -10,4 +10,4 @@ contract test {
     }
 }
 // ----
-// TypeError 1408: (80-81): Only local variables are supported. To access storage variables, use the ".slot" and ".offset" suffixes.
+// SyntaxError 1184: (57-96): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

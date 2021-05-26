@@ -6,4 +6,4 @@ contract C {
   }
 }
 // ----
-// DeclarationError 4634: (63-64): Variable not found or variable not lvalue.
+// SyntaxError 1184: (46-75): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

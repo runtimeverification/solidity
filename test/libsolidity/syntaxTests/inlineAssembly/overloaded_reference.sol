@@ -8,4 +8,4 @@ contract C {
     }
 }
 // ----
-// DeclarationError 4718: (155-156): Multiple matching identifiers. Resolving overloaded identifiers is not supported.
+// SyntaxError 1184: (123-166): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

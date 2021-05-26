@@ -6,4 +6,4 @@ contract C {
     }
 }
 // ----
-// TypeError 3083: (75-83): Top-level expressions are not supposed to return values (this expression returns 1 value). Use ``pop()`` or assign them.
+// SyntaxError 1184: (52-93): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

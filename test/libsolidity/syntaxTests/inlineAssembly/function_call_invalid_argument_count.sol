@@ -10,5 +10,4 @@ contract C {
   }
 }
 // ----
-// TypeError 7000: (87-88): Function expects 1 arguments but got 0.
-// TypeError 7000: (108-109): Function expects 1 arguments but got 2.
+// SyntaxError 1184: (46-121): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

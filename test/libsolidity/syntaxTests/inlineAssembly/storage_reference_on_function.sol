@@ -6,4 +6,4 @@ contract C {
     }
 }
 // ----
-// TypeError 7944: (84-90): The suffixes ".offset", ".slot" and ".length" can only be used with variables.
+// SyntaxError 1184: (52-100): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

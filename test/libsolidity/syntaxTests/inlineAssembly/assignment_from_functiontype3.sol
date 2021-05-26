@@ -8,4 +8,4 @@ contract C {
   }
 }
 // ----
-// DeclarationError 2025: (90-92): Access to functions is not allowed in inline assembly.
+// SyntaxError 1184: (64-98): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
