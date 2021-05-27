@@ -1557,6 +1557,7 @@
 -t !syntaxTests/freeFunctions/free_namesake_contract_function
 -t !syntaxTests/functionCalls/calloptions_on_staticcall
 -t !syntaxTests/functionCalls/new_with_calloptions
+-t !syntaxTests/functionTypes/inline_array_with_bound_function_mixed
 -t !syntaxTests/getter/simple_struct
 -t !syntaxTests/globalFunctions/callcode_with_wrong_arg_count
 -t !syntaxTests/globalFunctions/call_with_wrong_arg_count
