@@ -1671,7 +1671,6 @@
 -t !syntaxTests/types/address/codehash
 -t !syntaxTests/types/array_index_too_large
 -t !syntaxTests/types/function_types/function_definition_expression
--t !syntaxTests/types/function_types/function_state_mutability_success
 -t !syntaxTests/types/index_access_for_bytes
 -t !syntaxTests/types/library_to_address
 -t !syntaxTests/types/magic_block_istanbul
