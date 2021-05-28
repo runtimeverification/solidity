@@ -3421,7 +3421,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleInstruction::CreateIsZero(InvConditionValue, ConditionValue->getValue(),
                                         CompilingBlock);
     if (function.kind() == FunctionType::Kind::Assert)
-      appendInvalid(InvConditionValue);
+      appendRevert(InvConditionValue, nullptr);
     else {
       iele::IeleValue *MessageValue = nullptr;
       if (arguments.size() > 1) {
