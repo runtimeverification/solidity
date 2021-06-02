@@ -138,8 +138,10 @@ std::pair<bool, string> ExecutionFramework::compareAndCreateMessage(
 bytes ExecutionFramework::panicData(util::PanicCode _code)
 {
 	return
+/*
 		m_evmVersion.supportsReturndata() ?
 		toCompactBigEndian(selectorFromSignature32("Panic(uint256)"), 4) + encode(u256(_code)) :
+*/
 		bytes();
 }
 

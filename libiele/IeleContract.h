@@ -65,7 +65,7 @@ public:
   IeleContract(const IeleContract&) = delete;
   void operator=(const IeleContract&) = delete;
 
-  ~IeleContract();
+  ~IeleContract() override;
 
   static IeleContract *Create(IeleContext *Ctx, const llvm::Twine &Name = "",
                               IeleContract *C = nullptr) {

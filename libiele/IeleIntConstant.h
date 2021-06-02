@@ -18,7 +18,7 @@ public:
   IeleIntConstant(const IeleIntConstant&) = delete;
   void operator=(const IeleIntConstant&) = delete;
 
-  ~IeleIntConstant();
+  ~IeleIntConstant() override;
 
   static IeleIntConstant *Create(IeleContext *Ctx, const bigint &V, bool PrintAsHex = false);
 

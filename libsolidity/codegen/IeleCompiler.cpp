@@ -630,7 +630,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     llvm::SmallVector<IeleLValue *, 4> parameters;
     llvm::SmallVector<iele::IeleValue *, 4> paramValues;
     // Visit formal arguments.
-    for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
+    for (const ASTPointer<const VariableDeclaration> arg : function.parameters()) {
       std::vector<iele::IeleLocalVariable *> param;
       for (unsigned i = 0; i < arg->type()->sizeInRegisters(); i++) {
         std::string genName = arg->name() + getNextVarSuffix();
@@ -645,7 +645,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
     llvm::SmallVector<iele::IeleLocalVariable *, 4> ReturnParameterRegisters;
  
     // Visit formal return parameters.
-    for (const ASTPointer<const VariableDeclaration> &ret : function.returnParameters()) {
+    for (const ASTPointer<const VariableDeclaration> ret : function.returnParameters()) {
       std::vector<iele::IeleLocalVariable *> param;
       for (unsigned i = 0; i < ret->type()->sizeInRegisters(); i++) {
         std::string genName = ret->name() + getNextVarSuffix();
@@ -701,7 +701,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   //                           // of which function we are in (i.e. it breaks)
 
   // Visit formal arguments.
-  for (const ASTPointer<const VariableDeclaration> &arg : function.parameters()) {
+  for (const ASTPointer<const VariableDeclaration> arg : function.parameters()) {
     std::vector<iele::IeleLocalVariable *> param;
     for (unsigned i = 0; i < arg->type()->sizeInRegisters(); i++) {
       std::string genName = arg->name() + getNextVarSuffix();
@@ -743,7 +743,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   llvm::SmallVector<TypePointer, 4> ReturnParameterTypes;
 
   // Visit formal return parameters.
-  for (const ASTPointer<const VariableDeclaration> &ret : function.returnParameters()) {
+  for (const ASTPointer<const VariableDeclaration> ret : function.returnParameters()) {
     std::vector<iele::IeleLocalVariable *> param;
     for (unsigned i = 0; i < ret->type()->sizeInRegisters(); i++) {
       std::string genName = ret->name() + getNextVarSuffix();
@@ -1062,7 +1062,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
       solAssert(modifier, "Could not find modifier");
 
       // Visit the modifier's parameters
-      for (const ASTPointer<const VariableDeclaration> &arg : modifier->parameters()) {
+      for (const ASTPointer<const VariableDeclaration> arg : modifier->parameters()) {
         std::vector<iele::IeleLocalVariable *> param;
         for (unsigned i = 0; i < arg->type()->sizeInRegisters(); i++) {
           std::string genName = arg->name() + getNextVarSuffix();
@@ -1680,7 +1680,7 @@ bool IeleCompiler::visit(const Assignment &assignment) {
       if (op != Token::Assign) {
         Token binOp = TokenTraits::AssignmentToBinaryOp(op);
         iele::IeleValue *LHSDeref = LHSValue->read(CompilingBlock)->getValue();
-        RHSValue = IeleRValue::Create({appendBinaryOperator(binOp, LHSDeref, RHSValue->getValue(), LHSComponentType)});
+        RHSValue = IeleRValue::Create(appendBinaryOperator(binOp, LHSDeref, RHSValue->getValue(), LHSComponentType));
         // save the rhs for return as the assignment expression result
         RHSValues[i] = RHSValue;
       }
@@ -1752,7 +1752,7 @@ bool IeleCompiler::visit(const TupleExpression &tuple) {
     }
 
     // Return pointer to the newly allocated array.
-    CompilingExpressionResult.push_back(IeleRValue::Create({ArrayValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(ArrayValue));
     return false;
   }
 
@@ -1792,7 +1792,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
       iele::IeleIntConstant::Create(
           &Context, 
           ResultType->literalValue(nullptr));
-    CompilingExpressionResult.push_back(IeleRValue::Create({LiteralValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(LiteralValue));
     return false;
   }
 
@@ -1807,7 +1807,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     iele::IeleLocalVariable *Result =
       iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
     iele::IeleInstruction::CreateIsZero(Result, SubExprValue, CompilingBlock);
-    CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(Result));
     break;
   }
   case Token::Add: { // +
@@ -1816,7 +1816,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
       compileExpression(unaryOperation.subExpression())->getValue();
     solAssert(SubExprValue, "IeleCompiler: Failed to compile operand.");
     // unary add, so basically no-op
-    CompilingExpressionResult.push_back(IeleRValue::Create({SubExprValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(SubExprValue));
     break;
   }
   case Token::Sub: { // -
@@ -1828,7 +1828,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
     iele::IeleIntConstant *Zero = iele::IeleIntConstant::getZero(&Context);
     iele::IeleLocalVariable *Result =
       appendBinaryOperator(Token::Sub, Zero, SubExprValue, ResultType);
-    CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(Result));
     break;
   }
   case Token::Inc:    // ++ (pre- or postfix)
@@ -1858,9 +1858,9 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
       Result = After;
     }
     // Generate assignment code.
-    SubExprValue->write(IeleRValue::Create({After}), CompilingBlock);
+    SubExprValue->write(IeleRValue::Create(After), CompilingBlock);
     // Return result.
-    CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(Result));
     break;
   }
   case Token::BitNot: { // ~
@@ -1902,7 +1902,7 @@ bool IeleCompiler::visit(const UnaryOperation &unaryOperation) {
       appendMask(Result, Result, nbytes, false);
     }
 
-    CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(Result));
     break;
   }
   case Token::Delete: { // delete
@@ -1933,7 +1933,7 @@ IeleLValue *IeleCompiler::makeLValue(
       (type->isDynamicallySized() && Loc == DataLocation::Memory)) {
     if (auto arrayType = dynamic_cast<const ArrayType *>(type)) {
       if (arrayType->isByteArray()) {
-        return ReadOnlyLValue::Create(IeleRValue::Create({Address}));
+        return ReadOnlyLValue::Create(IeleRValue::Create(Address));
       }
     }
     return AddressLValue::Create(this, Address, Loc, "loaded",
@@ -1946,11 +1946,11 @@ IeleLValue *IeleCompiler::makeLValue(
     const StructType &structType = dynamic_cast<const StructType &>(*type);
     if (structType.recursive()) {
       return RecursiveStructLValue::Create(
-                 IeleRValue::Create({Address}), structType, this);
+                 IeleRValue::Create(Address), structType, this);
     }
   }
 
-  return ReadOnlyLValue::Create(IeleRValue::Create({Address}));
+  return ReadOnlyLValue::Create(IeleRValue::Create(Address));
 }
 
 void IeleCompiler::appendLValueDelete(IeleLValue *LValue, TypePointer type) {
@@ -2177,7 +2177,7 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
       appendBooleanOperator(binaryOperation.getOperator(),
                             binaryOperation.leftExpression(),
                             binaryOperation.rightExpression());
-    CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(Result));
     return false;
   }
 
@@ -2189,7 +2189,7 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
       iele::IeleIntConstant::Create(
         &Context,
         commonType->literalValue(nullptr));
-    CompilingExpressionResult.push_back(IeleRValue::Create({LiteralValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(LiteralValue));
     return false;
   }
 
@@ -2215,7 +2215,7 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
                          LeftOperandValue->getValue(), RightOperandValue->getValue(),
                          binaryOperation.annotation().type);
 
-  CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+  CompilingExpressionResult.push_back(IeleRValue::Create(Result));
   return false;
 }
 
@@ -2252,7 +2252,7 @@ IeleRValue *IeleCompiler::encoding(
   }
   
   // Return register holding encoded bytestring
-  return IeleRValue::Create({EncodedVal});
+  return IeleRValue::Create(EncodedVal);
 }
 
 void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value) {
@@ -2277,7 +2277,7 @@ void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleVa
         iele::IeleLocalVariable::Create(
           &Context, "logarithm.base.2", CompilingFunction);
       iele::IeleInstruction::CreateLog2(Result, Value, CompilingBlock);
-      Results.push_back(IeleRValue::Create({Result}));
+      Results.push_back(IeleRValue::Create(Result));
     },
     [&Value, this](llvm::SmallVectorImpl<IeleRValue *> &Results){
       // Check for 0 or -1 value.
@@ -2293,7 +2293,7 @@ void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleVa
        [this](llvm::SmallVectorImpl<IeleRValue *> &Results){
          // Return 0.
          Results.push_back(
-           IeleRValue::Create({iele::IeleIntConstant::getZero(&Context)}));
+           IeleRValue::Create(iele::IeleIntConstant::getZero(&Context)));
        },
        [&Value, this](llvm::SmallVectorImpl<IeleRValue *> &Results){
          // Compute the log of the negated number.
@@ -2306,7 +2306,7 @@ void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleVa
             &Context, "logarithm.base.2", CompilingFunction);
         iele::IeleInstruction::CreateLog2(
           Result, PositiveValue, CompilingBlock);
-        Results.push_back(IeleRValue::Create({Result}));
+        Results.push_back(IeleRValue::Create(Result));
        });
        solAssert(NonPositiveResults.size() == 1,
                  "Invalid number of conditional results in appendByteWidth");
@@ -2314,7 +2314,7 @@ void IeleCompiler::appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleVa
       // Forward the result.
       iele::IeleValue *NonPositiveResult =
         NonPositiveResults[0]->read(CompilingBlock)->getValue();
-      Results.push_back(IeleRValue::Create({NonPositiveResult}));
+      Results.push_back(IeleRValue::Create(NonPositiveResult));
     });
    solAssert(Results.size() == 1, "Invalid number of conditional results in appendByteWidth");
    iele::IeleInstruction::CreateBinOp(
@@ -2611,8 +2611,8 @@ void IeleCompiler::doEncode(
     unsigned index = 0;
     switch (kind) {
     case FunctionType::Kind::External:
-      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[0]})), ArgTypeSize, ArgLen, Address, appendWidths, bigEndian);
-      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[1]})), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create(ArgValue->getValues()[0])), ArgTypeSize, ArgLen, Address, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create(ArgValue->getValues()[1])), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
       index = 2;
       break;
     case FunctionType::Kind::BareCall:
@@ -2620,7 +2620,7 @@ void IeleCompiler::doEncode(
     case FunctionType::Kind::BareDelegateCall:
     case FunctionType::Kind::Internal:
     case FunctionType::Kind::DelegateCall:
-      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[0]})), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create(ArgValue->getValues()[0])), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
       index = 1;
       break;
     case FunctionType::Kind::ArrayPush:
@@ -2631,11 +2631,11 @@ void IeleCompiler::doEncode(
       break;
     }
     if (functionType.gasSet()) {
-      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[index]})), ArgTypeSize, ArgLen, UInt, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create(ArgValue->getValues()[index])), ArgTypeSize, ArgLen, UInt, appendWidths, bigEndian);
       index++;
     }
     if (functionType.valueSet()) {
-      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create({ArgValue->getValues()[index]})), ArgTypeSize, ArgLen, UInt, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create(ArgValue->getValues()[index])), ArgTypeSize, ArgLen, UInt, appendWidths, bigEndian);
       index++;
     }
     if (functionType.bound()) {
@@ -2804,7 +2804,7 @@ IeleRValue *IeleCompiler::decoding(IeleRValue *encoded, TypePointer type) {
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "arg.value", CompilingFunction);
   doDecode(NextFree, CrntPos, RegisterLValue::Create({Result}), ArgTypeSize, ArgLen, type);
-  return IeleRValue::Create({Result});
+  return IeleRValue::Create(Result);
 }
 
 void IeleCompiler::doDecode(
@@ -2866,7 +2866,7 @@ void IeleCompiler::doDecode(
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
     }
-    IeleRValue *rvalue = IeleRValue::Create({AllocedValue});
+    IeleRValue *rvalue = IeleRValue::Create(AllocedValue);
     appendRangeCheck(rvalue, *type);
     StoreAt->write(rvalue, CompilingBlock);
     break;
@@ -2880,7 +2880,7 @@ void IeleCompiler::doDecode(
     if (arrayType.isByteArray()) {
       if (dynamic_cast<RegisterLValue *>(StoreAt)) {
         AllocedValue = appendArrayAllocation(arrayType);
-        StoreAt->write(IeleRValue::Create({AllocedValue}), CompilingBlock);
+        StoreAt->write(IeleRValue::Create(AllocedValue), CompilingBlock);
       } else {
         AllocedValue = StoreAt->read(CompilingBlock)->getValue();
       }
@@ -2907,14 +2907,14 @@ void IeleCompiler::doDecode(
         CompilingBlock);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
-      AddressLValue::Create(this, AllocedValue, DataLocation::Memory)->write(IeleRValue::Create({ArgLen}), CompilingBlock);
+      AddressLValue::Create(this, AllocedValue, DataLocation::Memory)->write(IeleRValue::Create(ArgLen), CompilingBlock);
 
       iele::IeleLocalVariable *Offset =
         iele::IeleLocalVariable::Create(&Context, "value.address", CompilingFunction);
       iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, Offset, AllocedValue, iele::IeleIntConstant::getOne(&Context),
         CompilingBlock);
-      AddressLValue::Create(this, Offset, DataLocation::Memory)->write(IeleRValue::Create({StringValue}), CompilingBlock);
+      AddressLValue::Create(this, Offset, DataLocation::Memory)->write(IeleRValue::Create(StringValue), CompilingBlock);
     } else {
       iele::IeleLocalVariable *ArrayLen =
         iele::IeleLocalVariable::Create(&Context, "array.length", CompilingFunction);
@@ -2935,7 +2935,7 @@ void IeleCompiler::doDecode(
           iele::IeleInstruction::Add, CrntPos, CrntPos, ArgLen, CompilingBlock);
   
         AllocedValue = appendArrayAllocation(arrayType, ArrayLen);
-        StoreAt->write(IeleRValue::Create({AllocedValue}), CompilingBlock);
+        StoreAt->write(IeleRValue::Create(AllocedValue), CompilingBlock);
   
         iele::IeleInstruction::CreateBinOp(
           iele::IeleInstruction::Add,
@@ -2945,7 +2945,7 @@ void IeleCompiler::doDecode(
       } else {
         if (dynamic_cast<RegisterLValue *>(StoreAt)) {
           AllocedValue = appendArrayAllocation(arrayType);
-          StoreAt->write(IeleRValue::Create({AllocedValue}), CompilingBlock);
+          StoreAt->write(IeleRValue::Create(AllocedValue), CompilingBlock);
         } else {
           AllocedValue = StoreAt->read(CompilingBlock)->getValue();
         }
@@ -3007,7 +3007,7 @@ void IeleCompiler::doDecode(
     const StructType &structType = dynamic_cast<const StructType &>(*type);
     if (dynamic_cast<RegisterLValue *>(StoreAt)) {
       AllocedValue = appendStructAllocation(structType);
-      StoreAt->write(IeleRValue::Create({AllocedValue}), CompilingBlock);
+      StoreAt->write(IeleRValue::Create(AllocedValue), CompilingBlock);
     } else {
       AllocedValue = StoreAt->read(CompilingBlock)->getValue();
     }
@@ -3323,7 +3323,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     }
 
     // Return pointer to allocated struct.
-    CompilingExpressionResult.push_back(IeleRValue::Create({StructValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(StructValue));
 
     return false;
   }
@@ -3355,10 +3355,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     llvm::SmallVector<IeleLValue *, 4> Results;
     appendConditional(TransferValue->getValue(), Results,
       [this](llvm::SmallVectorImpl<IeleRValue *> &Results){
-        Results.push_back(IeleRValue::Create({iele::IeleIntConstant::getZero(&Context)}));
+        Results.push_back(IeleRValue::Create(iele::IeleIntConstant::getZero(&Context)));
       },
       [this](llvm::SmallVectorImpl<IeleRValue *> &Results){
-        Results.push_back(IeleRValue::Create({iele::IeleIntConstant::Create(&Context, 2300)}));
+        Results.push_back(IeleRValue::Create(iele::IeleIntConstant::Create(&Context, 2300)));
       });
     iele::IeleValue *GasValue = Results[0]->read(CompilingBlock)->getValue();
 
@@ -3380,7 +3380,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleLocalVariable *ResultValue =
         iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
       iele::IeleInstruction::CreateIsZero(ResultValue, StatusValue, CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({ResultValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(ResultValue));
     }
     break;
   }
@@ -3462,7 +3462,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleInstruction::CreateTernOp(iele::IeleInstruction::AddMod,
                                         AddModValue, Op1->getValue(), Op2->getValue(), Modulus->getValue(), 
                                         CompilingBlock);
-    CompilingExpressionResult.push_back(IeleRValue::Create({AddModValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(AddModValue));
     break;
   }
   case FunctionType::Kind::MulMod: {
@@ -3484,7 +3484,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleInstruction::CreateTernOp(iele::IeleInstruction::MulMod,
                                         MulModValue, Op1->getValue(), Op2->getValue(), Modulus->getValue(), 
                                         CompilingBlock);
-    CompilingExpressionResult.push_back(IeleRValue::Create({MulModValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(MulModValue));
     break;
   }
   case FunctionType::Kind::ObjectCreation: {
@@ -3511,7 +3511,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     }
 
     // Return pointer to allocated array.
-    CompilingExpressionResult.push_back(IeleRValue::Create({ArrayValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(ArrayValue));
     break;
   }
   case FunctionType::Kind::DelegateCall:
@@ -3853,10 +3853,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     auto returnType = dynamic_cast<const ArrayType *>(function.returnParameterTypes()[0]);
     iele::IeleValue *Return = appendArrayAllocation(*returnType);
     appendArrayAccess(*returnType, iele::IeleIntConstant::getZero(&Context),
-      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[0]}), CompilingBlock);
+      Return, returnType->location())->write(IeleRValue::Create(ReturnRegisters[0]), CompilingBlock);
     appendArrayAccess(*returnType, iele::IeleIntConstant::getOne(&Context),
-      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[1]}), CompilingBlock);
-    CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
+      Return, returnType->location())->write(IeleRValue::Create(ReturnRegisters[1]), CompilingBlock);
+    CompilingExpressionResult.push_back(IeleRValue::Create(Return));
     break;
   }
   case FunctionType::Kind::ECMul: {
@@ -3927,10 +3927,10 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     auto returnType = dynamic_cast<const ArrayType *>(function.returnParameterTypes()[0]);
     iele::IeleValue *Return = appendArrayAllocation(*returnType);
     appendArrayAccess(*returnType, iele::IeleIntConstant::getZero(&Context),
-      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[0]}), CompilingBlock);
+      Return, returnType->location())->write(IeleRValue::Create(ReturnRegisters[0]), CompilingBlock);
     appendArrayAccess(*returnType, iele::IeleIntConstant::getOne(&Context),
-      Return, returnType->location())->write(IeleRValue::Create({ReturnRegisters[1]}), CompilingBlock);
-    CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
+      Return, returnType->location())->write(IeleRValue::Create(ReturnRegisters[1]), CompilingBlock);
+    CompilingExpressionResult.push_back(IeleRValue::Create(Return));
     break;
   }
   case FunctionType::Kind::ECPairing: {
@@ -4010,7 +4010,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     appendRevert(StatusValue, StatusValue);
 
-    CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(Result));
     break;
   }
   case FunctionType::Kind::ECRecover: {
@@ -4068,7 +4068,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleInstruction::CreateIntrinsicCall(
       iele::IeleInstruction::Blockhash, BlockHashValue, Arguments,
       CompilingBlock);
-    CompilingExpressionResult.push_back(IeleRValue::Create({BlockHashValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(BlockHashValue));
     break;
   }
   case FunctionType::Kind::KECCAK256:
@@ -4149,7 +4149,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
       appendRevert(StatusValue, StatusValue);
     }
-    CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(Return));
     break;
   }
   case FunctionType::Kind::ByteArrayPush: {
@@ -4175,7 +4175,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::Add, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
-    IeleRValue *rvalue = IeleRValue::Create({NewSize});
+    IeleRValue *rvalue = IeleRValue::Create(NewSize);
     SizeLValue->write(rvalue, CompilingBlock);
 
     if (!PushedValue) {
@@ -4243,7 +4243,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::Add, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
-    IeleRValue *rvalue = IeleRValue::Create({NewSize});
+    IeleRValue *rvalue = IeleRValue::Create(NewSize);
     SizeLValue->write(rvalue, CompilingBlock);
 
     if (!PushedValue) {
@@ -4308,7 +4308,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::Sub, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
-    IeleRValue *rvalue = IeleRValue::Create({NewSize});
+    IeleRValue *rvalue = IeleRValue::Create(NewSize);
     SizeLValue->write(rvalue, CompilingBlock);
 
     break;
@@ -4345,7 +4345,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     iele::IeleInstruction::CreateStore(
       ByteWidth, Return, CompilingBlock);
 
-    CompilingExpressionResult.push_back(IeleRValue::Create({Return}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(Return));
     break;
   }
   case FunctionType::Kind::ABIDecode: {
@@ -4463,7 +4463,7 @@ bool IeleCompiler::visit(const NewExpression &newExpression) {
   if (std::find(contracts.begin(), contracts.end(), Contract) == contracts.end()) {
     CompilingContract->getIeleContractList().push_back(Contract);
   }
-  CompilingExpressionResult.push_back(IeleRValue::Create({Contract}));
+  CompilingExpressionResult.push_back(IeleRValue::Create(Contract));
   return false;
 }
 
@@ -4474,7 +4474,7 @@ void IeleCompiler::appendGasLeft() {
   iele::IeleInstruction::CreateIntrinsicCall(
     iele::IeleInstruction::Gas, GasValue, EmptyArguments,
     CompilingBlock);
-  CompilingExpressionResult.push_back(IeleRValue::Create({GasValue}));
+  CompilingExpressionResult.push_back(IeleRValue::Create(GasValue));
 }
 
 
@@ -4538,7 +4538,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
 	  if (const auto * function = dynamic_cast<const FunctionDefinition *>(memberAccess.annotation().referencedDeclaration)) {
             std::string name = getIeleNameForFunction(*function);
             iele::IeleValue *Result = ST->lookup(name);
-            CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+            CompilingExpressionResult.push_back(IeleRValue::Create(Result));
             return false;
           } else {
             solAssert(false, "Function member not found");
@@ -4579,7 +4579,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       }
     } else if (auto enumType = dynamic_cast<const EnumType *>(type->actualType())) {
       iele::IeleIntConstant *Result = iele::IeleIntConstant::Create(&Context, bigint(enumType->memberValue(memberAccess.memberName())));
-      CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(Result));
       return false;
     } else {
       solAssert(false, "not implemented yet");
@@ -4599,7 +4599,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       solAssert(Result,
                 "IeleCompiler: failed to find function in compiling contract's"
                 " symbol table");
-      CompilingExpressionResult.push_back(IeleRValue::Create({Result}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(Result));
       return false;
     } else {
       if (const Declaration *declaration = memberAccess.annotation().referencedDeclaration) {
@@ -4643,7 +4643,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Timestamp, TimestampValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({TimestampValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(TimestampValue));
     } else if (member == "difficulty") {
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
       iele::IeleLocalVariable *DifficultyValue =
@@ -4651,7 +4651,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Difficulty, DifficultyValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({DifficultyValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(DifficultyValue));
     } else if (member == "number") {
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
       iele::IeleLocalVariable *NumberValue =
@@ -4659,7 +4659,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Number, NumberValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({NumberValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(NumberValue));
     } else if (member == "gaslimit") {
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
       iele::IeleLocalVariable *GaslimitValue =
@@ -4667,7 +4667,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Gaslimit, GaslimitValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({GaslimitValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(GaslimitValue));
     } else if (member == "sender") {
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
       iele::IeleLocalVariable *CallerValue =
@@ -4675,7 +4675,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Caller, CallerValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({CallerValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(CallerValue));
     } else if (member == "value") {
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
       iele::IeleLocalVariable *CallvalueValue =
@@ -4683,7 +4683,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Callvalue, CallvalueValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({CallvalueValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(CallvalueValue));
     } else if (member == "origin") {
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
       iele::IeleLocalVariable *OriginValue =
@@ -4691,7 +4691,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Origin, OriginValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({OriginValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(OriginValue));
     } else if (member == "gas") {
       appendGasLeft();
     } else if (member == "gasprice") {
@@ -4701,7 +4701,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Gasprice, GaspriceValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({GaspriceValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(GaspriceValue));
     } else if (member == "coinbase") {
       llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
       iele::IeleLocalVariable *BeneficiaryValue =
@@ -4709,7 +4709,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Beneficiary, BeneficiaryValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({BeneficiaryValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(BeneficiaryValue));
     } else if (member == "min" || member == "max") {
       const MagicType *arg =
         dynamic_cast<const MagicType *>(actualType);
@@ -4724,7 +4724,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleLocalVariable::Create(&Context, "typesize", CompilingFunction);
       iele::IeleInstruction::CreateAssign(
           TypeSizeValue, MinMaxConstant, CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({TypeSizeValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(TypeSizeValue));
     } else if (member == "interfaceId") {
       TypePointer arg = dynamic_cast<const MagicType *>(actualType)->typeArgument();
       ContractDefinition const& contract =
@@ -4766,7 +4766,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Balance, BalanceValue, Arguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({BalanceValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(BalanceValue));
     } else if (member == "codesize") {
       ExprValue = appendTypeConversion(ExprValue,
         memberAccess.expression().annotation().type,
@@ -4777,7 +4777,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Extcodesize, CodeSizeValue, Arguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({CodeSizeValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(CodeSizeValue));
     } else
       solAssert(false, "IeleCompiler: invalid member for integer value");
     break;
@@ -4825,7 +4825,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleIntConstant::Create(
         &Context,
         bigint(type.numBytes()));
-    CompilingExpressionResult.push_back(IeleRValue::Create({LengthValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(LengthValue));
     break;
   }
   case Type::Category::Array: {
@@ -4857,8 +4857,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         CompilingExpressionResult.push_back(ArrayLengthLValue::Create(this, ExprValue->getValue(), type.location()));
         CompilingLValueArrayType = &type;
       } else {
-        CompilingExpressionResult.push_back(IeleRValue::Create({
-          iele::IeleIntConstant::Create(&Context, type.length())}));
+        CompilingExpressionResult.push_back(IeleRValue::Create(
+          iele::IeleIntConstant::Create(&Context, type.length())));
       }
     } else if (member == "push") {
       solAssert(type.isDynamicallySized(), "Invalid push on fixed length array");
@@ -4947,7 +4947,7 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
       IndexValue->getValue(), CompilingBlock);
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Byte, ByteValue, ByteValue, ExprValue, CompilingBlock);
-    CompilingExpressionResult.push_back(IeleRValue::Create({ByteValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(ByteValue));
     break;
   }
   case Type::Category::Mapping: {
@@ -5312,7 +5312,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
       iele::IeleLocalVariable *This =
         iele::IeleLocalVariable::Create(&Context, "this", CompilingFunction);
       iele::IeleInstruction::CreateIntrinsicCall(iele::IeleInstruction::Address, This, EmptyArguments, CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({This}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(This));
       return;
     }
     case Type::Category::Integer: {
@@ -5323,7 +5323,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
       iele::IeleInstruction::CreateIntrinsicCall(
         iele::IeleInstruction::Timestamp, TimestampValue, EmptyArguments,
         CompilingBlock);
-      CompilingExpressionResult.push_back(IeleRValue::Create({TimestampValue}));
+      CompilingExpressionResult.push_back(IeleRValue::Create(TimestampValue));
       return;
     }
     default:
@@ -5381,10 +5381,10 @@ IeleLValue *IeleCompiler::appendGlobalVariable(iele::IeleValue *Identifier, std:
         // variable.
         return AddressLValue::Create(this, Identifier, DataLocation::Storage, name, sizeInRegisters);
       } else {
-        return ReadOnlyLValue::Create(IeleRValue::Create({Identifier}));
+        return ReadOnlyLValue::Create(IeleRValue::Create(Identifier));
       }
     } else {
-      return ReadOnlyLValue::Create(IeleRValue::Create({Identifier}));
+      return ReadOnlyLValue::Create(IeleRValue::Create(Identifier));
     }
 }
 
@@ -5399,7 +5399,7 @@ void IeleCompiler::endVisit(const Literal &literal) {
       iele::IeleIntConstant::Create(
           &Context,
           type->literalValue(&literal));
-    CompilingExpressionResult.push_back(IeleRValue::Create({LiteralValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(LiteralValue));
     break;
   }
   case Type::Category::StringLiteral: {
@@ -5412,7 +5412,7 @@ void IeleCompiler::endVisit(const Literal &literal) {
         &Context,
         value_integer,
         true);
-    CompilingExpressionResult.push_back(IeleRValue::Create({LiteralValue}));
+    CompilingExpressionResult.push_back(IeleRValue::Create(LiteralValue));
     break;
   }
   default:
@@ -5867,7 +5867,7 @@ void IeleCompiler::appendLocalVariableInitialization(
 
   // Add assignment if needed.
   if (InitValue)
-    Local->write(IeleRValue::Create({InitValue}), CompilingBlock);
+    Local->write(IeleRValue::Create(InitValue), CompilingBlock);
 }
 
 iele::IeleValue *IeleCompiler::getReferenceTypeSize(
@@ -6026,7 +6026,7 @@ void IeleCompiler::appendCopy(
     iele::IeleValue *SizeValue = getReferenceTypeSize(*FromType, From->getValue());
     if (dynamic_cast<RegisterLValue *>(To)) {
       AllocedValue = appendIeleRuntimeAllocateMemory(SizeValue);
-      To->write(IeleRValue::Create({AllocedValue}), CompilingBlock);
+      To->write(IeleRValue::Create(AllocedValue), CompilingBlock);
     } else {
       AllocedValue = To->read(CompilingBlock)->getValue();
     }
@@ -6040,7 +6040,7 @@ void IeleCompiler::appendCopy(
 
     if (dynamic_cast<RegisterLValue *>(To)) {
       AllocedValue = appendStructAllocation(toStructType);
-      To->write(IeleRValue::Create({AllocedValue}), CompilingBlock);
+      To->write(IeleRValue::Create(AllocedValue), CompilingBlock);
     } else {
       AllocedValue = To->read(CompilingBlock)->getValue();
     }
@@ -6073,7 +6073,7 @@ void IeleCompiler::appendCopy(
       iele::IeleValue *SizeValue = getReferenceTypeSize(*FromType, From->getValue());
       if (dynamic_cast<RegisterLValue *>(To)) {
         AllocedValue = appendIeleRuntimeAllocateMemory(SizeValue);
-        To->write(IeleRValue::Create({AllocedValue}), CompilingBlock);
+        To->write(IeleRValue::Create(AllocedValue), CompilingBlock);
       } else {
         AllocedValue = To->read(CompilingBlock)->getValue();
       }
@@ -6128,7 +6128,7 @@ void IeleCompiler::appendCopy(
           SizeVariableTo, SizeVariableFrom,
           CompilingBlock);
         AllocedValue = appendArrayAllocation(toArrayType, SizeVariableTo);
-        To->write(IeleRValue::Create({AllocedValue}), CompilingBlock);
+        To->write(IeleRValue::Create(AllocedValue), CompilingBlock);
       }
 
       iele::IeleInstruction::CreateBinOp(
@@ -6138,7 +6138,7 @@ void IeleCompiler::appendCopy(
     } else {
       if (dynamic_cast<RegisterLValue *>(To)) {
         AllocedValue = appendArrayAllocation(toArrayType);
-        To->write(IeleRValue::Create({AllocedValue}), CompilingBlock);
+        To->write(IeleRValue::Create(AllocedValue), CompilingBlock);
       } else {
         AllocedValue = To->read(CompilingBlock)->getValue();
       }
@@ -6502,7 +6502,7 @@ iele::IeleValue *IeleCompiler::appendBooleanOperator(
   if (Opcode == Token::Or) {
     appendConditional(
       LeftOperandValue, Results,
-      [this](llvm::SmallVectorImpl<IeleRValue *> &Results){ Results.push_back(IeleRValue::Create({iele::IeleIntConstant::getOne(&Context)})); },
+      [this](llvm::SmallVectorImpl<IeleRValue *> &Results){ Results.push_back(IeleRValue::Create(iele::IeleIntConstant::getOne(&Context))); },
       [&RightOperand, this](llvm::SmallVectorImpl<IeleRValue *> &Results){Results.push_back(compileExpression(RightOperand));});
     solAssert(Results.size() == 1, "Boolean operators have a single results");
     return Results[0]->read(CompilingBlock)->getValue();
@@ -6510,7 +6510,7 @@ iele::IeleValue *IeleCompiler::appendBooleanOperator(
     appendConditional(
       LeftOperandValue, Results,
       [&RightOperand, this](llvm::SmallVectorImpl<IeleRValue *> &Results){Results.push_back(compileExpression(RightOperand));},
-      [this](llvm::SmallVectorImpl<IeleRValue *> &Results){Results.push_back(IeleRValue::Create({iele::IeleIntConstant::getZero(&Context)})); });
+      [this](llvm::SmallVectorImpl<IeleRValue *> &Results){Results.push_back(IeleRValue::Create(iele::IeleIntConstant::getZero(&Context))); });
     solAssert(Results.size() == 1, "Boolean operators have a single results");
     return Results[0]->read(CompilingBlock)->getValue();
   }
@@ -6737,7 +6737,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
   }
   iele::IeleLocalVariable *convertedValue =
     iele::IeleLocalVariable::Create(&Context, "type.converted", CompilingFunction);
-  IeleRValue *Result = IeleRValue::Create({convertedValue});
+  IeleRValue *Result = IeleRValue::Create(convertedValue);
   switch (SourceType->category()) {
   case Type::Category::FixedBytes: {
     const FixedBytesType &srcType = dynamic_cast<const FixedBytesType &>(*SourceType);
@@ -6771,12 +6771,12 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
     const FunctionType &sourceType = dynamic_cast<const FunctionType &>(*SourceType);
     solAssert(sourceType.kind() == FunctionType::Kind::External, "Only external function type can be converted.");
     solAssert(Value->getValues().size() == 2, "Incorrect number of rvalues.");
-    return IeleRValue::Create({Value->getValues()[0]});
+    return IeleRValue::Create(Value->getValues()[0]);
   }
   case Type::Category::Struct:
   case Type::Category::Array:
     if (shouldCopyStorageToMemory(*TargetType, *SourceType))
-      return IeleRValue::Create({appendCopyFromStorageToMemory(TargetType, Value, SourceType)});
+      return IeleRValue::Create(appendCopyFromStorageToMemory(TargetType, Value, SourceType));
     return Value;
   case Type::Category::Integer:
   case Type::Category::Address:
@@ -6872,7 +6872,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       bigint value = bigint(u256(h256(bytesConstRef(paddedValueStr), h256::AlignRight)));
       iele::IeleIntConstant *Result = iele::IeleIntConstant::Create(
         &Context, value, true);
-      return IeleRValue::Create({Result});
+      return IeleRValue::Create(Result);
     }
     case Type::Category::Array: {
       const ArrayType &targetType = dynamic_cast<const ArrayType &>(*TargetType);
@@ -6890,7 +6890,7 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
         CompilingBlock);
       iele::IeleInstruction::CreateStore(
         Value->getValue(), ValueAddress, CompilingBlock);
-      return IeleRValue::Create({Ptr});
+      return IeleRValue::Create(Ptr);
     }
     default:
       solAssert(false, "not implemented yet");

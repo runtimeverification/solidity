@@ -22,7 +22,7 @@ public:
   IeleArgument(const IeleArgument&) = delete;
   void operator=(const IeleArgument&) = delete;
 
-  ~IeleArgument();
+  ~IeleArgument() override;
 
   static IeleArgument *Create(IeleContext *Ctx, const llvm::Twine &Name = "",
                               IeleFunction *F = nullptr) {

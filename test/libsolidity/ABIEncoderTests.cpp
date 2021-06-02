@@ -675,11 +675,11 @@ BOOST_AUTO_TEST_CASE(bytesNN_arrays_dyn)
 				for (size_t i = 0; i < size; i ++)
 					flat_arr.emplace_back(uint8_t(arr[i]));
 				vector<bytes> encoded = encodeArgs(
-					encodeRefArgs(1, size, arr),
+					encodeRefArgs(1, uint64_t(size), arr),
 					encodeRefArgs(1, 2, "abc", "def")
 				);
 				bytes flattened = encodeLogs(
-					1, size, flat_arr,
+					1, uint64_t(size), flat_arr,
 					1, 2, "abc", "def"
 				);
 				ABI_CHECK(callContractFunction("f()"), encoded);
