@@ -4547,6 +4547,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         case FunctionType::Kind::Creation:
         case FunctionType::Kind::Send:
         case FunctionType::Kind::Transfer:
+        case FunctionType::Kind::Declaration:
           // handled below
           actualType = type->actualType();
           break;
