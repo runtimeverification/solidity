@@ -50,6 +50,8 @@ using namespace solidity::util;
 using namespace solidity::test;
 using namespace solidity::langutil;
 
+#define ALSO_VIA_YUL(CODE) { CODE }
+/*
 #define ALSO_VIA_YUL(CODE)                      \
 {                                               \
 	m_doEwasmTestrun = true;                    \
@@ -69,9 +71,13 @@ using namespace solidity::langutil;
 		{ CODE }                                \
 	}                                           \
 }
+*/
 
+#define DISABLE_EWASM_TESTRUN()
+/*
 #define DISABLE_EWASM_TESTRUN() \
 	{ m_doEwasmTestrun = false; }
+*/
 
 namespace solidity::frontend::test
 {
@@ -92,7 +98,7 @@ BOOST_AUTO_TEST_CASE(encode_negative_int)
 {
   char const* sourceCode = R"(
     contract ReturnIntArray {
-      function returnIntArray() public pure returns (int[3]) {
+      function returnIntArray() public pure returns (int[3] memory) {
         int[3] memory x;
         x[0] = -1;
         x[1] = -255;
@@ -148,7 +154,6 @@ BOOST_AUTO_TEST_CASE(conditional_expression_string_literal)
 BOOST_AUTO_TEST_CASE(C99_scoping_activation_loops)
 {
   char const* sourceCode = R"(
-    pragma experimental "v0.5.0";
     contract test {
       function f(uint n) pure public returns (uint x1, uint x2) {
         for (uint i = 1; i <= n; i++) {
