@@ -383,7 +383,7 @@ public:
 	}
 
 	void modifyTimestamp(size_t timestamp) {
-		m_timestamp = timestamp;
+                m_rpc.test_modifyTimestamp(timestamp);
 	}
 
 	u256 gasLimit() const;
