@@ -50,7 +50,10 @@ let
       echo "0000000000000000000000000000000000000000" >commit_hash.txt
     '';
 
-    NIX_CFLAGS_COMPILE = "-Wno-error=maybe-uninitialized";
+    NIX_CFLAGS_COMPILE =
+      # -Wmaybe-uninitialized isn't recognized by Clang, so no need to disable
+      # the error.
+      lib.optional (!stdenv.cc.isClang) "-Wno-error=maybe-uninitialized";
 
     postPatch = ''
       substituteInPlace cmake/jsoncpp.cmake \
