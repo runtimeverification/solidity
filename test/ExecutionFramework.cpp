@@ -63,7 +63,7 @@ ExecutionFramework::ExecutionFramework():
 }
 
 ExecutionFramework::ExecutionFramework(langutil::EVMVersion _evmVersion, vector<boost::filesystem::path> const& _vmPaths):
-	m_rpc(RPCSession::instance(getIPCSocketPath())),
+	m_rpc(RPCSession::instance(getIPCSocketPath(), solidity::test::CommonOptions::get().walletId(), solidity::test::CommonOptions::get().privateFromAddr())),
 	m_evmVersion(_evmVersion),
 	m_optimiserSettings(solidity::frontend::OptimiserSettings::minimal()),
 	m_showMessages(solidity::test::CommonOptions::get().showMessages),
@@ -72,7 +72,8 @@ ExecutionFramework::ExecutionFramework(langutil::EVMVersion _evmVersion, vector<
 	if (solidity::test::CommonOptions::get().optimize)
 		m_optimiserSettings = solidity::frontend::OptimiserSettings::standard();
 
-    m_rpc.test_rewindToBlock(0);
+    m_rpc.test_rewindToBlock(1);
+    m_rpc.test_mineBlocks(1);
 
 /*
 	for (auto const& path: m_vmPaths)
@@ -200,16 +201,14 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 	d.value = toHex(_value, HexPrefix::Add);
 	if (m_timestamp == 0)
 		m_timestamp = time(nullptr);
-	m_rpc.test_modifyTimestamp(m_timestamp);
 	if (!_isCreation)
 	{
-	        d.to = toString(m_contractAddress);
+	        d.to = "0x" + toString(m_contractAddress);
 	        BOOST_REQUIRE(m_rpc.eth_getCode(d.to, "latest").size() > 2);
 		vector<string> const& outputs = m_rpc.iele_call(d);
-		m_rpc.test_modifyTimestamp(m_timestamp);
 		m_output.clear();
 		for (auto const& output : outputs) {
-			m_output.push_back(fromHex(output, WhenError::Throw));
+			m_output.push_back(asBytes(output));
 		}
 	}
 	m_timestamp = m_timestamp + 1;

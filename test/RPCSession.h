@@ -88,7 +88,7 @@ public:
 		std::string function;
 		std::vector<std::string> arguments;
 
-		std::string toJson() const;
+		std::string toJson(RPCSession*) const;
 	};
 
 	struct LogEntry {
@@ -106,8 +106,9 @@ public:
 		std::string blockNumber;
 	};
 
-	static RPCSession& instance(std::string const& _path);
+	static RPCSession& instance(std::string const& _path, std::string const& _walletId, std::string const& _privateFromAddr);
 
+        std::string eth_blockNumber(void);
 	std::string eth_getCode(std::string const& _address, std::string const& _blockNumber);
 	std::string eth_getTimestamp(std::string const& _blockNumber);
 	TransactionReceipt eth_getTransactionReceipt(std::string const& _transactionHash);
@@ -125,11 +126,13 @@ public:
 	std::string const& account(size_t _id) const { return m_accounts.at(_id); }
 	std::string const& accountCreate();
 	std::string const& accountCreateIfNotExists(size_t _id);
+        std::string bech32Encode(std::string const&);
+        std::string bech32Decode(std::string const&);
 
 private:
-	explicit RPCSession(std::string const& _path);
+	explicit RPCSession(std::string const& _path, std::string const& _walletId, std::string const& _privateFromAddr);
 
-	Json::Value rpcCall(std::string const& _methodName, std::vector<std::string> const& _args = std::vector<std::string>(), bool _canFail = false);
+	Json::Value rpcCall(std::string const& _methodName, std::vector<std::string> const& _args = std::vector<std::string>(), bool _canFail = false, bool passphrase = false);
 	std::string personal_newAccount();
 	void test_setBalance(std::vector<std::string> _accounts, std::string _balance);
 
@@ -138,6 +141,8 @@ private:
 	void parseString(std::string& _string, std::map<std::string, std::string> const& _varMap);
 
 	IPCSocket m_ipcSocket;
+        std::string m_walletId;
+        std::string m_privateFromAddr;
 	size_t m_rpcSequence = 1;
 	unsigned m_maxMiningTime = 6000000; // 600 seconds
 	unsigned m_sleepTime = 10; // 10 milliseconds

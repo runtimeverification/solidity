@@ -65,6 +65,8 @@ struct CommonOptions: boost::noncopyable
 	bool showMetadata = false;
 
 	langutil::EVMVersion evmVersion() const;
+        std::string walletId() const;
+        std::string privateFromAddr() const;
 
 	virtual bool parse(int argc, char const* const* argv);
 	// Throws a ConfigException on error
@@ -81,6 +83,8 @@ protected:
 
 private:
 	std::string evmVersionString;
+        std::string walletIdString;
+        std::string privateFromAddrString;
 	static std::unique_ptr<CommonOptions const> m_singleton;
 };
 

@@ -105,6 +105,8 @@ CommonOptions::CommonOptions(std::string _caption):
 {
 	options.add_options()
 		("evm-version", po::value(&evmVersionString), "which evm version to use")
+		("wallet-id", po::value(&walletIdString), "walletId to use")
+		("private-from-address", po::value(&privateFromAddrString), "private address to send test transactions from")
 		("ipcpath", po::value<fs::path>(&this->ipcPath)->default_value(solidity::test::ipcPath()), "path to IPC file")
 		("testpath", po::value<fs::path>(&this->testPath)->default_value(solidity::test::testPath()), "path to test files")
 		("vm", po::value<std::vector<fs::path>>(&vmPaths), "path to evmc library, can be supplied multiple times.")
@@ -201,6 +203,15 @@ bool CommonOptions::parse(int argc, char const* const* argv)
 	return true;
 }
 
+std::string CommonOptions::walletId() const
+{
+        return walletIdString;
+}
+
+std::string CommonOptions::privateFromAddr() const
+{
+        return privateFromAddrString;
+}
 
 langutil::EVMVersion CommonOptions::evmVersion() const
 {
