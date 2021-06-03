@@ -26,7 +26,7 @@ public:
   IeleGlobalVariable(const IeleGlobalVariable&) = delete;
   void operator=(const IeleGlobalVariable&) = delete;
 
-  ~IeleGlobalVariable();
+  ~IeleGlobalVariable() override;
 
   static IeleGlobalVariable *Create(IeleContext *Ctx,
                                     const llvm::Twine &Name = "",

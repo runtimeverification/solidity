@@ -92,7 +92,7 @@ IeleRValue *ByteArrayLValue::read(iele::IeleBlock *InsertAtEnd) const {
     iele::IeleInstruction::CreateLoad(Result, Address, Offset, iele::IeleIntConstant::getOne(&Compiler->Context), InsertAtEnd);
     iele::IeleInstruction::CreateBinOp(iele::IeleInstruction::Byte, Result, iele::IeleIntConstant::getZero(&Compiler->Context), Result, InsertAtEnd);
   }
-  return IeleRValue::Create({Result});
+  return IeleRValue::Create(Result);
 }
 
 void ArrayLengthLValue::write(IeleRValue *Value, iele::IeleBlock *InsertAtEnd) const {
@@ -141,5 +141,5 @@ IeleRValue *RecursiveStructLValue::read(iele::IeleBlock *InsertAtEnd) const {
   
   // Return the address of the first slot of the 
   // recusrive struct.
-  return IeleRValue::Create({RecStructAddress});
+  return IeleRValue::Create(RecStructAddress);
 }

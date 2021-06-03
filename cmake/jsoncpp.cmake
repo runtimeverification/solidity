@@ -29,6 +29,14 @@ else()
     set(JSONCPP_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJSON_USE_INT64_DOUBLE_CONVERSION")
 endif()
 
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+    # Boost libraries use visibility=hidden to reduce unnecessary DWARF entries.
+    # Unless we match visibility, ld will give a warning message like:
+    #   ld: warning: direct access in function 'boost::filesystem... from file ...
+    #   means the weak symbol cannot be overridden at runtime. This was likely caused by different translation units being compiled with different visibility settings.
+    set(JSONCPP_CXX_FLAGS "${JSONCPP_CXX_FLAGS} -fvisibility=hidden")
+endif()
+
 set(byproducts "")
 if(CMAKE_VERSION VERSION_GREATER 3.1)
     set(byproducts BUILD_BYPRODUCTS "${JSONCPP_LIBRARY}")

@@ -46,8 +46,8 @@ class SyntaxChecker: private ASTConstVisitor
 public:
 	/// @param _errorReporter provides the error logging functionality.
 	SyntaxChecker(langutil::ErrorReporter& _errorReporter, bool _useYulOptimizer):
-		m_errorReporter(_errorReporter),
-		m_useYulOptimizer(_useYulOptimizer)
+		m_errorReporter(_errorReporter) //,
+		//m_useYulOptimizer(_useYulOptimizer)
 	{}
 
 	bool checkSyntax(ASTNode const& _astRoot);
@@ -96,7 +96,7 @@ private:
 
 	langutil::ErrorReporter& m_errorReporter;
 
-	bool m_useYulOptimizer = false;
+	//bool m_useYulOptimizer = false;
 
 	/// Flag that indicates whether a function modifier actually contains '_'.
 	bool m_placeholderFound = false;

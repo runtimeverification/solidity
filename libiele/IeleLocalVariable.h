@@ -29,7 +29,7 @@ public:
   IeleLocalVariable(const IeleLocalVariable&) = delete;
   void operator=(const IeleLocalVariable&) = delete;
 
-  virtual ~IeleLocalVariable();
+  virtual ~IeleLocalVariable() override;
 
   static IeleLocalVariable *Create(IeleContext *Ctx,
                                    const llvm::Twine &Name = "",

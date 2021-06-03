@@ -13,7 +13,7 @@ public:
   IeleConstant(const IeleConstant&) = delete;
   void operator=(const IeleConstant&) = delete;
 
-  virtual ~IeleConstant();
+  virtual ~IeleConstant() override;
 
   // Method for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const IeleValue *V) {

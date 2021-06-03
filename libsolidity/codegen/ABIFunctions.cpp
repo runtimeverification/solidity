@@ -852,7 +852,9 @@ string ABIFunctions::abiEncodingFunctionStruct(
 			templ("assignEnd", "");
 		// to avoid multiple loads from the same slot for subsequent members
 		templ("init", _from.dataStoredIn(DataLocation::Storage) ? "let slotValue := 0" : "");
+/*
 		u256 previousSlotOffset(-1);
+*/
 		u256 encodingOffset = 0;
 		vector<map<string, string>> members;
 /*

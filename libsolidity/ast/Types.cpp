@@ -1078,7 +1078,6 @@ bigint RationalNumberType::literalValue(Literal const*) const
 	// We ignore the literal and hope that the type was correctly determined to represent
 	// its value.
 
-	u256 value;
 	bigint shiftedValue;
 
 	if (!isFractional())

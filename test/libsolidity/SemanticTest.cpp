@@ -243,8 +243,8 @@ TestCase::TestResult SemanticTest::runTest(ostream& _stream, string const& _line
 					success = false;
 
 				test.setFailure(!m_transactionSuccessful);
-				test.setRawBytes(std::move(
-					m_transactionSuccessful ? output : vector<bytes>(1, encode(m_status))));
+				test.setRawBytes(
+					m_transactionSuccessful ? output : vector<bytes>(1, encode(m_status)));
 				test.setContractABI(m_compiler.contractABI(m_compiler.lastContractName()));
 			}
 		}
