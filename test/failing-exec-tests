@@ -1664,9 +1664,6 @@
 -t !syntaxTests/tryCatch/library_call
 -t !syntaxTests/tryCatch/returns
 -t !syntaxTests/tryCatch/returns_memory
--t !syntaxTests/tupleAssignments/empty_tuples_lhs
--t !syntaxTests/tupleAssignments/err_fill_assignment
--t !syntaxTests/tupleAssignments/error_fill
 -t !syntaxTests/types/address/address_members
 -t !syntaxTests/types/address/codehash
 -t !syntaxTests/types/array_index_too_large
