@@ -18,3 +18,6 @@ contract C {
     }
     receive() payable external {}
 }
+// ----
+// TypeError 6198: (177-207): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 6198: (250-272): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

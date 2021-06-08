@@ -27,3 +27,12 @@ contract C {
         assembly { pop(extcodesize(0)) }
     }
 }
+// ----
+// SyntaxError 1184: (86-139): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (201-220): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (266-320): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (366-414): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (455-498): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (539-586): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (632-660): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (706-738): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
