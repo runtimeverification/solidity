@@ -3206,6 +3206,7 @@ unsigned FunctionType::gasIndex() const
 	case Kind::BareCall:
 	case Kind::BareCallCode:
 	case Kind::BareDelegateCall:
+	case Kind::BareStaticCall:
 	case Kind::Internal:
 	case Kind::DelegateCall:
 	case Kind::ArrayPush:
@@ -3241,6 +3242,7 @@ unsigned FunctionType::valueIndex() const
 	case Kind::BareCall:
 	case Kind::BareCallCode:
 	case Kind::BareDelegateCall:
+	case Kind::BareStaticCall:
 	case Kind::Internal:
 	case Kind::DelegateCall:
 	case Kind::ArrayPush:

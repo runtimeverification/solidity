@@ -462,10 +462,7 @@ BOOST_AUTO_TEST_CASE(address_staticcall)
 		}
 	)";
 
-	if (solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
-		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
-	else
-		CHECK_ERROR(sourceCode, TypeError, "\"staticcall\" is not supported by the VM version.");
+	CHECK_ERROR(sourceCode, TypeError, "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 BOOST_AUTO_TEST_CASE(address_staticcall_value)
@@ -525,7 +522,7 @@ BOOST_AUTO_TEST_CASE(address_staticcall_full_return_type)
 			}
 		)";
 
-		CHECK_SUCCESS_NO_WARNINGS(sourceCode);
+	CHECK_ERROR(sourceCode, TypeError, "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 	}
 }
 

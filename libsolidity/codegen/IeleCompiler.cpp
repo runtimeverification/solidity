@@ -2618,6 +2618,7 @@ void IeleCompiler::doEncode(
     case FunctionType::Kind::BareCall:
     case FunctionType::Kind::BareCallCode:
     case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::BareStaticCall:
     case FunctionType::Kind::Internal:
     case FunctionType::Kind::DelegateCall:
       doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create(ArgValue->getValues()[0])), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
@@ -3056,6 +3057,7 @@ void IeleCompiler::doDecode(
     case FunctionType::Kind::BareCall:
     case FunctionType::Kind::BareCallCode:
     case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::BareStaticCall:
     case FunctionType::Kind::Internal:
     case FunctionType::Kind::DelegateCall:
       doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[0]}), ArgTypeSize, ArgLen, UInt16);
@@ -3719,6 +3721,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::BareCall:
   case FunctionType::Kind::BareCallCode:
   case FunctionType::Kind::BareDelegateCall:
+  case FunctionType::Kind::BareStaticCall:
     solAssert(false, "low-level function calls not supported in IELE");
   case FunctionType::Kind::Creation: {
     solAssert(!function.gasSet(), "Gas limit set for contract creation.");
@@ -4554,6 +4557,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         case FunctionType::Kind::BareCall:
         case FunctionType::Kind::BareCallCode:
         case FunctionType::Kind::BareDelegateCall:
+        case FunctionType::Kind::BareStaticCall:
         default:
           solAssert(false, "not implemented yet");
         }
@@ -5233,6 +5237,7 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
     case FunctionType::Kind::BareCall:
     case FunctionType::Kind::BareCallCode:
     case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::BareStaticCall:
     case FunctionType::Kind::Internal:
     case FunctionType::Kind::DelegateCall:
       max = (bigint(1) << 16) - 1;

@@ -53,8 +53,6 @@ BOOST_AUTO_TEST_CASE(environment_access)
 		"address(1).balance",
 		"address(1).codesize",
 	};
-	if (solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
-		view.emplace_back("address(0x4242).staticcall(\"\")");
 
 	// ``block.blockhash`` and ``blockhash`` are tested separately below because their usage will
 	// produce warnings that can't be handled in a generic way.
@@ -106,10 +104,7 @@ BOOST_AUTO_TEST_CASE(address_staticcall)
 			}
 		}
 	)";
-	if (!solidity::test::CommonOptions::get().evmVersion().hasStaticCall())
-		CHECK_ERROR(text, TypeError, "\"staticcall\" is not supported by the VM version.");
-	else
-		CHECK_SUCCESS_NO_WARNINGS(text);
+	CHECK_ERROR(text, TypeError, "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 }
 
 

@@ -1812,7 +1812,8 @@ void TypeChecker::typeCheckFunctionCall(
 	if (
 		_functionType->kind() == FunctionType::Kind::BareCall ||
 		_functionType->kind() == FunctionType::Kind::BareCallCode ||
-		_functionType->kind() == FunctionType::Kind::BareDelegateCall
+		_functionType->kind() == FunctionType::Kind::BareDelegateCall ||
+		_functionType->kind() == FunctionType::Kind::BareStaticCall
 	)
 		m_errorReporter.typeError(6198_error, _functionCall.location(), "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 
