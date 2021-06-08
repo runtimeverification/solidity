@@ -2618,6 +2618,7 @@ void IeleCompiler::doEncode(
     case FunctionType::Kind::BareCall:
     case FunctionType::Kind::BareCallCode:
     case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::BareStaticCall:
     case FunctionType::Kind::Internal:
     case FunctionType::Kind::DelegateCall:
       doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(IeleRValue::Create(ArgValue->getValues()[0])), ArgTypeSize, ArgLen, UInt16, appendWidths, bigEndian);
@@ -3056,6 +3057,7 @@ void IeleCompiler::doDecode(
     case FunctionType::Kind::BareCall:
     case FunctionType::Kind::BareCallCode:
     case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::BareStaticCall:
     case FunctionType::Kind::Internal:
     case FunctionType::Kind::DelegateCall:
       doDecode(NextFree, CrntPos, RegisterLValue::Create({Results[0]}), ArgTypeSize, ArgLen, UInt16);
@@ -3719,6 +3721,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::BareCall:
   case FunctionType::Kind::BareCallCode:
   case FunctionType::Kind::BareDelegateCall:
+  case FunctionType::Kind::BareStaticCall:
     solAssert(false, "low-level function calls not supported in IELE");
   case FunctionType::Kind::Creation: {
     solAssert(!function.gasSet(), "Gas limit set for contract creation.");
@@ -4547,12 +4550,14 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         case FunctionType::Kind::Creation:
         case FunctionType::Kind::Send:
         case FunctionType::Kind::Transfer:
+        case FunctionType::Kind::Declaration:
           // handled below
           actualType = type->actualType();
           break;
         case FunctionType::Kind::BareCall:
         case FunctionType::Kind::BareCallCode:
         case FunctionType::Kind::BareDelegateCall:
+        case FunctionType::Kind::BareStaticCall:
         default:
           solAssert(false, "not implemented yet");
         }
@@ -5232,6 +5237,7 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
     case FunctionType::Kind::BareCall:
     case FunctionType::Kind::BareCallCode:
     case FunctionType::Kind::BareDelegateCall:
+    case FunctionType::Kind::BareStaticCall:
     case FunctionType::Kind::Internal:
     case FunctionType::Kind::DelegateCall:
       max = (bigint(1) << 16) - 1;
@@ -6767,10 +6773,17 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
   case Type::Category::FixedPoint:
     solAssert(false, "not implemented yet");
   case Type::Category::Function: {
-    solAssert(TargetType->category() == Type::Category::Address, "Invalid type conversion requested.");
+    solAssert(TargetType->category() == Type::Category::Address ||
+              TargetType->category() == Type::Category::Function,
+              "Invalid type conversion requested.");
     const FunctionType &sourceType = dynamic_cast<const FunctionType &>(*SourceType);
-    solAssert(sourceType.kind() == FunctionType::Kind::External, "Only external function type can be converted.");
-    solAssert(Value->getValues().size() == 2, "Incorrect number of rvalues.");
+    if (TargetType->category() == Type::Category::Address) {
+      solAssert(sourceType.kind() == FunctionType::Kind::External, "Only external function type can be converted to address.");
+      solAssert(Value->getValues().size() == 2, "Incorrect number of rvalues.");
+    } else { // Type::Category::Function
+      solAssert(Value->getValues().size() == 1 || Value->getValues().size() == 2,
+                "Incorrect number of rvalues.");
+    }
     return IeleRValue::Create(Value->getValues()[0]);
   }
   case Type::Category::Struct:

@@ -20,7 +20,7 @@ contract C {
 // TypeError 7407: (47-48): Type int_const 2 is not implicitly convertible to expected type tuple().
 // TypeError 5547: (86-88): Empty tuple on the left hand side.
 // TypeError 5547: (173-175): Empty tuple on the left hand side.
-// TypeError 7407: (178-182): Type tuple(uint256,uint256) is not implicitly convertible to expected type tuple().
+// TypeError 7407: (178-182): Type tuple(uint,uint) is not implicitly convertible to expected type tuple().
 // TypeError 5132: (166-182): Different number of arguments in return statement than in returns declaration.
 // TypeError 5547: (229-231): Empty tuple on the left hand side.
 // TypeError 5547: (401-404): Empty tuple on the left hand side.
