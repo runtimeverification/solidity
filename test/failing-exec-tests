@@ -1155,7 +1155,6 @@
 -t !smtCheckerTests/types/address_balance
 -t !smtCheckerTests/types/address_call
 -t !smtCheckerTests/types/address_delegatecall
--t !smtCheckerTests/types/address_staticcall
 -t !smtCheckerTests/types/address_transfer
 -t !smtCheckerTests/types/address_transfer_2
 -t !smtCheckerTests/types/address_transfer_insufficient
