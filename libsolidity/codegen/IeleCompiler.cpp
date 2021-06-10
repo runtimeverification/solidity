@@ -4776,7 +4776,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     solAssert(ExprValue,
               "IeleCompiler: failed to compile base expression for member "
               "access.");
-    if (member == "call" || member == "callcode" || member == "delegatecall") {
+    if (member == "call" || member == "callcode" || member == "delegatecall" ||
+        member == "staticcall") {
     // cannot be invoked in iele, so we don't need to create a result.
     } else if (member == "transfer" || member == "send") {
       ExprValue = appendTypeConversion(ExprValue,

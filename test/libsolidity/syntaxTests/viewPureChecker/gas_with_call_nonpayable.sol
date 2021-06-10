@@ -8,4 +8,4 @@ contract C {
 	}
 }
 // ----
-// TypeError 6198: (90-109): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 6198: (90-96): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

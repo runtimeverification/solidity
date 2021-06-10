@@ -4,4 +4,4 @@ contract test {
     }
 }
 // ----
-// TypeError 2256: (55-77): "callcode" has been deprecated in favour of "delegatecall".
+// TypeError 6198: (55-77): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

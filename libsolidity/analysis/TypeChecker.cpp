@@ -1809,14 +1809,6 @@ void TypeChecker::typeCheckFunctionCall(
 			"\"staticcall\" is not supported by the VM version."
 		);
 
-	if (
-		_functionType->kind() == FunctionType::Kind::BareCall ||
-		_functionType->kind() == FunctionType::Kind::BareCallCode ||
-		_functionType->kind() == FunctionType::Kind::BareDelegateCall ||
-		_functionType->kind() == FunctionType::Kind::BareStaticCall
-	)
-		m_errorReporter.typeError(6198_error, _functionCall.location(), "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
-
 	// Perform standard function call type checking
 	typeCheckFunctionGeneralChecks(_functionCall, _functionType);
 }
@@ -2828,6 +2820,14 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 				if (contractType && contractType->isSuper())
 					requiredLookup = VirtualLookup::Super;
 			}
+
+		if (
+			funType->kind() == FunctionType::Kind::BareCall ||
+			funType->kind() == FunctionType::Kind::BareCallCode ||
+			funType->kind() == FunctionType::Kind::BareDelegateCall ||
+			funType->kind() == FunctionType::Kind::BareStaticCall
+		)
+			m_errorReporter.typeError(6198_error, _memberAccess.location(), "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 	}
 
 	annotation.requiredLookup = requiredLookup;

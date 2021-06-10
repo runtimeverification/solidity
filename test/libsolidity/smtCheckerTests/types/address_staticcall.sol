@@ -18,4 +18,4 @@ contract C
 // ====
 // EVMVersion: >spuriousDragon
 // ----
-// TypeError 6198: (244-262): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 6198: (244-256): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
