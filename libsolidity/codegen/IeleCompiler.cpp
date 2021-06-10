@@ -996,24 +996,39 @@ bool IeleCompiler::visit(const Return &returnStatement) {
   llvm::SmallVector<IeleRValue *, 4> Values;
   compileTuple(*returnExpr, Values);
 
-  llvm::SmallVector<IeleRValue *, 4> ReturnValues;
-
-  TypePointers returnTypes = FunctionType(*CompilingFunctionASTNode).returnParameterTypes();
+  TypePointer sourceType = returnExpr->annotation().type;
+  TypePointers LHSTypes = FunctionType(*CompilingFunctionASTNode).returnParameterTypes();
   
-  appendTypeConversions(ReturnValues, Values, returnExpr->annotation().type, returnTypes);
-
-  llvm::SmallVector<IeleRValue *, 4> EncodedReturnValues;
-  for (unsigned i = 0; i < ReturnValues.size(); i++) {
-    IeleRValue *Value = ReturnValues[i];
-    TypePointer type = returnTypes[i];
-    if (CompilingFunctionASTNode->isPublic() && !hasTwoFunctions(FunctionType(*CompilingFunctionASTNode), CompilingFunctionASTNode->isConstructor(), false) && !contractFor(CompilingFunctionASTNode)->isLibrary()) {
-      Value = encoding(Value, type);
-    }
-    EncodedReturnValues.push_back(Value);
+  TypePointers RHSTypes;
+  if (const TupleType *tupleType = dynamic_cast<const TupleType *>(sourceType)) {
+    RHSTypes = tupleType->components();
+  } else {
+    RHSTypes = TypePointers{sourceType};
   }
 
-  for (unsigned i = 0; i < EncodedReturnValues.size(); ++i) {
-    CompilingFunctionReturnParameters[i]->write(EncodedReturnValues[i], CompilingBlock);
+  solAssert(Values.size() == RHSTypes.size(),
+            "IeleCompiler: Missing value in tuple in return expression");
+
+  solAssert(LHSTypes.size() == RHSTypes.size(),
+            "IeleCompiler: Missing value in tuple in return expression");
+
+  for (unsigned i = 0; i < Values.size(); ++i) {
+    IeleLValue *LHSValue = CompilingFunctionReturnParameters[i];
+    TypePointer LHSType = LHSTypes[i];
+    TypePointer RHSType = RHSTypes[i];
+    IeleRValue *RHSValue = Values[i];
+    RHSValue = appendTypeConversion(RHSValue, RHSType, LHSType);
+
+    // Assign to RHS.
+    RHSType = RHSType->mobileType();
+    if (shouldCopyStorageToStorage(*LHSType, LHSValue, *RHSType))
+      appendCopyFromStorageToStorage(LHSValue, LHSType, RHSValue, RHSType);
+    else if (shouldCopyMemoryToStorage(*LHSType, LHSValue, *RHSType))
+      appendCopyFromMemoryToStorage(LHSValue, LHSType, RHSValue, RHSType);
+    else if (shouldCopyMemoryToMemory(*LHSType, LHSValue, *RHSType))
+      appendCopyFromMemoryToMemory(LHSValue, LHSType, RHSValue, RHSType);
+    else
+      LHSValue->write(RHSValue, CompilingBlock);
   }
 
   connectWithUnconditionalJump(CompilingBlock, ReturnBlocks.top());
@@ -1339,7 +1354,15 @@ bool IeleCompiler::visit(
         RHSValue = appendTypeConversion(RHSValue, RHSType, LHSType);
 
         // Assign to RHS.
-        LHSValue->write(RHSValue, CompilingBlock);
+        RHSType = RHSType->mobileType();
+        if (shouldCopyStorageToStorage(*LHSType, LHSValue, *RHSType))
+          appendCopyFromStorageToStorage(LHSValue, LHSType, RHSValue, RHSType);
+        else if (shouldCopyMemoryToStorage(*LHSType, LHSValue, *RHSType))
+          appendCopyFromMemoryToStorage(LHSValue, LHSType, RHSValue, RHSType);
+        else if (shouldCopyMemoryToMemory(*LHSType, LHSValue, *RHSType))
+          appendCopyFromMemoryToMemory(LHSValue, LHSType, RHSValue, RHSType);
+        else
+          LHSValue->write(RHSValue, CompilingBlock);
       }
     }
   } else {
@@ -6966,8 +6989,8 @@ bool IeleCompiler::shouldCopyMemoryToStorage(const Type &ToType, const IeleLValu
 
 bool IeleCompiler::shouldCopyMemoryToMemory(const Type &ToType, const IeleLValue *To,
                                              const Type &FromType) const {
-  return dynamic_cast<const ReadOnlyLValue *>(To) &&
-         (FromType.dataStoredIn(DataLocation::Memory) ||
+  return ((dynamic_cast<const ReadOnlyLValue *>(To) &&
+             FromType.dataStoredIn(DataLocation::Memory)) ||
           FromType.dataStoredIn(DataLocation::CallData)) &&
          (ToType.dataStoredIn(DataLocation::Memory) ||
           ToType.dataStoredIn(DataLocation::CallData));
