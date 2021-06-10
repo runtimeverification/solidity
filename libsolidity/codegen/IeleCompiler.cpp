@@ -5075,6 +5075,7 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
     break;
   }
   }
+
   // First compute the offset from the start of the array.
   iele::IeleLocalVariable *OffsetValue =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
@@ -5102,7 +5103,8 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
           llvm::cast<iele::IeleLocalVariable>(SizeValue), ExprValue,
           CompilingBlock);
   } else {
-    SizeValue = iele::IeleIntConstant::Create(&Context, size);
+    bigint sizeInElements = size / elementSize;
+    SizeValue = iele::IeleIntConstant::Create(&Context, sizeInElements);
   }
   // Then check for out-of-bounds access.
   iele::IeleLocalVariable *OutOfRangeValue =
