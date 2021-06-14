@@ -1581,7 +1581,6 @@
 -t !syntaxTests/multiSource/multiple_imports_same_function
 -t !syntaxTests/multiSource/reimport_imported_function
 -t !syntaxTests/multiSource/two_imports_same_function
--t !syntaxTests/multiVariableDeclaration/multiVariableDeclarationInvalidType
 -t !syntaxTests/nameAndTypeResolution/025_comparison_of_mapping_types
 -t !syntaxTests/nameAndTypeResolution/152_array_copy_with_different_types1
 -t !syntaxTests/nameAndTypeResolution/156_array_copy_with_different_types_dynamic_static
