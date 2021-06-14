@@ -5,4 +5,3 @@ contract C {
     }
 }
 // ----
-// TypeError 3390: (77-82): Invalid rational number.
