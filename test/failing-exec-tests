@@ -1587,7 +1587,6 @@
 -t !syntaxTests/parsing/mapping_in_struct
 -t !syntaxTests/receiveEther/msg_data_in_receive
 -t !syntaxTests/smoke_test
--t !syntaxTests/specialFunctions/abi_functions_member_access
 -t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_memory
 -t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_storage
 -t !syntaxTests/structs/recursion/struct_definition_recursion_via_mapping
