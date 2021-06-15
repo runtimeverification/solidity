@@ -4769,6 +4769,16 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else if (member == "blockhash")
       CompilingExpressionResult.push_back(IeleRValue::Create({}));
+    else if (member == "encode")
+      CompilingExpressionResult.push_back(IeleRValue::Create({}));
+    else if (member == "encodePacked")
+      CompilingExpressionResult.push_back(IeleRValue::Create({}));
+    else if (member == "decode")
+      CompilingExpressionResult.push_back(IeleRValue::Create({}));
+    else if (member == "encodeWithSelector")
+      solAssert(false, "IeleCompiler: member not supported in IELE");
+    else if (member == "encodeWithSignature")
+      solAssert(false, "IeleCompiler: member not supported in IELE");
     else
       solAssert(false, "IeleCompiler: Unknown magic member.");
     break;
