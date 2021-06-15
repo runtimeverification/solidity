@@ -5,4 +5,4 @@ contract C {
     }
 }
 // ----
-// TypeError 9563: (78-85): Invalid mobile type.
+// TypeError 7407: (76-87): Type uint[1] memory is not implicitly convertible to expected type tuple(uint,).

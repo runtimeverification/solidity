@@ -8,8 +8,4 @@ contract C {
     }
 }
 // ----
-// DeclarationError 4113: (74-79): The identifier name "super" is reserved.
-// DeclarationError 3859: (74-79): This declaration shadows a declaration outside the inline assembly block.
-// DeclarationError 4113: (101-105): The identifier name "this" is reserved.
-// DeclarationError 3859: (101-105): This declaration shadows a declaration outside the inline assembly block.
-// DeclarationError 4113: (127-128): The identifier name "_" is reserved.
+// SyntaxError 1184: (47-143): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

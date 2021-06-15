@@ -476,7 +476,12 @@ BOOST_AUTO_TEST_CASE(address_staticcall_value)
 				}
 			}
 		)";
-		CHECK_ERROR(sourceCode, TypeError, "Member \"value\" is only available for payable functions.");
+	CHECK_ERROR_ALLOW_MULTI(
+		sourceCode, TypeError,
+		(std::vector<std::string>{
+			"Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md",
+			"Member \"value\" is only available for payable functions."
+	}));
 	}
 }
 

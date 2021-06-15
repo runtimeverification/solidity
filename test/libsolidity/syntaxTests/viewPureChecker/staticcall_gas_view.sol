@@ -9,4 +9,4 @@ contract C {
 // ====
 // EVMVersion: >=byzantium
 // ----
-// TypeError 6198: (207-232): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 6198: (207-219): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
