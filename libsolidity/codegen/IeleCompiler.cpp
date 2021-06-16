@@ -1953,7 +1953,8 @@ IeleLValue *IeleCompiler::makeLValue(
   }
 
   if (type->isValueType() ||
-      (type->isDynamicallySized() && Loc == DataLocation::Memory)) {
+      (type->isDynamicallySized() &&
+       (Loc == DataLocation::Memory || Loc == DataLocation::CallData))) {
     if (auto arrayType = dynamic_cast<const ArrayType *>(type)) {
       if (arrayType->isByteArray()) {
         return ReadOnlyLValue::Create(IeleRValue::Create(Address));
