@@ -187,7 +187,6 @@
 -t !semanticTests/array/copying/array_copy_cleanup_uint40
 -t !semanticTests/array/copying/array_copy_clear_storage
 -t !semanticTests/array/copying/array_copy_clear_storage_packed
--t !semanticTests/array/copying/array_nested_calldata_to_memory
 -t !semanticTests/array/copying/array_nested_calldata_to_storage
 -t !semanticTests/array/copying/array_of_struct_calldata_to_memory
 -t !semanticTests/array/copying/array_of_struct_calldata_to_storage
@@ -195,12 +194,7 @@
 -t !semanticTests/array/copying/bytes_storage_to_storage
 -t !semanticTests/array/copying/calldata_2d_bytes_to_memory
 -t !semanticTests/array/copying/calldata_2d_bytes_to_memory_2
--t !semanticTests/array/copying/calldata_array_dynamic_to_storage
 -t !semanticTests/array/copying/calldata_array_static_to_memory
--t !semanticTests/array/copying/calldata_bytes_array_to_memory
--t !semanticTests/array/copying/calldata_bytes_to_storage
--t !semanticTests/array/copying/calldata_dynamic_array_to_memory
--t !semanticTests/array/copying/calldata_nested_array_copy_to_memory
 -t !semanticTests/array/copying/copy_byte_array_in_struct_to_storage
 -t !semanticTests/array/copying/copy_byte_array_to_storage
 -t !semanticTests/array/copying/copy_removes_bytes_data
@@ -1585,7 +1579,6 @@
 -t !syntaxTests/parsing/array_range_nested
 -t !syntaxTests/parsing/declaring_fixed_and_ufixed_variables
 -t !syntaxTests/parsing/mapping_in_struct
--t !syntaxTests/receiveEther/msg_data_in_receive
 -t !syntaxTests/smoke_test
 -t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_memory
 -t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_storage
