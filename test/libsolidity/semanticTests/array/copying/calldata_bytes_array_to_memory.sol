@@ -4,7 +4,7 @@ pragma abicoder               v2;
 contract C {
     function f(bytes[] calldata a)
         external
-        returns (uint256, uint256, bytes memory)
+        returns (uint, uint, bytes memory)
     {
         bytes memory m = a[0];
         return (a.length, m.length, m);
@@ -13,8 +13,8 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(bytes[]): 0x20, 0x1, 0x20, 0x2, hex"6162000000000000000000000000000000000000000000000000000000000000" -> 0x1, 0x2, 0x60, 0x2, hex"6162000000000000000000000000000000000000000000000000000000000000"
-// f(bytes[]): 0x20, 0x1, 0x20, 0x20, hex"7878787878787878787878787878787878787878787878787878787878787878" -> 0x1, 0x20, 0x60, 0x20, hex"7878787878787878787878787878787878787878787878787878787878787878"
-// f(bytes[]): 0x20, 0x1, 0x20, 0x20, hex"7800000000000000000000000000000000000000000000000000000000000061" -> 0x1, 0x20, 0x60, 0x20, hex"7800000000000000000000000000000000000000000000000000000000000061"
-// f(bytes[]): 0x20, 0x1, 0x20, 0x20, hex"6100000000000000000000000000000000000000000000000000000000000078" -> 0x1, 0x20, 0x60, 0x20, hex"6100000000000000000000000000000000000000000000000000000000000078"
-// f(bytes[]): 0x20, 0x1, 0x20, 0x20, hex"616d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d78" -> 0x1, 0x20, 0x60, 0x20, hex"616d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d78"
+// f(bytes[]): refargs {0x01, 0x01, "ab" } -> 0x1, 0x2, "ab"
+// f(bytes[]): refargs {0x01, 0x01, "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN" } -> 0x1, 0x20, "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
+// f(bytes[]): refargs {0x01, 0x01, "\x78\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x61" } -> 0x1, 0x20, "\x78\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x61"
+// f(bytes[]): refargs {0x01, 0x01, "\x61\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x78" } -> 0x1, 0x20, "\x61\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x78"
+// f(bytes[]): refargs {0x01, 0x01, "\x61\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x78" } -> 0x1, 0x20, "\x61\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x6d\x78"

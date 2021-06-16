@@ -1,8 +1,8 @@
 pragma abicoder               v2;
 
 contract C {
-  uint256[] s;
-  function f(uint256[] calldata data) external returns (uint) {
+  uint[] s;
+  function f(uint[] calldata data) external returns (uint) {
     s = data;
     return s[0];
   }
@@ -10,4 +10,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(uint256[]): 0x20, 0x03, 0x1, 0x2, 0x3 -> 0x1
+// f(uint[]): dynarray 0 [ 1, 2, 3 ] -> 1

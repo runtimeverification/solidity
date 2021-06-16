@@ -2,4 +2,4 @@ contract C {
     receive() external payable { msg.data; }
 }
 // ----
-// TypeError 7139: (46-54): "msg.data" cannot be used inside of "receive" function.
+// TypeError 2699: (46-54): msg.data is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
