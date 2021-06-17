@@ -371,6 +371,7 @@ private:
   bool isMostDerived(const VariableDeclaration *d) const;
   const ContractDefinition *contractFor(const Declaration *d) const;
   const FunctionDefinition *superFunction(const FunctionDefinition &function, const ContractDefinition &contract);
+  const ContractDefinition *superContract(const ContractDefinition &contract);
   const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function);
   const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function, std::vector<const ContractDefinition *>::iterator it);
 
