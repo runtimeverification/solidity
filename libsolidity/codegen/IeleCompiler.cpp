@@ -1953,7 +1953,8 @@ IeleLValue *IeleCompiler::makeLValue(
   }
 
   if (type->isValueType() ||
-      (type->isDynamicallySized() && Loc == DataLocation::Memory)) {
+      (type->isDynamicallySized() &&
+       (Loc == DataLocation::Memory || Loc == DataLocation::CallData))) {
     if (auto arrayType = dynamic_cast<const ArrayType *>(type)) {
       if (arrayType->isByteArray()) {
         return ReadOnlyLValue::Create(IeleRValue::Create(Address));
@@ -4251,7 +4252,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
 
     // write the pushed value (if available)
     if (PushedValue) {
-      TypePointer RHSType = arguments.front()->annotation().type->mobileType();
+      TypePointer RHSType = arguments.front()->annotation().type;
+      PushedValue = appendTypeConversion(PushedValue, RHSType, elementType);
+      RHSType = RHSType->mobileType();
       if (shouldCopyStorageToStorage(*elementType, ElementLValue, *RHSType))
         appendCopyFromStorageToStorage(ElementLValue, elementType, PushedValue, RHSType);
       else if (shouldCopyMemoryToStorage(*elementType, ElementLValue, *RHSType))
@@ -4767,6 +4770,16 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else if (member == "blockhash")
       CompilingExpressionResult.push_back(IeleRValue::Create({}));
+    else if (member == "encode")
+      CompilingExpressionResult.push_back(IeleRValue::Create({}));
+    else if (member == "encodePacked")
+      CompilingExpressionResult.push_back(IeleRValue::Create({}));
+    else if (member == "decode")
+      CompilingExpressionResult.push_back(IeleRValue::Create({}));
+    else if (member == "encodeWithSelector")
+      solAssert(false, "IeleCompiler: member not supported in IELE");
+    else if (member == "encodeWithSignature")
+      solAssert(false, "IeleCompiler: member not supported in IELE");
     else
       solAssert(false, "IeleCompiler: Unknown magic member.");
     break;

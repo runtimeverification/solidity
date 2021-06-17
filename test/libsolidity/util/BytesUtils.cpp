@@ -180,6 +180,12 @@ bytes BytesUtils::convertRefArgs(vector<pair<string, Token>> const& _literal)
 			result = encoded + result;
 			break;
 		}
+		case Token::String:
+		{
+			bytes encoded = solidity::test::ExecutionFramework::encodeDyn(p.first);
+			result = encoded + result;
+			break;
+		}
 		case Token::Number:
 		{
 			bytes encoded = solidity::test::ExecutionFramework::encodeLog(bigint(p.first));

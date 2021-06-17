@@ -1942,11 +1942,6 @@ void TypeChecker::typeCheckABIEncodeFunctions(
 		return;
 	}
 
-	if (_functionType->kind() == FunctionType::Kind::ABIEncodeWithSelector)
-		m_errorReporter.typeError(2038_error, _functionCall.location(), "abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
-	if (_functionType->kind() == FunctionType::Kind::ABIEncodeWithSignature)
-		m_errorReporter.typeError(1379_error, _functionCall.location(), "abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
-
 	// Perform standard function call type checking
 	typeCheckFunctionGeneralChecks(_functionCall, _functionType);
 
@@ -2828,6 +2823,12 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 			funType->kind() == FunctionType::Kind::BareStaticCall
 		)
 			m_errorReporter.typeError(6198_error, _memberAccess.location(), "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+
+		if (funType->kind() == FunctionType::Kind::ABIEncodeWithSelector)
+			m_errorReporter.typeError(2038_error, _memberAccess.location(), "abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+		if (funType->kind() == FunctionType::Kind::ABIEncodeWithSignature)
+			m_errorReporter.typeError(1379_error, _memberAccess.location(), "abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+
 	}
 
 	annotation.requiredLookup = requiredLookup;
