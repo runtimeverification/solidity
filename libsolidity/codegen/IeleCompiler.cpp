@@ -2239,7 +2239,8 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
   LeftOperandValue = appendTypeConversion(LeftOperandValue,
     binaryOperation.leftExpression().annotation().type,
     commonType);
-  if (!TokenTraits::isShiftOp(binaryOperation.getOperator())) {
+  if (!TokenTraits::isShiftOp(binaryOperation.getOperator()) &&
+      binaryOperation.getOperator() != Token::Exp) {
     RightOperandValue = appendTypeConversion(RightOperandValue,
       binaryOperation.rightExpression().annotation().type,
       commonType);
