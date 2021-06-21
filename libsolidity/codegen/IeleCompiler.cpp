@@ -4777,7 +4777,11 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       bigint contractName_integer = bigint(toHex(asBytes(contractName), HexPrefix::Add));
       iele::IeleIntConstant *ContractNameValue =
         iele::IeleIntConstant::Create(&Context, contractName_integer, true);
-      CompilingExpressionResult.push_back(IeleRValue::Create(ContractNameValue));
+      IeleRValue *ConvertedValue =
+        appendTypeConversion(IeleRValue::Create(ContractNameValue),
+                             TypeProvider::stringLiteral(contractName),
+                             memberAccess.annotation().type);
+      CompilingExpressionResult.push_back(ConvertedValue);
     } else if (member == "interfaceId") {
       TypePointer arg = dynamic_cast<const MagicType *>(actualType)->typeArgument();
       ContractDefinition const& contract =
