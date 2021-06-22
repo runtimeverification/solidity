@@ -12,4 +12,4 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// test() -> 0xff, 0xff
+// test() -> 0x00ff, 0x00ff
