@@ -1,12 +1,12 @@
 contract Test {
     function basic() public pure {
-        uint uintMax = type(uint).max;
+        uint256 uintMax = type(uint256).max;
         uintMax;
-        int intMax = type(int).max;
+        int256 intMax = type(int256).max;
         intMax;
-        uint uintMin = type(uint).min;
+        uint256 uintMin = type(uint256).min;
         uintMin;
-        int intMin = type(int).min;
+        int256 intMin = type(int256).min;
         intMin;
     }
 }

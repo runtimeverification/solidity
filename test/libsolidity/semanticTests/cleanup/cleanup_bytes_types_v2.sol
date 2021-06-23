@@ -14,4 +14,4 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(bytes2,uint16): "abc", 0x40102 -> FAILURE # We input longer data on purpose. #
+// f(bytes2,uint16): "abc", 0x40102 -> FAILURE, 255 

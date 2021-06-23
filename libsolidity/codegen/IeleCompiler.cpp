@@ -153,6 +153,17 @@ const FunctionDefinition *IeleCompiler::superFunction(const FunctionDefinition &
   return resolveVirtualFunction(function, it);
 }
 
+const ContractDefinition *IeleCompiler::superContract(const ContractDefinition &contract) {
+  solAssert(!CompilingContractInheritanceHierarchy.empty(), "IeleCompiler: current contract not set.");
+
+  auto it = find(CompilingContractInheritanceHierarchy.begin(), CompilingContractInheritanceHierarchy.end(), &contract);
+  solAssert(it != CompilingContractInheritanceHierarchy.end(), "Contract not found in inheritance hierarchy.");
+  it++;
+  solAssert(it != CompilingContractInheritanceHierarchy.end(), "Base not found in inheritance hierarchy.");
+
+  return *it;
+}
+
 static bool hasTwoFunctions(const FunctionType &function, bool isConstructor, bool isLibrary) {
   if (isConstructor || isLibrary) {
     return false;
@@ -2228,7 +2239,8 @@ bool IeleCompiler::visit(const BinaryOperation &binaryOperation) {
   LeftOperandValue = appendTypeConversion(LeftOperandValue,
     binaryOperation.leftExpression().annotation().type,
     commonType);
-  if (!TokenTraits::isShiftOp(binaryOperation.getOperator())) {
+  if (!TokenTraits::isShiftOp(binaryOperation.getOperator()) &&
+      binaryOperation.getOperator() != Token::Exp) {
     RightOperandValue = appendTypeConversion(RightOperandValue,
       binaryOperation.rightExpression().annotation().type,
       commonType);
@@ -4396,8 +4408,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     break;
   }
   case FunctionType::Kind::MetaType:
-    solAssert(false, "IeleCompiler: Function calls of kind MetaType should not "
-                     "be reached by the visitor.");
+    CompilingExpressionResult.push_back(IeleRValue::Create({}));
     break;
   default:
       solAssert(false, "IeleCompiler: Invalid function type.");
@@ -4756,6 +4767,22 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       iele::IeleInstruction::CreateAssign(
           TypeSizeValue, MinMaxConstant, CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create(TypeSizeValue));
+    } else if (member == "name") {
+      TypePointer arg = dynamic_cast<const MagicType *>(actualType)->typeArgument();
+      auto const& contractType = dynamic_cast<ContractType const&>(*arg);
+      ContractDefinition const& contract = contractType.isSuper() ?
+        *superContract(dynamic_cast<const ContractDefinition &>(contractType.contractDefinition())) :
+        contractType.contractDefinition();
+      std::string contractName = contract.name();
+      std::reverse(contractName.begin(), contractName.end());
+      bigint contractName_integer = bigint(toHex(asBytes(contractName), HexPrefix::Add));
+      iele::IeleIntConstant *ContractNameValue =
+        iele::IeleIntConstant::Create(&Context, contractName_integer, true);
+      IeleRValue *ConvertedValue =
+        appendTypeConversion(IeleRValue::Create(ContractNameValue),
+                             TypeProvider::stringLiteral(contractName),
+                             memberAccess.annotation().type);
+      CompilingExpressionResult.push_back(ConvertedValue);
     } else if (member == "interfaceId") {
       TypePointer arg = dynamic_cast<const MagicType *>(actualType)->typeArgument();
       ContractDefinition const& contract =
