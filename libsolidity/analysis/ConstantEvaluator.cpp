@@ -58,12 +58,6 @@ bool fitsPrecisionExp(bigint const& _base, bigint const& _exp)
 	return bitsNeeded <= bitsMax;
 }
 
-/// Checks whether _mantissa * (2 ** _expBase10) fits into 4096 bits.
-bool fitsPrecisionBase2(bigint const& _mantissa, uint32_t _expBase2)
-{
-	return fitsPrecisionBaseX(_mantissa, 1.0, _expBase2);
-}
-
 }
 
 optional<rational> ConstantEvaluator::evaluateBinaryOperator(Token _operator, rational const& _left, rational const& _right)
@@ -131,7 +125,10 @@ optional<rational> ConstantEvaluator::evaluateBinaryOperator(Token _operator, ra
 			uint32_t absExp = bigint(abs(exp)).convert_to<uint32_t>();
 
 			if (!fitsPrecisionExp(abs(_left.numerator()), absExp) || !fitsPrecisionExp(abs(_left.denominator()), absExp))
-				return nullopt;
+			{
+				if (_left.denominator() != 1)
+					return nullopt;
+			}
 
 			static auto const optimizedPow = [](bigint const& _base, uint32_t _exponent) -> bigint {
 				if (_base == 1)
@@ -166,8 +163,6 @@ optional<rational> ConstantEvaluator::evaluateBinaryOperator(Token _operator, ra
 		else
 		{
 			uint32_t exponent = _right.numerator().convert_to<uint32_t>();
-			if (!fitsPrecisionBase2(abs(_left.numerator()), exponent))
-				return nullopt;
 			return _left.numerator() * boost::multiprecision::pow(bigint(2), exponent);
 		}
 		break;
