@@ -6,5 +6,5 @@ contract C {
 // ====
 // EVMVersion: >=byzantium
 // ----
+// TypeError 6198: (56-78): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
 // TypeError 2842: (56-96): Cannot set option "value" for staticcall.
-// Warning 9302: (56-100): Return value of low-level calls not used.
