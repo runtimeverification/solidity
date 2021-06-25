@@ -1513,9 +1513,6 @@
 -t !syntaxTests/types/address/codehash
 -t !syntaxTests/types/library_to_address
 -t !syntaxTests/types/magic_block_istanbul
--t !syntaxTests/types/rational_number_exp_limit
--t !syntaxTests/types/rational_number_exp_limit_fail
--t !syntaxTests/types/rational_number_exp_unlimited
 -t !syntaxTests/variableDeclaration/if
 -t !syntaxTests/viewPureChecker/address_constantinople
 -t !syntaxTests/viewPureChecker/assembly_chainid_not_pure

@@ -22,22 +22,27 @@ contract c {
     }
 }
 // ----
-// TypeError: (74-105): Type uint is not implicitly convertible to expected type int256.
-// TypeError: (119-156): Type uint is not implicitly convertible to expected type int256.
-// TypeError: (170-206): Operator ** not compatible with types int_const 4 and int_const -179...(302 digits omitted)...7216
-// TypeError: (320-331): Operator ** not compatible with types int_const 2 and int_const 1000...(1226 digits omitted)...0000
-// TypeError: (345-357): Operator ** not compatible with types int_const -2 and int_const 1000...(1226 digits omitted)...0000
-// TypeError: (371-383): Operator ** not compatible with types int_const 2 and int_const -100...(1227 digits omitted)...0000
-// TypeError: (397-410): Operator ** not compatible with types int_const -2 and int_const -100...(1227 digits omitted)...0000
-// TypeError: (424-435): Type uint is not implicitly convertible to expected type int256.
-// TypeError: (449-461): Type uint is not implicitly convertible to expected type int256.
-// TypeError: (475-487): Type uint is not implicitly convertible to expected type int256.
-// TypeError: (501-514): Type uint is not implicitly convertible to expected type int256.
-// TypeError: (528-544): Operator ** not compatible with types int_const 1000...(1226 digits omitted)...0000 and int_const 1000...(1226 digits omitted)...0000
-// TypeError: (528-544): Type int_const 1000...(1226 digits omitted)...0000 is not implicitly convertible to expected type int256.
-// TypeError: (558-575): Operator ** not compatible with types int_const 1000...(1226 digits omitted)...0000 and int_const -100...(1227 digits omitted)...0000
-// TypeError: (558-575): Type int_const 1000...(1226 digits omitted)...0000 is not implicitly convertible to expected type int256.
-// TypeError: (589-606): Operator ** not compatible with types int_const -100...(1227 digits omitted)...0000 and int_const 1000...(1226 digits omitted)...0000
-// TypeError: (589-606): Type int_const -100...(1227 digits omitted)...0000 is not implicitly convertible to expected type int256.
-// TypeError: (620-638): Operator ** not compatible with types int_const -100...(1227 digits omitted)...0000 and int_const -100...(1227 digits omitted)...0000
-// TypeError: (620-638): Type int_const -100...(1227 digits omitted)...0000 is not implicitly convertible to expected type int256.
+// TypeError 2271: (89-105): Operator ** not compatible with types int_const 4 and int_const 1340...(147 digits omitted)...4096
+// TypeError 2271: (74-105): Operator ** not compatible with types int_const 4 and int_const 4294967296
+// TypeError 2271: (140-156): Operator ** not compatible with types int_const 4 and int_const 1340...(147 digits omitted)...4096
+// TypeError 2271: (125-156): Operator ** not compatible with types int_const 4 and int_const 1157...(70 digits omitted)...9936
+// TypeError 2271: (188-204): Operator ** not compatible with types int_const 4 and int_const 1340...(147 digits omitted)...4096
+// TypeError 2271: (170-206): Operator ** not compatible with types int_const 4 and int_const -115...(71 digits omitted)...9936
+// TypeError 2271: (320-331): Operator ** not compatible with types int_const 2 and int_const 1000...(1226 digits omitted)...0000
+// TypeError 2271: (345-357): Operator ** not compatible with types int_const -2 and int_const 1000...(1226 digits omitted)...0000
+// TypeError 2271: (371-383): Operator ** not compatible with types int_const 2 and int_const -100...(1227 digits omitted)...0000
+// TypeError 2271: (397-410): Operator ** not compatible with types int_const -2 and int_const -100...(1227 digits omitted)...0000
+// TypeError 7407: (424-435): Type uint is not implicitly convertible to expected type int256.
+// TypeError 7407: (449-461): Type uint is not implicitly convertible to expected type int256.
+// TypeError 2271: (475-487): Operator ** not compatible with types int_const 1000...(1226 digits omitted)...0000 and int_const -2. Precision of rational constants is limited to 4096 bits.
+// TypeError 7407: (475-487): Type int_const 1000...(1226 digits omitted)...0000 is not implicitly convertible to expected type int256. Literal is too large to fit in int256.
+// TypeError 2271: (501-514): Operator ** not compatible with types int_const -100...(1227 digits omitted)...0000 and int_const -2. Precision of rational constants is limited to 4096 bits.
+// TypeError 7407: (501-514): Type int_const -100...(1227 digits omitted)...0000 is not implicitly convertible to expected type int256. Literal is too large to fit in int256.
+// TypeError 2271: (528-544): Operator ** not compatible with types int_const 1000...(1226 digits omitted)...0000 and int_const 1000...(1226 digits omitted)...0000
+// TypeError 7407: (528-544): Type int_const 1000...(1226 digits omitted)...0000 is not implicitly convertible to expected type int256. Literal is too large to fit in int256.
+// TypeError 2271: (558-575): Operator ** not compatible with types int_const 1000...(1226 digits omitted)...0000 and int_const -100...(1227 digits omitted)...0000
+// TypeError 7407: (558-575): Type int_const 1000...(1226 digits omitted)...0000 is not implicitly convertible to expected type int256. Literal is too large to fit in int256.
+// TypeError 2271: (589-606): Operator ** not compatible with types int_const -100...(1227 digits omitted)...0000 and int_const 1000...(1226 digits omitted)...0000
+// TypeError 7407: (589-606): Type int_const -100...(1227 digits omitted)...0000 is not implicitly convertible to expected type int256. Literal is too large to fit in int256.
+// TypeError 2271: (620-638): Operator ** not compatible with types int_const -100...(1227 digits omitted)...0000 and int_const -100...(1227 digits omitted)...0000
+// TypeError 7407: (620-638): Type int_const -100...(1227 digits omitted)...0000 is not implicitly convertible to expected type int256. Literal is too large to fit in int256.
