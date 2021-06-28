@@ -25,8 +25,8 @@ contract test {
 // EVMVersion: <byzantium
 // compileViaYul: also
 // ----
-// getChoiceExp(uint256): 3 -> FAILURE # These should throw #
-// getChoiceFromSigned(int256): -1 -> FAILURE
-// getChoiceFromMax() -> FAILURE
+// getChoiceExp(uint256): 3 -> FAILURE , 255 # These should throw #
+// getChoiceFromSigned(int256): -1 -> FAILURE, 255
+// getChoiceFromMax() -> FAILURE, 255
 // getChoiceExp(uint256): 2 -> 2 # These should work #
 // getChoiceExp(uint256): 0 -> 0

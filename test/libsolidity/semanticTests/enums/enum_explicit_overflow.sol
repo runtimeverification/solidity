@@ -14,7 +14,7 @@ contract test {
     }
 
     function getChoiceFromMax() public returns (uint d) {
-        choice = ActionChoices(type(uint).max);
+        choice = ActionChoices(type(uint256).max);
         d = uint(choice);
     }
 
@@ -26,8 +26,8 @@ contract test {
 // EVMVersion: >=byzantium
 // ----
 // getChoiceExp(uint): 2 -> 2
-// getChoiceExp(uint): 3 -> FAILURE, hex"4e487b71", 33 # These should throw #
-// getChoiceFromSigned(int): -1 -> FAILURE, hex"4e487b71", 33
-// getChoiceFromMax() -> FAILURE, hex"4e487b71", 33
+// getChoiceExp(uint): 3 -> FAILURE, 255 # These should throw #
+// getChoiceFromSigned(int): -1 -> FAILURE, 255
+// getChoiceFromMax() -> FAILURE, 255
 // getChoiceExp(uint): 2 -> 2 # These should work #
 // getChoiceExp(uint): 0 -> 0

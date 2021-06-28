@@ -269,8 +269,6 @@
 -t !semanticTests/ecrecover/failing_ecrecover_invalid_input_asm
 -t !semanticTests/ecrecover/failing_ecrecover_invalid_input_proper
 -t !semanticTests/empty_contract
--t !semanticTests/enums/enum_explicit_overflow
--t !semanticTests/enums/enum_explicit_overflow_homestead
 -t !semanticTests/enums/enum_with_256_members
 -t !semanticTests/exponentiation/signed_base
 -t !semanticTests/exponentiation/small_exp
@@ -563,10 +561,6 @@
 -t !semanticTests/types/mapping_enum_key_library_encoderV2
 -t !semanticTests/types/mapping_enum_key_v2
 -t !semanticTests/types/mapping_simple
--t !semanticTests/uninitializedFunctionPointer/invalidInConstructor
--t !semanticTests/uninitializedFunctionPointer/invalidStoredInConstructor
--t !semanticTests/uninitializedFunctionPointer/store2
--t !semanticTests/uninitializedFunctionPointer/storeInConstructor
 -t !semanticTests/variables/public_state_overridding_mapping_to_dynamic_struct
 -t !semanticTests/various/address_code
 -t !semanticTests/various/address_code_complex
