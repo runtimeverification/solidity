@@ -8,7 +8,7 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// a(uint256,uint256): 0, 0 -> FAILURE
-// a(uint256,uint256): 1, 0 -> 3
-// a(uint256,uint256): 1, 1 -> 4
-// a(uint256,uint256): 2, 0 -> FAILURE
+// a(uint,uint): 0, 0 -> FAILURE, 255
+// a(uint,uint): 1, 0 -> 3
+// a(uint,uint): 1, 1 -> 4
+// a(uint,uint): 2, 0 -> FAILURE, 255

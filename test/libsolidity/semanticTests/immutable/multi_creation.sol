@@ -21,7 +21,7 @@ contract C {
 		x = (new A()).f();
 		y = (new B()).f();
 	}
-	function f() public returns (uint256, uint, uint) {
+	function f() public returns (uint, uint, uint) {
 		return (a, (new A()).f(), (new B()).f());
 	}
 }
