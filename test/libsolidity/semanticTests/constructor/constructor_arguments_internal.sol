@@ -37,4 +37,4 @@ contract Main {
 // compileViaYul: also
 // ----
 // getFlag() -> true
-// getName() -> "abc"
+// getName() -> 0x616263

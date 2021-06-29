@@ -25,4 +25,4 @@ contract Creator {
 // ====
 // compileViaYul: also
 // ----
-// f(uint,bytes): 7, 0x40, 78, "abcdefghijklmnopqrstuvwxyzabcdef", "ghijklmnopqrstuvwxyzabcdefghijkl", "mnopqrstuvwxyz" -> 7, "h"
+// f(uint,bytes): 7, "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz" -> 7, 0x68
