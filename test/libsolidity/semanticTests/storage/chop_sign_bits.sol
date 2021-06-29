@@ -22,10 +22,10 @@ contract Test {
 // ====
 // compileViaYul: also
 // ----
-// x(uint256): 0 -> -1
-// x(uint256): 1 -> -2
-// y(uint256): 0 -> -5
-// y(uint256): 1 -> -6
-// f() -> 0x20, 2, -3, -4
-// g() -> -3, -4
+// x(uint): 0 -> -1
+// x(uint): 1 -> -2
+// y(uint): 0 -> -5
+// y(uint): 1 -> -6
+// f() -> dynarray 16 [ -3, -4 ]
+// g() -> array 16 [ -3, -4 ]
 // h(int8): -10 -> -10
