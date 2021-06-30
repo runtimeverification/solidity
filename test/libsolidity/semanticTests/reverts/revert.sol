@@ -11,5 +11,5 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f() -> FAILURE
+// f() -> FAILURE, 255
 // a() -> 42
