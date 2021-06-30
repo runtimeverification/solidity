@@ -19,7 +19,7 @@ contract test {
         h = new helper();
     }
 
-    function sendAmount(uint amount) public payable returns(uint256 bal) {
+    function sendAmount(uint256 amount) public payable returns(uint256 bal) {
         return h.getBalance{value: amount}();
     }
 
@@ -30,7 +30,7 @@ contract test {
         return true;
     }
 
-    function checkState() public returns(bool flagAfter, uint myBal) {
+    function checkState() public returns(bool flagAfter, uint256 myBal) {
         flagAfter = h.getFlag();
         myBal = address(this).balance;
     }
@@ -41,5 +41,5 @@ contract test {
 // ----
 // constructor(), 20 wei ->
 // sendAmount(uint256): 5 -> 5
-// outOfGas() -> FAILURE # call to helper should not succeed but amount should be transferred anyway #
+// outOfGas() -> FAILURE, 5 # call to helper should not succeed but amount should be transferred anyway #
 // checkState() -> false, 15

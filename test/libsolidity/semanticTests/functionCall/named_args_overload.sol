@@ -11,7 +11,7 @@ contract C {
     function f(uint a, uint b, uint c) public returns (uint) {
         return a+b+c;
     }
-    function call(uint num) public returns (uint256) {
+    function call(uint num) public returns (uint) {
         if (num == 0)
             return f();
         if (num == 1)
@@ -30,9 +30,9 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// call(uint256): 0 -> 0
-// call(uint256): 1 -> 1
-// call(uint256): 2 -> 3
-// call(uint256): 3 -> 6
-// call(uint256): 4 -> 8
-// call(uint256): 5 -> 500
+// call(uint): 0 -> 0
+// call(uint): 1 -> 1
+// call(uint): 2 -> 3
+// call(uint): 3 -> 6
+// call(uint): 4 -> 8
+// call(uint): 5 -> 500

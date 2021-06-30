@@ -1,5 +1,5 @@
 contract test {
-    function f(uint256[] calldata seq) external pure returns (uint256) {
+    function f(uint[] calldata seq) external pure returns (uint) {
         uint i = 0;
         uint sum = 0;
         while (i < seq.length)
@@ -26,6 +26,6 @@ contract test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(uint256[]): 32, 3, 1000, 1, 2 -> 3
-// f(uint256[]): 32, 3, 100, 500, 300 -> 600
-// f(uint256[]): 32, 11, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 111 -> 55
+// f(uint[]): dynarray 0 [ 1000, 1, 2 ] -> 3
+// f(uint[]): dynarray 0 [ 100, 500, 300 ] -> 600
+// f(uint[]): dynarray 0 [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 111 ] -> 55

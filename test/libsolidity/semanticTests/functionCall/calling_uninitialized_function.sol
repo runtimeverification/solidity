@@ -15,5 +15,5 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// intern() -> FAILURE, hex"4e487b71", 0x51 # This should throw exceptions #
-// extern() -> FAILURE
+// intern() -> FAILURE, 1 # This should throw exceptions #
+// extern() -> FAILURE, 1
