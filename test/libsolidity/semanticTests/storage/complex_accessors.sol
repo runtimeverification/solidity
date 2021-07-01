@@ -13,7 +13,7 @@ contract test {
 // ====
 // compileViaYul: also
 // ----
-// to_string_map(uint): 42 -> "24"
+// to_string_map(uint): 42 -> 0x32340000
 // to_bool_map(uint): 42 -> false
 // to_uint_map(uint): 42 -> 12
 // to_multiple_map(uint,uint): 42, 23 -> 31

@@ -10,8 +10,8 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(int32,uint32): 0xffffff99, 0x00 -> FAILURE
-// f(int32,uint32): 0xffffff99, 0x01 -> FAILURE
-// f(int32,uint32): 0xffffff99, 0x02 -> FAILURE
-// f(int32,uint32): 0xffffff99, 0x04 -> FAILURE
-// f(int32,uint32): 0xffffff99, 0x08 -> FAILURE
+// f(int32,uint32): 0x00ffffff99, 0x00 -> FAILURE, 255
+// f(int32,uint32): 0x00ffffff99, 0x01 -> FAILURE, 255
+// f(int32,uint32): 0x00ffffff99, 0x02 -> FAILURE, 255
+// f(int32,uint32): 0x00ffffff99, 0x04 -> FAILURE, 255
+// f(int32,uint32): 0x00ffffff99, 0x08 -> FAILURE, 255

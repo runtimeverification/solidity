@@ -1024,9 +1024,11 @@ TypeResult RationalNumberType::binaryOperatorResult(Token _operator, Type const*
 	else if (optional<rational> value = ConstantEvaluator::evaluateBinaryOperator(_operator, m_value, other.m_value))
 	{
 		// verify that numerator and denominator fit into 4096 bit after every operation
-		if (value->numerator() != 0 && max(boost::multiprecision::msb(abs(value->numerator())), boost::multiprecision::msb(abs(value->denominator()))) > 4096)
-			return TypeResult::err("Precision of rational constants is limited to 4096 bits.");
-
+		if (value->numerator() != 0 && max(boost::multiprecision::msb(abs(value->numerator())), boost::multiprecision::msb(abs(value->denominator()))) > 4096) {
+			if (value->denominator() != 1)
+				return TypeResult::err("Precision of rational constants is limited to 4096 bits.");
+			return (value >= 0) ? TypeProvider::uint() : TypeProvider::sint();
+		}
 		return TypeResult{TypeProvider::rationalNumber(*value)};
 	}
 	else

@@ -21,6 +21,6 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// use(uint16): 3 -> 0xfff9
-// result_in_constructor() -> 0xfffb
+// use(uint16): 3 -> 0x00fff9
+// result_in_constructor() -> 0x00fffb
 // other() -> 0x1fff

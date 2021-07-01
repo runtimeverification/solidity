@@ -18,4 +18,4 @@ contract C {
 // ----
 // constructor(): 3 ->
 // f() -> 84, 23
-// m(uint256): 3 -> 7
+// m(uint): 3 -> 7

@@ -1,5 +1,5 @@
 contract C {
-    function f(uint256 x) public returns (uint256) {
+    function f(uint x) public returns (uint) {
         return eval(g, x);
     }
 
@@ -7,7 +7,7 @@ contract C {
         return x(a);
     }
 
-    function g(uint256 x) public pure returns (uint256) {
+    function g(uint x) public pure returns (uint) {
         return x + 1;
     }
 }
@@ -15,4 +15,4 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(uint256): 7 -> 8
+// f(uint): 7 -> 8

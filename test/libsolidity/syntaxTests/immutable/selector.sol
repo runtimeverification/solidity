@@ -8,5 +8,4 @@ contract C {
     function readX() external view returns(uint) { return x; }
 }
 // ----
-// Warning 6133: (78-97): Statement has no effect.
-// Warning 5805: (78-82): "this" used in constructor. Note that external functions of a contract cannot be called while it is being constructed.
+// TypeError 2524: (78-97): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

@@ -1,9 +1,9 @@
 contract C {
-    function f(uint256 x) public returns (uint256) {
+    function f(uint x) public returns (uint) {
         return this.eval(this.g, x);
     }
 
-    function f2(uint256 x) public returns (uint256) {
+    function f2(uint x) public returns (uint) {
         return eval(this.g, x);
     }
 
@@ -11,7 +11,7 @@ contract C {
         return x(a);
     }
 
-    function g(uint256 x) public returns (uint256) {
+    function g(uint x) public returns (uint) {
         return x + 1;
     }
 }
@@ -19,5 +19,5 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(uint256): 7 -> 8
-// f2(uint256): 7 -> 8
+// f(uint): 7 -> 8
+// f2(uint): 7 -> 8

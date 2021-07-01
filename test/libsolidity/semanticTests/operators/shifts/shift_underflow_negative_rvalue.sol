@@ -12,5 +12,5 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(int256,uint256): 1, -1 -> 0
-// g(int256,uint256): 1, -1 -> 0
+// f(int256,uint256): 1, 0x00ffff -> 0
+// g(int256,uint256): 1, 0x00ffff -> 0

@@ -14,27 +14,27 @@ contract C {
         a = g;
     }
 
-    function t1() public returns (uint256) {
+    function t1() public returns (uint) {
         return a();
     }
 
-    function t2() public returns (uint256) {
+    function t2() public returns (uint) {
         return b();
     }
 
-    function t3() public returns (uint256) {
+    function t3() public returns (uint) {
         return a();
     }
 
-    function t4() public returns (uint256) {
+    function t4() public returns (uint) {
         return b();
     }
 
-    function g() public returns (uint256) {
+    function g() public returns (uint) {
         return 7;
     }
 
-    function h() public returns (uint256) {
+    function h() public returns (uint) {
         return 8;
     }
 }

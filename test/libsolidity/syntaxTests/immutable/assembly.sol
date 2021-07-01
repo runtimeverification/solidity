@@ -8,4 +8,4 @@ contract C {
     }
 }
 // ----
-// TypeError 3773: (118-119): Assembly access to immutable variables is not supported.
+// SyntaxError 1184: (90-129): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

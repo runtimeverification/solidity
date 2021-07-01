@@ -13,4 +13,4 @@ contract test {
 // b() -> 1
 // c() -> 2
 // f() -> 3
-// i_am_not_there() -> FAILURE
+// i_am_not_there() -> FAILURE, 1

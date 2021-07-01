@@ -7,5 +7,5 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// x(uint256,uint256): 1, 2 -> 3
-// x(uint256,uint256): 0, 0 -> 0
+// x(uint,uint): 1, 2 -> 3
+// x(uint,uint): 0, 0 -> 0
