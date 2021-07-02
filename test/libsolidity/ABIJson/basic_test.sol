@@ -1,5 +1,5 @@
 contract test {
-	function f(uint a) public returns (uint d) { return a * 7; }
+	function f(uint256 a) public returns (uint256 d) { return a * 7; }
 }
 // ----
 //     :test

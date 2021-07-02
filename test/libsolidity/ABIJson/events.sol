@@ -1,8 +1,8 @@
 contract test {
-    function f(uint a) public returns (uint d) { return a * 7; }
-    event e1(uint b, address indexed c);
+    function f(uint256 a) public returns (uint256 d) { return a * 7; }
+    event e1(uint256 b, address indexed c);
     event e2();
-    event e2(uint a);
+    event e2(uint256 a);
     event e3() anonymous;
 }
 // ----

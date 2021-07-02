@@ -1,5 +1,5 @@
 contract helper {
-    function getBalance() public payable returns (uint myBalance) {
+    function getBalance() public payable returns (uint256 myBalance) {
         return address(this).balance;
     }
 }
@@ -12,7 +12,7 @@ contract test {
         h = new helper();
     }
 
-    function sendAmount(uint amount) public returns (uint bal) {
+    function sendAmount(uint256 amount) public returns (uint256 bal) {
         return h.getBalance{value: amount + 3, gas: 1000}();
     }
 }
@@ -21,4 +21,4 @@ contract test {
 // compileViaYul: also
 // ----
 // constructor(), 20 wei ->
-// sendAmount(uint): 5 -> 8
+// sendAmount(uint256): 5 -> 8

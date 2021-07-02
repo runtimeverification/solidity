@@ -1,7 +1,7 @@
 pragma experimental SMTChecker;
 contract C {
 	function f(bool b) public pure {
-		uint x;
+		uint256 x;
 		if (b) ++((((((x))))));
 		if (b) --((((((x))))));
 		if (b) delete((((((b))))));

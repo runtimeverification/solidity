@@ -1,9 +1,9 @@
 contract C {
-    function or(uint x) public returns (bool t, uint y) {
+    function or(uint256 x) public returns (bool t, uint256 y) {
         t = (x == 0 || ((x = 8) > 0));
         y = x;
     }
-    function and(uint x) public returns (bool t, uint y) {
+    function and(uint256 x) public returns (bool t, uint256 y) {
         t = (x == 0 && ((x = 8) > 0));
         y = x;
     }

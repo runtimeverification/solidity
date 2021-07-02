@@ -2,7 +2,7 @@ pragma experimental SMTChecker;
 
 library L
 {
-	function add(uint x, uint y) internal pure returns (uint) {
+	function add(uint256 x, uint256 y) internal pure returns (uint256) {
 		require(x < 1000);
 		require(y < 1000);
 		return x + y;
@@ -11,8 +11,8 @@ library L
 
 contract C
 {
-	function f(uint x) public pure {
-		uint y = L.add(x, 999);
+	function f(uint256 x) public pure {
+		uint256 y = L.add(x, 999);
 		assert(y < 10000);
 	}
 }

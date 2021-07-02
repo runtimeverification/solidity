@@ -2,8 +2,8 @@ pragma experimental SMTChecker;
 
 contract Simple {
 	function f() public pure {
-		uint x = 10;
-		uint y;
+		uint256 x = 10;
+		uint256 y;
 		while (y < x)
 		{
 			++y;

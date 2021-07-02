@@ -9,7 +9,7 @@ library L {
 contract C {
     using L for L.E;
 
-    function equalsA(uint choice) public returns (bool) {
+    function equalsA(uint256 choice) public returns (bool) {
         L.E x = L.E.A;
         return x.equals(L.E(choice));
     }

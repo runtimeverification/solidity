@@ -1,5 +1,5 @@
 contract A {
-    uint x;
+    uint256 x;
     constructor() {
         x = 42;
     }
@@ -8,7 +8,7 @@ contract A {
     }
 }
 contract B is A {
-    uint public y = f();
+    uint256 public y = f();
 }
 // ====
 // compileViaYul: true

@@ -1,29 +1,29 @@
 contract C {
-    function f(bool condition) public returns (uint x) {
+    function f(bool condition) public returns (uint256 x) {
         x = 23;
         if (condition)
             x = 42;
     }
-    function g(bool condition) public returns (uint x) {
+    function g(bool condition) public returns (uint256 x) {
         x = 0;
         if (condition)
             x = 42;
         else
             x = 23;
     }
-    function h(bool condition) public returns (uint x) {
+    function h(bool condition) public returns (uint256 x) {
         if (condition)
             return 42;
         x = 23;
     }
-    function i(bool condition) public returns (uint x) {
+    function i(bool condition) public returns (uint256 x) {
         if (condition)
             x = 10;
         else
             return 23;
         x = 42;
     }
-    function j(uint a, uint b) public returns (uint x, uint y) {
+    function j(uint256 a, uint256 b) public returns (uint256 x, uint256 y) {
         x = 42;
         if (a + b < 10)
             x = a;
@@ -31,7 +31,7 @@ contract C {
             x = b;
         y = 100;
     }
-    function k(uint a, uint b) public returns (uint x, uint y) {
+    function k(uint256 a, uint256 b) public returns (uint256 x, uint256 y) {
         x = 42;
         do {
             if (a + b < 10)

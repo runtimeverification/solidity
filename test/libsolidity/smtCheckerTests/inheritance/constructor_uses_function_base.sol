@@ -1,7 +1,7 @@
 pragma experimental SMTChecker;
 
 contract A {
-	uint x;
+	uint256 x;
 	constructor() {
 		x = 42;
 	}
@@ -10,7 +10,7 @@ contract A {
 	}
 }
 contract B is A {
-	uint y = f();
+	uint256 y = f();
 }
 contract C is B {
 	function g() public view {

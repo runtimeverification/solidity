@@ -5,13 +5,13 @@ contract C {
 		// signed <- signed
 		int8 z = int8(-1);
 		assert(z == -1);
-		z = int8(int(0) - 1);
+		z = int8(int256(0) - 1);
 		assert(z == -1);
-		z = int8(int(0) - 1);
+		z = int8(int256(0) - 1);
 		assert(z == -1);
-		z = int8(int(0) - 2);
+		z = int8(int256(0) - 2);
 		assert(z == -2);
-		z = int8(int(0) - 1);
+		z = int8(int256(0) - 1);
 		assert(z == -1);
 
 		// unsigned <= unsigned

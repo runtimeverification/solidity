@@ -2,18 +2,18 @@ pragma experimental SMTChecker;
 
 contract C {
   function f() public pure {
-    uint x = 1234;
-    uint y = 0;
+    uint256 x = 1234;
+    uint256 y = 0;
     assert(x != y);
-    assert(x == uint(1234));
-    assert(y == uint(0));
+    assert(x == uint256(1234));
+    assert(y == uint256(0));
   }
   function g() public pure {
-    uint a = uint(0);
-    uint b = type(uint256).max;
-    uint c = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
-    int d = -1;
-    uint e = uint(d);
+    uint256 a = uint256(0);
+    uint256 b = type(uint256).max;
+    uint256 c = 115792089237316195423570985008687907853269984665640564039457584007913129639935;
+    int256 d = -1;
+    uint256 e = uint256(d);
     assert(a != b);
     assert(b == c);
     assert(b == e);
