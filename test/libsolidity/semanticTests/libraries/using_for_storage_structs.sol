@@ -1,4 +1,4 @@
-struct Struct { uint x; }
+struct Struct { uint256 x; }
 
 library L {
     function f(Struct storage _x) internal view returns (uint256) {
@@ -11,11 +11,11 @@ contract C {
 
   Struct s;
 
-  function h(Struct storage _s) internal view returns (uint) {
+  function h(Struct storage _s) internal view returns (uint256) {
     // _s is pointer
     return _s.f();
   }
-  function g() public returns (uint, uint) {
+  function g() public returns (uint256, uint256) {
     s.x = 7;
     // s is reference
     return (s.f(), h(s));

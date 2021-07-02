@@ -13,41 +13,41 @@ contract C {
 		assert(x == 255);
 		x = uint16(int16(i));
 		assert(x == 65535);
-		uint z = uint(uint8(i));
+		uint256 z = uint256(uint8(i));
 		assert(z == 255);
 	}
 
 	function f2() public pure {
 		// signed <- unsigned
-		int16 y = int16(uint16(uint8(uint(65535))));
+		int16 y = int16(uint16(uint8(uint256(65535))));
 		assert(y == 255);
-		int z = int(uint(uint8(type(uint).max)));
+		int256 z = int256(uint256(uint8(type(uint256).max)));
 		assert(z == 255);
-		z = int(uint(uint8(255)));
+		z = int256(uint256(uint8(255)));
 		assert(z == 255);
 	}
 
 	function f3() public pure {
 		// signed <- signed
-		int16 y = int16(uint16(uint8(int8(int(uint(65535))))));
+		int16 y = int16(uint16(uint8(int8(int256(uint256(65535))))));
 		assert(y == 255);
-		int z = int(int8(-1));
+		int256 z = int256(int8(-1));
 		assert(z == -1);
-		z = int(int8(int(255)));
+		z = int256(int8(int256(255)));
 		assert(z == -1);
-		z = int(int16(5000));
+		z = int256(int16(5000));
 		assert(z == 5000);
 	}
 
 	function f4() public pure {
 		// unsigned <- unsigned
-		uint x = uint(uint8(type(uint).max));
+		uint256 x = uint256(uint8(type(uint256).max));
 		assert(x == 255);
-		x = uint(uint16(type(uint).max));
+		x = uint256(uint16(type(uint256).max));
 		assert(x == 65535);
-		x = uint(uint16(5000));
+		x = uint256(uint16(5000));
 		assert(x == 5000);
-		uint16 y = uint16(type(uint).max);
+		uint16 y = uint16(type(uint256).max);
 		assert(y == 65535);
 		y = uint16(uint8(type(uint16).max));
 		assert(y == 255);

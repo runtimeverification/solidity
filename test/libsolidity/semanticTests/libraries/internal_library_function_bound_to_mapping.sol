@@ -1,15 +1,15 @@
 library L {
-    function at(mapping(uint => uint) storage a, uint i) internal view returns (uint) {
+    function at(mapping(uint256 => uint256) storage a, uint256 i) internal view returns (uint256) {
         return a[i];
     }
 }
 
 contract C {
-    using L for mapping(uint => uint);
+    using L for mapping(uint256 => uint256);
 
-    mapping(uint => uint) map;
+    mapping(uint256 => uint256) map;
 
-    function mapValue(uint a) public returns (uint) {
+    function mapValue(uint256 a) public returns (uint256) {
         map[42] = 0x24;
         map[66] = 0x66;
 

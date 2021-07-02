@@ -5,34 +5,34 @@ contract C {
     function g() public pure returns (bool) {
         return bytes3("abc") == bytes4("abc");
     }
-    function lt(uint a, uint b) public pure returns (bool) {
+    function lt(uint256 a, uint256 b) public pure returns (bool) {
         return a < b;
     }
-    function slt(int a, int b) public pure returns (bool) {
+    function slt(int256 a, int256 b) public pure returns (bool) {
         return a < b;
     }
-    function lte(uint a, uint b) public pure returns (bool) {
+    function lte(uint256 a, uint256 b) public pure returns (bool) {
         return a <= b;
     }
-    function slte(int a, int b) public pure returns (bool) {
+    function slte(int256 a, int256 b) public pure returns (bool) {
         return a <= b;
     }
-    function gt(uint a, uint b) public pure returns (bool) {
+    function gt(uint256 a, uint256 b) public pure returns (bool) {
         return a > b;
     }
-    function sgt(int a, int b) public pure returns (bool) {
+    function sgt(int256 a, int256 b) public pure returns (bool) {
         return a > b;
     }
-    function gte(uint a, uint b) public pure returns (bool) {
+    function gte(uint256 a, uint256 b) public pure returns (bool) {
         return a >= b;
     }
-    function sgte(int a, int b) public pure returns (bool) {
+    function sgte(int256 a, int256 b) public pure returns (bool) {
         return a >= b;
     }
-    function eq(uint a, uint b) public pure returns (bool) {
+    function eq(uint256 a, uint256 b) public pure returns (bool) {
         return a == b;
     }
-    function neq(uint a, uint b) public pure returns (bool) {
+    function neq(uint256 a, uint256 b) public pure returns (bool) {
         return a != b;
     }
 }

@@ -1,6 +1,6 @@
 pragma experimental SMTChecker;
 contract C {
-	function f(uint x) public pure {
+	function f(uint256 x) public pure {
 		x = 2;
 		while (x > 1) {
 			if (x > 10)

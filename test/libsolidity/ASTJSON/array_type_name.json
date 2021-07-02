@@ -38,8 +38,8 @@
           "storageLocation": "default",
           "typeDescriptions":
           {
-            "typeIdentifier": "t_array$_t_uint256_$dyn_storage",
-            "typeString": "uint256[]"
+            "typeIdentifier": "t_array$_t_uint_$dyn_storage",
+            "typeString": "uint[]"
           },
           "typeName":
           {
@@ -51,8 +51,8 @@
               "src": "13:4:1",
               "typeDescriptions":
               {
-                "typeIdentifier": "t_uint256",
-                "typeString": "uint256"
+                "typeIdentifier": "t_uint",
+                "typeString": "uint"
               }
             },
             "id": 2,
@@ -60,8 +60,8 @@
             "src": "13:6:1",
             "typeDescriptions":
             {
-              "typeIdentifier": "t_array$_t_uint256_$dyn_storage_ptr",
-              "typeString": "uint256[]"
+              "typeIdentifier": "t_array$_t_uint_$dyn_storage_ptr",
+              "typeString": "uint[]"
             }
           },
           "visibility": "internal"

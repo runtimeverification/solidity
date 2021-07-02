@@ -1,5 +1,5 @@
 contract test {
-    function g(function(uint) external returns (uint) x) public {}
+    function g(function(uint256) external returns (uint256) x) public {}
 }
 // ----
 //     :test

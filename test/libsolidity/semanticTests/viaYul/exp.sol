@@ -1,5 +1,5 @@
 contract C {
-    function f(uint x, uint y) public returns (uint) {
+    function f(uint256 x, uint256 y) public returns (uint256) {
         return x**y;
     }
 }

@@ -4,7 +4,7 @@ contract C
 {
 	enum D { Left, Right }
 	function f(D _a) public pure {
-		uint x = uint(_a);
+		uint256 x = uint256(_a);
 		assert(x < 10);
 	}
 }

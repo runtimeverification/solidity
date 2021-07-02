@@ -1,7 +1,7 @@
 pragma experimental SMTChecker;
 
 contract C  {
-	function f(uint x, uint y) public pure returns (uint) {
+	function f(uint256 x, uint256 y) public pure returns (uint256) {
 		require(x >= y);
 		return x - y;
 	}

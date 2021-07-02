@@ -4,7 +4,7 @@ pragma abicoder               v2;
 contract C {
     function f(string[] calldata a)
         external
-        returns (uint256, uint256, uint256, string memory)
+        returns (uint, uint, uint, string memory)
     {
         string memory s1 = a[0];
         bytes memory m1 = bytes(s1);
@@ -14,4 +14,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(string[]): 0x20, 0x1, 0x20, 0x2, hex"6162000000000000000000000000000000000000000000000000000000000000" -> 1, 2, 97, 0x80, 2, "ab"
+// f(string[]): refargs { 0x01, 0x01, "ab" } -> 1, 2, 97, "ab"

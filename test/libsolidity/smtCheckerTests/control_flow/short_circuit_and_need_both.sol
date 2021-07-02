@@ -1,8 +1,8 @@
 pragma experimental SMTChecker;
 
 contract c {
-	uint x;
-	function f() internal returns (uint) {
+	uint256 x;
+	function f() internal returns (uint256) {
 		x = x + 1;
 		return x;
 	}

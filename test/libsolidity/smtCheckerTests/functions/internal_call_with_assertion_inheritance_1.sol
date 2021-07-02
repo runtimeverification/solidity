@@ -1,7 +1,7 @@
 pragma experimental SMTChecker;
 
 contract A {
-	uint x;
+	uint256 x;
 	function f() internal {
 		assert(x == 1);
 		--x;

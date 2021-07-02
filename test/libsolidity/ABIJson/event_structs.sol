@@ -1,7 +1,7 @@
 pragma abicoder               v2;
 contract C {
-    struct S { uint a; T[] sub; bytes b; }
-    struct T { uint[2] x; }
+    struct S { uint256 a; T[] sub; bytes b; }
+    struct T { uint256[2] x; }
     event E(T t, S s);
 }
 // ----

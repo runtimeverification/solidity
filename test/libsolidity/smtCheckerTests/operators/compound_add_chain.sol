@@ -3,9 +3,9 @@ pragma experimental SMTChecker;
 contract C
 {
 	function f() public pure {
-		uint a = 1;
-		uint b = 3;
-		uint c = 7;
+		uint256 a = 1;
+		uint256 b = 3;
+		uint256 c = 7;
 		a += b += c;
 		assert(b ==  10 && a == 11);
 		a += (b += c);

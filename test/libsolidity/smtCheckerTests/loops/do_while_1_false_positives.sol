@@ -2,7 +2,7 @@ pragma experimental SMTChecker;
 
 contract C
 {
-	function f(uint x) public pure {
+	function f(uint256 x) public pure {
 		require(x < 100);
 		do {
 			x = x + 1;
