@@ -1077,6 +1077,7 @@
 -t !SolidityEndToEndTest/call_forward_bytes_length
 -t !SolidityEndToEndTest/calls_to_this
 -t !SolidityEndToEndTest/code_access
+-t !SolidityEndToEndTest/contract_name
 -t !SolidityEndToEndTest/copy_from_calldata_removes_bytes_data
 -t !SolidityEndToEndTest/copying_bytes_multiassign
 -t !SolidityEndToEndTest/correctly_initialize_memory_array_in_constructor
