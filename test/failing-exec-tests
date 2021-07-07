@@ -211,7 +211,6 @@
 -t !semanticTests/ecrecover/failing_ecrecover_invalid_input
 -t !semanticTests/ecrecover/failing_ecrecover_invalid_input_asm
 -t !semanticTests/ecrecover/failing_ecrecover_invalid_input_proper
--t !semanticTests/empty_contract
 -t !semanticTests/enums/enum_with_256_members
 -t !semanticTests/exponentiation/signed_base
 -t !semanticTests/exponentiation/small_exp
@@ -284,7 +283,6 @@
 -t !semanticTests/intheritance/super_in_constructor
 -t !semanticTests/intheritance/super_in_constructor_assignment
 -t !semanticTests/intheritance/value_for_constructor
--t !semanticTests/isoltestFormatting
 -t !semanticTests/libraries/internal_library_function_bound_to_function_named_selector
 -t !semanticTests/libraries/library_address
 -t !semanticTests/libraries/library_address_homestead
@@ -296,7 +294,6 @@
 -t !semanticTests/libraries/library_function_selectors
 -t !semanticTests/libraries/library_function_selectors_struct
 -t !semanticTests/libraries/library_return_struct_with_mapping
--t !semanticTests/literals/hex_string_with_underscore
 -t !semanticTests/memoryManagement/assembly_access
 -t !semanticTests/memoryManagement/return_variable
 -t !semanticTests/memoryManagement/static_memory_array_allocation
@@ -360,10 +357,6 @@
 -t !semanticTests/state/uncalled_blockhash
 -t !semanticTests/storage/chop_sign_bits
 -t !semanticTests/storage/packed_storage_signed
--t !semanticTests/strings/empty_string
--t !semanticTests/strings/empty_string_input
--t !semanticTests/strings/unicode_escapes
--t !semanticTests/strings/unicode_string
 -t !semanticTests/structs/calldata/calldata_nested_structs
 -t !semanticTests/structs/calldata/calldata_struct
 -t !semanticTests/structs/calldata/calldata_struct_and_ints
