@@ -7,4 +7,4 @@ contract C {
 // revertStrings: debug
 // compileViaYul: also
 // ----
-// e(bytes): 0x20, 7 -> FAILURE, hex"08c379a0", 0x20, 39, "ABI decoding: invalid byte array", " length"
+// e(bytes): "\x07" -> 7

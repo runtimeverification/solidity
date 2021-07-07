@@ -9,4 +9,4 @@ contract C {
 // revertStrings: debug
 // ABIEncoderV1Only: true
 // ----
-// f(uint8[]): 0x20, 2, 3, 3 -> FAILURE, hex"08c379a0", 0x20, 17, "Enum out of range"
+// f(uint8[]): refargs { 2, 3, 3 } -> FAILURE, 255
