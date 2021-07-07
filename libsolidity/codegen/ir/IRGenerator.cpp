@@ -566,9 +566,7 @@ void IRGenerator::generateImplicitConstructors(ContractDefinition const& _contra
 			}
 			else
 				t("hasNextConstructor", false);
-/*
-			t("initStateVariables", initStateVariables(*contract));
-*/
+			t("initStateVariables", "");
 			t("userDefinedConstructorBody", contract->constructor() ? generate(contract->constructor()->body()) : "");
 
 			return t.render();

@@ -320,6 +320,8 @@ inline T fromBigEndian(In const& _bytes)
 }
 inline bytes toBigEndian(uint64_t _val) { bytes ret(8); toBigEndian(_val, ret); return ret; }
 inline bytes toBigEndian(int16_t _val) { bytes ret(2); toBigEndian((uint16_t)_val, ret); return ret; }
+inline bytes toBigEndian(u24 _val) { bytes ret(3); toBigEndian(_val, ret); return ret; }
+inline bytes toBigEndian(u248 _val) { bytes ret(31); toBigEndian(_val, ret); return ret; }
 inline bytes toBigEndian(u256 _val) { bytes ret(32); toBigEndian(_val, ret); return ret; }
 inline bytes toBigEndian(u160 _val) { bytes ret(20); toBigEndian(_val, ret); return ret; }
 

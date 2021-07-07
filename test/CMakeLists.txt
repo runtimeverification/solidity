@@ -89,7 +89,6 @@ set(libsolidity_sources
     libsolidity/SolidityEndToEndTest.cpp
     libsolidity/SolidityExecutionFramework.cpp
     libsolidity/SolidityExecutionFramework.h
-    libsolidity/SolidityExpressionCompiler.cpp
     libsolidity/SolidityNameAndTypeResolution.cpp
     libsolidity/SolidityNatspecJSON.cpp
     libsolidity/SolidityOptimizer.cpp
