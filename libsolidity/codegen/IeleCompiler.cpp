@@ -4787,10 +4787,13 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       TypePointer arg = dynamic_cast<const MagicType *>(actualType)->typeArgument();
       ContractDefinition const& contract =
         dynamic_cast<ContractType const&>(*arg).contractDefinition();
-      bigint interfaceId = bigint(u256{contract.interfaceId()} << (256 - 32));
       iele::IeleValue *InterfaceIDValue =
-        iele::IeleIntConstant::Create(&Context, interfaceId, true);
-      CompilingExpressionResult.push_back(IeleRValue::Create(InterfaceIDValue));
+        iele::IeleIntConstant::Create(&Context, contract.interfaceId(), true);
+      IeleRValue *ConvertedValue =
+        appendTypeConversion(IeleRValue::Create(InterfaceIDValue),
+                             TypeProvider::uint(32),
+                             memberAccess.annotation().type);
+      CompilingExpressionResult.push_back(ConvertedValue);
     } else if (member == "data")
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else if (member == "sig")

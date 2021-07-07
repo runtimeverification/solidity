@@ -275,8 +275,6 @@
 -t !semanticTests/inlineAssembly/slot_access
 -t !semanticTests/inlineAssembly/truefalse
 -t !semanticTests/interfaceID/homer
--t !semanticTests/interfaceID/homer_interfaceId
--t !semanticTests/interfaceID/interfaceId_events
 -t !semanticTests/interfaceID/interfaces
 -t !semanticTests/interfaceID/lisa
 -t !semanticTests/interfaceID/lisa_interfaceId
