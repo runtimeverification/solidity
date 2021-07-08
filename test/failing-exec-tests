@@ -1201,6 +1201,7 @@
 -t !syntaxTests/multiSource/reimport_imported_function
 -t !syntaxTests/multiSource/two_imports_same_function
 -t !syntaxTests/nameAndTypeResolution/253_using_for_function_exists
+-t !syntaxTests/nameAndTypeResolution/254_using_for_function_on_int
 -t !syntaxTests/negation
 -t !syntaxTests/parsing/array_range_and_ternary
 -t !syntaxTests/parsing/array_range_nested
