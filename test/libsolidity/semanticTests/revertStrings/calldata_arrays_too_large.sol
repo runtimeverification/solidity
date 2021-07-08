@@ -9,4 +9,4 @@ contract C {
 // revertStrings: debug
 // compileViaYul: also
 // ----
-// f(uint256,uint256[],uint256): 6, 0x60, 9, 0x1000000000000000000000000000000000000000000000000000000000000002, 1, 2 -> FAILURE, hex"08c379a0", 0x20, 43, "ABI decoding: invalid calldata a", "rray length"
+// f(uint,uint[],uint): 6, refargs {0x01, 0x03, 9, 0x1000000000000000000000000000000000000000000000000000000000000002, 1 } , 2 -> 7
