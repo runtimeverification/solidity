@@ -1,6 +1,6 @@
 // this test just checks that the copy loop does not mess up the stack
 contract C {
-    function save(bytes data) public returns (uint r) {
+    function save(bytes memory data) public returns (uint r) {
         r = 23;
         savedData = data;
         r = 24;
