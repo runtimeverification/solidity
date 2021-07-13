@@ -15,6 +15,6 @@ contract C {
 // compileToEwasm: also
 // ----
 // f(bool): true -> true
-// f(bool): false -> FAILURE, hex"4e487b71", 0x01
+// f(bool): false -> FAILURE, 255
 // f2(bool): true -> true
-// f2(bool): false -> FAILURE
+// f2(bool): false -> FAILURE, 255
