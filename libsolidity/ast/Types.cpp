@@ -1653,7 +1653,8 @@ BoolResult ArrayType::validForLocation(DataLocation _loc) const
 
 bigint ArrayType::unlimitedStaticCalldataSize(bool _padded) const
 {
-	solAssert(!isDynamicallySized(), "");
+	if (isDynamicallySized())
+		return 32;
 	bigint size = bigint(length()) * calldataStride();
 	if (_padded)
 		size = ((size + 31) / 32) * 32;
