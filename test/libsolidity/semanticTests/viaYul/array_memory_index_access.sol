@@ -1,7 +1,7 @@
 contract C {
 	function index(uint256 len) public returns (bool)
 	{
-		uint[] memory array = new uint[](len);
+		uint256[] memory array = new uint256[](len);
 
 		for (uint256 i = 0; i < len; i++)
 			array[i] = i + 1;
@@ -13,7 +13,7 @@ contract C {
 	}
 	function accessIndex(uint256 len, int256 idx) public returns (uint256)
 	{
-		uint[] memory array = new uint[](len);
+		uint256[] memory array = new uint256[](len);
 
 		for (uint256 i = 0; i < len; i++)
 			array[i] = i + 1;
@@ -27,9 +27,9 @@ contract C {
 // index(uint256): 0 -> true
 // index(uint256): 10 -> true
 // index(uint256): 20 -> true
-// index(uint256): 0xFF -> true
+// index(uint256): 0x00FF -> true
 // accessIndex(uint256,int256): 10, 1 -> 2
 // accessIndex(uint256,int256): 10, 0 -> 1
-// accessIndex(uint256,int256): 10, 11 -> FAILURE, hex"4e487b71", 0x32
-// accessIndex(uint256,int256): 10, 10 -> FAILURE, hex"4e487b71", 0x32
-// accessIndex(uint256,int256): 10, -1 -> FAILURE, hex"4e487b71", 0x32
+// accessIndex(uint256,int256): 10, 11 -> FAILURE, 255
+// accessIndex(uint256,int256): 10, 10 -> FAILURE, 255
+// accessIndex(uint256,int256): 10, -1 -> FAILURE, 255

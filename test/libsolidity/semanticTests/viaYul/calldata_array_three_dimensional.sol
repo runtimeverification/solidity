@@ -1,7 +1,7 @@
 pragma abicoder               v2;
 
 contract C {
-	function f(uint256[][2][] calldata x, uint256 i, uint256 j, uint256 k) external returns (uint256 a, uint256 b, uint256 c, uint256 d) {
+	function f(uint[][2][] calldata x, uint i, uint j, uint k) external returns (uint a, uint b, uint c, uint d) {
 		a = x.length;
 		b = x[i].length;
 		c = x[i][j].length;
@@ -12,10 +12,10 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(uint256[][2][],uint256,uint256,uint256): 0x80, 0, 0, 0, 1, 0x20, 0x40, 0x80, 1, 42, 1, 23 -> 1, 2, 1, 42
-// f(uint256[][2][],uint256,uint256,uint256): 0x80, 0, 1, 0, 1, 0x20, 0x40, 0x80, 1, 42, 1, 23 -> 1, 2, 1, 23
-// f(uint256[][2][],uint256,uint256,uint256): 0x80, 0, 1, 0, 1, 0x20, 0x40, 0x80, 1, 42, 2, 23, 17 -> 1, 2, 2, 23
-// f(uint256[][2][],uint256,uint256,uint256): 0x80, 0, 1, 1, 1, 0x20, 0x40, 0x80, 1, 42, 2, 23, 17 -> 1, 2, 2, 17
-// f(uint256[][2][],uint256,uint256,uint256): 0x80, 1, 0, 0, 1, 0x20, 0x40, 0x80, 1, 42, 1, 23 -> FAILURE, hex"4e487b71", 0x32
-// f(uint256[][2][],uint256,uint256,uint256): 0x80, 0, 2, 0, 1, 0x20, 0x40, 0x80, 1, 42, 1, 23 -> FAILURE, hex"4e487b71", 0x32
-// f(uint256[][2][],uint256,uint256,uint256): 0x80, 0, 2, 0, 1, 0x20, 0x40, 0x80, 1, 42, 1, 23 -> FAILURE, hex"4e487b71", 0x32
+// f(uint[][2][],uint,uint,uint): refargs { 0x01, 0x01, 0x01, 0x01, 42, 0x01, 0x01, 23 }, 0, 0, 0 -> 1, 2, 1, 42
+// f(uint[][2][],uint,uint,uint): refargs { 0x01, 0x01, 0x01, 0x01, 42, 0x01, 0x01, 23 }, 0, 1, 0 -> 1, 2, 1, 23
+// f(uint[][2][],uint,uint,uint): refargs { 0x01, 0x01, 0x01, 0x01, 42, 0x01, 0x02, 23, 17 }, 0, 1, 0 -> 1, 2, 2, 23
+// f(uint[][2][],uint,uint,uint): refargs { 0x01, 0x01, 0x01, 0x01, 42, 0x01, 0x02, 23, 17 }, 0, 1, 1 -> 1, 2, 2, 17
+// f(uint[][2][],uint,uint,uint): refargs { 0x01, 0x01, 0x01, 0x01, 42, 0x01, 0x01, 23 }, 1, 0, 0 -> FAILURE, 255
+// f(uint[][2][],uint,uint,uint): refargs { 0x01, 0x01, 0x01, 0x01, 42, 0x01, 0x01, 23 }, 0, 2, 0 -> FAILURE, 255
+// f(uint[][2][],uint,uint,uint): refargs { 0x01, 0x01, 0x01, 0x01, 42, 0x01, 0x01, 23 }, 0, 2, 0 -> FAILURE, 255

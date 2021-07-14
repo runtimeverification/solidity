@@ -10,4 +10,4 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f() -> 0x20, 5, "b23a5"
+// f() -> "b23a5"

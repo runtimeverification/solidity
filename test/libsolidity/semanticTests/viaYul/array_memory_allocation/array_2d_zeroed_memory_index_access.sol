@@ -18,7 +18,7 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// set(string,uint256,uint256,uint256,uint256): 0xa0, 2, 4, 0, 0, 32, "01234567890123456789012345678901" -> 0
-// set(string,uint256,uint256,uint256,uint256): 0xa0, 2, 4, 1, 3, 32, "01234567890123456789012345678901" -> 0
-// set(string,uint256,uint256,uint256,uint256): 0xa0, 2, 4, 3, 3, 32, "01234567890123456789012345678901" -> FAILURE, hex"4e487b71", 0x32
-// set(string,uint256,uint256,uint256,uint256): 0xa0, 2, 4, 1, 5, 32, "01234567890123456789012345678901" -> FAILURE, hex"4e487b71", 0x32
+// set(string,uint,uint,uint,uint): "01234567890123456789012345678901", 2, 4, 0, 0 -> 0
+// set(string,uint,uint,uint,uint): "01234567890123456789012345678901", 2, 4, 1, 3 -> 0
+// set(string,uint,uint,uint,uint): "01234567890123456789012345678901", 2, 4, 3, 3 -> FAILURE, 255
+// set(string,uint,uint,uint,uint): "01234567890123456789012345678901", 2, 4, 1, 5 -> FAILURE, 255
