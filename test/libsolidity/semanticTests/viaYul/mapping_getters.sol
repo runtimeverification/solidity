@@ -13,28 +13,28 @@ contract test {
 // ----
 // m1(uint256): 0 -> 0
 // m1(uint256): 0x01 -> 0
-// m1(uint256): 0xa7 -> 0
-// set(uint256,uint256): 0x01, 0xa1 ->
+// m1(uint256): 0x00a7 -> 0
+// set(uint256,uint256): 0x01, 0x00a1 ->
 // m1(uint256): 0 -> 0
-// m1(uint256): 0x01 -> 0xa1
-// m1(uint256): 0xa7 -> 0
-// set(uint256,uint256): 0x00, 0xef ->
-// m1(uint256): 0 -> 0xef
-// m1(uint256): 0x01 -> 0xa1
-// m1(uint256): 0xa7 -> 0
+// m1(uint256): 0x01 -> 0x00a1
+// m1(uint256): 0x00a7 -> 0
+// set(uint256,uint256): 0x00, 0x00ef ->
+// m1(uint256): 0 -> 0x00ef
+// m1(uint256): 0x01 -> 0x00a1
+// m1(uint256): 0x00a7 -> 0
 // set(uint256,uint256): 0x01, 0x05 ->
-// m1(uint256): 0 -> 0xef
+// m1(uint256): 0 -> 0x00ef
 // m1(uint256): 0x01 -> 0x05
-// m1(uint256): 0xa7 -> 0
+// m1(uint256): 0x00a7 -> 0
 // m2(uint256,uint256): 0, 0 -> 0
 // m2(uint256,uint256): 0, 0x01 -> 0
-// m2(uint256,uint256): 0xa7, 0 -> 0
-// m2(uint256,uint256): 0xa7, 0x01 -> 0
-// set(uint256,uint256,uint256): 0xa7, 0x01, 0x23
+// m2(uint256,uint256): 0x00a7, 0 -> 0
+// m2(uint256,uint256): 0x00a7, 0x01 -> 0
+// set(uint256,uint256,uint256): 0x00a7, 0x01, 0x23
 // m2(uint256,uint256): 0, 0x01 -> 0
-// m2(uint256,uint256): 0xa7, 0 -> 0
-// m2(uint256,uint256): 0xa7, 0x01 -> 0x23
-// set(uint256,uint256,uint256): 0, 0x01, 0xef
-// m2(uint256,uint256): 0, 0x01 -> 0xef
-// m2(uint256,uint256): 0xa7, 0 -> 0
-// m2(uint256,uint256): 0xa7, 0x01 -> 0x23
+// m2(uint256,uint256): 0x00a7, 0 -> 0
+// m2(uint256,uint256): 0x00a7, 0x01 -> 0x23
+// set(uint256,uint256,uint256): 0, 0x01, 0x00ef
+// m2(uint256,uint256): 0, 0x01 -> 0x00ef
+// m2(uint256,uint256): 0x00a7, 0 -> 0
+// m2(uint256,uint256): 0x00a7, 0x01 -> 0x23

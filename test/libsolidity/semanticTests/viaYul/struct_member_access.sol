@@ -33,7 +33,7 @@ contract C {
 // EVMVersion: >homestead
 // compileViaYul: also
 // ----
-// f((uint256,uint256[],uint256)): 0x20, 42, 0x60, 21, 3, 1, 2, 3 -> 42, 0x60, 21, 3, 1, 2, 3
-// g((uint256,uint256[],uint256)): 0x20, 42, 0x60, 21, 3, 1, 2, 3 -> 42, 3, 21, 1, 2, 3
-// g2((uint256,uint256[],uint256),(uint256,uint256[],uint256)): 0x40, 0x0120, 42, 0x60, 21, 2, 1, 2, 3, 7, 0x80, 9, 0, 1, 17  -> 42, 21, 7, 1, 9, 17
+// f((uint,uint[],uint)): refargs { 42, 0x01, 0x03, 1, 2, 3, 21 } -> 42, dynarray 0 [ 1, 2, 3 ], 21
+// g((uint,uint[],uint)): refargs { 42, 0x01, 0x03, 1, 2, 3, 21 } -> 42, 3, 21, 1, 2, 3
+// g2((uint,uint[],uint),(uint,uint[],uint)): refargs {42, 0x01, 0x03, 1, 2, 3, 21 }, refargs { 7, 0x01, 0x01, 17, 9 }  -> 42, 21, 7, 1, 9, 17
 // h() -> 42, 3, 21, 1, 2, 3

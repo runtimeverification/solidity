@@ -5,4 +5,4 @@ contract C {
 // compileToEwasm: also
 // allowNonExistingFunctions: true
 // ----
-// f() -> FAILURE
+// f() -> FAILURE, 1
