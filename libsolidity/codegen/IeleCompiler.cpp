@@ -919,6 +919,10 @@ void IeleCompiler::appendRevertBlocks(void) {
     AssertFailBlock->insertInto(CompilingFunction);
     AssertFailBlock = nullptr;
   }
+  if (ECRFailedBlock) {
+    ECRFailedBlock->insertInto(CompilingFunction);
+    ECRFailedBlock = nullptr;
+  }
 }
 
 bool IeleCompiler::visit(const Block &block) {
@@ -4092,7 +4096,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       iele::IeleInstruction::CmpEq, Failed, ReturnRegisters[0],
       iele::IeleIntConstant::getMinusOne(&Context),
       CompilingBlock);
-    appendRevert(Failed);
+    if (!ECRFailedBlock) {
+      // Create the ecrecover-failed block if it's not already created.
+      ECRFailedBlock = iele::IeleBlock::Create(&Context, "ecr.failed");
+      llvm::SmallVector<iele::IeleValue *, 1> Returns;
+      iele::IeleIntConstant *Return = iele::IeleIntConstant::getZero(&Context);
+      Returns.push_back(Return);
+      iele::IeleInstruction::CreateRet(Returns, ECRFailedBlock);
+    }
+    connectWithConditionalJump(Failed, CompilingBlock, ECRFailedBlock);
 
     CompilingExpressionResult.insert(
         CompilingExpressionResult.end(), Returns.begin(), Returns.end());

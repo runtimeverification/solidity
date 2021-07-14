@@ -35,6 +35,7 @@ public:
     ContinueBlock(nullptr),
     RevertBlock(nullptr),
     RevertStatusBlock(nullptr),
+    ECRFailedBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingBlockArithmetic(Arithmetic::Checked),
     CompilingLValue(false),
@@ -136,6 +137,7 @@ private:
   iele::IeleBlock *ContinueBlock;
   iele::IeleBlock *RevertBlock;
   iele::IeleBlock *RevertStatusBlock;
+  iele::IeleBlock *ECRFailedBlock;
   iele::IeleBlock *AssertFailBlock;
 
   Arithmetic CompilingBlockArithmetic;

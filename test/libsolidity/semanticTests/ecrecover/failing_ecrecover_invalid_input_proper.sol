@@ -9,7 +9,7 @@ contract C {
             0x000000000000000000000000ca35b7d915458ef540ade6068dfe2f44e8fa733c
         );
     }
-    function recover(bytes32 hash, uint8 v, bytes32 r, bytes32 s, uint blockExpired, bytes32 salt)
+    function recover(bytes32 hash, uint8 v, bytes32 r, bytes32 s, uint256 blockExpired, bytes32 salt)
         public returns (address)
     {
         require(hash == keccak256(abi.encodePacked(blockExpired, salt)));
