@@ -371,7 +371,6 @@ BOOST_AUTO_TEST_CASE(optimizer_runs_not_an_unsigned_number)
 	BOOST_CHECK(containsError(result, "JSONError", "The \"runs\" setting must be an unsigned number."));
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(basic_compilation, 2)
 BOOST_AUTO_TEST_CASE(basic_compilation)
 {
 	char const* input = R"(
@@ -421,46 +420,8 @@ BOOST_AUTO_TEST_CASE(basic_compilation)
                 "\n"
                 "}\n"
 	) == 0);
-	BOOST_CHECK(contract["evm"]["gasEstimates"].isObject());
-	BOOST_CHECK_EQUAL(contract["evm"]["gasEstimates"].size(), 1);
-	BOOST_CHECK(contract["evm"]["gasEstimates"]["creation"].isObject());
-	BOOST_CHECK_EQUAL(contract["evm"]["gasEstimates"]["creation"].size(), 3);
-	BOOST_CHECK(contract["evm"]["gasEstimates"]["creation"]["codeDepositCost"].isString());
-	BOOST_CHECK(contract["evm"]["gasEstimates"]["creation"]["executionCost"].isString());
-	BOOST_CHECK(contract["evm"]["gasEstimates"]["creation"]["totalCost"].isString());
-	BOOST_CHECK_EQUAL(
-		u256(contract["evm"]["gasEstimates"]["creation"]["codeDepositCost"].asString()) +
-		u256(contract["evm"]["gasEstimates"]["creation"]["executionCost"].asString()),
-		u256(contract["evm"]["gasEstimates"]["creation"]["totalCost"].asString())
-	);
-	// Lets take the top level `.code` section (the "deployer code"), that should expose most of the features of
-	// the assembly JSON. What we want to check here is Operation, Push, PushTag, PushSub, PushSubSize and Tag.
-	BOOST_CHECK(contract["evm"]["legacyAssembly"].isObject());
-	BOOST_CHECK(contract["evm"]["legacyAssembly"][".code"].isArray());
-	BOOST_CHECK_EQUAL(
-		util::jsonCompactPrint(contract["evm"]["legacyAssembly"][".code"]),
-		"[{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"80\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"40\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"MSTORE\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"CALLVALUE\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"DUP1\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"ISZERO\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH [tag]\",\"source\":0,\"value\":\"1\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"JUMPI\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"0\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"DUP1\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"REVERT\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"tag\",\"source\":0,\"value\":\"1\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"JUMPDEST\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"POP\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH #[$]\",\"source\":0,\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"DUP1\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH [$]\",\"source\":0,\"value\":\"0000000000000000000000000000000000000000000000000000000000000000\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"0\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"CODECOPY\",\"source\":0},"
-		"{\"begin\":0,\"end\":14,\"name\":\"PUSH\",\"source\":0,\"value\":\"0\"},"
-		"{\"begin\":0,\"end\":14,\"name\":\"RETURN\",\"source\":0}]"
-	);
+	BOOST_CHECK(!contract["evm"]["gasEstimates"].isObject());
+	BOOST_CHECK(!contract["evm"]["legacyAssembly"].isObject());
 	BOOST_CHECK(contract["metadata"].isString());
 	BOOST_CHECK(solidity::test::isValidMetadata(contract["metadata"].asString()));
 	BOOST_CHECK(result["sources"].isObject());
@@ -1393,28 +1354,14 @@ BOOST_AUTO_TEST_CASE(use_stack_optimization)
 	solidity::frontend::StandardCompiler compiler;
 	Json::Value result = compiler.compile(parsedInput);
 
-	BOOST_CHECK(containsAtMostWarnings(result));
+	BOOST_CHECK(!containsAtMostWarnings(result));
 	Json::Value contract = getContractResult(result, "fileA", "A");
-	BOOST_REQUIRE(contract.isObject());
-	BOOST_REQUIRE(contract["evm"]["bytecode"]["object"].isString());
-	BOOST_CHECK(contract["evm"]["bytecode"]["object"].asString().length() > 20);
-
-	// Now disable stack optimizations and UnusedFunctionParameterPruner (p)
-	// results in "stack too deep"
-	string optimiserSteps = OptimiserSettings::DefaultYulOptimiserSteps;
-	optimiserSteps.erase(
-		remove_if(optimiserSteps.begin(), optimiserSteps.end(), [](char ch) { return ch == 'p'; }),
-		optimiserSteps.end()
-	);
-	parsedInput["settings"]["optimizer"]["details"]["yulDetails"]["stackAllocation"] = false;
-	parsedInput["settings"]["optimizer"]["details"]["yulDetails"]["optimizerSteps"] = optimiserSteps;
-
-	result = compiler.compile(parsedInput);
+	BOOST_REQUIRE(!contract.isObject());
 	BOOST_REQUIRE(result["errors"].isArray());
-	BOOST_CHECK(result["errors"][0]["severity"] == "error");
-	BOOST_REQUIRE(result["errors"][0]["message"].isString());
-	BOOST_CHECK(result["errors"][0]["message"].asString().find("Stack too deep when compiling inline assembly") != std::string::npos);
-	BOOST_CHECK(result["errors"][0]["type"] == "CompilerError");
+	BOOST_CHECK(result["errors"][1]["severity"] == "error");
+	BOOST_REQUIRE(result["errors"][1]["message"].isString());
+	BOOST_CHECK(result["errors"][1]["message"].asString().find("Inline assembly is not supported in IELE.") != std::string::npos);
+	BOOST_CHECK(result["errors"][1]["type"] == "SyntaxError");
 }
 
 BOOST_AUTO_TEST_CASE(standard_output_selection_wildcard)
@@ -1684,7 +1631,7 @@ BOOST_AUTO_TEST_CASE(dependency_tracking_of_abstract_contract)
 		"settings": {
 			"outputSelection": {
 				"BlockRewardAuRaCoins.sol": {
-					"BlockRewardAuRaCoins": ["ir", "evm.bytecode.sourceMap"]
+					"BlockRewardAuRaCoins": ["evm.bytecode", "evm.bytecode.sourceMap"]
 				}
 			}
 		}
@@ -1703,7 +1650,6 @@ BOOST_AUTO_TEST_CASE(dependency_tracking_of_abstract_contract)
 	BOOST_REQUIRE(result["contracts"]["BlockRewardAuRaCoins.sol"].size() == 1);
 	BOOST_REQUIRE(result["contracts"]["BlockRewardAuRaCoins.sol"]["BlockRewardAuRaCoins"].isObject());
 	BOOST_REQUIRE(result["contracts"]["BlockRewardAuRaCoins.sol"]["BlockRewardAuRaCoins"]["evm"].isObject());
-	BOOST_REQUIRE(result["contracts"]["BlockRewardAuRaCoins.sol"]["BlockRewardAuRaCoins"]["ir"].isString());
 	BOOST_REQUIRE(result["contracts"]["BlockRewardAuRaCoins.sol"]["BlockRewardAuRaCoins"]["evm"]["bytecode"].isObject());
 	BOOST_REQUIRE(result["sources"].isObject());
 	BOOST_REQUIRE(result["sources"].size() == 2);
@@ -1722,7 +1668,7 @@ BOOST_AUTO_TEST_CASE(dependency_tracking_of_abstract_contract_yul)
 		"settings": {
 			"outputSelection": {
 				"A.sol": {
-					"C": ["ir"]
+					"C": ["evm.bytecode", "evm.assembly"]
 				}
 			}
 		}
@@ -1740,18 +1686,20 @@ BOOST_AUTO_TEST_CASE(dependency_tracking_of_abstract_contract_yul)
 	BOOST_REQUIRE(result["contracts"]["A.sol"].isObject());
 	BOOST_REQUIRE(result["contracts"]["A.sol"].size() == 1);
 	BOOST_REQUIRE(result["contracts"]["A.sol"]["C"].isObject());
-	BOOST_REQUIRE(result["contracts"]["A.sol"]["C"]["ir"].isString());
+	BOOST_REQUIRE(result["contracts"]["A.sol"]["C"]["evm"].isObject());
+	BOOST_REQUIRE(result["contracts"]["A.sol"]["C"]["evm"]["bytecode"].isObject());
+	BOOST_REQUIRE(result["contracts"]["A.sol"]["C"]["evm"]["assembly"].isString());
 
-	const string& irCode = result["contracts"]["A.sol"]["C"]["ir"].asString();
+	const string& assembly = result["contracts"]["A.sol"]["C"]["evm"]["assembly"].asString();
 
 	// Make sure C and B contracts are deployed
-	BOOST_REQUIRE(irCode.find("object \"C") != string::npos);
-	BOOST_REQUIRE(irCode.find("object \"B") != string::npos);
+	BOOST_REQUIRE(assembly.find("contract \"A.sol:C") != string::npos);
+	BOOST_REQUIRE(assembly.find("contract \"A.sol:B") != string::npos);
 
 	// Make sure A and D are NOT deployed as they were not requested and are not
 	// in any dependency
-	BOOST_REQUIRE(irCode.find("object \"A") == string::npos);
-	BOOST_REQUIRE(irCode.find("object \"D") == string::npos);
+	BOOST_REQUIRE(assembly.find("contract \"A.sol:A") == string::npos);
+	BOOST_REQUIRE(assembly.find("contract  \"A.sol:D") == string::npos);
 
 
 	BOOST_REQUIRE(result["sources"].isObject());
