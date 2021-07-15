@@ -4319,36 +4319,58 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
         iele::IeleIntConstant::getZero(&Context), CompilingBlock);
     appendRevert(PopEmpty);
 
-    iele::IeleLocalVariable *AddressValue =
-      iele::IeleLocalVariable::Create(&Context, "array.last.element", CompilingFunction);
-    // compute the data offset of the last element
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Sub, AddressValue, SizeValue,
-      iele::IeleIntConstant::getOne(&Context),
-      CompilingBlock);
-    appendMul(AddressValue, AddressValue, elementSize);
-    // add one for the length slot
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Add, AddressValue, AddressValue,
-      iele::IeleIntConstant::getOne(&Context),
-      CompilingBlock);
-    // compute the address of the last element
-    iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Add, AddressValue, AddressValue, ArrayValue,
-      CompilingBlock);
-
-    // delete the last element
-    appendLValueDelete(
-      makeLValue(AddressValue, elementType, CompilingLValueArrayType->location()),
-      elementType);
-
-    // update array length
+    // compute new size
     iele::IeleLocalVariable *NewSize =
       iele::IeleLocalVariable::Create(&Context, "array.new.length", CompilingFunction);
     iele::IeleInstruction::CreateBinOp(
       iele::IeleInstruction::Sub, NewSize, SizeValue,
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
+
+    // delete the last element
+    if (CompilingLValueArrayType->isByteArray()) {
+      // for byte/string arrays, we use the twos IELE instruction to truncate the last elememt
+      iele::IeleLocalVariable *StringAddress =
+        iele::IeleLocalVariable::Create(&Context, "string.address", CompilingFunction);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, StringAddress, ArrayValue,
+        iele::IeleIntConstant::getOne(&Context),
+        CompilingBlock);
+      iele::IeleLocalVariable *NewValue =
+        iele::IeleLocalVariable::Create(&Context, "shrunk.value", CompilingFunction);
+      iele::IeleInstruction::CreateSLoad(NewValue, StringAddress, CompilingBlock);
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Twos,
+        NewValue, NewSize, NewValue,
+        CompilingBlock);
+      iele::IeleInstruction::CreateSStore(NewValue, StringAddress, CompilingBlock);
+    } else {
+      // for regular arrays, we delete the last element
+      iele::IeleLocalVariable *AddressValue =
+        iele::IeleLocalVariable::Create(&Context, "array.last.element", CompilingFunction);
+      // compute the data offset of the last element
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Sub, AddressValue, SizeValue,
+        iele::IeleIntConstant::getOne(&Context),
+        CompilingBlock);
+      appendMul(AddressValue, AddressValue, elementSize);
+      // add one for the length slot
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, AddressValue, AddressValue,
+        iele::IeleIntConstant::getOne(&Context),
+        CompilingBlock);
+      // compute the address of the last element
+      iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, AddressValue, AddressValue, ArrayValue,
+        CompilingBlock);
+
+      // delete the last element
+      appendLValueDelete(
+        makeLValue(AddressValue, elementType, CompilingLValueArrayType->location()),
+        elementType);
+    }
+
+    // update array length
     IeleRValue *rvalue = IeleRValue::Create(NewSize);
     SizeLValue->write(rvalue, CompilingBlock);
 
@@ -6849,11 +6871,12 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
     if (TargetType->category() == Type::Category::Address) {
       solAssert(sourceType.kind() == FunctionType::Kind::External, "Only external function type can be converted to address.");
       solAssert(Value->getValues().size() == 2, "Incorrect number of rvalues.");
+      return IeleRValue::Create(Value->getValues()[0]);
     } else { // Type::Category::Function
       solAssert(Value->getValues().size() == 1 || Value->getValues().size() == 2,
                 "Incorrect number of rvalues.");
+      return Value;
     }
-    return IeleRValue::Create(Value->getValues()[0]);
   }
   case Type::Category::Struct:
   case Type::Category::Array:

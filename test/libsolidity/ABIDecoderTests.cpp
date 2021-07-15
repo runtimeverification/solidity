@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(validation_int_inside_arrays)
 		contract C {
 			enum E { A, B }
 			function f(uint16[] memory a) public pure returns (uint r) { r = a[0]; }
-			function g(int16[] memory a) public pure returns (uint256 r) { r = uint256(a[0]); }
+			function g(int16[] memory a) public pure returns (uint256 r) { r = uint256(int256(a[0])); }
 			function h(E[] memory a) public pure returns (uint r) { r = uint(a[0]); }
 		}
 	)";
