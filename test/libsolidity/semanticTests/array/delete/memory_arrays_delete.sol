@@ -12,4 +12,4 @@ contract Test {
 // ====
 // compileViaYul: also
 // ----
-// del() -> 0, 1, 2, 0, 0, 0, 0x20, 0x21, 0x22, 0x30, 0x31, 0
+// del() -> array 24 [ 0, 1, 2, 0, 0, 0, 0x20, 0x21, 0x22, 0x30, 0x31, 0 ]
