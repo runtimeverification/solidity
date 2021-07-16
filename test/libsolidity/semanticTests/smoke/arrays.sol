@@ -35,11 +35,11 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// r() -> true, false, true
-// s() -> 123, 456, 789
-// u() -> 0x20, 0x40, 0xE0, 23, 42, 0x60, 3, "any", 555, 666, 0x60, 3, "any"
-// v() -> 0x20, 0
-// w1() -> 0x20, 0x20, 3, "any"
-// w2() -> 0x20, 0x40, 0x80, 3, "any", 3, "any"
-// w3() -> 0x20, 0x60, 0xa0, 0xe0, 3, "any", 3, "any", 3, "any"
-// x() -> 0x40, 0x0100, 0x40, 0x80, 3, "any", 3, "any", 0x60, 0xa0, 0xe0, 3, "any", 3, "any", 3, "any"
+// r() -> refargs { true, false, true }
+// s() -> array 0 [ 123, 456 ], 789
+// u() -> refargs { 23, 42, "any", 555, 666, "any" }
+// v() -> refargs { 0x01 }
+// w1() -> refargs { "any" }
+// w2() -> refargs { "any", "any" }
+// w3() -> refargs { "any", "any", "any" }
+// x() -> refargs { "any", "any" }, refargs { "any", "any", "any" }
