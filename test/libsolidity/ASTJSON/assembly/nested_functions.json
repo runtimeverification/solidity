@@ -16,6 +16,7 @@
       "baseContracts": [],
       "contractDependencies": [],
       "contractKind": "contract",
+      "fullyImplemented": true,
       "id": 8,
       "linearizedBaseContracts":
       [
@@ -94,6 +95,7 @@
               }
             ]
           },
+          "functionSelector": "26121ff0",
           "id": 7,
           "implemented": true,
           "kind": "function",
@@ -123,14 +125,22 @@
                 "src": "49:6:1",
                 "stateVariable": false,
                 "storageLocation": "default",
-                "typeDescriptions": {},
+                "typeDescriptions":
+                {
+                  "typeIdentifier": "t_uint",
+                  "typeString": "uint"
+                },
                 "typeName":
                 {
                   "id": 2,
                   "name": "uint",
                   "nodeType": "ElementaryTypeName",
                   "src": "49:4:1",
-                  "typeDescriptions": {}
+                  "typeDescriptions":
+                  {
+                    "typeIdentifier": "t_uint",
+                    "typeString": "uint"
+                  }
                 },
                 "visibility": "internal"
               }

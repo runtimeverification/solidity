@@ -43,8 +43,8 @@
               "storageLocation": "default",
               "typeDescriptions":
               {
-                "typeIdentifier": "t_uint256",
-                "typeString": "uint256"
+                "typeIdentifier": "t_uint",
+                "typeString": "uint"
               },
               "typeName":
               {
@@ -54,8 +54,8 @@
                 "src": "28:4:1",
                 "typeDescriptions":
                 {
-                  "typeIdentifier": "t_uint256",
-                  "typeString": "uint256"
+                  "typeIdentifier": "t_uint",
+                  "typeString": "uint"
                 }
               },
               "visibility": "internal"
@@ -180,25 +180,7 @@
                   ]
                 },
                 "evmVersion": %EVMVERSION%,
-                "externalReferences":
-                [
-                  {
-                    "declaration": 6,
-                    "isOffset": true,
-                    "isSlot": false,
-                    "src": "106:8:1",
-                    "suffix": "offset",
-                    "valueSize": 1
-                  },
-                  {
-                    "declaration": 6,
-                    "isOffset": false,
-                    "isSlot": true,
-                    "src": "128:6:1",
-                    "suffix": "slot",
-                    "valueSize": 1
-                  }
-                ],
+                "externalReferences": [],
                 "id": 9,
                 "nodeType": "InlineAssembly",
                 "src": "86:54:1"
