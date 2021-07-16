@@ -112,11 +112,11 @@ BOOST_AUTO_TEST_CASE(call_succees)
 BOOST_AUTO_TEST_CASE(non_existent_call_revert_single_line)
 {
 	char const* source = R"(
-		// i_am_not_there() -> FAILURE
+		// i_am_not_there() -> FAILURE, 255
 	)";
 	auto const calls = parse(source);
 	BOOST_REQUIRE_EQUAL(calls.size(), 1);
-	testFunctionCall(calls.at(0), Mode::SingleLine, "i_am_not_there()", true);
+	testFunctionCall(calls.at(0), Mode::SingleLine, "i_am_not_there()", true, fmt::encodeArgs(), fmt::encodeArgs(255));
 }
 
 BOOST_AUTO_TEST_CASE(call_arguments_success)
@@ -222,17 +222,17 @@ BOOST_AUTO_TEST_CASE(non_existent_call_revert)
 {
 	char const* source = R"(
 		// i_am_not_there()
-		// -> FAILURE
+		// -> FAILURE, 255
 	)";
 	auto const calls = parse(source);
 	BOOST_REQUIRE_EQUAL(calls.size(), 1);
-	testFunctionCall(calls.at(0), Mode::MultiLine, "i_am_not_there()", true);
+	testFunctionCall(calls.at(0), Mode::MultiLine, "i_am_not_there()", true, fmt::encodeArgs(), fmt::encodeArgs(255));
 }
 
 BOOST_AUTO_TEST_CASE(call_revert_message)
 {
 	char const* source = R"(
-		// f() -> FAILURE, hex"08c379a0", 0x20, 6, "Revert"
+		// f() -> FAILURE, "Revert"
 	)";
 	auto const calls = parse(source);
 	BOOST_REQUIRE_EQUAL(calls.size(), 1);
@@ -242,7 +242,7 @@ BOOST_AUTO_TEST_CASE(call_revert_message)
 		"f()",
 		true,
 		fmt::encodeArgs(),
-		fmt::encodeArgs(fromHex("08c379a0"), fmt::encodeDyn(string{"Revert"}))
+		fmt::encodeArgs(fmt::encodeLogs(string{"Revert"}))
 	);
 }
 
@@ -364,7 +364,7 @@ BOOST_AUTO_TEST_CASE(scanner_hex_values)
 	)";
 	auto const calls = parse(source);
 	BOOST_REQUIRE_EQUAL(calls.size(), 1);
-	testFunctionCall(calls.at(0), Mode::SingleLine, "f(uint256)", false, fmt::encodeArgs(string("\x20\x00\xff", 3)));
+	testFunctionCall(calls.at(0), Mode::SingleLine, "f(uint256)", false, fmt::encodeArgs(fmt::encodeDyn(string("\x20\x00\xff", 3))));
 }
 
 BOOST_AUTO_TEST_CASE(scanner_hex_values_invalid1)
@@ -382,7 +382,7 @@ BOOST_AUTO_TEST_CASE(scanner_hex_values_invalid2)
 	)";
 	auto const calls = parse(source);
 	BOOST_REQUIRE_EQUAL(calls.size(), 1);
-	testFunctionCall(calls.at(0), Mode::SingleLine, "f(uint256)", false, fmt::encodeArgs(string("\x1", 1)));
+	testFunctionCall(calls.at(0), Mode::SingleLine, "f(uint256)", false, fmt::encodeArgs(fmt::encodeDyn(string("\x1", 1))));
 }
 
 BOOST_AUTO_TEST_CASE(scanner_hex_values_invalid3)
@@ -438,7 +438,7 @@ BOOST_AUTO_TEST_CASE(call_arguments_hex_string_lowercase)
 BOOST_AUTO_TEST_CASE(call_arguments_string)
 {
 	char const* source = R"(
-		// f(string): 0x20, 3, "any" ->
+		// f(string): "any" ->
 	)";
 	auto const calls = parse(source);
 	BOOST_REQUIRE_EQUAL(calls.size(), 1);
@@ -475,7 +475,7 @@ BOOST_AUTO_TEST_CASE(call_hex_number)
 BOOST_AUTO_TEST_CASE(call_return_string)
 {
 	char const* source = R"(
-		// f() -> 0x20, 3, "any"
+		// f() -> "any"
 	)";
 	auto const calls = parse(source);
 	BOOST_REQUIRE_EQUAL(calls.size(), 1);
@@ -673,13 +673,13 @@ BOOST_AUTO_TEST_CASE(call_signature_struct_array)
 BOOST_AUTO_TEST_CASE(call_signature_valid)
 {
 	char const* source = R"(
-		// f(uint256, uint8, string) -> FAILURE
-		// f(invalid, xyz, foo) -> FAILURE
+		// f(uint256, uint8, string) -> FAILURE, 255
+		// f(invalid, xyz, foo) -> FAILURE, 255
 	)";
 	auto const calls = parse(source);
 	BOOST_REQUIRE_EQUAL(calls.size(), 2);
-	testFunctionCall(calls.at(0), Mode::SingleLine, "f(uint256,uint8,string)", true);
-	testFunctionCall(calls.at(1), Mode::SingleLine, "f(invalid,xyz,foo)", true);
+	testFunctionCall(calls.at(0), Mode::SingleLine, "f(uint256,uint8,string)", true, fmt::encodeArgs(), fmt::encodeArgs(255));
+	testFunctionCall(calls.at(1), Mode::SingleLine, "f(invalid,xyz,foo)", true, fmt::encodeArgs(), fmt::encodeArgs(255));
 }
 
 BOOST_AUTO_TEST_CASE(call_raw_arguments)
@@ -715,14 +715,8 @@ BOOST_AUTO_TEST_CASE(call_builtin_left_decimal)
 		Mode::SingleLine,
 		"f()",
 		false,
-		fmt::encodeArgs(
-			fmt::encode(toCompactBigEndian(u256{1}), false),
-			fmt::encode(fromHex("0x20"), false)
-		),
-		fmt::encodeArgs(
-			fmt::encode(toCompactBigEndian(u256{-2}), false),
-			fmt::encode(bytes{true}, false)
-		)
+		fmt::encodeArgs(1, 0x20),
+		fmt::encodeArgs(-2, true)
 	);
 }
 
