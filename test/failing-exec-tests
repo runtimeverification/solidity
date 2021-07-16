@@ -961,8 +961,6 @@
 -t !SolidityFixedFeeRegistrar/properties
 -t !SolidityFixedFeeRegistrar/reserve
 -t !SolidityFixedFeeRegistrar/transfer
--t !SolidityTypes/int_types
--t !SolidityTypes/uint_types
 -t !SolidityWallet/add_owners
 -t !SolidityWallet/change_owners
 -t !SolidityWallet/creation
