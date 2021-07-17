@@ -35,7 +35,10 @@
     {
       "abstract": false,
       "baseContracts": [],
-      "contractDependencies": [],
+      "contractDependencies":
+      [
+        1
+      ],
       "contractKind": "contract",
       "fullyImplemented": true,
       "id": 5,
@@ -67,8 +70,8 @@
             "src": "38:4:1",
             "typeDescriptions":
             {
-              "typeIdentifier": "t_uint256",
-              "typeString": "uint256"
+              "typeIdentifier": "t_uint",
+              "typeString": "uint"
             }
           }
         }

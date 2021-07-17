@@ -37,14 +37,14 @@ BOOST_AUTO_TEST_SUITE(SolidityTypes)
 
 BOOST_AUTO_TEST_CASE(int_types)
 {
-	BOOST_CHECK(*TypeProvider::fromElementaryTypeName(ElementaryTypeNameToken(Token::Int, 0, 0)) == *TypeProvider::integer(256, IntegerType::Modifier::Signed));
+	BOOST_CHECK(*TypeProvider::fromElementaryTypeName(ElementaryTypeNameToken(Token::Int, 0, 0)) == *TypeProvider::integer(IntegerType::Modifier::Signed));
 	for (unsigned i = 8; i <= 256; i += 8)
 		BOOST_CHECK(*TypeProvider::fromElementaryTypeName(ElementaryTypeNameToken(Token::IntM, i, 0)) == *TypeProvider::integer(i, IntegerType::Modifier::Signed));
 }
 
 BOOST_AUTO_TEST_CASE(uint_types)
 {
-	BOOST_CHECK(*TypeProvider::fromElementaryTypeName(ElementaryTypeNameToken(Token::UInt, 0, 0)) == *TypeProvider::integer(256, IntegerType::Modifier::Unsigned));
+	BOOST_CHECK(*TypeProvider::fromElementaryTypeName(ElementaryTypeNameToken(Token::UInt, 0, 0)) == *TypeProvider::integer(IntegerType::Modifier::Unsigned));
 	for (unsigned i = 8; i <= 256; i += 8)
 		BOOST_CHECK(*TypeProvider::fromElementaryTypeName(ElementaryTypeNameToken(Token::UIntM, i, 0)) == *TypeProvider::integer(i, IntegerType::Modifier::Unsigned));
 }
