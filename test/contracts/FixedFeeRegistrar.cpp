@@ -84,7 +84,7 @@ contract FixedFeeRegistrar is Registrar {
 		}
 	}
 	function disown(string memory _name, address payable _refund) onlyrecordowner(_name) public {
-		delete m_recordData[uint(keccak256(bytes(_name))) / 8];
+		delete m_recordData[uint(uint256(keccak256(bytes(_name)))) / 8];
 		if (!_refund.send(c_fee))
 			revert();
 		emit Changed(_name);
@@ -120,7 +120,7 @@ contract FixedFeeRegistrar is Registrar {
 
 	Record[2**253] m_recordData;
 	function m_record(string memory _name) view internal returns (Record storage o_record) {
-		return m_recordData[uint(keccak256(bytes(_name))) / 8];
+		return m_recordData[uint(uint256(keccak256(bytes(_name)))) / 8];
 	}
 	uint constant c_fee = 69 ether;
 }
@@ -159,9 +159,9 @@ BOOST_AUTO_TEST_CASE(reserve)
 	deployRegistrar();
 	string name[] = {"abc", "def", "ghi"};
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee, encodeDyn(name[0])) == encodeArgs());
-	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name[0])) == encodeArgs(account(0)));
+	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name[0])) == encodeArgs(u160(account(0))));
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee + 1, encodeDyn(name[1])) == encodeArgs());
-	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name[1])) == encodeArgs(account(0)));
+	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name[1])) == encodeArgs(u160(account(0))));
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee - 1, encodeDyn(name[2])) == encodeArgs());
 	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name[2])) == encodeArgs(0));
 }
@@ -172,12 +172,12 @@ BOOST_AUTO_TEST_CASE(double_reserve)
 	deployRegistrar();
 	string name = "abc";
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee, encodeDyn(name)) == encodeArgs());
-	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(account(0)));
+	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(u160(account(0))));
 
-	sendEther(account(1), 100 * ether);
+	sendEther(account(1), 100 * u256("1000000000000000000"));
 	m_sender = account(1);
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee, encodeDyn(name)) == encodeArgs());
-	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(account(0)));
+	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(u160(account(0))));
 }
 
 BOOST_AUTO_TEST_CASE(properties)
@@ -191,9 +191,9 @@ BOOST_AUTO_TEST_CASE(properties)
 	{
 		addr++;
 		m_sender = account(0);
-		sendEther(account(count), 100 * ether);
+		sendEther(account(count), 100 * u256("1000000000000000000"));
 		m_sender = account(count);
-		h160 owner = m_sender;
+		u160 owner = u160(m_sender);
 		// setting by sender works
 		BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee, encodeDyn(name)) == encodeArgs());
 		BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(owner));
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(properties)
 		count++;
 		// but not by someone else
 		m_sender = account(0);
-		sendEther(account(count), 100 * ether);
+		sendEther(account(count), 100 * u256("1000000000000000000"));
 		m_sender = account(count);
 		BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(owner));
 		BOOST_CHECK(callContractFunction("setAddr(string,address)", encodeDyn(name), addr + 1) == encodeArgs());
@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE(transfer)
 	BOOST_CHECK(callContractFunction("setContent(string,bytes32)", encodeDyn(name), account(0)) == encodeArgs());
 	BOOST_CHECK(callContractFunction("transfer(string,address)", encodeDyn(name), u256(555)) == encodeArgs());
 	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(u256(555)));
-	BOOST_CHECK(callContractFunction("content(string)", encodeDyn(name)) == encodeArgs(account(0)));
+	BOOST_CHECK(callContractFunction("content(string)", encodeDyn(name)) == encodeArgs(u160(account(0))));
 }
 
 BOOST_AUTO_TEST_CASE(disown)

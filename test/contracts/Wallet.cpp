@@ -128,7 +128,7 @@ contract multiowned {
 	}
 
 	// Replaces an owner `_from` with another `_to`.
-	function changeOwner(address _from, address _to) onlymanyowners(keccak256(1, _from, _to)) public virtual {
+	function changeOwner(address _from, address _to) onlymanyowners(keccak256(abi.encodePacked(uint(1), _from, _to))) public virtual {
 		if (isOwner(_to)) return;
 		uint ownerIndex = m_ownerIndex[uint160(_from)];
 		if (ownerIndex == 0) return;
@@ -140,7 +140,7 @@ contract multiowned {
 		emit OwnerChanged(_from, _to);
 	}
 
-	function addOwner(address _owner) onlymanyowners(keccak256(2, _owner)) external {
+	function addOwner(address _owner) onlymanyowners(keccak256(abi.encodePacked(uint(2), _owner))) external {
 		if (isOwner(_owner)) return;
 
 		clearPending();
@@ -154,7 +154,7 @@ contract multiowned {
 		emit OwnerAdded(_owner);
 	}
 
-	function removeOwner(address _owner) onlymanyowners(keccak256(3, _owner)) external {
+	function removeOwner(address _owner) onlymanyowners(keccak256(abi.encodePacked(uint(3), _owner))) external {
 		uint ownerIndex = m_ownerIndex[uint160(_owner)];
 		if (ownerIndex == 0) return;
 		if (m_required > m_numOwners - 1) return;
@@ -166,7 +166,7 @@ contract multiowned {
 		emit OwnerRemoved(_owner);
 	}
 
-	function changeRequirement(uint _newRequired) onlymanyowners(keccak256(4, _newRequired)) external {
+	function changeRequirement(uint _newRequired) onlymanyowners(keccak256(abi.encodePacked(uint(4), _newRequired))) external {
 		if (_newRequired > m_numOwners) return;
 		m_required = _newRequired;
 		clearPending();
@@ -294,11 +294,11 @@ abstract contract daylimit is multiowned {
 		m_lastDay = today();
 	}
 	// (re)sets the daily limit. needs many of the owners to confirm. doesn't alter the amount already spent today.
-	function setDailyLimit(uint _newLimit) onlymanyowners(keccak256(5, _newLimit)) external {
+	function setDailyLimit(uint _newLimit) onlymanyowners(keccak256(abi.encodePacked(uint(5), _newLimit))) external {
 		m_dailyLimit = _newLimit;
 	}
 	// (re)sets the daily limit. needs many of the owners to confirm. doesn't alter the amount already spent today.
-	function resetSpentToday() onlymanyowners(keccak256(6)) external {
+	function resetSpentToday() onlymanyowners(keccak256(abi.encodePacked(uint(6)))) external {
 		m_spentToday = 0;
 	}
 
@@ -377,7 +377,7 @@ contract Wallet is multisig, multiowned, daylimit {
 		multiowned.changeOwner(_from, _to);
 	}
 	// destroys the contract sending everything to `_to`.
-	function shutdown(address payable _to) onlymanyowners(keccak256(7, _to)) external {
+	function shutdown(address payable _to) onlymanyowners(keccak256(abi.encodePacked(uint(7), _to))) external {
 		selfdestruct(_to);
 	}
 
@@ -397,12 +397,12 @@ contract Wallet is multisig, multiowned, daylimit {
 		if (underLimit(_value)) {
 			emit SingleTransact(msg.sender, _value, _func);
 			// yes - just execute the call.
-			_func{value: _value}();
+			_func{value: uint256(_value)}();
 			return 0;
 		}
 		// determine our operation hash.
-		_r = keccak256(8, _func, _value, block.number);
-		if (!confirm(_r) && address(m_txs[_r].func) == 0x0000000000000000000000000000000000000000) {
+		_r = keccak256(abi.encodePacked(uint(8), _func, _value, block.number));
+		if (!confirm(_r) && m_txs[_r].func.address == 0x0000000000000000000000000000000000000000) {
 			m_txs[_r].func = _func;
 			m_txs[_r].value = _value;
 			emit ConfirmationNeeded(_r, msg.sender, _value, _func);
@@ -412,8 +412,8 @@ contract Wallet is multisig, multiowned, daylimit {
 	// confirm a transaction through just the hash. we use the previous transactions map, m_txs, in order
 	// to determine the body of the transaction from the hash provided.
 	function confirm(bytes32 _h) onlymanyowners(_h) public override returns (bool) {
-		if (address(m_txs[_h].func) != 0x0000000000000000000000000000000000000000) {
-			m_txs[_h].func{value: m_txs[_h].value}();
+		if (m_txs[_h].func.address != 0x0000000000000000000000000000000000000000) {
+			m_txs[_h].func{value: uint256(m_txs[_h].value)}();
 			emit MultiTransact(msg.sender, _h, m_txs[_h].value, m_txs[_h].func);
 			delete m_txs[_h];
 			return true;
