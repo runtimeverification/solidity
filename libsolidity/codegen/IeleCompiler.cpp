@@ -2180,7 +2180,7 @@ void IeleCompiler::appendArrayDeleteLoop(
   bigint elementSize;
   switch (type.location()) {
   case DataLocation::Storage: {
-    elementSize = elementType->storageSize();
+    elementSize = type.storageSizeOfElement();
     break;
   }
   case DataLocation::CallData:
@@ -2585,7 +2585,7 @@ void IeleCompiler::doEncode(
       bigint elementSize;
       switch (arrayType.location()) {
       case DataLocation::Storage: {
-        elementSize = elementType->storageSize();
+        elementSize = arrayType.storageSizeOfElement();
         break;
       }
       case DataLocation::CallData:
@@ -3014,7 +3014,7 @@ void IeleCompiler::doDecode(
       bigint elementSize;
       switch (arrayType.location()) {
       case DataLocation::Storage: {
-        elementSize = elementType->storageSize();
+        elementSize = arrayType.storageSizeOfElement();
         break;
       }
       case DataLocation::CallData:
@@ -4246,7 +4246,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     bigint elementSize;
     switch (CompilingLValueArrayType->location()) {
     case DataLocation::Storage: {
-      elementSize = elementType->storageSize();
+      elementSize = CompilingLValueArrayType->storageSizeOfElement();
       break;
     }
     case DataLocation::CallData:
@@ -4314,7 +4314,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     bigint elementSize;
     switch (CompilingLValueArrayType->location()) {
     case DataLocation::Storage: {
-      elementSize = elementType->storageSize();
+      elementSize = CompilingLValueArrayType->storageSizeOfElement();
       break;
     }
     case DataLocation::CallData:
@@ -4941,21 +4941,6 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     solAssert(ExprValue,
               "IeleCompiler: failed to compile base expression for member "
               "access.");
-
-    const Type &elementType = *type.baseType();
-    // Generate code for the access.
-    bigint elementSize;
-    switch (type.location()) {
-    case DataLocation::Storage: {
-      elementSize = elementType.storageSize();
-      break;
-    }
-    case DataLocation::CallData:
-    case DataLocation::Memory: {
-      elementSize = elementType.memorySize();
-      break;
-    }
-    }
  
     if (member == "length") {
       if (type.isDynamicallySized()) {
@@ -5101,7 +5086,7 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
   bigint size;
   switch (Loc) {
   case DataLocation::Storage: {
-    elementSize = elementType->storageSize();
+    elementSize = type.storageSizeOfElement();
     size = type.storageSize();
     break;
   }
@@ -6005,7 +5990,7 @@ iele::IeleValue *IeleCompiler::getReferenceTypeSize(
       bigint elementSize;
       switch (arrayType.location()) {
       case DataLocation::Storage: {
-        elementSize = elementType.storageSize();
+        elementSize = arrayType.storageSizeOfElement();
         break;
       }
       case DataLocation::CallData:
@@ -6056,7 +6041,7 @@ iele::IeleLocalVariable *IeleCompiler::appendArrayAllocation(
     bigint elementSize;
     switch (type.location()) {
     case DataLocation::Storage: {
-      elementSize = elementType.storageSize();
+      elementSize = type.storageSizeOfElement();
       break;
     }
     case DataLocation::CallData:
@@ -6261,7 +6246,7 @@ void IeleCompiler::appendCopy(
     bigint elementSize, toElementSize;
     switch (FromLoc) {
     case DataLocation::Storage: {
-      elementSize = elementType->storageSize();
+      elementSize = arrayType.storageSizeOfElement();
       break;
     }
     case DataLocation::CallData:
@@ -6273,7 +6258,7 @@ void IeleCompiler::appendCopy(
 
     switch (ToLoc) {
     case DataLocation::Storage: {
-      toElementSize = toElementType->storageSize();
+      toElementSize = toArrayType.storageSizeOfElement();
       break;
     }
     case DataLocation::CallData:

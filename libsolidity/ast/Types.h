@@ -849,6 +849,7 @@ public:
 	bigint getFixedBitwidth() const override;
 	bigint storageSizeUpperBound() const override;
 	bigint storageSize() const override;
+	bigint storageSizeOfElement() const;
 	bigint memorySize() const override { return memoryDataSize(); }
 	bool containsInfiniteMapping() const override;
 	bool containsNestedMapping() const override { return m_baseType->containsNestedMapping(); }

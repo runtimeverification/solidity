@@ -1707,6 +1707,18 @@ bigint ArrayType::storageSize() const
 	if (isByteArray())
 		return 2;
 
+	bigint baseTypeSize = storageSizeOfElement();
+
+	if (isDynamicallySized()) {
+		return MAX_ARRAY_SIZE * baseTypeSize + 1; // One extra slot for the length
+	}
+
+	solAssert(length() <= MAX_ARRAY_SIZE, "Array too large.");
+	return length() * baseTypeSize;
+}
+
+bigint ArrayType::storageSizeOfElement() const
+{
 	bigint baseTypeSize;
 
 	// Recursive structs are stored as pointers in storage arrays,
@@ -1721,12 +1733,7 @@ bigint ArrayType::storageSize() const
 		baseTypeSize = baseType()->storageSize();
 	}
 
-	if (isDynamicallySized()) {
-		return MAX_ARRAY_SIZE * baseTypeSize + 1; // One extra slot for the length
-	}
-
-	solAssert(length() <= MAX_ARRAY_SIZE, "Array too large.");
-	return length() * baseTypeSize;
+	return baseTypeSize;
 }
 
 bigint ArrayType::memoryDataSize() const
