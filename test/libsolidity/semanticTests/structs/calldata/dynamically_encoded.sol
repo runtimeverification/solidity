@@ -1,8 +1,8 @@
 pragma abicoder               v2;
 
 contract C {
-	struct S { uint256[] a; }
-	function f(S calldata s) external pure returns (uint256 a, uint256 b, uint256 c) {
+	struct S { uint[] a; }
+	function f(S calldata s) external pure returns (uint a, uint b, uint c) {
 	    return (s.a.length, s.a[0], s.a[1]);
 	}
 }
@@ -10,4 +10,4 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f((uint256[])): 32, 32, 2, 42, 23 -> 2, 42, 23
+// f((uint[])): refargs { 0x01, 0x02, 42, 23 } -> 2, 42, 23
