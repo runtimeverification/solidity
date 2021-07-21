@@ -4,14 +4,14 @@ pragma abicoder               v2;
 contract C {
     function f1(bytes[1] calldata a)
         external
-        returns (uint256, uint256, uint256, uint256)
+        returns (uint, uint256, uint256, uint256)
     {
         return (a[0].length, uint8(a[0][0]), uint8(a[0][1]), uint8(a[0][2]));
     }
 
     function f2(bytes[1] calldata a, bytes[1] calldata b)
         external
-        returns (uint256, uint256, uint256, uint256, uint256, uint256, uint256)
+        returns (uint, uint256, uint256, uint256, uint, uint256, uint256)
     {
         return (
             a[0].length,
@@ -27,11 +27,11 @@ contract C {
     function g1(bytes[2] calldata a)
         external
         returns (
+            uint,
             uint256,
             uint256,
             uint256,
-            uint256,
-            uint256,
+            uint,
             uint256,
             uint256,
             uint256
@@ -49,7 +49,7 @@ contract C {
         );
     }
 
-    function g2(bytes[] calldata a) external returns (uint256[8] memory) {
+    function g2(bytes[] calldata a) external returns (uint[8] memory) {
         return [
             a.length,
             a[0].length,
@@ -69,8 +69,8 @@ contract C {
 // ====
 // compileViaYul: false
 // ----
-// f1(bytes[1]): 0x20, 0x20, 0x3, hex"0102030000000000000000000000000000000000000000000000000000000000" -> 0x3, 0x1, 0x2, 0x3
-// f2(bytes[1],bytes[1]): 0x40, 0xa0, 0x20, 0x3, hex"0102030000000000000000000000000000000000000000000000000000000000", 0x20, 0x2, hex"0102000000000000000000000000000000000000000000000000000000000000" -> 0x3, 0x1, 0x2, 0x3, 0x2, 0x1, 0x2
-// g1(bytes[2]): 0x20, 0x40, 0x80, 0x3, hex"0102030000000000000000000000000000000000000000000000000000000000", 0x3, hex"0405060000000000000000000000000000000000000000000000000000000000" -> 0x3, 0x1, 0x2, 0x3, 0x3, 0x4, 0x5, 0x6
-// g1(bytes[2]): 0x20, 0x40, 0x40, 0x3, hex"0102030000000000000000000000000000000000000000000000000000000000" -> 0x3, 0x1, 0x2, 0x3, 0x3, 0x1, 0x2, 0x3
-// g2(bytes[]): 0x20, 0x2, 0x40, 0x80, 0x2, hex"0102000000000000000000000000000000000000000000000000000000000000", 0x3, hex"0405060000000000000000000000000000000000000000000000000000000000" -> 0x2, 0x2, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6
+// f1(bytes[1]): refargs { "\x01\x02\x03" } -> 0x03, 0x01, 0x02, 0x03
+// f2(bytes[1],bytes[1]): refargs { "\x01\x02\x03" }, refargs { "\x01\x02" } -> 0x03, 0x01, 0x02, 0x03, 0x02, 0x01, 0x02
+// g1(bytes[2]): refargs { "\x01\x02\x03", "\x04\x05\x06" } -> 0x03, 0x01, 0x02, 0x03, 0x03, 0x04, 0x05, 0x06
+// g1(bytes[2]): refargs { "\x01\x02\x03", "\x01\x02\x03" } -> 0x03, 0x01, 0x02, 0x03, 0x03, 0x01, 0x02, 0x03
+// g2(bytes[]): refargs { 0x01, 0x02, "\x01\x02", "\x04\x05\x06" } -> array 0 [ 0x02, 0x02, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 ]

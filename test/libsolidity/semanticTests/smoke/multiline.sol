@@ -8,8 +8,8 @@ contract C {
 // compileToEwasm: also
 // allowNonExistingFunctions: true
 // ----
-// f(uint256,uint256,uint256,uint256,uint256): 1, 1, 1, 1, 1
+// f(uint,uint,uint,uint,uint): 1, 1, 1, 1, 1
 // -> 5
 // g()
 // # g() does not exist #
-// -> FAILURE
+// -> FAILURE, 1

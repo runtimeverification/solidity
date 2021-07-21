@@ -24,12 +24,12 @@ contract c {
 // compileViaYul: also
 // ----
 // storage: empty
-// set(uint,bytes,uint): 12, 0x60, 13, 33, "12345678901234567890123456789012", "3" -> true
-// test(uint): 32 -> "3"
+// set(uint,bytes,uint): 12, "123456789012345678901234567890123", 13 -> true
+// test(uint): 32 -> 0x33
 // storage: nonempty
 // copy() -> true
 // storage: empty
-// set(uint,bytes,uint): 12, 0x60, 13, 33, "12345678901234567890123456789012", "3" -> true
+// set(uint,bytes,uint): 12, "123456789012345678901234567890123", 13 -> true
 // storage: nonempty
 // del() -> true
 // storage: empty

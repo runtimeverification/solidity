@@ -10,4 +10,4 @@ contract c {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// test(uint256[8],uint[],uint[5],uint,uint,uint): 1, 2, 3, 4, 5, 6, 7, 8, 0x220, 21, 22, 23, 24, 25, 0, 1, 2, 3, 11, 12, 13 -> 1, 12, 23
+// test(uint[8],uint[],uint[5],uint,uint,uint): array 0 [ 1, 2, 3, 4, 5, 6, 7, 8 ], dynarray 0 [ 11, 12, 13 ], array 0 [ 21, 22, 23, 24, 25 ], 0, 1, 2 -> 1, 12, 23

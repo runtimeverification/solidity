@@ -2,7 +2,7 @@ pragma abicoder               v2;
 
 contract C {
     struct S {
-        uint256 a;
+        uint a;
         bool x;
     }
 
@@ -16,4 +16,4 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// s() -> 8, true
+// s() -> refargs { 8, true }

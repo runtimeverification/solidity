@@ -1,10 +1,10 @@
 contract c {
-    function set(bytes b) public returns (bool) {
+    function set(bytes memory b) public returns (bool) {
         data = b;
         return true;
     }
 
-    function getLength() public returns (uint256) {
+    function getLength() public returns (uint) {
         return data.length;
     }
 

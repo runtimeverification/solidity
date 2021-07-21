@@ -25,7 +25,7 @@ contract D {
 // stateBool() -> right(true)
 // stateDecimal() -> 42
 // stateDecimal() -> right(42)
-// stateBytes() -> left(0x4200ef)
+// stateBytes() -> 0x4200ef0000000000000000000000000000000000000000000000000000000000
 // internalStateDecimal() -> 0x20
-// update(bool,uint256,bytes32): false, -23, left(0x2300ef) -> false, -23, left(0x2300ef)
+// update(bool,uint256,bytes32): false, 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe9, 0x2300ef0000000000000000000000000000000000000000000000000000000000 -> false, 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe9, 0x2300ef0000000000000000000000000000000000000000000000000000000000
 

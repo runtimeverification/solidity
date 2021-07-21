@@ -7,4 +7,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(uint256[2]): 43, 57 -> 43, 57
+// f(uint256[2]): array 256 [ 43, 57 ] -> 43, 57
