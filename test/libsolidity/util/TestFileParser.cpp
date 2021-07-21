@@ -633,7 +633,7 @@ vector<pair<ParsedRefArgs, Token>> TestFileParser::parseRefArgs()
 			string literal = parseDecimalNumber();
 			if (isSigned)
 				literal = "-" + literal;
-			result.push_back(make_pair(literal, Token::Number));
+			result.push_back(make_pair(ParsedRefArgs(literal), Token::Number));
 		}
 		else if (accept(Token::HexNumber))
 		{
@@ -641,7 +641,7 @@ vector<pair<ParsedRefArgs, Token>> TestFileParser::parseRefArgs()
 				throw TestParserError("Invalid hex number literal.");
 
 			string literal = parseHexNumber();
-			result.push_back(make_pair(literal, Token::HexNumber));
+			result.push_back(make_pair(ParsedRefArgs(literal), Token::HexNumber));
 		}
 		else if (accept(Token::Hex, true))
 		{
@@ -649,7 +649,7 @@ vector<pair<ParsedRefArgs, Token>> TestFileParser::parseRefArgs()
 				throw TestParserError("Invalid hex string literal.");
 
 			string literal = parseString();
-			result.push_back(make_pair(literal, Token::Hex));
+			result.push_back(make_pair(ParsedRefArgs(literal), Token::Hex));
 		}
 		else if (accept(Token::String))
 		{
@@ -657,7 +657,7 @@ vector<pair<ParsedRefArgs, Token>> TestFileParser::parseRefArgs()
 				throw TestParserError("Invalid string literal.");
 
 			string literal = parseString();
-			result.push_back(make_pair(literal, Token::String));
+			result.push_back(make_pair(ParsedRefArgs(literal), Token::String));
 		}
 		else if (accept(Token::RefArgs))
 		{
@@ -665,7 +665,7 @@ vector<pair<ParsedRefArgs, Token>> TestFileParser::parseRefArgs()
 				throw TestParserError("Invalid string literal.");
 
 			vector<pair<ParsedRefArgs, Token>> refargs = parseRefArgs();
-			result.push_back(make_pair(refargs, Token::RefArgs));
+			result.push_back(make_pair(ParsedRefArgs(refargs), Token::RefArgs));
 		}
 		else
 			throw TestParserError("Invalid refargs literal");
