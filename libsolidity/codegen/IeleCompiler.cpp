@@ -2817,7 +2817,10 @@ void IeleCompiler::decoding(IeleRValue *encoded, TypePointers types,
   for (TypePointer type : types) {
     iele::IeleLocalVariable *Result =
       iele::IeleLocalVariable::Create(&Context, "arg.value", CompilingFunction);
-    doDecode(NextFree, CrntPos, RegisterLValue::Create({Result}), ArgTypeSize, ArgLen, type);
+    if (const ReferenceType *refTy = dynamic_cast<const ReferenceType *>(type))
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Result}), ArgTypeSize, ArgLen, type, refTy->location());
+    else
+      doDecode(NextFree, CrntPos, RegisterLValue::Create({Result}), ArgTypeSize, ArgLen, type);
     results.push_back(IeleRValue::Create(Result));
   }
 }
@@ -2844,7 +2847,10 @@ IeleRValue *IeleCompiler::decoding(IeleRValue *encoded, TypePointer type) {
     CrntPos, iele::IeleIntConstant::getZero(&Context), CompilingBlock);    
   iele::IeleLocalVariable *Result =
     iele::IeleLocalVariable::Create(&Context, "arg.value", CompilingFunction);
-  doDecode(NextFree, CrntPos, RegisterLValue::Create({Result}), ArgTypeSize, ArgLen, type);
+  if (const ReferenceType *refTy = dynamic_cast<const ReferenceType *>(type))
+    doDecode(NextFree, CrntPos, RegisterLValue::Create({Result}), ArgTypeSize, ArgLen, type, refTy->location());
+  else
+    doDecode(NextFree, CrntPos, RegisterLValue::Create({Result}), ArgTypeSize, ArgLen, type);
   return IeleRValue::Create(Result);
 }
 
@@ -2852,7 +2858,7 @@ void IeleCompiler::doDecode(
     iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
     IeleLValue *StoreAt,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type) {
+    TypePointer type, DataLocation Loc) {
   iele::IeleValue *AllocedValue;
   switch(type->category()) {
   case Type::Category::Contract:
@@ -3012,7 +3018,7 @@ void IeleCompiler::doDecode(
       connectWithConditionalJump(DoneValue, CompilingBlock, LoopExitBlock);
   
       bigint elementSize;
-      switch (arrayType.location()) {
+      switch (Loc) {
       case DataLocation::Storage: {
         elementSize = arrayType.storageSizeOfElement();
         break;
@@ -3024,7 +3030,7 @@ void IeleCompiler::doDecode(
       }
       }
   
-      doDecode(NextFree, CrntPos, makeLValue(Element, elementType, DataLocation::Memory), ArgTypeSize, ArgLen, elementType);
+      doDecode(NextFree, CrntPos, makeLValue(Element, elementType, DataLocation::Memory), ArgTypeSize, ArgLen, elementType, Loc);
   
       iele::IeleValue *ElementSizeValue =
           iele::IeleIntConstant::Create(&Context, elementSize);
@@ -3055,7 +3061,7 @@ void IeleCompiler::doDecode(
 
     if (structType.recursive()) {
       // Call the recursive decoder.
-      iele::IeleFunction *Decoder = getRecursiveStructDecoder(structType);
+      iele::IeleFunction *Decoder = getRecursiveStructDecoder(structType, Loc);
       llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, CrntPos);
       llvm::SmallVector<iele::IeleValue *, 3> Arguments;
       Arguments.push_back(AllocedValue);
@@ -3066,7 +3072,7 @@ void IeleCompiler::doDecode(
       break;
     }
 
-    appendStructDecode(structType, AllocedValue, ArgTypeSize, ArgLen, NextFree,
+    appendStructDecode(structType, Loc, AllocedValue, ArgTypeSize, ArgLen, NextFree,
                        CrntPos);
     break;
   }
@@ -3134,7 +3140,7 @@ void IeleCompiler::doDecode(
 }
 
 iele::IeleFunction *IeleCompiler::getRecursiveStructDecoder(
-    const StructType &type) {
+    const StructType &type, DataLocation Loc) {
   solAssert(type.recursive(),
             "IeleCompiler: attempted to construct recursive destructor "
             "for non-recursive struct type");
@@ -3184,7 +3190,7 @@ iele::IeleFunction *IeleCompiler::getRecursiveStructDecoder(
   // position.
   std::swap(CompilingFunction, Decoder);
   std::swap(CompilingBlock, DecoderBlock);
-  appendStructDecode(type, Address, AddrTypeSize, AddrLen, NextFree, CrntPos);
+  appendStructDecode(type, Loc, Address, AddrTypeSize, AddrLen, NextFree, CrntPos);
   llvm::SmallVector<iele::IeleValue *, 1> Results(1, CrntPos);
   iele::IeleInstruction::CreateRet(Results, CompilingBlock);
   std::swap(CompilingFunction, Decoder);
@@ -3194,7 +3200,7 @@ iele::IeleFunction *IeleCompiler::getRecursiveStructDecoder(
 }
 
 void IeleCompiler::appendStructDecode(
-    const StructType &type, iele::IeleValue *Address,
+    const StructType &type, DataLocation Loc, iele::IeleValue *Address,
     iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
     iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos) {
   for (auto decl : type.structDefinition().members()) {
@@ -3225,7 +3231,7 @@ void IeleCompiler::appendStructDecode(
     doDecode(
         NextFree, CrntPos,
         makeLValue(Member, decl->type(), DataLocation::Memory), AddrTypeSize,
-        AddrLen, decl->type());
+        AddrLen, decl->type(), Loc);
   }
 }
 

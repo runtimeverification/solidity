@@ -285,7 +285,6 @@
 -t !semanticTests/structs/calldata/calldata_struct_as_argument_of_lib_function
 -t !semanticTests/structs/calldata/calldata_struct_as_memory_argument
 -t !semanticTests/structs/calldata/calldata_struct_to_memory_tuple_assignment
--t !semanticTests/structs/calldata/calldata_struct_with_nested_array_to_memory
 -t !semanticTests/structs/calldata/calldata_struct_with_nested_array_to_storage
 -t !semanticTests/structs/recursive_struct_2
 -t !semanticTests/structs/struct_delete_storage_nested_small
