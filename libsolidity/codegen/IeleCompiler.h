@@ -414,7 +414,8 @@ private:
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, IeleLValue *ArgValue,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, bool appendWidths, bool bigEndian);
+    TypePointer type, bool appendWidths, bool bigEndian,
+    DataLocation Loc = DataLocation::CallData);
   void doDecode(
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, IeleLValue *StoreAt,
@@ -425,13 +426,13 @@ private:
   std::map<std::string, std::map<bool, std::map<bool, iele::IeleFunction *>>>
     RecursiveStructEncoders;
   iele::IeleFunction *getRecursiveStructEncoder(
-      const StructType &type, bool appendWidths, bool bigEndian);
+      const StructType &type, DataLocation Loc, bool appendWidths, bool bigEndian);
   std::map<std::string, iele::IeleFunction *> RecursiveStructDecoders;
   iele::IeleFunction *getRecursiveStructDecoder(const StructType &type, DataLocation Loc);
 
   // Helper functions that append code for encoding/decoding a struct.
   void appendStructEncode(
-      const StructType &type, iele::IeleValue *Address,
+      const StructType &type, DataLocation Loc, iele::IeleValue *Address,
       iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
       iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
       bool appendWidths, bool bigEndian);

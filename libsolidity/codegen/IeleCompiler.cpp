@@ -2393,7 +2393,10 @@ iele::IeleValue *IeleCompiler::encoding(
   iele::IeleInstruction::CreateAssign(
     CrntPos, iele::IeleIntConstant::getZero(&Context), CompilingBlock);    
   for (unsigned i = 0; i < arguments.size(); i++) {
-    doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(arguments[i]), ArgTypeSize, ArgLen, types[i], appendWidths, bigEndian);
+    if (const ReferenceType *refTy = dynamic_cast<const ReferenceType *>(types[i]))
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(arguments[i]), ArgTypeSize, ArgLen, types[i], appendWidths, bigEndian, refTy->location());
+    else
+      doEncode(NextFree, CrntPos, ReadOnlyLValue::Create(arguments[i]), ArgTypeSize, ArgLen, types[i], appendWidths, bigEndian);
   }
   return CrntPos;
 }
@@ -2402,7 +2405,7 @@ void IeleCompiler::doEncode(
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, IeleLValue *LValue, 
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, bool appendWidths, bool bigEndian) {
+    TypePointer type, bool appendWidths, bool bigEndian, DataLocation Loc) {
   IeleRValue *ArgValue = LValue->read(CompilingBlock);
   switch (type->category()) {
   case Type::Category::Contract:
@@ -2596,7 +2599,7 @@ void IeleCompiler::doEncode(
       }
   
       elementType = TypeProvider::withLocationIfReference(arrayType.location(), elementType);
-      doEncode(NextFree, CrntPos, makeLValue(Element, elementType, arrayType.location()), ArgTypeSize, ArgLen, elementType, appendWidths, bigEndian);
+      doEncode(NextFree, CrntPos, makeLValue(Element, elementType, arrayType.location()), ArgTypeSize, ArgLen, elementType, appendWidths, bigEndian, Loc);
   
       iele::IeleValue *ElementSizeValue =
           iele::IeleIntConstant::Create(&Context, elementSize);
@@ -2622,7 +2625,7 @@ void IeleCompiler::doEncode(
     if (structType.recursive()) {
       // Call the recursive encoder.
       iele::IeleFunction *Encoder =
-        getRecursiveStructEncoder(structType, appendWidths, bigEndian);
+        getRecursiveStructEncoder(structType, Loc, appendWidths, bigEndian);
       llvm::SmallVector<iele::IeleLocalVariable *, 1> Results(1, CrntPos);
       llvm::SmallVector<iele::IeleValue *, 3> Arguments;
       Arguments.push_back(ArgValue->getValue());
@@ -2634,7 +2637,7 @@ void IeleCompiler::doEncode(
     }
 
     appendStructEncode(
-        structType, ArgValue->getValue(), ArgTypeSize, ArgLen, NextFree,
+        structType, Loc, ArgValue->getValue(), ArgTypeSize, ArgLen, NextFree,
         CrntPos, appendWidths, bigEndian);
     break;
   }
@@ -2692,7 +2695,7 @@ void IeleCompiler::doEncode(
 }
 
 iele::IeleFunction *IeleCompiler::getRecursiveStructEncoder(
-    const StructType &type, bool appendWidths, bool bigEndian) {
+    const StructType &type, DataLocation Loc, bool appendWidths, bool bigEndian) {
   solAssert(type.recursive(),
             "IeleCompiler: attempted to construct recursive destructor "
             "for non-recursive struct type");
@@ -2751,7 +2754,7 @@ iele::IeleFunction *IeleCompiler::getRecursiveStructEncoder(
   // position.
   std::swap(CompilingFunction, Encoder);
   std::swap(CompilingBlock, EncoderBlock);
-  appendStructEncode(type, Address, AddrTypeSize, AddrLen, NextFree, CrntPos,
+  appendStructEncode(type, Loc, Address, AddrTypeSize, AddrLen, NextFree, CrntPos,
                      appendWidths, bigEndian);
   llvm::SmallVector<iele::IeleValue *, 1> Results(1, CrntPos);
   iele::IeleInstruction::CreateRet(Results, CompilingBlock);
@@ -2762,7 +2765,7 @@ iele::IeleFunction *IeleCompiler::getRecursiveStructEncoder(
 }
 
 void IeleCompiler::appendStructEncode(
-    const StructType &type, iele::IeleValue *Address,
+    const StructType &type, DataLocation Loc, iele::IeleValue *Address,
     iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
     iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
     bool appendWidths, bool bigEndian) {
@@ -2794,7 +2797,7 @@ void IeleCompiler::appendStructEncode(
     TypePointer memberType =
       TypeProvider::withLocationIfReference(type.location(), decl->type());
     doEncode(NextFree, CrntPos, makeLValue(Member, memberType, type.location()),
-             AddrTypeSize, AddrLen, memberType, appendWidths, bigEndian);
+             AddrTypeSize, AddrLen, memberType, appendWidths, bigEndian, Loc);
   }
 }
 
