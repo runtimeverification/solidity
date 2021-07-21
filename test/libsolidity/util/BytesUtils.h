@@ -72,7 +72,7 @@ public:
 
 	/// Tries to convert \param _literal to an unpadded `bytes`
 	/// representation of the refargs. Throws if conversion fails.
-	static bytes convertRefArgs(std::vector<std::pair<std::string, soltest::Token>> const& _literal);
+	static bytes convertRefArgs(std::vector<std::pair<ParsedRefArgs, soltest::Token>> const& _literal);
 
 	/// Converts \param _bytes to a soltest-compliant and human-readable
 	/// string representation of a byte array which is assumed to hold

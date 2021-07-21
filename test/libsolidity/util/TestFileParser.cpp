@@ -282,6 +282,24 @@ FunctionCallExpectations TestFileParser::parseFunctionCallExpectations()
 	return expectations;
 }
 
+string TestFileParser::refArgsToString(vector<pair<ParsedRefArgs, Token>> refargs) const {
+	string result = "refargs {";
+	bool first = true;;
+	for (auto &p : refargs)
+	{
+		if (!first) result += ",";
+		if (p.second == Token::Hex)
+			result += "hex\"" + p.first.str + "\"";
+		else if (p.second == Token::RefArgs)
+			result += refArgsToString(p.first.refargs);
+		else
+			result += p.first.str;
+		first = false;
+	}
+	result += "}";
+	return result;
+}
+
 Parameter TestFileParser::parseParameter(bool isErrorMessage)
 {
 	Parameter parameter;
@@ -433,19 +451,8 @@ Parameter TestFileParser::parseParameter(bool isErrorMessage)
 		if (parameter.alignment != Parameter::Alignment::None)
 			throw TestParserError("Refargs literals cannot be aligned or padded.");
 
-		vector<pair<string, Token>> parsed = parseRefArgs();
-		parameter.rawString += "refargs {";
-		bool first = true;;
-		for (auto &p : parsed)
-		{
-			if (!first) parameter.rawString += ",";
-			if (p.second == Token::Hex)
-				parameter.rawString += "hex\"" + p.first + "\"";
-			else
-				parameter.rawString += p.first;
-			first = false;
-		}
-		parameter.rawString += "}";
+		vector<pair<ParsedRefArgs, Token>> parsed = parseRefArgs();
+		parameter.rawString += refArgsToString(parsed);
 
 		parameter.rawBytes = BytesUtils::convertRefArgs(parsed);
 		parameter.abiType = ABIType{
@@ -598,11 +605,11 @@ vector<pair<string, Token>> TestFileParser::parseArray(bool isDynamic)
 	return result;
 }
 
-vector<pair<string, Token>> TestFileParser::parseRefArgs()
+vector<pair<ParsedRefArgs, Token>> TestFileParser::parseRefArgs()
 {
 	expect(Token::RefArgs);
 
-	vector<pair<string, Token>> result;
+	vector<pair<ParsedRefArgs, Token>> result;
 	expect(Token::LBrace);
 	bool first = true;;
 	while (!accept(Token::RBrace))
@@ -619,7 +626,7 @@ vector<pair<string, Token>> TestFileParser::parseRefArgs()
 				throw TestParserError("Invalid boolean literal.");
 
 			string literal = parseBoolean();
-			result.push_back(make_pair(literal, Token::Boolean));
+			result.push_back(make_pair(ParsedRefArgs(literal), Token::Boolean));
 		}
 		else if (accept(Token::Number))
 		{
@@ -651,6 +658,14 @@ vector<pair<string, Token>> TestFileParser::parseRefArgs()
 
 			string literal = parseString();
 			result.push_back(make_pair(literal, Token::String));
+		}
+		else if (accept(Token::RefArgs))
+		{
+			if (isSigned)
+				throw TestParserError("Invalid string literal.");
+
+			vector<pair<ParsedRefArgs, Token>> refargs = parseRefArgs();
+			result.push_back(make_pair(refargs, Token::RefArgs));
 		}
 		else
 			throw TestParserError("Invalid refargs literal");

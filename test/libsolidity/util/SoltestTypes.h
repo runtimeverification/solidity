@@ -299,4 +299,12 @@ struct FunctionCall
 	bool omitsArrow = true;
 };
 
+struct ParsedRefArgs
+{
+	std::string str;
+	std::vector<std::pair<ParsedRefArgs, soltest::Token>> refargs;
+	ParsedRefArgs(std::string _str) : str(_str) {}
+	ParsedRefArgs(std::vector<std::pair<ParsedRefArgs, soltest::Token>> _refargs) : refargs(_refargs) {}
+};
+
 }
