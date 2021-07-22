@@ -11,4 +11,5 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(bytes): "\x01\x02\x03\x04\x05\x06" -> refargs { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 }
+// f(bytes): "\x06\x05\x04\x03\x02\x01" -> refargs { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 }
+
