@@ -4436,6 +4436,15 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     IeleRValue *ArgValue = compileExpression(*arguments.front());
     TypePointer ArgType = arguments.front()->annotation().type;
     ArgValue = appendTypeConversion(ArgValue, ArgType, TypeProvider::bytesMemory());
+    iele::IeleLocalVariable *EncodedValueAddress =
+      iele::IeleLocalVariable::Create(&Context, "encoded.value.address", CompilingFunction);
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Add, EncodedValueAddress, ArgValue->getValue(),
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+    iele::IeleLocalVariable *EncodedValue =
+      iele::IeleLocalVariable::Create(&Context, "encoded.value", CompilingFunction);
+    iele::IeleInstruction::CreateLoad(EncodedValue, EncodedValueAddress, CompilingBlock);
 
     TypePointers TargetTypes;
     if (TupleType const* TargetTupleType =
@@ -4445,7 +4454,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       TargetTypes = TypePointers{functionCall.annotation().type};
 
     llvm::SmallVector<IeleRValue *, 4> DecodedValues;
-    decoding(ArgValue, TargetTypes, DecodedValues);
+    decoding(IeleRValue::Create(EncodedValue), TargetTypes, DecodedValues);
     CompilingExpressionResult.insert(
       CompilingExpressionResult.end(), DecodedValues.begin(), DecodedValues.end());
     break;
