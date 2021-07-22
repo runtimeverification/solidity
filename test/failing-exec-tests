@@ -278,8 +278,6 @@
 -t !semanticTests/state/uncalled_blockhash
 -t !semanticTests/storage/chop_sign_bits
 -t !semanticTests/storage/packed_storage_signed
--t !semanticTests/structs/calldata/calldata_nested_structs
--t !semanticTests/structs/calldata/calldata_struct_as_argument_of_lib_function
 -t !semanticTests/structs/recursive_struct_2
 -t !semanticTests/structs/struct_delete_storage_nested_small
 -t !semanticTests/structs/struct_delete_storage_small
