@@ -10,4 +10,4 @@ contract C {
 // f(bool): true -> true
 // f(bool): false -> false
 // f(bool): 0x000000 -> false
-// f(bool): 0xffffff -> FAILURE
+// f(bool): 0xffffff -> FAILURE, 255

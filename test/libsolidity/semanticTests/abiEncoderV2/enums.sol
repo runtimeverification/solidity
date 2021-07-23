@@ -12,5 +12,5 @@ contract C {
 // ----
 // f(uint8): 0 -> 0
 // f(uint8): 1 -> 1
-// f(uint8): 2 -> FAILURE
-// f(uint8): 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff -> FAILURE
+// f(uint8): 2 -> FAILURE, 255
+// f(uint8): 0x00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff -> FAILURE, 255
