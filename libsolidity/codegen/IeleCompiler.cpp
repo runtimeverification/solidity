@@ -2773,7 +2773,7 @@ void IeleCompiler::appendStructEncode(
   for (auto decl : type.structDefinition().members()) {
     // First compute the offset from the start of the struct.
     bigint offset;
-    switch (type.location()) {
+    switch (Loc) {
     case DataLocation::Storage: {
       const auto& offsets = type.storageOffsetsOfMember(decl->name());
       offset = offsets.first;
@@ -3209,7 +3209,7 @@ void IeleCompiler::appendStructDecode(
   for (auto decl : type.structDefinition().members()) {
     // First compute the offset from the start of the struct.
     bigint offset;
-    switch (type.location()) {
+    switch (Loc) {
     case DataLocation::Storage: {
       const auto& offsets = type.storageOffsetsOfMember(decl->name());
       offset = offsets.first;
