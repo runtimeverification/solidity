@@ -46,6 +46,7 @@
 -t !semanticTests/exponentiation/signed_base
 -t !semanticTests/exponentiation/small_exp
 -t !semanticTests/expressions/bit_operators
+-t !semanticTests/freeFunctions/free_namesake_contract_function
 -t !semanticTests/functionCall/calling_nonexisting_contract_throws
 -t !semanticTests/functionCall/calling_uninitialized_function_in_detail
 -t !semanticTests/functionCall/calling_uninitialized_function_through_array

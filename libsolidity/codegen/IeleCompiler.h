@@ -130,6 +130,7 @@ private:
   std::map<const ContractDefinition *, std::shared_ptr<IeleCompiler const>> OtherCompilers;
   iele::IeleContext Context;
   iele::IeleContract *CompilingContract;
+  std::vector<const FunctionDefinition *> CompilingContractFreeFunctions;
   iele::IeleFunction *CompilingFunction;
   iele::IeleLocalVariable *CompilingFunctionStatus;
   iele::IeleBlock *CompilingBlock;
