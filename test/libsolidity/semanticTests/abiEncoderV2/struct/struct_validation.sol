@@ -1,12 +1,14 @@
 pragma abicoder               v2;
 
 contract C {
-	struct S { int16 a; uint8 b; bytes2 c; }
-	function f(S memory s) public pure returns (uint a, uint b, uint c) {
-		a = uint256(s.a);
-		b = s.b;
-		c = uint256(s.c);
-	}
+    struct S { int16 a; uint8 b; bytes2 c; }
+    function f(S memory s) public pure returns (uint a, uint b, uint c) {
+        assembly {
+            a := mload(s)
+            b := mload(add(s, 0x20))
+            c := mload(add(s, 0x40))
+        }
+    }
 }
 // ====
 // compileViaYul: also

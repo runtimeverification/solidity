@@ -13,6 +13,7 @@
 -t !semanticTests/abiEncoderV2/cleanup/simple_struct
 -t !semanticTests/abiEncoderV2/cleanup/static_array
 -t !semanticTests/abiEncoderV2/cleanup/uintx
+-t !semanticTests/abiEncoderV2/struct/struct_validation
 -t !semanticTests/array/byte_array_storage_layout
 -t !semanticTests/array/copying/array_copy_cleanup_uint128
 -t !semanticTests/array/copying/array_copy_cleanup_uint40
