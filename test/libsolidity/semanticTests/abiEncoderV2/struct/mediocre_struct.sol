@@ -11,4 +11,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(uint256,(address)[2],uint256): 7, 0, 0, 8 -> 7, 0, 8
+// f(uint,(address)[2],uint): 7, refargs { refargs { 0x0000000000000000000000000000000000000000 }, refargs { 0x0000000000000000000000000000000000000000 } }, 8 -> 7, 0, 8

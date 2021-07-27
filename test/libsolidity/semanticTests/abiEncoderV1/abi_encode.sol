@@ -32,8 +32,8 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f0() -> 0x20, 0x0
-// f1() -> 0x20, 0x40, 0x1, 0x2
-// f2() -> 0x20, 0xa0, 0x1, 0x60, 0x2, 0x3, "abc"
-// f3() -> 0x20, 0xa0, 0x1, 0x60, 0x2, 0x3, "abc"
-// f4() -> 0x20, 0x20, "ab"
+// f0() -> ""
+// f1() -> "\x01\x02"
+// f2() -> "\x01\x03\x00\x00\x00\x00\x00\x00\x00cba\x02"
+// f3() -> "\x01\x03\x00\x00\x00\x00\x00\x00\x00cba\x02"
+// f4() -> "ba"
