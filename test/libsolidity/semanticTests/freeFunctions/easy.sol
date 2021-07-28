@@ -11,4 +11,4 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(uint256): 7 -> 9
+// f(uint): 7 -> 9

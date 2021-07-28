@@ -40,7 +40,9 @@ std::string IeleCompiler::getIeleNameForFunction(
   else
     IeleFunctionName = function.name() + "." + function.type()->identifier();
 
-  if (isMostDerived(&function)) {
+  if (function.isFree()) {
+    return *function.sourceUnit().annotation().path + "." + IeleFunctionName;
+  } else if (isMostDerived(&function)) {
     return IeleFunctionName;
   } else {
     return getIeleNameForContract(contractFor(&function)) + "." + IeleFunctionName;
@@ -253,6 +255,10 @@ void IeleCompiler::compileContract(
 
   // Create IeleContract.
   CompilingContract = iele::IeleContract::Create(&Context, getIeleNameForContract(&contract));
+
+  // Reset free function list. The list will be populated with free functions
+  // we need to include in this contract.
+  CompilingContractFreeFunctions.clear();
 
   // Check for recursive structs. Their presence will affect how we allocate
   // storage for the contract.
@@ -503,6 +509,12 @@ void IeleCompiler::compileContract(
     }
   }
 
+  // Visit needed free functions.
+  for (const FunctionDefinition *function : CompilingContractFreeFunctions) {
+    VarNameMap.clear();
+    function->accept(*this);
+  }
+
   // If we have to include the runtime storage, append code that initializes
   // @ielert.storage.next.free global variable at the start of the constructor.
   if (CompilingContract->getIncludeStorageRuntime()) {
@@ -625,6 +637,7 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
 
 bool IeleCompiler::visit(const FunctionDefinition &function) {
   std::string name = getIeleNameForFunction(function);
+  bool isLibrary = !function.isFree() && contractFor(&function)->isLibrary();
 
   // Lookup function in the contract's symbol table.
   iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
@@ -632,7 +645,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
             "IeleCompiler: failed to access compiling contract's symbol table.");
   CompilingFunctionASTNode = &function;
 
-  if (hasTwoFunctions(FunctionType(function), function.isConstructor(), contractFor(&function)->isLibrary())) {
+  if (hasTwoFunctions(FunctionType(function), function.isConstructor(), isLibrary)) {
     CompilingFunction = llvm::dyn_cast<iele::IeleFunction>(ST->lookup(name));
     solAssert(CompilingFunction,
               "IeleCompiler: failed to find function in compiling contract's"
@@ -795,7 +808,7 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
 
   if ((function.isConstructor() || function.isPublic()) &&
       !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) &&
-      !contractFor(&function)->isLibrary()) {
+      !isLibrary) {
     if (!function.isPayable() && isMostDerived(&function)) {
       appendPayableCheck();
     }
@@ -875,12 +888,14 @@ void IeleCompiler::appendReturn(const FunctionDefinition &function,
   } else { // return declared parameters
       llvm::SmallVector<iele::IeleValue *, 4> Returns;
 
+      bool isLibrary = !function.isFree() && contractFor(&function)->isLibrary();
+
       // Find Symbol Table for this function
-      iele::IeleValueSymbolTable *ST =
-        CompilingFunction->getIeleValueSymbolTable();
-      solAssert(ST,
-                "IeleCompiler: failed to access compiling function's symbol "
-                "table.");
+      //iele::IeleValueSymbolTable *ST =
+      //  CompilingFunction->getIeleValueSymbolTable();
+      //solAssert(ST,
+      //          "IeleCompiler: failed to access compiling function's symbol "
+      //          "table.");
 
       // Prepare arguments for the `ret` instruction by fetching the param names
       // for (const std::string paramName : ReturnParameterNames) {
@@ -893,7 +908,7 @@ void IeleCompiler::appendReturn(const FunctionDefinition &function,
           IeleLValue *param = CompilingFunctionReturnParameters[i];
           TypePointer paramType = ReturnParameterTypes[i];
           solAssert(param, "IeleCompiler: couldn't find parameter name in symbol table.");
-          if (function.isPublic() && !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) && !contractFor(&function)->isLibrary()) {
+          if (function.isPublic() && !hasTwoFunctions(FunctionType(function), function.isConstructor(), false) && !isLibrary) {
             IeleRValue *rvalue = encoding(param->read(CompilingBlock), paramType);
             Returns.insert(Returns.end(), rvalue->getValues().begin(), rvalue->getValues().end());
           } else {
@@ -1082,6 +1097,7 @@ void IeleCompiler::appendModifierOrFunctionCode() {
                 "IeleCompiler: Found modifier with compound name");
       const ASTString &modName = modifierInvocation->name().path().at(0);
       const ModifierDefinition *modifier = nullptr;
+      solAssert(!CompilingFunctionASTNode->isFree(), "IeleCompiler: found free function with modifier");
       if (contractFor(CompilingFunctionASTNode)->isLibrary()) {
         for (ModifierDefinition const* mod: contractFor(CompilingFunctionASTNode)->functionModifiers())
           if (mod->name() == modName)
@@ -4573,24 +4589,25 @@ void IeleCompiler::appendGasLeft() {
 bool IeleCompiler::visit(const MemberAccess &memberAccess) {
    const std::string& member = memberAccess.memberName();
 
-  // Not supported yet cases.
+  // Bound/free functions
   if (const FunctionType *funcType =
-        dynamic_cast<const FunctionType *>(
-            memberAccess.annotation().type)) {
-    if (funcType->bound()) {
-      IeleRValue *boundValue = compileExpression(memberAccess.expression());
-      boundValue = appendTypeConversion(boundValue, 
-        memberAccess.expression().annotation().type,
-        funcType->selfType());
+        dynamic_cast<const FunctionType *>(memberAccess.annotation().type)) {
+    const Declaration *declaration =
+      memberAccess.annotation().referencedDeclaration;
+    const FunctionDefinition *functionDef =
+          dynamic_cast<const FunctionDefinition *>(declaration);
+    if (funcType->bound() || (functionDef && functionDef->isFree())) {
+      solAssert(functionDef, "IeleCompiler: bound/free function does not have a definition");
+      std::string name = getIeleNameForFunction(*functionDef);
+
       std::vector<iele::IeleValue *> Result;
-      Result.insert(Result.end(), boundValue->getValues().begin(), boundValue->getValues().end());
-      
-      const Declaration *declaration =
-        memberAccess.annotation().referencedDeclaration;
-      const FunctionDefinition *functionDef =
-            dynamic_cast<const FunctionDefinition *>(declaration);
-      solAssert(functionDef, "IeleCompiler: bound function does not have a definition");
-      std::string name = getIeleNameForFunction(*functionDef); 
+      if (funcType->bound()) {
+        IeleRValue *boundValue = compileExpression(memberAccess.expression());
+        boundValue = appendTypeConversion(boundValue, 
+          memberAccess.expression().annotation().type,
+          funcType->selfType());
+        Result.insert(Result.end(), boundValue->getValues().begin(), boundValue->getValues().end());
+      }
 
       // Lookup identifier in the compiling function's variable name map.
       if (IeleLValue *Identifier =
@@ -4600,6 +4617,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         CompilingExpressionResult.push_back(IeleRValue::Create(Result));
         return false;
       }
+
+      // Lookup identifier in the compiling contract's symbol table.
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
       solAssert(ST,
                "IeleCompiler: failed to access compiling contract's symbol "
@@ -4612,7 +4631,16 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         return false;
       }
 
-      solAssert(false, "Invalid bound function without declaration");
+      // Function was not found in symbol tables, check for free function.
+      if (functionDef->isFree()) {
+        iele::IeleFunction *function =
+          iele::IeleFunction::Create(&Context, false, name, CompilingContract);
+        CompilingContractFreeFunctions.push_back(functionDef);
+        CompilingExpressionResult.push_back(ReadOnlyLValue::Create(IeleRValue::Create(function)));
+        return false;
+      }
+
+      solAssert(false, "Invalid free/bound function without declaration");
       return false;
     }
   }
@@ -5404,7 +5432,7 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     identifier.annotation().referencedDeclaration;
   if (const FunctionDefinition *functionDef =
         dynamic_cast<const FunctionDefinition *>(declaration)) {
-    if (contractFor(functionDef)->isLibrary()) {
+    if (functionDef->isFree() || contractFor(functionDef)->isLibrary()) {
       name = getIeleNameForFunction(*functionDef); 
     } else {
       name = getIeleNameForFunction(*resolveVirtualFunction(*functionDef)); 
@@ -5477,7 +5505,19 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     return;
   }
 
-  // If not found, make a new IeleLocalVariable for the identifier.
+  // If not found, first check for a free function.
+  if (const FunctionDefinition *functionDef =
+        dynamic_cast<const FunctionDefinition *>(declaration)) {
+    if (functionDef->isFree()) {
+      iele::IeleFunction *function =
+        iele::IeleFunction::Create(&Context, false, name, CompilingContract);
+      CompilingContractFreeFunctions.push_back(functionDef);
+      CompilingExpressionResult.push_back(ReadOnlyLValue::Create(IeleRValue::Create(function)));
+      return;
+    }
+  }
+
+  // Else, make a new IeleLocalVariable for the identifier.
   iele::IeleLocalVariable *Identifier =
     iele::IeleLocalVariable::Create(&Context, name, CompilingFunction);
   CompilingExpressionResult.push_back(RegisterLValue::Create({Identifier}));
