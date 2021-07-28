@@ -58,4 +58,4 @@ contract C {
 // enumToInt(uint8): 256 -> FAILURE, 255
 // decodeEnum(bytes): "\x00" -> 0
 // decodeEnum(bytes): "\xff" -> 255
-// decodeEnum(bytes): 0x20, 32, 256 -> FAILURE
+// decodeEnum(bytes): "\x01\x00" -> 1
