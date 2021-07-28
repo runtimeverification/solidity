@@ -4646,16 +4646,20 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
   }
 
   const Type *actualType = memberAccess.expression().annotation().type;
-  if (const TypeType *type = dynamic_cast<const TypeType *>(actualType)) {
-    if (dynamic_cast<const ContractType *>(type->actualType())) {
+  if (const TypeType *typeType = dynamic_cast<const TypeType *>(actualType)) {
+    if (const ContractType * contractType = dynamic_cast<const ContractType *>(typeType->actualType())) {
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
       solAssert(ST,
                 "IeleCompiler: failed to access compiling contract's symbol table.");
-      if (auto funType = dynamic_cast<const FunctionType *>(memberAccess.annotation().type)) {
+      if (contractType->isSuper()) {
+        // handled below
+        actualType = contractType;
+      } else if (auto funType =
+                   dynamic_cast<const FunctionType *>(memberAccess.annotation().type)) {
         switch(funType->kind()) {
         case FunctionType::Kind::DelegateCall:
         case FunctionType::Kind::Internal:
-	  if (const auto * function = dynamic_cast<const FunctionDefinition *>(memberAccess.annotation().referencedDeclaration)) {
+          if (const auto * function = dynamic_cast<const FunctionDefinition *>(memberAccess.annotation().referencedDeclaration)) {
             std::string name = getIeleNameForFunction(*function);
             iele::IeleValue *Result = ST->lookup(name);
             CompilingExpressionResult.push_back(IeleRValue::Create(Result));
@@ -4669,7 +4673,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         case FunctionType::Kind::Transfer:
         case FunctionType::Kind::Declaration:
           // handled below
-          actualType = type->actualType();
+          actualType = contractType;
           break;
         case FunctionType::Kind::BareCall:
         case FunctionType::Kind::BareCallCode:
@@ -4699,7 +4703,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
       } else {
         solAssert(false, "not implemented yet");
       }
-    } else if (auto enumType = dynamic_cast<const EnumType *>(type->actualType())) {
+    } else if (auto enumType = dynamic_cast<const EnumType *>(typeType->actualType())) {
       iele::IeleIntConstant *Result = iele::IeleIntConstant::Create(&Context, bigint(enumType->memberValue(memberAccess.memberName())));
       CompilingExpressionResult.push_back(IeleRValue::Create(Result));
       return false;
@@ -4709,7 +4713,6 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
   }
 
   if (auto type = dynamic_cast<const ContractType *>(actualType)) {
- 
     if (type->isSuper()) {
       iele::IeleValueSymbolTable *ST = CompilingContract->getIeleValueSymbolTable();
       solAssert(ST,
