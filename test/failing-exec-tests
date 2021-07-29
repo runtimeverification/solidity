@@ -62,9 +62,6 @@
 -t !semanticTests/intheritance/base_access_to_function_type_variables
 -t !semanticTests/intheritance/inherited_function_calldata_memory
 -t !semanticTests/intheritance/pass_dynamic_arguments_to_the_base_base
--t !semanticTests/intheritance/super_in_constructor
--t !semanticTests/intheritance/super_in_constructor_assignment
--t !semanticTests/intheritance/value_for_constructor
 -t !semanticTests/modifiers/access_through_contract_name
 -t !semanticTests/modifiers/access_through_module_name
 -t !semanticTests/operators/shifts/shift_negative_constant_left
@@ -116,8 +113,6 @@
 -t !semanticTests/variables/public_state_overridding_mapping_to_dynamic_struct
 -t !semanticTests/various/address_code
 -t !semanticTests/various/codehash
--t !semanticTests/various/super
--t !semanticTests/various/super_parentheses
 -t !semanticTests/viaYul/array_function_pointers
 -t !semanticTests/viaYul/calldata_array_index_range_access
 -t !semanticTests/viaYul/conversion/function_cast

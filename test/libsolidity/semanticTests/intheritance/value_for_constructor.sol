@@ -43,5 +43,5 @@ contract Main {
 // ----
 // constructor(), 22 wei ->
 // getFlag() -> true
-// getName() -> "abc"
+// getName() -> 0x616263
 // getBalances() -> 12, 10

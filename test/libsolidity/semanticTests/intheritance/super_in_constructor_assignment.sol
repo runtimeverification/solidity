@@ -1,12 +1,12 @@
 contract A {
-    function f() public virtual returns (uint256 r) {
+    function f() public virtual returns (uint r) {
         return 1;
     }
 }
 
 
 contract B is A {
-    function f() public virtual override returns (uint256 r) {
+    function f() public virtual override returns (uint r) {
         function() internal returns (uint) x = super.f;
         return x() | 2;
     }
@@ -14,7 +14,7 @@ contract B is A {
 
 
 contract C is A {
-    function f() public virtual override returns (uint256 r) {
+    function f() public virtual override returns (uint r) {
         function() internal returns (uint) x = super.f;
         return x() | 4;
     }
@@ -22,14 +22,14 @@ contract C is A {
 
 
 contract D is B, C {
-    uint256 data;
+    uint data;
 
     constructor() {
         function() internal returns (uint) x = super.f;
         data = x() | 8;
     }
 
-    function f() public override (B, C) returns (uint256 r) {
+    function f() public override (B, C) returns (uint r) {
         return data;
     }
 }
