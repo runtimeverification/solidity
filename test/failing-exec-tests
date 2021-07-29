@@ -24,13 +24,10 @@
 -t !gasTests/exp_optimized
 -t !objectCompiler/simple
 -t !objectCompiler/wasm/simple
--t !semanticTests/abiencodedecode/contract_array_v2
 -t !semanticTests/abiEncoderV1/abi_encode_calldata_slice
 -t !semanticTests/abiEncoderV1/calldata_arrays_too_large
 -t !semanticTests/abiEncoderV1/decode_slice
 -t !semanticTests/abiEncoderV2/abi_encode_calldata_slice
--t !semanticTests/abiEncoderV2/calldata_array_dynamic
--t !semanticTests/abiEncoderV2/calldata_array_static
 -t !semanticTests/abiEncoderV2/struct/validation_function_type_inside_struct
 -t !semanticTests/array/calldata_array_as_argument_internal_function
 -t !semanticTests/array/calldata_slice_access
@@ -42,7 +39,6 @@
 -t !semanticTests/array/slices/array_slice_calldata_to_memory
 -t !semanticTests/array/slices/array_slice_calldata_to_storage
 -t !semanticTests/builtinFunctions/blockhash
--t !semanticTests/calldata/calldata_bytes_to_memory_encode
 -t !semanticTests/constants/constants_at_file_level_referencing
 -t !semanticTests/constants/same_constants_different_files
 -t !semanticTests/constructor/bytes_in_constructors_unpacker
@@ -50,7 +46,6 @@
 -t !semanticTests/constructor/constructor_static_array_argument
 -t !semanticTests/constructor/evm_exceptions_in_constructor_call_fail
 -t !semanticTests/constructor/order_of_evaluation
--t !semanticTests/enums/enum_with_256_members
 -t !semanticTests/externalContracts/deposit_contract
 -t !semanticTests/fallback/fallback_argument
 -t !semanticTests/fallback/fallback_argument_to_storage
