@@ -59,9 +59,6 @@
 -t !semanticTests/functionCall/file_level_call_via_module
 -t !semanticTests/functionTypes/struct_with_external_function
 -t !semanticTests/immutable/getter_call_in_constructor
--t !semanticTests/intheritance/base_access_to_function_type_variables
--t !semanticTests/intheritance/inherited_function_calldata_memory
--t !semanticTests/intheritance/pass_dynamic_arguments_to_the_base_base
 -t !semanticTests/modifiers/access_through_contract_name
 -t !semanticTests/modifiers/access_through_module_name
 -t !semanticTests/operators/shifts/shift_negative_constant_left
