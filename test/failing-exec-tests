@@ -681,8 +681,6 @@
 -t !syntaxTests/inlineAssembly/shadowing/constant
 -t !syntaxTests/inlineAssembly/shadowing/qualified_names
 -t !syntaxTests/inlineAssembly/shadowing/variable_by_opcode
--t !syntaxTests/largeTypes/large_storage_array_mapping
--t !syntaxTests/largeTypes/large_storage_array_simple
 -t !syntaxTests/largeTypes/large_storage_structs
 -t !syntaxTests/memberLookup/internal_function_type
 -t !syntaxTests/memberLookup/unused_module_member_reference
