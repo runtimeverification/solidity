@@ -670,6 +670,7 @@
 -t !syntaxTests/fallback/fallback_duplicate_returns_override
 -t !syntaxTests/fallback/returns
 -t !syntaxTests/functionCalls/new_with_calloptions
+-t !syntaxTests/functionTypes/ternary_with_bound_functions
 -t !syntaxTests/iceRegressionTests/large_array_in_memory_struct_2
 -t !syntaxTests/iele/assembly
 -t !syntaxTests/iele/callcode
