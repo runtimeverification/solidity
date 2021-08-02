@@ -1,8 +1,8 @@
 contract A {
     constructor() {
-        address(this).send(0);
+        payable(address(this)).send(0);
     }
-    function() payable { throw; }
+    function receive() public payable { revert(); }
 }
 
 

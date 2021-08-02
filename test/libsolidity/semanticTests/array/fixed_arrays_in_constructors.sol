@@ -10,6 +10,6 @@ contract Creator {
 // ====
 // compileViaYul: also
 // ----
-// constructor(): 1, 2, 3, 4 ->
+// constructor(): array 160 [ 1, 2, 3 ], 4 ->
 // r() -> 4
 // ch() -> 3
