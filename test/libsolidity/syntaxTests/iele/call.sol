@@ -1,7 +1,7 @@
 contract test {
 	constructor() {
-		this.call();
+		address(this).call("");
 	}
 }
 // ----
-// TypeError 3125: (35-44): Member "call" not found or not visible after argument-dependent lookup in contract test. Use "address(this).call" to access this address member.
+// TypeError 6198: (35-53): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
