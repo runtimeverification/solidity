@@ -1,7 +1,7 @@
 contract test {
-	constructor() public {
+	constructor() {
 		msg.sig;
 	}
 }
 // ----
-// TypeError: (42-49): msg.sig is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 2699: (35-42): msg.sig is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
