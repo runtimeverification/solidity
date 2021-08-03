@@ -81,8 +81,6 @@
 -t !semanticTests/state/uncalled_blockhash
 -t !semanticTests/storage/chop_sign_bits
 -t !semanticTests/storage/packed_storage_signed
--t !semanticTests/structs/struct_reference
--t !semanticTests/structs/structs
 -t !semanticTests/tryCatch/assert
 -t !semanticTests/tryCatch/create
 -t !semanticTests/tryCatch/invalid_error_encoding
@@ -673,7 +671,6 @@
 -t !syntaxTests/inlineAssembly/shadowing/constant
 -t !syntaxTests/inlineAssembly/shadowing/qualified_names
 -t !syntaxTests/inlineAssembly/shadowing/variable_by_opcode
--t !syntaxTests/largeTypes/large_storage_structs
 -t !syntaxTests/memberLookup/internal_function_type
 -t !syntaxTests/memberLookup/unused_module_member_reference
 -t !syntaxTests/metaTypes/codeAccess
@@ -687,9 +684,6 @@
 -t !syntaxTests/parsing/array_range_nested
 -t !syntaxTests/parsing/declaring_fixed_and_ufixed_variables
 -t !syntaxTests/parsing/mapping_in_struct
--t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_memory
--t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_storage
--t !syntaxTests/structs/recursion/struct_definition_recursion_via_mapping
 -t !syntaxTests/tryCatch/invalid_returns
 -t !syntaxTests/tryCatch/library_call
 -t !syntaxTests/tryCatch/returns
