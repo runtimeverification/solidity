@@ -19,6 +19,6 @@ contract C {
 // compileToEwasm: also
 // ----
 // g() -> 2
-// h() -> FAILURE, hex"4e487b71", 0x51
+// h() -> FAILURE, 1
 // set() ->
 // h() -> 2
