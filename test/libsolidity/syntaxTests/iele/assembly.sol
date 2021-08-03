@@ -1,9 +1,9 @@
 contract test {
-	constructor(uint x) public {
+	constructor(uint x) {
 		assembly {
-			x := gas
+			x := gas()
 		}
 	}
 }
 // ----
-// SyntaxError: (48-77): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (41-69): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

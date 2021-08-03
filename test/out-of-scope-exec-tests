@@ -165,6 +165,7 @@
 -t !semanticTests/viaYul/unary_operations
 -t !semanticTests/viaYul/various_inline_asm
 -t !syntaxTests/largeTypes/large_storage_structs
+-t !syntaxTests/parsing/mapping_in_struct
 -t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_memory
 -t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_storage
 -t !syntaxTests/structs/recursion/struct_definition_recursion_via_mapping

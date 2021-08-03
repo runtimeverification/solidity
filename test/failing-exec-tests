@@ -651,14 +651,10 @@
 -t !syntaxTests/array/slice/calldata_dynamic_encode
 -t !syntaxTests/array/slice/calldata_dynamic_forward
 -t !syntaxTests/array/slice/member_access
--t !syntaxTests/bytecode_too_large
 -t !syntaxTests/fallback/fallback_duplicate_returns_override
 -t !syntaxTests/fallback/returns
 -t !syntaxTests/functionCalls/new_with_calloptions
 -t !syntaxTests/iceRegressionTests/large_array_in_memory_struct_2
--t !syntaxTests/iele/assembly
--t !syntaxTests/iele/callcode
--t !syntaxTests/iele/library
 -t !syntaxTests/immutable/creationCode
 -t !syntaxTests/immutable/no_assignments
 -t !syntaxTests/immutable/selector_function_name
@@ -666,7 +662,6 @@
 -t !syntaxTests/inlineAssembly/shadowing/constant
 -t !syntaxTests/inlineAssembly/shadowing/qualified_names
 -t !syntaxTests/inlineAssembly/shadowing/variable_by_opcode
--t !syntaxTests/memberLookup/internal_function_type
 -t !syntaxTests/memberLookup/unused_module_member_reference
 -t !syntaxTests/metaTypes/codeAccess
 -t !syntaxTests/metaTypes/codeAccessIsConstant
@@ -678,7 +673,6 @@
 -t !syntaxTests/parsing/array_range_and_ternary
 -t !syntaxTests/parsing/array_range_nested
 -t !syntaxTests/parsing/declaring_fixed_and_ufixed_variables
--t !syntaxTests/parsing/mapping_in_struct
 -t !syntaxTests/tryCatch/invalid_returns
 -t !syntaxTests/tryCatch/library_call
 -t !syntaxTests/tryCatch/returns
@@ -687,7 +681,6 @@
 -t !syntaxTests/types/address/codehash
 -t !syntaxTests/types/library_to_address
 -t !syntaxTests/types/magic_block_istanbul
--t !syntaxTests/variableDeclaration/if
 -t !syntaxTests/viewPureChecker/address_constantinople
 -t !syntaxTests/viewPureChecker/assembly_chainid_not_pure
 -t !syntaxTests/viewPureChecker/selector_complex
