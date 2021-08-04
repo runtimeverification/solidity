@@ -644,8 +644,6 @@
 -t !SolidityEndToEndTest/code_access
 -t !SolidityEndToEndTest/contract_name
 -t !SolidityEndToEndTest/struct_referencing
--t !syntaxTests/array/nested_calldata_storage
--t !syntaxTests/array/nested_calldata_storage2
 -t !syntaxTests/array/slice/calldata_dynamic_access
 -t !syntaxTests/array/slice/calldata_dynamic_convert_to_memory
 -t !syntaxTests/array/slice/calldata_dynamic_encode
@@ -654,7 +652,6 @@
 -t !syntaxTests/fallback/fallback_duplicate_returns_override
 -t !syntaxTests/fallback/returns
 -t !syntaxTests/functionCalls/new_with_calloptions
--t !syntaxTests/iceRegressionTests/large_array_in_memory_struct_2
 -t !syntaxTests/immutable/creationCode
 -t !syntaxTests/imports/import_access_struct
 -t !syntaxTests/memberLookup/unused_module_member_reference
