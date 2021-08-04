@@ -128,6 +128,8 @@
 -t !semanticTests/structs/struct_delete_storage_small
 -t !semanticTests/structs/struct_delete_storage_with_array
 -t !semanticTests/structs/struct_delete_storage_with_arrays_small
+-t !semanticTests/structs/struct_reference
+-t !semanticTests/structs/structs
 -t !semanticTests/various/address_code_complex
 -t !semanticTests/various/byte_optimization_bug
 -t !semanticTests/various/code_access_content
@@ -162,3 +164,9 @@
 -t !semanticTests/viaYul/storage/mappings
 -t !semanticTests/viaYul/unary_operations
 -t !semanticTests/viaYul/various_inline_asm
+-t !syntaxTests/immutable/no_assignments
+-t !syntaxTests/largeTypes/large_storage_structs
+-t !syntaxTests/parsing/mapping_in_struct
+-t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_memory
+-t !syntaxTests/structs/recursion/recursive_struct_nested_mapping_storage
+-t !syntaxTests/structs/recursion/struct_definition_recursion_via_mapping
