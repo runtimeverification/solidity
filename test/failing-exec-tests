@@ -649,6 +649,7 @@
 -t !syntaxTests/array/slice/calldata_dynamic_encode
 -t !syntaxTests/array/slice/calldata_dynamic_forward
 -t !syntaxTests/array/slice/member_access
+-t !syntaxTests/bound/bound_call
 -t !syntaxTests/fallback/fallback_duplicate_returns_override
 -t !syntaxTests/fallback/returns
 -t !syntaxTests/functionCalls/new_with_calloptions
