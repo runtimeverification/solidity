@@ -6,13 +6,10 @@ contract A {
 contract B is A {
     fallback () override external {
     }
-    function f() public returns (bool, bytes memory) {
-        (bool success, bytes memory retval) = address(this).call("abc");
-        return (success, retval);
-    }
 }
 // ====
 // EVMVersion: >=byzantium
 // compileViaYul: also
 // ----
-// f() -> 1, 0x40, 0x00
+// () : "abc" -> FAILURE, 2 
+// ()  ->  

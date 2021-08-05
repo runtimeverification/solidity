@@ -4,14 +4,10 @@ contract A {
         x = _input.length;
         return "";
     }
-    function f() public returns (bool, bytes memory) {
-        (bool success, bytes memory retval) = address(this).call("abc");
-        return (success, retval);
-    }
 }
 // ====
 // compileViaYul: also
 // EVMVersion: >=byzantium
 // ----
-// f() -> 0x01, 0x40, 0x00
+// () : "abc" -> ""
 // x() -> 3

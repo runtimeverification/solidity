@@ -103,6 +103,9 @@ bool IeleCompiler::isMostDerived(const FunctionDefinition *d) const {
     if (d->isConstructor()) {
       return d == contract->constructor();
     }
+    if (d->isFallback()) {
+      return d == contract->fallbackFunction();
+    }
     for (const FunctionDefinition *decl : contract->definedFunctions()) {
       if (d->name() == decl->name() && !decl->isConstructor() && FunctionType(*decl).asExternallyCallableFunction(false)->hasEqualParameterTypes(*functionType)) {
         return d == decl;
@@ -377,20 +380,38 @@ void IeleCompiler::compileContract(
       appendPayableCheck();
     }
 
-    // Create the function call to the fallback/receive internal function.
-    llvm::SmallVector<iele::IeleValue *, 4> paramValues;
-    llvm::SmallVector<iele::IeleLocalVariable *, 4> ReturnParameterRegisters;
-    solAssert(DepositFunction->parameters().size() == 0,
-              "IeleCompiler: fallback/receive function with non-zero number"
-              "of arguments is not currently supported.");
-    solAssert(DepositFunction->returnParameters().size() == 0,
-              "IeleCompiler: fallback/receive function with non-zero number"
-              "of return values is not currently supported.");
-    iele::IeleInstruction::CreateInternalCall(
-      ReturnParameterRegisters, Callee, paramValues, CompilingBlock);
+    // Visit formal arguments
+    llvm::SmallVector<iele::IeleValue *, 4> ParamValues;
+    for (const ASTPointer<const VariableDeclaration> arg : DepositFunction->parameters()) {
+      std::vector<iele::IeleLocalVariable *> param;
+      for (unsigned i = 0; i < arg->type()->sizeInRegisters(); i++) {
+        std::string genName = arg->name() + getNextVarSuffix();
+        auto reg = iele::IeleArgument::Create(&Context, genName, CompilingFunction);
+        param.push_back(reg);
+        ParamValues.push_back(reg);
+      }
+    }
+    // Visit formal return parameters
+    llvm::SmallVector<iele::IeleLocalVariable *, 4> ReturnParameterRegisters; 
+    for (const ASTPointer<const VariableDeclaration> ret : DepositFunction->returnParameters()) {
+      std::vector<iele::IeleLocalVariable *> param;
+      for (unsigned i = 0; i < ret->type()->sizeInRegisters(); i++) {
+        std::string genName = ret->name() + getNextVarSuffix();
+        auto reg = iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction);
+        param.push_back(reg);
+        ReturnParameterRegisters.push_back(reg);
+      }
+    }
 
-    // Create ret void
-    iele::IeleInstruction::CreateRetVoid(CompilingBlock);
+    // Create the function call to the fallback/receive internal function
+    iele::IeleInstruction::CreateInternalCall(
+      ReturnParameterRegisters, Callee, ParamValues, CompilingBlock);
+
+    // Create ret
+    llvm::SmallVector<iele::IeleValue *, 4> ReturnParameterValues;
+    for (iele::IeleLocalVariable *var : ReturnParameterRegisters)
+      ReturnParameterValues.push_back(var);
+    iele::IeleInstruction::CreateRet(ReturnParameterValues, CompilingBlock);
     appendRevertBlocks();
 
     CompilingBlock = nullptr;
@@ -418,19 +439,20 @@ void IeleCompiler::compileContract(
 
       // Add constructor's aux params
       auto auxParams = ctorAuxParams[CompilingContractASTNode];
-      if (!auxParams.empty()) {
-        // Make iterator
+      for (const ContractDefinition *auxParamDest : CompilingContractInheritanceHierarchy) {
         std::map<const ContractDefinition *, 
-                std::pair<std::vector<std::string>, const ContractDefinition *>>::iterator it;
+                 std::pair<std::vector<std::string>,
+                           const ContractDefinition *>>::iterator it =
+          auxParams.find(auxParamDest);
+        if (it == auxParams.end())
+          continue;
 
-        for(it = auxParams.begin(); it != auxParams.end(); ++it) {
-          auto forwardingAuxParams = it -> second;
-          auto paramNames = forwardingAuxParams.first;
+        auto forwardingAuxParams = it -> second;
+        auto paramNames = forwardingAuxParams.first;
 
-          for (std::string paramName : paramNames) {
-            iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
-            VarNameMap[0][paramName] = RegisterLValue::Create({arg});
-          }
+        for (std::string paramName : paramNames) {
+          iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
+          VarNameMap[0][paramName] = RegisterLValue::Create({arg});
         }
       }
       
@@ -458,19 +480,20 @@ void IeleCompiler::compileContract(
     
     // Add constructor's aux params
     auto auxParams = ctorAuxParams[CompilingContractASTNode];
-    if (!auxParams.empty()) {
-      // Make iterator
+    for (const ContractDefinition *auxParamDest : CompilingContractInheritanceHierarchy) {
       std::map<const ContractDefinition *, 
-              std::pair<std::vector<std::string>, const ContractDefinition *>>::iterator it;
+               std::pair<std::vector<std::string>,
+                         const ContractDefinition *>>::iterator it =
+        auxParams.find(auxParamDest);
+      if (it == auxParams.end())
+        continue;
 
-      for(it = auxParams.begin(); it != auxParams.end(); ++it) {
-        auto forwardingAuxParams = it -> second;
-        auto paramNames = forwardingAuxParams.first;
+      auto forwardingAuxParams = it -> second;
+      auto paramNames = forwardingAuxParams.first;
 
-        for (std::string paramName : paramNames) {
-          iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
-          VarNameMap[0][paramName] = RegisterLValue::Create({arg});
-        }
+      for (std::string paramName : paramNames) {
+        iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
+        VarNameMap[0][paramName] = RegisterLValue::Create({arg});
       }
     }
     
@@ -744,21 +767,21 @@ bool IeleCompiler::visit(const FunctionDefinition &function) {
   // Add aux constructor params 
   if (function.isConstructor()) {
     auto auxParams = ctorAuxParams[CompilingContractASTNode];
-    if (!auxParams.empty()) {
-      
-      // Make iterator
+    for (const ContractDefinition *auxParamDest : CompilingContractInheritanceHierarchy) {
       std::map<const ContractDefinition *, 
-               std::pair<std::vector<std::string>, const ContractDefinition *>>::iterator it;
+               std::pair<std::vector<std::string>,
+                         const ContractDefinition *>>::iterator it =
+        auxParams.find(auxParamDest);
+      if (it == auxParams.end())
+        continue;
 
-      for(it = auxParams.begin(); it != auxParams.end(); ++it) {
-        auto forwardingAuxParams = it -> second;
-        auto paramNames = forwardingAuxParams.first;
+      auto forwardingAuxParams = it -> second;
+      auto paramNames = forwardingAuxParams.first;
 
-        for (std::string paramName : paramNames) {
-          if (!paramName.empty()) {
-            iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
-            VarNameMap[NumOfModifiers][paramName] = RegisterLValue::Create({arg});
-          }
+      for (std::string paramName : paramNames) {
+        if (!paramName.empty()) {
+          iele::IeleArgument *arg = iele::IeleArgument::Create(&Context, paramName, CompilingFunction);
+          VarNameMap[NumOfModifiers][paramName] = RegisterLValue::Create({arg});
         }
       }
     }
@@ -5027,6 +5050,18 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     }
     break;
   }
+  case Type::Category::Module: {
+    const Declaration *declaration = memberAccess.annotation().referencedDeclaration;
+    const VariableDeclaration *variable =
+          dynamic_cast<const VariableDeclaration *>(declaration);
+    solAssert(variable->isConstant(), "IeleCompiler: found non-constant "
+                                      "file-level variable");
+    IeleRValue *Result = compileExpression(*variable->value());
+    TypePointer rhsType = variable->value()->annotation().type;
+    Result = appendTypeConversion(Result, rhsType, variable->annotation().type);
+    CompilingExpressionResult.push_back(Result);
+    break;
+  }
   case Type::Category::Enum:
     solAssert(false, "not implemented yet: enums");
   default:
@@ -5137,6 +5172,10 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
   }
 
   return false;
+}
+
+bool IeleCompiler::visit(const IndexRangeAccess &indexRangeAccess) {
+    solAssert(false, "IeleCompiler: Index range access is not implemented yet.");
 }
 
 IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc) {
@@ -5918,13 +5957,15 @@ void IeleCompiler::appendDefaultConstructor(const ContractDefinition *contract) 
                          const ContractDefinition *>> baseCtorAuxParams = 
         ctorAuxParams[def];
       
-      // Iterate through aux parameters
-      std::map<const ContractDefinition *,
-               std::pair<std::vector<std::string>,
-                         const ContractDefinition *>>::iterator it;
+      // Iterate through aux parameters in the order of the inheritance hierarchy.
+      for (const ContractDefinition *auxParamDest : CompilingContractInheritanceHierarchy) {
+        std::map<const ContractDefinition *,
+                 std::pair<std::vector<std::string>,
+                           const ContractDefinition *>>::iterator it =
+          baseCtorAuxParams.find(auxParamDest);
+        if (it == baseCtorAuxParams.end())
+          continue;
 
-      for(it = baseCtorAuxParams.begin(); it != baseCtorAuxParams.end(); ++it) {
-        auto auxParamDest = it -> first;
         auto auxParams    = it -> second;
         auto paramNames   = auxParams.first;
         auto paramSource  = auxParams.second;

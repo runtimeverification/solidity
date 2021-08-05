@@ -18,6 +18,6 @@ contract Main {
 // ====
 // compileViaYul: also
 // ----
-// constructor(): "abc", true
+// constructor(): hex"616263", true
 // getFlag() -> true
-// getName() -> "abc"
+// getName() -> hex"616263"

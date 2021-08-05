@@ -10,8 +10,8 @@ contract C {
 // compileViaYul: also
 // ----
 // f((function)): "01234567890123456789abcd" -> 1
-// f((function)): "01234567890123456789abcdX" -> FAILURE
+// f((function)): "01234567890123456789abcdX" -> 1
 // g((function)): "01234567890123456789abcd" -> 2
 // g((function)): "01234567890123456789abcdX" -> 2
 // h((function)): "01234567890123456789abcd" -> 3
-// h((function)): "01234567890123456789abcdX" -> FAILURE
+// h((function)): "01234567890123456789abcdX" -> 3

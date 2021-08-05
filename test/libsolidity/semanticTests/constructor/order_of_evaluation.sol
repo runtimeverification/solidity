@@ -21,4 +21,4 @@ contract X is D, C, B, A {
 // ====
 // compileViaYul: also
 // ----
-// g() -> 0x20, 4, 1, 3, 2, 4
+// g() -> dynarray 0 [ 1, 3, 2, 4 ]
