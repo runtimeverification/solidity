@@ -111,6 +111,15 @@ bool IeleCompiler::isMostDerived(const FunctionDefinition *d) const {
         return d == decl;
       }
     }
+    for (const VariableDeclaration *varDecl : contract->stateVariables()) {
+      if (!varDecl->isPublic()) {
+        continue;
+      }
+      FunctionType accessorType(*varDecl);
+      if (d->name() == varDecl->name() && accessorType.asExternallyCallableFunction(false)->hasEqualParameterTypes(*functionType)) {
+        return false;
+      }
+    }
   }
   return false;
 }
@@ -615,11 +624,18 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
     TypePointers paramTypes = accessorType.parameterTypes();
 
     std::vector<iele::IeleArgument *> parameters;
-  
     // Visit formal arguments.
     for (unsigned i = 0; i < paramTypes.size(); i++) {
+      TypePointer paramType = paramTypes[i];
+      solAssert(paramType->sizeInRegisters() == 1,
+                "IeleCompiler: found accessor type that requires more than "
+                "one IELE registers for its index.");
       std::string genName = getNextVarSuffix();
-      parameters.push_back(iele::IeleArgument::Create(&Context, genName, CompilingFunction));
+      iele::IeleArgument *ieleArg =
+        iele::IeleArgument::Create(&Context, genName, CompilingFunction);
+      parameters.push_back(ieleArg);
+      solAssert(paramType->isValueType(), "IeleCompiler: reference type as accessor index.");
+      appendRangeCheck(IeleRValue::Create(ieleArg), *paramType);
     }
 
     TypePointer returnType = stateVariable->annotation().type;
@@ -1117,18 +1133,22 @@ void IeleCompiler::appendModifierOrFunctionCode() {
       appendModifierOrFunctionCode();
     }
     else {
-      // Retrieve modifier definition from its name
-      solAssert(modifierInvocation->name().path().size() == 1,
-                "IeleCompiler: Found modifier with compound name");
-      const ASTString &modName = modifierInvocation->name().path().at(0);
+      // Retrieve modifier definition
       const ModifierDefinition *modifier = nullptr;
-      solAssert(!CompilingFunctionASTNode->isFree(), "IeleCompiler: found free function with modifier");
-      if (contractFor(CompilingFunctionASTNode)->isLibrary()) {
-        for (ModifierDefinition const* mod: contractFor(CompilingFunctionASTNode)->functionModifiers())
-          if (mod->name() == modName)
-            modifier = mod;
+      if (modifierInvocation->name().path().size() > 1) {
+        modifier =
+          dynamic_cast<const ModifierDefinition *>(
+            modifierInvocation->name().annotation().referencedDeclaration);
       } else {
-        modifier = functionModifier(modName);
+        const ASTString &modName = modifierInvocation->name().path().at(0);
+        solAssert(!CompilingFunctionASTNode->isFree(), "IeleCompiler: found free function with modifier");
+        if (contractFor(CompilingFunctionASTNode)->isLibrary()) {
+          for (ModifierDefinition const* mod: contractFor(CompilingFunctionASTNode)->functionModifiers())
+            if (mod->name() == modName)
+              modifier = mod;
+        } else {
+          modifier = functionModifier(modName);
+        }
       }
       solAssert(modifier, "Could not find modifier");
 
@@ -5052,14 +5072,15 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
   }
   case Type::Category::Module: {
     const Declaration *declaration = memberAccess.annotation().referencedDeclaration;
-    const VariableDeclaration *variable =
-          dynamic_cast<const VariableDeclaration *>(declaration);
-    solAssert(variable->isConstant(), "IeleCompiler: found non-constant "
-                                      "file-level variable");
-    IeleRValue *Result = compileExpression(*variable->value());
-    TypePointer rhsType = variable->value()->annotation().type;
-    Result = appendTypeConversion(Result, rhsType, variable->annotation().type);
-    CompilingExpressionResult.push_back(Result);
+    if (const VariableDeclaration *variable =
+            dynamic_cast<const VariableDeclaration *>(declaration)) {
+      solAssert(variable->isConstant(), "IeleCompiler: found non-constant "
+                                        "file-level variable");
+      IeleRValue *Result = compileExpression(*variable->value());
+      TypePointer rhsType = variable->value()->annotation().type;
+      Result = appendTypeConversion(Result, rhsType, variable->annotation().type);
+      CompilingExpressionResult.push_back(Result);
+    }
     break;
   }
   case Type::Category::Enum:
