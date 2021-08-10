@@ -5199,7 +5199,7 @@ bool IeleCompiler::visit(const IndexRangeAccess &indexRangeAccess) {
   const Type &baseType = *indexRangeAccess.baseExpression().annotation().type;
   switch (baseType.category()) {
   case Type::Category::Array: {
-//    const ArrayType &type = dynamic_cast<const ArrayType &>(baseType);
+    const ArrayType &type = dynamic_cast<const ArrayType &>(baseType);
 
     // Visit accessed exression.
     iele::IeleValue *ExprValue = compileExpression(indexRangeAccess.baseExpression())->getValue();
@@ -5233,14 +5233,14 @@ bool IeleCompiler::visit(const IndexRangeAccess &indexRangeAccess) {
               "IeleCompiler: failed to compile end expression for index "
               "range access.");
 
-//    IeleLValue *AddressValue = appendArrayAccess(type, IndexValue->getValue(), ExprValue, type.location());
-//    CompilingExpressionResult.push_back(AddressValue);
+    IeleRValue *SliceValue = appendArrayRangeAccess(type, StartValue->getValue(), EndValue->getValue(), ExprValue, type.location());
+    CompilingExpressionResult.push_back(SliceValue);
     break;
   }
   default:
     solAssert(false, "IeleCompiler: Index range access to unknown type.");
   }
-    solAssert(false, "IeleCompiler: Index range access is not implemented yet.");
+  return false;
 }
 
 void IeleCompiler::appendArrayAccessRangeCheck(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc, iele::IeleLocalVariable *OffsetValue) {
@@ -5307,7 +5307,7 @@ void IeleCompiler::appendArrayAccessRangeCheck(const ArrayType &type, iele::Iele
 IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc) {
   TypePointer elementType = type.baseType();
 
-  // Generate code for the out-pf-bounds check.
+  // Generate code for the out-of-bounds check.
   iele::IeleLocalVariable *OffsetValue =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
   appendArrayAccessRangeCheck(type, IndexValue, ExprValue, Loc, OffsetValue);
@@ -5327,6 +5327,20 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
   }
 
   return makeLValue(AddressValue, elementType, Loc, type.isByteArray() ? IndexValue : nullptr);
+}
+
+IeleRValue *IeleCompiler::appendArrayRangeAccess(const ArrayType &type, iele::IeleValue *StartValue, iele::IeleValue *EndValue, iele::IeleValue *ExprValue, DataLocation Loc) {
+
+  // Generate code for the out-of-bounds checks.
+  iele::IeleLocalVariable *StartOffsetValue =
+    iele::IeleLocalVariable::Create(&Context, "slice.start", CompilingFunction);
+  appendArrayAccessRangeCheck(type, StartValue, ExprValue, Loc, StartOffsetValue);
+  iele::IeleLocalVariable *EndOffsetValue =
+    iele::IeleLocalVariable::Create(&Context, "slice.end", CompilingFunction);
+  appendArrayAccessRangeCheck(type, EndValue, ExprValue, Loc, EndOffsetValue);
+
+  // Return an RValue with the triple (base, start, end).
+  return IeleRValue::Create({ExprValue, StartOffsetValue, EndOffsetValue});
 }
 
 IeleLValue *IeleCompiler::appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue) {
@@ -7108,6 +7122,9 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
     if (shouldCopyStorageToMemory(*TargetType, *SourceType))
       return IeleRValue::Create(appendCopyFromStorageToMemory(TargetType, Value, SourceType));
     return Value;
+  case Type::Category::ArraySlice: {
+    solAssert(false, "IeleCompiler: Index range is not implemented yet.");
+  }
   case Type::Category::Integer:
   case Type::Category::Address:
   case Type::Category::RationalNumber:
