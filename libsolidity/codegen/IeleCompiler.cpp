@@ -5196,13 +5196,56 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
 }
 
 bool IeleCompiler::visit(const IndexRangeAccess &indexRangeAccess) {
+  const Type &baseType = *indexRangeAccess.baseExpression().annotation().type;
+  switch (baseType.category()) {
+  case Type::Category::Array: {
+//    const ArrayType &type = dynamic_cast<const ArrayType &>(baseType);
+
+    // Visit accessed exression.
+    iele::IeleValue *ExprValue = compileExpression(indexRangeAccess.baseExpression())->getValue();
+    solAssert(ExprValue,
+              "IeleCompiler: failed to compile base expression for index "
+              "range access.");
+
+    // Visit start expression.
+    solAssert(indexRangeAccess.startExpression(),
+              "IeleCompiler: Start expression expected.");
+    IeleRValue *StartValue =
+      compileExpression(*indexRangeAccess.startExpression());
+    StartValue =
+      appendTypeConversion(
+          StartValue,
+          indexRangeAccess.startExpression()->annotation().type, UInt);
+    solAssert(StartValue,
+              "IeleCompiler: failed to compile start expression for index "
+              "range access.");
+
+    // Visit end expression.
+    solAssert(indexRangeAccess.endExpression(),
+              "IeleCompiler: End expression expected.");
+    IeleRValue *EndValue =
+      compileExpression(*indexRangeAccess.endExpression());
+    EndValue =
+      appendTypeConversion(
+          EndValue,
+          indexRangeAccess.endExpression()->annotation().type, UInt);
+    solAssert(EndValue,
+              "IeleCompiler: failed to compile end expression for index "
+              "range access.");
+
+//    IeleLValue *AddressValue = appendArrayAccess(type, IndexValue->getValue(), ExprValue, type.location());
+//    CompilingExpressionResult.push_back(AddressValue);
+    break;
+  }
+  default:
+    solAssert(false, "IeleCompiler: Index range access to unknown type.");
+  }
     solAssert(false, "IeleCompiler: Index range access is not implemented yet.");
 }
 
-IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc) {
+void IeleCompiler::appendArrayAccessRangeCheck(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc, iele::IeleLocalVariable *OffsetValue) {
   TypePointer elementType = type.baseType();
 
-  // Generate code for the access.
   bigint elementSize;
   bigint size;
   switch (Loc) {
@@ -5220,8 +5263,6 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
   }
 
   // First compute the offset from the start of the array.
-  iele::IeleLocalVariable *OffsetValue =
-    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
   if (!type.isByteArray()) {
     appendMul(OffsetValue, IndexValue, elementSize);
   }
@@ -5261,8 +5302,18 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
       iele::IeleInstruction::CmpGe, OutOfRangeValue, IndexValue, 
       SizeValue, CompilingBlock);
   appendRevert(OutOfRangeValue);
-  // Then compute the address of the accessed element and check for
-  // out-of-bounds access.
+}
+
+IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc) {
+  TypePointer elementType = type.baseType();
+
+  // Generate code for the out-pf-bounds check.
+  iele::IeleLocalVariable *OffsetValue =
+    iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
+  appendArrayAccessRangeCheck(type, IndexValue, ExprValue, Loc, OffsetValue);
+
+  // Then compute the address of the accessed element and return
+  // an LValue pointing to it.
   iele::IeleLocalVariable *AddressValue =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
   if (type.isByteArray()) {

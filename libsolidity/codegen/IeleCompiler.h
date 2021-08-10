@@ -255,6 +255,7 @@ private:
           IeleLValue *Local, const VariableDeclaration *localVariable);
 
   IeleLValue *appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue);
+  void appendArrayAccessRangeCheck(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc, iele::IeleLocalVariable *OffsetValue);
   IeleLValue *appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc);
   IeleLValue *appendStructAccess(const StructType &type, iele::IeleValue *ExprValue, std::string member, DataLocation Loc);
 
