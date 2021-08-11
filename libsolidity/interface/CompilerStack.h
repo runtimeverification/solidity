@@ -312,7 +312,7 @@ public:
 	/// @returns a JSON representation of the assembly.
 	/// @arg _sourceCodes is the map of input files to source code strings
 	/// Prerequisite: Successful compilation.
-	Json::Value assemblyJSON(std::string const& _contractName) const;
+	Json::Value assemblyJSON(std::string const& _contractName, StringMap _sourceCodes = StringMap()) const;
 	/// @returns a JSON representing the contract ABI.
 	/// Prerequisite: Successful call to parse or compile.
 	Json::Value const& contractABI(std::string const& _contractName) const;
