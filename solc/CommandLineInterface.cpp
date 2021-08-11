@@ -1648,7 +1648,7 @@ void CommandLineInterface::handleCombinedJSON()
 		if (requests.count(g_strOpcodes) && m_compiler->compilationSuccessful())
 			contractData[g_strOpcodes] = evmasm::disassemble(m_compiler->object(contractName).bytecode);
 		if (requests.count(g_strAsm) && m_compiler->compilationSuccessful())
-			contractData[g_strAsm] = m_compiler->assemblyJSON(contractName);
+			contractData[g_strAsm] = m_compiler->assemblyJSON(contractName, m_sourceCodes);
 		if (requests.count(g_strStorageLayout) && m_compiler->compilationSuccessful())
 			contractData[g_strStorageLayout] = m_compiler->storageLayout(contractName);
 /*
@@ -2018,7 +2018,7 @@ void CommandLineInterface::outputCompilationResults()
 		{
 			string ret;
 			if (m_args.count(g_argAsmJson))
-				ret = jsonPrettyPrint(removeNullMembers(m_compiler->assemblyJSON(contract)));
+				ret = jsonPrettyPrint(removeNullMembers(m_compiler->assemblyJSON(contract, m_sourceCodes)));
 			else
 				ret = m_compiler->assemblyString(contract, m_sourceCodes);
 

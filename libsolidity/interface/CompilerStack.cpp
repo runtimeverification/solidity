@@ -809,14 +809,14 @@ string CompilerStack::assemblyString(string const& _contractName, StringMap _sou
 }
 
 /// TODO: cache the JSON
-Json::Value CompilerStack::assemblyJSON(string const& _contractName) const
+Json::Value CompilerStack::assemblyJSON(string const& _contractName, StringMap _sourceCodes) const
 {
 	if (m_stackState != CompilationSuccessful)
 		BOOST_THROW_EXCEPTION(CompilerError() << errinfo_comment("Compilation was not successful."));
 
 	Contract const& currentContract = contract(_contractName);
-	if (currentContract.evmAssembly)
-		return currentContract.evmAssembly->assemblyJSON(sourceIndices());
+	if (currentContract.compiler)
+		return currentContract.compiler->assemblyJSON(_sourceCodes);
 	else
 		return Json::Value();
 }
