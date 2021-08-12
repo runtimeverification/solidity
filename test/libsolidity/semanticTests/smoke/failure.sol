@@ -21,6 +21,6 @@ contract C {
 // ----
 // _() -> FAILURE, 1
 // e() -> FAILURE, "Transaction failed."
-// f(bool): false -> FAILURE, hex"08c379a0", 0x20, 0x00
+// f(bool): false ->
 // g(bool): false -> FAILURE, "Value is false."
 // h() -> FAILURE, 255
