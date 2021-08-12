@@ -5248,36 +5248,9 @@ bool IeleCompiler::visit(const IndexRangeAccess &indexRangeAccess) {
   return false;
 }
 
-void IeleCompiler::appendArrayAccessRangeCheck(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc, iele::IeleLocalVariable *OffsetValue) {
-  TypePointer elementType = type.baseType();
+void IeleCompiler::appendArrayAccessRangeCheck(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc, bigint sizeInElements) {
 
-  bigint elementSize;
-  bigint size;
-  switch (Loc) {
-  case DataLocation::Storage: {
-    elementSize = type.storageSizeOfElement();
-    size = type.storageSize();
-    break;
-  }
-  case DataLocation::CallData:
-  case DataLocation::Memory: {
-    elementSize = elementType->memorySize();
-    size = type.memorySize();
-    break;
-  }
-  }
-
-  // First compute the offset from the start of the array.
-  if (!type.isByteArray()) {
-    appendMul(OffsetValue, IndexValue, elementSize);
-  }
-  if (type.isDynamicallySized() && !type.isByteArray()) {
-    // Add 1 to skip the first slot that holds the size.
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, OffsetValue, OffsetValue,
-        iele::IeleIntConstant::getOne(&Context), CompilingBlock);
-  }
-  // Then compute the size of the array.
+  // Compute the size of the array.
   iele::IeleValue *SizeValue = nullptr;
   if (type.isDynamicallySized()) {
     // If the array is dynamically sized the size is stored in the first slot.
@@ -5292,7 +5265,6 @@ void IeleCompiler::appendArrayAccessRangeCheck(const ArrayType &type, iele::Iele
           llvm::cast<iele::IeleLocalVariable>(SizeValue), ExprValue,
           CompilingBlock);
   } else {
-    bigint sizeInElements = size / elementSize;
     SizeValue = iele::IeleIntConstant::Create(&Context, sizeInElements);
   }
   // Then check for out-of-bounds access.
@@ -5312,10 +5284,38 @@ void IeleCompiler::appendArrayAccessRangeCheck(const ArrayType &type, iele::Iele
 IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc) {
   TypePointer elementType = type.baseType();
 
-  // Generate code for the out-of-bounds check.
+  bigint elementSize;
+  bigint size;
+  switch (Loc) {
+  case DataLocation::Storage: {
+    elementSize = type.storageSizeOfElement();
+    size = type.storageSize();
+    break;
+  }
+  case DataLocation::CallData:
+  case DataLocation::Memory: {
+    elementSize = elementType->memorySize();
+    size = type.memorySize();
+    break;
+  }
+  }
+
+  // First compute the offset from the start of the array.
   iele::IeleLocalVariable *OffsetValue =
     iele::IeleLocalVariable::Create(&Context, "tmp", CompilingFunction);
-  appendArrayAccessRangeCheck(type, IndexValue, ExprValue, Loc, OffsetValue);
+  if (!type.isByteArray()) {
+    appendMul(OffsetValue, IndexValue, elementSize);
+  }
+  if (type.isDynamicallySized() && !type.isByteArray()) {
+    // Add 1 to skip the first slot that holds the size.
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, OffsetValue, OffsetValue,
+        iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+  }
+
+  // Generate code for the out-of-bounds check.
+  bigint sizeInElements = size / elementSize;
+  appendArrayAccessRangeCheck(type, IndexValue, ExprValue, Loc, sizeInElements);
 
   // Then compute the address of the accessed element and return
   // an LValue pointing to it.
@@ -5335,17 +5335,31 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
 }
 
 IeleRValue *IeleCompiler::appendArrayRangeAccess(const ArrayType &type, iele::IeleValue *StartValue, iele::IeleValue *EndValue, iele::IeleValue *ExprValue, DataLocation Loc) {
+  TypePointer elementType = type.baseType();
 
   // Generate code for the out-of-bounds checks.
-  iele::IeleLocalVariable *StartOffsetValue =
-    iele::IeleLocalVariable::Create(&Context, "slice.start", CompilingFunction);
-  appendArrayAccessRangeCheck(type, StartValue, ExprValue, Loc, StartOffsetValue);
-  iele::IeleLocalVariable *EndOffsetValue =
-    iele::IeleLocalVariable::Create(&Context, "slice.end", CompilingFunction);
-  appendArrayAccessRangeCheck(type, EndValue, ExprValue, Loc, EndOffsetValue);
+  bigint elementSize;
+  bigint size;
+  switch (Loc) {
+  case DataLocation::Storage: {
+    elementSize = type.storageSizeOfElement();
+    size = type.storageSize();
+    break;
+  }
+  case DataLocation::CallData:
+  case DataLocation::Memory: {
+    elementSize = elementType->memorySize();
+    size = type.memorySize();
+    break;
+  }
+  }
+  bigint sizeInElements = size / elementSize;
+
+  appendArrayAccessRangeCheck(type, StartValue, ExprValue, Loc, sizeInElements);
+  appendArrayAccessRangeCheck(type, EndValue, ExprValue, Loc, sizeInElements);
 
   // Return an RValue with the triple (base, start, end).
-  return IeleRValue::Create({ExprValue, StartOffsetValue, EndOffsetValue});
+  return IeleRValue::Create({ExprValue, StartValue, EndValue});
 }
 
 IeleLValue *IeleCompiler::appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue) {
@@ -6624,6 +6638,7 @@ void IeleCompiler::appendCopy(
     const ArraySliceType &arraySliceType = dynamic_cast<const ArraySliceType &>(*FromType);
     const ArrayType &arrayType = arraySliceType.arrayType();
     const ArrayType &toArrayType = dynamic_cast<const ArrayType &>(*ToType);
+    TypePointer elementType = arrayType.baseType();
 
     if (arrayType.isByteArray() && toArrayType.isByteArray()) {
       // copy from bytes to string or back
@@ -6643,20 +6658,41 @@ void IeleCompiler::appendCopy(
     iele::IeleLocalVariable *ElementTo =
       iele::IeleLocalVariable::Create(&Context, "copy.to.address", CompilingFunction);
 
+    bigint elementSize;
+    bigint size;
+    switch (FromLoc) {
+    case DataLocation::Storage: {
+      elementSize = arrayType.storageSizeOfElement();
+      size = arrayType.storageSize();
+      break;
+    }
+    case DataLocation::CallData:
+    case DataLocation::Memory: {
+      elementSize = elementType->memorySize();
+      size = arrayType.memorySize();
+      break;
+    }
+    }
+
+    // First compute the offset from the start of the array.
+    iele::IeleLocalVariable *StartOffsetValue =
+      iele::IeleLocalVariable::Create(&Context, "slice.start", CompilingFunction);
+    appendMul(StartOffsetValue, From->getValues()[1], elementSize);
+    if (arrayType.isDynamicallySized()) {
+      // Add 1 to skip the first slot that holds the size.
+      iele::IeleInstruction::CreateBinOp(
+          iele::IeleInstruction::Add, StartOffsetValue, StartOffsetValue,
+          iele::IeleIntConstant::getOne(&Context), CompilingBlock);
+    }
+
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Sub, SizeVariableFrom, From->getValues()[2],
         From->getValues()[1],
         CompilingBlock);
     iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, ElementFrom,From->getValues()[0],
-        From->getValues()[1],
+        iele::IeleInstruction::Add, ElementFrom, From->getValues()[0],
+        StartOffsetValue,
         CompilingBlock);
-//    if (arrayType.isDynamicallySized()) {
-//      iele::IeleInstruction::CreateBinOp(
-//          iele::IeleInstruction::Add, ElementFrom, ElementFrom,
-//          iele::IeleIntConstant::getOne(&Context),
-//          CompilingBlock);
-//    }
 
     // copy the size field
     if (ToType->isDynamicallySized()) {
