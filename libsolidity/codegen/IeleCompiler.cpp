@@ -634,8 +634,8 @@ void IeleCompiler::appendAccessorFunction(const VariableDeclaration *stateVariab
       iele::IeleArgument *ieleArg =
         iele::IeleArgument::Create(&Context, genName, CompilingFunction);
       parameters.push_back(ieleArg);
-      solAssert(paramType->isValueType(), "IeleCompiler: reference type as accessor index.");
-      appendRangeCheck(IeleRValue::Create(ieleArg), *paramType);
+      if (paramType->isValueType())
+        appendRangeCheck(IeleRValue::Create(ieleArg), *paramType);
     }
 
     TypePointer returnType = stateVariable->annotation().type;
