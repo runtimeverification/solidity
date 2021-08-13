@@ -5213,27 +5213,50 @@ bool IeleCompiler::visit(const IndexRangeAccess &indexRangeAccess) {
               "range access.");
 
     // Visit start expression.
-    solAssert(indexRangeAccess.startExpression(),
-              "IeleCompiler: Start expression expected.");
-    IeleRValue *StartValue =
-      compileExpression(*indexRangeAccess.startExpression());
-    StartValue =
-      appendTypeConversion(
-          StartValue,
-          indexRangeAccess.startExpression()->annotation().type, UInt);
+    IeleRValue *StartValue;
+    if (indexRangeAccess.startExpression()) {
+      StartValue = compileExpression(*indexRangeAccess.startExpression());
+      StartValue =
+        appendTypeConversion(
+            StartValue,
+            indexRangeAccess.startExpression()->annotation().type, UInt);
+    } else {
+      StartValue = IeleRValue::Create(iele::IeleIntConstant::getZero(&Context));
+    }
+
     solAssert(StartValue,
               "IeleCompiler: failed to compile start expression for index "
               "range access.");
 
     // Visit end expression.
-    solAssert(indexRangeAccess.endExpression(),
-              "IeleCompiler: End expression expected.");
-    IeleRValue *EndValue =
-      compileExpression(*indexRangeAccess.endExpression());
-    EndValue =
-      appendTypeConversion(
-          EndValue,
-          indexRangeAccess.endExpression()->annotation().type, UInt);
+    IeleRValue *EndValue;
+    if (indexRangeAccess.endExpression()) {
+      EndValue = compileExpression(*indexRangeAccess.endExpression());
+      EndValue =
+        appendTypeConversion(
+            EndValue,
+            indexRangeAccess.endExpression()->annotation().type, UInt);
+    } else {
+      iele::IeleLocalVariable *SizeVariable =
+        iele::IeleLocalVariable::Create(&Context, "tmp.end", CompilingFunction);
+
+      if (type.isDynamicallySized()) {
+        type.location() == DataLocation::Storage ?
+          iele::IeleInstruction::CreateSLoad(
+            SizeVariable, ExprValue,
+            CompilingBlock) :
+          iele::IeleInstruction::CreateLoad(
+            SizeVariable, ExprValue,
+            CompilingBlock) ;
+      } else {
+        iele::IeleInstruction::CreateAssign(
+          SizeVariable, iele::IeleIntConstant::Create(&Context, bigint(type.length())),
+          CompilingBlock);
+      }
+
+      EndValue = IeleRValue::Create(SizeVariable);
+    }
+
     solAssert(EndValue,
               "IeleCompiler: failed to compile end expression for index "
               "range access.");
@@ -5355,11 +5378,18 @@ IeleRValue *IeleCompiler::appendArrayRangeAccess(const ArrayType &type, iele::Ie
   }
   bigint sizeInElements = size / elementSize;
 
+  iele::IeleLocalVariable *AdjustedEndValue =
+    iele::IeleLocalVariable::Create(&Context, "slice.end", CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::Sub, AdjustedEndValue, EndValue,
+      iele::IeleIntConstant::getOne(&Context),
+      CompilingBlock);
+
   appendArrayAccessRangeCheck(type, StartValue, ExprValue, Loc, sizeInElements);
-  appendArrayAccessRangeCheck(type, EndValue, ExprValue, Loc, sizeInElements);
+  appendArrayAccessRangeCheck(type, AdjustedEndValue, ExprValue, Loc, sizeInElements);
 
   // Return an RValue with the triple (base, start, end).
-  return IeleRValue::Create({ExprValue, StartValue, EndValue});
+  return IeleRValue::Create({ExprValue, StartValue, AdjustedEndValue});
 }
 
 IeleLValue *IeleCompiler::appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue) {
@@ -6688,6 +6718,10 @@ void IeleCompiler::appendCopy(
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Sub, SizeVariableFrom, From->getValues()[2],
         From->getValues()[1],
+        CompilingBlock);
+    iele::IeleInstruction::CreateBinOp(
+        iele::IeleInstruction::Add, SizeVariableFrom, SizeVariableFrom,
+        iele::IeleIntConstant::getOne(&Context),
         CompilingBlock);
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Add, ElementFrom, From->getValues()[0],
