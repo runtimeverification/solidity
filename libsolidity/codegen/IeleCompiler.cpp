@@ -5203,14 +5203,20 @@ bool IeleCompiler::visit(const IndexAccess &indexAccess) {
 bool IeleCompiler::visit(const IndexRangeAccess &indexRangeAccess) {
   const Type &baseType = *indexRangeAccess.baseExpression().annotation().type;
   switch (baseType.category()) {
+  case Type::Category::ArraySlice:
   case Type::Category::Array: {
-    const ArrayType &type = dynamic_cast<const ArrayType &>(baseType);
+    const ArrayType &type =
+      (baseType.category() == Type::Category::ArraySlice) ?
+        dynamic_cast<const ArraySliceType &>(baseType).arrayType() :
+        dynamic_cast<const ArrayType &>(baseType);
 
     // Visit accessed exression.
-    iele::IeleValue *ExprValue = compileExpression(indexRangeAccess.baseExpression())->getValue();
+    IeleRValue *ExprValue = compileExpression(indexRangeAccess.baseExpression());
     solAssert(ExprValue,
               "IeleCompiler: failed to compile base expression for index "
               "range access.");
+    iele::IeleValue *ArrayValue =
+      appendTypeConversion(ExprValue, &baseType, &type)->getValue();
 
     // Visit start expression.
     IeleRValue *StartValue;
@@ -5243,10 +5249,10 @@ bool IeleCompiler::visit(const IndexRangeAccess &indexRangeAccess) {
       if (type.isDynamicallySized()) {
         type.location() == DataLocation::Storage ?
           iele::IeleInstruction::CreateSLoad(
-            SizeVariable, ExprValue,
+            SizeVariable, ArrayValue,
             CompilingBlock) :
           iele::IeleInstruction::CreateLoad(
-            SizeVariable, ExprValue,
+            SizeVariable, ArrayValue,
             CompilingBlock) ;
       } else {
         iele::IeleInstruction::CreateAssign(
@@ -5261,7 +5267,7 @@ bool IeleCompiler::visit(const IndexRangeAccess &indexRangeAccess) {
               "IeleCompiler: failed to compile end expression for index "
               "range access.");
 
-    IeleRValue *SliceValue = appendArrayRangeAccess(type, StartValue->getValue(), EndValue->getValue(), ExprValue, type.location());
+    IeleRValue *SliceValue = appendArrayRangeAccess(type, StartValue->getValue(), EndValue->getValue(), ArrayValue, type.location());
     CompilingExpressionResult.push_back(SliceValue);
     break;
   }
@@ -5360,7 +5366,6 @@ IeleLValue *IeleCompiler::appendArrayAccess(const ArrayType &type, iele::IeleVal
 IeleRValue *IeleCompiler::appendArrayRangeAccess(const ArrayType &type, iele::IeleValue *StartValue, iele::IeleValue *EndValue, iele::IeleValue *ExprValue, DataLocation Loc) {
   TypePointer elementType = type.baseType();
 
-  // Generate code for the out-of-bounds checks.
   bigint elementSize;
   bigint size;
   switch (Loc) {
@@ -5378,6 +5383,16 @@ IeleRValue *IeleCompiler::appendArrayRangeAccess(const ArrayType &type, iele::Ie
   }
   bigint sizeInElements = size / elementSize;
 
+  // Check if start > end and revert if true.
+  iele::IeleLocalVariable *CompareValue1 =
+    iele::IeleLocalVariable::Create(&Context, "start.gt.end",
+                                    CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpGt, CompareValue1, StartValue,
+      EndValue, CompilingBlock);
+  appendRevert(CompareValue1);
+
+  // Compute end-1.
   iele::IeleLocalVariable *AdjustedEndValue =
     iele::IeleLocalVariable::Create(&Context, "slice.end", CompilingFunction);
   iele::IeleInstruction::CreateBinOp(
@@ -5385,8 +5400,24 @@ IeleRValue *IeleCompiler::appendArrayRangeAccess(const ArrayType &type, iele::Ie
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
 
+  // Skip range checks for start and end index if start == end.
+  iele::IeleLocalVariable *CompareValue2 =
+    iele::IeleLocalVariable::Create(&Context, "start.eq.end",
+                                    CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpEq, CompareValue2, StartValue,
+      EndValue, CompilingBlock);
+  iele::IeleBlock *JoinBlock = iele::IeleBlock::Create(&Context, "if.end");
+  connectWithConditionalJump(CompareValue2, CompilingBlock, JoinBlock);
+
+  // Check the start index for out-of-bounds access.
   appendArrayAccessRangeCheck(type, StartValue, ExprValue, Loc, sizeInElements);
+
+  // Check the (end-1) index for out-of-bounds access.
   appendArrayAccessRangeCheck(type, AdjustedEndValue, ExprValue, Loc, sizeInElements);
+
+  JoinBlock->insertInto(CompilingFunction);
+  CompilingBlock = JoinBlock;
 
   // Return an RValue with the triple (base, start, end).
   return IeleRValue::Create({ExprValue, StartValue, AdjustedEndValue});
