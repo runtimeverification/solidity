@@ -5392,6 +5392,43 @@ IeleRValue *IeleCompiler::appendArrayRangeAccess(const ArrayType &type, iele::Ie
       EndValue, CompilingBlock);
   appendRevert(CompareValue1);
 
+  // Check if end > length and revert if true.
+  iele::IeleLocalVariable *SizeVariable =
+    iele::IeleLocalVariable::Create(&Context, "array.length", CompilingFunction);
+
+  if (type.isDynamicallySized()) {
+    Loc == DataLocation::Storage ?
+      iele::IeleInstruction::CreateSLoad(
+        SizeVariable, ExprValue,
+        CompilingBlock) :
+      iele::IeleInstruction::CreateLoad(
+        SizeVariable, ExprValue,
+        CompilingBlock) ;
+  } else {
+    iele::IeleInstruction::CreateAssign(
+      SizeVariable, iele::IeleIntConstant::Create(&Context, bigint(type.length())),
+      CompilingBlock);
+  }
+
+  iele::IeleLocalVariable *CompareValue2 =
+    iele::IeleLocalVariable::Create(&Context, "end.gt.len",
+                                    CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpGt, CompareValue2, EndValue,
+      SizeVariable, CompilingBlock);
+  appendRevert(CompareValue2);
+
+  // Range checks for start and end index.
+  // The only needed remaining check is start >= 0, since at this point,
+  // start <= end <= array.length .
+  iele::IeleLocalVariable *CompareValue3 =
+    iele::IeleLocalVariable::Create(&Context, "start.lt.zero",
+                                    CompilingFunction);
+  iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpLt, CompareValue3, StartValue,
+      iele::IeleIntConstant::getZero(&Context), CompilingBlock);
+  appendRevert(CompareValue3);
+
   // Compute end-1.
   iele::IeleLocalVariable *AdjustedEndValue =
     iele::IeleLocalVariable::Create(&Context, "slice.end", CompilingFunction);
@@ -5400,26 +5437,7 @@ IeleRValue *IeleCompiler::appendArrayRangeAccess(const ArrayType &type, iele::Ie
       iele::IeleIntConstant::getOne(&Context),
       CompilingBlock);
 
-  // Skip range checks for start and end index if start == end.
-  iele::IeleLocalVariable *CompareValue2 =
-    iele::IeleLocalVariable::Create(&Context, "start.eq.end",
-                                    CompilingFunction);
-  iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::CmpEq, CompareValue2, StartValue,
-      EndValue, CompilingBlock);
-  iele::IeleBlock *JoinBlock = iele::IeleBlock::Create(&Context, "if.end");
-  connectWithConditionalJump(CompareValue2, CompilingBlock, JoinBlock);
-
-  // Check the start index for out-of-bounds access.
-  appendArrayAccessRangeCheck(type, StartValue, ExprValue, Loc, sizeInElements);
-
-  // Check the (end-1) index for out-of-bounds access.
-  appendArrayAccessRangeCheck(type, AdjustedEndValue, ExprValue, Loc, sizeInElements);
-
-  JoinBlock->insertInto(CompilingFunction);
-  CompilingBlock = JoinBlock;
-
-  // Return an RValue with the triple (base, start, end).
+  // Return an RValue with the triple (base, start, end-1).
   return IeleRValue::Create({ExprValue, StartValue, AdjustedEndValue});
 }
 
