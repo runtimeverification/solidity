@@ -292,13 +292,18 @@ private:
   iele::IeleValue *appendCopyFromStorageToMemory(
     TypePointer ToType, IeleRValue *From, TypePointer FromType);
 
+  void appendByteArrayCopyLoop(
+      IeleLValue *To, IeleRValue *From,
+      DataLocation ToLoc, DataLocation FromLoc,
+      iele::IeleLocalVariable *SizeVariableFrom,
+      iele::IeleLocalVariable *IndexTo, iele::IeleLocalVariable *IndexFrom);
+
   void appendArrayCopyLoop(
       IeleLValue *To, const ArrayType &toArrayType,
       IeleRValue *From, const ArrayType &arrayType,
       DataLocation ToLoc, DataLocation FromLoc,
       iele::IeleLocalVariable *SizeVariableTo, iele::IeleLocalVariable *SizeVariableFrom,
-      iele::IeleLocalVariable *ElementTo, iele::IeleLocalVariable *ElementFrom,
-      iele::IeleValue *AllocedValue);
+      iele::IeleLocalVariable *ElementTo, iele::IeleLocalVariable *ElementFrom);
 
   void appendCopy(
       IeleLValue *To, TypePointer ToType, IeleRValue *From,
