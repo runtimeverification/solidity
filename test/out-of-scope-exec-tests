@@ -1,4 +1,5 @@
 -t !semanticTests/abiEncoderV1/abi_encode_call
+-t !semanticTests/abiEncoderV1/decode_slice
 -t !semanticTests/abiEncoderV1/dynamic_memory_copy
 -t !semanticTests/abiEncoderV1/return_dynamic_types_cross_call_out_of_range_2
 -t !semanticTests/abiEncoderV2/calldata_array
