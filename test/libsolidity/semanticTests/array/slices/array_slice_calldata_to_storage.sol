@@ -13,4 +13,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(int256[], uint256, uint256): 0x60, 1, 3, 4, 1, 2, 3, 4 -> 2
+// f(int[], uint256, uint256): dynarray 0 [ 1, 2, 3, 4 ], 1, 3 -> 2

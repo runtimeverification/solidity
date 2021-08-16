@@ -8,5 +8,5 @@ contract C {
 // revertStrings: debug
 // compileViaYul: also
 // ----
-// f(uint256,uint256,uint256[]): 2, 1, 0x80, 3, 1, 2, 3 -> FAILURE, hex"08c379a0", 0x20, 22, "Slice starts after end"
-// f(uint256,uint256,uint256[]): 1, 5, 0x80, 3, 1, 2, 3 -> FAILURE, hex"08c379a0", 0x20, 28, "Slice is greater than length"
+// f(uint256,uint256,uint256[]): 2, 1, dynarray 256 [ 1, 2, 3 ] -> FAILURE, 255
+// f(uint256,uint256,uint256[]): 1, 5, dynarray 256 [ 1, 2, 3 ] -> FAILURE, 255
