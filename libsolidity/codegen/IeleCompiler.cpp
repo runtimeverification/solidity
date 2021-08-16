@@ -5430,16 +5430,8 @@ IeleRValue *IeleCompiler::appendArrayRangeAccess(const ArrayType &type, iele::Ie
       iele::IeleIntConstant::getZero(&Context), CompilingBlock);
   appendRevert(CompareValue3);
 
-  // Compute end-1.
-  iele::IeleLocalVariable *AdjustedEndValue =
-    iele::IeleLocalVariable::Create(&Context, "slice.end", CompilingFunction);
-  iele::IeleInstruction::CreateBinOp(
-      iele::IeleInstruction::Sub, AdjustedEndValue, EndValue,
-      iele::IeleIntConstant::getOne(&Context),
-      CompilingBlock);
-
-  // Return an RValue with the triple (base, start, end-1).
-  return IeleRValue::Create({ExprValue, StartValue, AdjustedEndValue});
+  // Return an RValue with the triple (base, start, end).
+  return IeleRValue::Create({ExprValue, StartValue, EndValue});
 }
 
 IeleLValue *IeleCompiler::appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue) {
@@ -6782,10 +6774,6 @@ void IeleCompiler::appendCopy(
     iele::IeleInstruction::CreateBinOp(
         iele::IeleInstruction::Sub, SizeVariableFrom, From->getValues()[2],
         From->getValues()[1],
-        CompilingBlock);
-    iele::IeleInstruction::CreateBinOp(
-        iele::IeleInstruction::Add, SizeVariableFrom, SizeVariableFrom,
-        iele::IeleIntConstant::getOne(&Context),
         CompilingBlock);
 
     if (arrayType.isByteArray() && toArrayType.isByteArray()) {
