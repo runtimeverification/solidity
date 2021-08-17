@@ -53,7 +53,8 @@ std::string IeleCompiler::getIeleNameForFunction(
 std::string IeleCompiler::getIeleNameForLocalVariable(
     const VariableDeclaration *localVariable) {
   solAssert(localVariable->isLocalVariable() &&
-            !localVariable->isCallableOrCatchParameter(),
+            (!localVariable->isCallableOrCatchParameter() || 
+             localVariable->isTryCatchParameter()),
             "IeleCompiler: requested unique local variable name for a "
             "non-local variable.");
   return localVariable->name() + "." +
@@ -1245,6 +1246,177 @@ void IeleCompiler::appendModifierOrFunctionCode() {
 
 bool IeleCompiler::visit(const Throw &throwStatement) {
   appendRevert();
+  return false;
+}
+
+bool IeleCompiler::visit(const TryStatement &tryStatement) {
+  // Compile the external call, setting the context as a try/catch block.
+  CompilingTryCatch = true;
+  llvm::SmallVector<IeleRValue *, 4> Results;
+  compileTuple(tryStatement.externalCall(), Results);
+  CompilingTryCatch = false;
+  solAssert(Results.size() > 0, "IeleCompiler: no status generated while "
+                                "compiling a try/catch enclosed external call.");
+  iele::IeleValue *StatusValue = Results[0]->getValue();
+
+  // Create the try/catch exit block.
+  iele::IeleBlock *TryCatchExitBlock = iele::IeleBlock::Create(&Context, "try.catch.end");
+
+  // Generate the jump table to the various catch clauses.
+  iele::IeleLocalVariable *IsMatchValue =
+    iele::IeleLocalVariable::Create(&Context, "matched", CompilingFunction);
+  iele::IeleBlock *SuccessClauseBlock = nullptr;
+  iele::IeleBlock *ErrorClauseBlock = nullptr;
+  iele::IeleBlock *FallbackClauseBlock = nullptr;
+  if (tryStatement.successClause()) {
+    SuccessClauseBlock = iele::IeleBlock::Create(&Context, "try.success");
+    iele::IeleInstruction::CreateIsZero(IsMatchValue, StatusValue, CompilingBlock);
+    connectWithConditionalJump(IsMatchValue, CompilingBlock, SuccessClauseBlock);
+  }
+  if (tryStatement.structuredClause()) {
+    ErrorClauseBlock = iele::IeleBlock::Create(&Context, "catch.error");
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpNe, IsMatchValue, StatusValue, 
+      iele::IeleIntConstant::getZero(&Context),
+      CompilingBlock);
+    connectWithConditionalJump(IsMatchValue, CompilingBlock, ErrorClauseBlock);
+  }
+  if (tryStatement.fallbackClause()) {
+    FallbackClauseBlock = iele::IeleBlock::Create(&Context, "catch.all");
+    iele::IeleInstruction::CreateBinOp(
+      iele::IeleInstruction::CmpNe, IsMatchValue, StatusValue, 
+      iele::IeleIntConstant::getZero(&Context),
+      CompilingBlock);
+    connectWithConditionalJump(IsMatchValue, CompilingBlock, FallbackClauseBlock);
+  }
+
+  // Generate code for the success block.
+  if (const TryCatchClause *successClause = tryStatement.successClause()) {
+    SuccessClauseBlock->insertInto(CompilingFunction);
+    CompilingBlock = SuccessClauseBlock;
+
+    // Assign returned values to block's parameters.
+    if (successClause->parameters()) {
+      TypePointers RHSTypes;
+      if (const TupleType *tupleType =
+            dynamic_cast<const TupleType *>(tryStatement.externalCall().annotation().type))
+        RHSTypes = tupleType->components();
+      else
+        RHSTypes = TypePointers{tryStatement.externalCall().annotation().type};
+      solAssert(Results.size() == RHSTypes.size() + 1,
+             "IeleCompiler: Different numbers of return parameters for external call");
+      const auto &Params = successClause->parameters()->parameters();
+      solAssert(Params.size() == RHSTypes.size(),
+             "IeleCompiler: Success catch clause with wrong number of parameters");
+      for (unsigned i = 0; i < Params.size(); ++i) {
+        const VariableDeclaration *param = Params[i].get();
+        // Visit block's parameter (LHS).
+        // We add the parameter name in the compiling function's variable name map.
+        std::string paramName = getIeleNameForLocalVariable(param);
+        std::vector<iele::IeleLocalVariable *> paramRegisters;
+        for (unsigned i = 0; i < param->type()->sizeInRegisters(); i++) {
+          std::string genName = paramName + getNextVarSuffix();
+          paramRegisters.push_back(
+            iele::IeleLocalVariable::Create(&Context, genName, CompilingFunction));
+        }
+        IeleLValue *LHSValue = RegisterLValue::Create(paramRegisters);
+        VarNameMap[ModifierDepth][paramName] = LHSValue;
+
+        // Check if we need to do a storage to memory copy.
+        TypePointer LHSType = param->type();
+        TypePointer RHSType = RHSTypes[i];
+        IeleRValue *RHSValue = Results[i+1];
+        RHSValue = appendTypeConversion(RHSValue, RHSType, LHSType);
+
+        // Assign from returned value (RHS).
+        RHSType = RHSType->mobileType();
+        if (shouldCopyStorageToStorage(*LHSType, LHSValue, *RHSType))
+          appendCopyFromStorageToStorage(LHSValue, LHSType, RHSValue, RHSType);
+        else if (shouldCopyMemoryToStorage(*LHSType, LHSValue, *RHSType))
+          appendCopyFromMemoryToStorage(LHSValue, LHSType, RHSValue, RHSType);
+        else if (shouldCopyMemoryToMemory(*LHSType, LHSValue, *RHSType))
+          appendCopyFromMemoryToMemory(LHSValue, LHSType, RHSValue, RHSType);
+        else
+          LHSValue->write(RHSValue, CompilingBlock);
+      }
+    }
+
+    // Generate code for the success block.
+    successClause->block().accept(*this);
+
+    // Jump to the try/catch exit.
+    connectWithUnconditionalJump(CompilingBlock, TryCatchExitBlock);
+  }
+
+  // Generate code for the error block.
+  if (const TryCatchClause *errorClause = tryStatement.structuredClause()) {
+    ErrorClauseBlock->insertInto(CompilingFunction);
+    CompilingBlock = ErrorClauseBlock;
+
+    // Visit block's parameter (LHS).
+    // We add the parameter name in the compiling function's variable name map.
+    const auto &Params = errorClause->parameters()->parameters();
+    solAssert(Params.size() == 1,
+              "IeleCompiler: Error catch clause with wrong number of parameters");
+    const VariableDeclaration *param = Params[0].get();
+    std::string paramName = getIeleNameForLocalVariable(param);
+    solAssert(*param->type() == *TypeProvider::stringMemory(),
+              "IeleCompiler: Error catch clause with unexpected parameter type");
+    std::vector<iele::IeleLocalVariable *> paramRegisters;
+    paramRegisters.push_back(
+      iele::IeleLocalVariable::Create(&Context, paramName, CompilingFunction));
+    IeleLValue *LHSValue = RegisterLValue::Create(paramRegisters);
+    VarNameMap[ModifierDepth][paramName] = LHSValue;
+
+    // Assign decoded error value (RHS) to block's parameter.
+    IeleRValue *DecodedErrorValue =
+      decoding(IeleRValue::Create(StatusValue), TypeProvider::stringMemory());
+    LHSValue->write(DecodedErrorValue, CompilingBlock);
+
+    // Generate code for the error block.
+    errorClause->block().accept(*this);
+
+    // Jump to the try/catch exit.
+    connectWithUnconditionalJump(CompilingBlock, TryCatchExitBlock);
+  }
+
+  // Generate code for the fallback block.
+  if (const TryCatchClause *fallbackClause = tryStatement.fallbackClause()) {
+    FallbackClauseBlock->insertInto(CompilingFunction);
+    CompilingBlock = FallbackClauseBlock;
+
+    // Visit block's parameter (LHS).
+    if (fallbackClause->parameters()) {
+      const auto &Params = fallbackClause->parameters()->parameters();
+      solAssert(Params.size() == 1,
+               "IeleCompiler: Fallback catch clause with wrong number of parameters");
+      // We add the parameter name in the compiling function's variable name map.
+      const VariableDeclaration *param = Params[0].get();
+      std::string paramName = getIeleNameForLocalVariable(param);
+      solAssert(*param->type() == *TypeProvider::bytesMemory(),
+                "IeleCompiler: Fallback catch clause with unexpected parameter type");
+      std::vector<iele::IeleLocalVariable *> paramRegisters;
+      paramRegisters.push_back(
+        iele::IeleLocalVariable::Create(&Context, paramName, CompilingFunction));
+      IeleLValue *LHSValue = RegisterLValue::Create(paramRegisters);
+      VarNameMap[ModifierDepth][paramName] = LHSValue;
+
+      // Assign decoded error value (RHS) to block's parameter.
+      IeleRValue *DecodedErrorValue =
+        decoding(IeleRValue::Create(StatusValue), TypeProvider::stringMemory());
+      LHSValue->write(DecodedErrorValue, CompilingBlock);
+    }
+ 
+    // Generate code for the fallbacl block.
+    fallbackClause->block().accept(*this);
+
+    // Jump to the try/catch exit.
+    connectWithUnconditionalJump(CompilingBlock, TryCatchExitBlock);
+  }
+
+  // Continue code generation in the try/catch exit block.
+  TryCatchExitBlock->insertInto(CompilingFunction);
+  CompilingBlock = TryCatchExitBlock;
   return false;
 }
 
@@ -3510,7 +3682,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
         args.push_back(Message);
         TypePointers types;
         types.push_back(ParamType);
-        encoding(args, types, NextFree, false);
+        encoding(args, types, NextFree, true);
         iele::IeleInstruction::CreateLoad(CompilingFunctionStatus, NextFree, CompilingBlock);
         MessageValue = CompilingFunctionStatus;
       }
@@ -3548,7 +3720,7 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
         args.push_back(Message);
         TypePointers types;
         types.push_back(ParamType);
-        encoding(args, types, NextFree, false);
+        encoding(args, types, NextFree, true);
         iele::IeleInstruction::CreateLoad(CompilingFunctionStatus, NextFree, CompilingBlock);
         MessageValue = CompilingFunctionStatus;
       }
@@ -3816,7 +3988,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       AddressValue, TransferValue, GasValue, Arguments,
       CompilingBlock);
 
-    appendRevert(StatusValue, StatusValue);
+    if (!CompilingTryCatch)
+      appendRevert(StatusValue, StatusValue);
 
     llvm::SmallVector<IeleRValue *, 4> DecodedReturns;
     for (unsigned i = 0; i < Returns.size(); i++) {
@@ -3825,6 +3998,8 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       DecodedReturns.push_back(decoding(Return->read(CompilingBlock), type));
     }
 
+    if (CompilingTryCatch)
+      CompilingExpressionResult.push_back(IeleRValue::Create(StatusValue));
     CompilingExpressionResult.insert(
         CompilingExpressionResult.end(), DecodedReturns.begin(), DecodedReturns.end());
     break;
@@ -3860,8 +4035,11 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
       false, StatusValue, ReturnRegisters[0], Contract, nullptr,
       TransferValue, Arguments, CompilingBlock);
 
-    appendRevert(StatusValue, StatusValue);
+    if (!CompilingTryCatch)
+      appendRevert(StatusValue, StatusValue);
 
+    if (CompilingTryCatch)
+      CompilingExpressionResult.push_back(IeleRValue::Create(StatusValue));
     CompilingExpressionResult.insert(
         CompilingExpressionResult.end(), Returns.begin(), Returns.end());
     break;
@@ -5674,7 +5852,8 @@ void IeleCompiler::endVisit(const Identifier &identifier) {
     }
   } else if (const VariableDeclaration *varDecl =
                dynamic_cast<const VariableDeclaration *>(declaration)) {
-    if (varDecl->isLocalVariable() && !varDecl->isCallableOrCatchParameter())
+    if (varDecl->isLocalVariable() &&
+        (!varDecl->isCallableOrCatchParameter() || varDecl->isTryCatchParameter()))
       name = getIeleNameForLocalVariable(varDecl);
   }
 

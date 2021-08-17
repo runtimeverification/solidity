@@ -242,7 +242,7 @@ BOOST_AUTO_TEST_CASE(call_revert_message)
 		"f()",
 		true,
 		fmt::encodeArgs(),
-		fmt::encodeArgs(fmt::encodeLogs(string{"Revert"}))
+		fmt::encodeArgs(fmt::encodeDyn(string{"Revert"}))
 	);
 }
 

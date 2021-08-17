@@ -126,7 +126,7 @@ bytes BytesUtils::convertErrorMessage(string const& _literal)
 {
 	try
 	{
-		return solidity::test::ExecutionFramework::encodeLogs(_literal);
+		return solidity::test::ExecutionFramework::encodeDyn(_literal);
 	}
 	catch (std::exception const&)
 	{

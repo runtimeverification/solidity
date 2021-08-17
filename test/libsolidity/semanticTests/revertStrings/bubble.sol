@@ -13,4 +13,4 @@ contract C {
 // EVMVersion: >=byzantium
 // revertStrings: debug
 // ----
-// f() -> FAILURE, 0x6c696166
+// f() -> FAILURE, "fail"
