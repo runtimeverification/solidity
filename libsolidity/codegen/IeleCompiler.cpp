@@ -5567,6 +5567,10 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
     max = (bigint(1) << (type.numBytes() * 8)) - 1;
     break;
   }
+  case Type::Category::FixedPoint: {
+    solUnimplemented("Not yet implemented - FixedPointType.");
+    break;
+  }
   case Type::Category::Contract: {
     min = 0;
     max = (bigint(1) << 160) - 1;

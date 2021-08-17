@@ -604,7 +604,6 @@
 -t !syntaxTests/nameAndTypeResolution/253_using_for_function_exists
 -t !syntaxTests/nameAndTypeResolution/254_using_for_function_on_int
 -t !syntaxTests/negation
--t !syntaxTests/parsing/declaring_fixed_and_ufixed_variables
 -t !syntaxTests/tryCatch/invalid_returns
 -t !syntaxTests/tryCatch/library_call
 -t !syntaxTests/tryCatch/returns
