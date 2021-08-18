@@ -5567,6 +5567,10 @@ void IeleCompiler::appendRangeCheck(IeleRValue *Value, const Type &Type) {
     max = (bigint(1) << (type.numBytes() * 8)) - 1;
     break;
   }
+  case Type::Category::FixedPoint: {
+    solUnimplemented("Not yet implemented - FixedPointType.");
+    break;
+  }
   case Type::Category::Contract: {
     min = 0;
     max = (bigint(1) << 160) - 1;
@@ -7549,6 +7553,22 @@ IeleRValue *IeleCompiler::appendTypeConversion(IeleRValue *Value, TypePointer So
       return IeleRValue::Create(Ptr);
     }
     default:
+      solAssert(false, "not implemented yet");
+    }
+  }
+  case Type::Category::TypeType: {
+    const TypeType *typeType = dynamic_cast<const TypeType *>(SourceType);
+    if (dynamic_cast<const ContractType *>(typeType->actualType())) {
+      // Library code is embedded in the current contract.
+      // Return the address of the current contract.
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *ThisAddress =
+        iele::IeleLocalVariable::Create(&Context, "address", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Address, ThisAddress, EmptyArguments,
+        CompilingBlock);
+      return IeleRValue::Create(ThisAddress);
+    } else {
       solAssert(false, "not implemented yet");
     }
   }
