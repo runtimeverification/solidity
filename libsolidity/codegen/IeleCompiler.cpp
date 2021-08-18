@@ -4720,7 +4720,6 @@ bool IeleCompiler::visit(const FunctionCallOptions &functionCallOptions) {
                  functionCallOptions.expression().annotation().type);
 
   int numOptions = functionCallOptions.options().size() ;
-  solAssert(numOptions <= 2, "");
 
   for (int i = 0; i < numOptions; i++) {
     if (functionCallOptions.names()[i]->compare("gas") == 0) {
@@ -4739,8 +4738,10 @@ bool IeleCompiler::visit(const FunctionCallOptions &functionCallOptions) {
                              functionCallOptions.options()[i]->annotation().type,
                              UInt);
       values.insert(values.begin() + functionType->valueIndex(), OptionValue->getValue());
+    } else if (functionCallOptions.names()[i]->compare("salt") == 0) {
+      solUnimplemented("Not yet implemented - salted create.");
     } else {
-      solAssert(false, "not implemented yet");
+      solAssert(false, "Unknown call option.");
     }
   }
 
