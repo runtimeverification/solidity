@@ -38,9 +38,7 @@
 -t !semanticTests/state/block_gaslimit
 -t !semanticTests/state/blockhash_basic
 -t !semanticTests/state/block_timestamp
--t !semanticTests/state/msg_data
 -t !semanticTests/state/msg_sender
--t !semanticTests/state/msg_sig
 -t !semanticTests/state/tx_gasprice
 -t !semanticTests/state/tx_origin
 -t !semanticTests/state/uncalled_blockhash
