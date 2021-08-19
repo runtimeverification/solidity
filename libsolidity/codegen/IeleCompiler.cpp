@@ -5182,7 +5182,7 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
     } else if (member == "codehash") {
       solUnimplemented("Not yet implemented - codehash.");
     } else
-      solAssert(false, "IeleCompiler: invalid member for integer value");
+      solAssert(false, "IeleCompiler: invalid member for address value");
     break;
   }
   case Type::Category::Function:
