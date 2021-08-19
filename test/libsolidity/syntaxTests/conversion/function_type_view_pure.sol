@@ -8,3 +8,4 @@ contract C {
 }
 // ----
 // TypeError 9574: (110-146): Type function () view external is not implicitly convertible to expected type function () pure external.
+// TypeError 2524: (163-173): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

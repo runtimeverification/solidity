@@ -15,10 +15,11 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// e(bytes): 32, 3, hex"AB33BB" -> 32, 3, left(0xAB33BB)
-// e(bytes): 32, 32, 0x20 -> 32, 32, 0x20
-// e(bytes): 32, 3, hex"AB33FF" -> 32, 3, hex"ab33ff0000000000000000000000000000000000000000000000000000000000"
-// f() -> 0x40, 0x80, 3, "any", 3, "any"
-// g() -> 0x60, 0x2a, 0xa0, 3, "any", 3, "any"
-// h() -> 0x20, 3, "any"
+// e(bytes): "\xAB\x33\xBB" -> "\xAB\x33\xBB"
+// e(bytes): "\x20" -> "\x20"
+// e(bytes): "\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20" -> "\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20"
+// e(bytes): "\xAB\x33\xFF" -> "\xAB\x33\xFF"
+// f() -> "any", "any"
+// g() -> "any", 0x2a, "any"
+// h() -> "any"
 

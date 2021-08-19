@@ -180,8 +180,11 @@ private:
 	/// Parses the current array literal.
 	std::vector<std::pair<std::string, soltest::Token>> parseArray(bool isDynamic);
 
+	/// Returns a refargs literal as a raw string.
+	std::string refArgsToString(std::vector<std::pair<ParsedRefArgs, soltest::Token>> refargs) const;
+
 	/// Parses the current refargs literal.
-	std::vector<std::pair<std::string, soltest::Token>> parseRefArgs();
+	std::vector<std::pair<ParsedRefArgs, soltest::Token>> parseRefArgs();
 
 	/// A scanner instance
 	Scanner m_scanner;

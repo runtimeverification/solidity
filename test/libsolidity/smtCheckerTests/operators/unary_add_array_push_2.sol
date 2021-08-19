@@ -2,7 +2,7 @@ pragma experimental SMTChecker;
 
 contract C {
 	struct S {
-		int[][] d;
+		int256[][] d;
 	}
 	S[] data;
 	function f() public {

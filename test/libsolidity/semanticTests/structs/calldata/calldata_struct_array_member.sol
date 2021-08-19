@@ -3,15 +3,15 @@ pragma abicoder v2;
 
 contract C {
     struct S {
-        uint256 a;
-        uint256[2] b;
-        uint256 c;
+        uint a;
+        uint[2] b;
+        uint c;
     }
 
     function f(S calldata s)
         external
         pure
-        returns (uint256 a, uint256 b0, uint256 b1, uint256 c)
+        returns (uint a, uint b0, uint b1, uint c)
     {
         a = s.a;
         b0 = s.b[0];
@@ -22,4 +22,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f((uint256,uint256[2],uint256)): 42, 1, 2, 23 -> 42, 1, 2, 23
+// f((uint,uint[2],uint)): refargs { 42, 1, 2, 23 } -> 42, 1, 2, 23

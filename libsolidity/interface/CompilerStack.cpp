@@ -643,12 +643,14 @@ evmasm::AssemblyItems const* CompilerStack::runtimeAssemblyItems(string const& _
 	Contract const& currentContract = contract(_contractName);
 	return currentContract.evmRuntimeAssembly ? &currentContract.evmRuntimeAssembly->items() : nullptr;
 }
-
+*/
 Json::Value CompilerStack::generatedSources(string const& _contractName, bool _runtime) const
 {
 	if (m_stackState != CompilationSuccessful)
 		BOOST_THROW_EXCEPTION(CompilerError() << errinfo_comment("Compilation was not successful."));
-
+	Json::Value sources;
+	return sources;
+/*
 	Contract const& c = contract(_contractName);
 	util::LazyInit<Json::Value const> const& sources =
 		_runtime ?
@@ -684,8 +686,9 @@ Json::Value CompilerStack::generatedSources(string const& _contractName, bool _r
 		}
 		return sources;
 	});
-}
 */
+}
+
 string const* CompilerStack::sourceMapping(string const& _contractName) const
 {
 	// TODO: source mapping
@@ -806,14 +809,14 @@ string CompilerStack::assemblyString(string const& _contractName, StringMap _sou
 }
 
 /// TODO: cache the JSON
-Json::Value CompilerStack::assemblyJSON(string const& _contractName) const
+Json::Value CompilerStack::assemblyJSON(string const& _contractName, StringMap _sourceCodes) const
 {
 	if (m_stackState != CompilationSuccessful)
 		BOOST_THROW_EXCEPTION(CompilerError() << errinfo_comment("Compilation was not successful."));
 
 	Contract const& currentContract = contract(_contractName);
-	if (currentContract.evmAssembly)
-		return currentContract.evmAssembly->assemblyJSON(sourceIndices());
+	if (currentContract.compiler)
+		return currentContract.compiler->assemblyJSON(_sourceCodes);
 	else
 		return Json::Value();
 }

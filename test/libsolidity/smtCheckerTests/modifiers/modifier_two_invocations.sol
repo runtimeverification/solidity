@@ -2,7 +2,7 @@ pragma experimental SMTChecker;
 
 contract C
 {
-	uint x;
+	uint256 x;
 
 	modifier m {
 		// Condition is always true for the second invocation.

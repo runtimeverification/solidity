@@ -6,4 +6,4 @@ contract C {
     }
 }
 // ----
-// TypeError 1397: (111-126): Call data elements cannot be accessed directly. Use ".offset" and ".length" to access the calldata offset and length of this array and then use "calldatacopy".
+// SyntaxError 1184: (79-136): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

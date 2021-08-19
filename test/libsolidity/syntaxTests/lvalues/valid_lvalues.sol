@@ -1,5 +1,5 @@
 contract C {
-    struct S { uint256 x; }
+    struct S { uint x; }
 	function i() internal pure {}
 	function e() external pure {}
 	uint[] s1;
@@ -11,8 +11,8 @@ contract C {
         S memory ms2;
         ms1 = ms2;
         ms1.x = x;
-        uint256[] memory a = new uint256[](2);
-        uint256[] memory b = new uint256[](3);
+        uint[] memory a = new uint[](2);
+        uint[] memory b = new uint[](3);
         a = b;
         a[0] = x;
         s1[0] = x;

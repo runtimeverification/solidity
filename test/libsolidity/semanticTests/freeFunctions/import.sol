@@ -18,4 +18,4 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(uint256): 7 -> 7, 8
+// f(uint): 7 -> 7, 8

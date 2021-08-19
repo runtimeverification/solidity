@@ -30,10 +30,10 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f1(bytes,uint256,uint256,bytes): 0x80, 1, 5, 0xC0, 8, "abcdefgh", 4, "bcde" -> true
-// f1(bytes,uint256,uint256,bytes): 0x80, 1, 5, 0xC0, 8, "abcdefgh", 4, "bcdf" -> false
-// f2(bytes,uint256): 0x40, 0, 0x80, 0x21, 0x40, 0x7, "abcdefg" -> 0x21, 0x40, 0x7, "abcdefg"
-// f3(bytes,uint256,uint256,bytes): 0x80, 1, 5, 0xC0, 8, "abcdefgh", 4, "bcde" -> true
-// f3(bytes,uint256,uint256,bytes): 0x80, 1, 5, 0xC0, 8, "abcdefgh", 4, "bcdf" -> false
-// f4(bytes,uint256,uint256,bytes): 0x80, 1, 5, 0xC0, 8, "abcdefgh", 4, "bcde" -> true
-// f4(bytes,uint256,uint256,bytes): 0x80, 1, 5, 0xC0, 8, "abcdefgh", 4, "bcdf" -> false
+// f1(bytes,uint256,uint256,bytes): "abcdefgh", 1, 5, "bcde" -> true
+// f1(bytes,uint256,uint256,bytes): "abcdefgh", 1, 5, "bcdf" -> false
+// f2(bytes,uint256): "\x21\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07\x00\x00\x00\x00\x00\x00\x00gfedcba", 0 -> 0x21, "abcdefg"
+// f3(bytes,uint256,uint256,bytes): "abcdefgh", 1, 5, "bcde" -> true
+// f3(bytes,uint256,uint256,bytes): "abcdefgh", 1, 5, "bcdf" -> false
+// f4(bytes,uint256,uint256,bytes): "abcdefgh", 1, 5, "bcde" -> true
+// f4(bytes,uint256,uint256,bytes): "abcdefgh", 1, 5, "bcdf" -> false

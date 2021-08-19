@@ -19,7 +19,7 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// oneByteUTF8() -> 0x20, 7, "aaa$aaa"
-// twoBytesUTF8() -> 0x20, 8, "aaa\xc2\xa2aaa"
-// threeBytesUTF8() -> 0x20, 9, "aaa\xe2\x82\xacaaa"
-// combined() -> 0x20, 6, "$\xc2\xa2\xe2\x82\xac"
+// oneByteUTF8() -> "aaa$aaa"
+// twoBytesUTF8() -> "aaa\xc2\xa2aaa"
+// threeBytesUTF8() -> "aaa\xe2\x82\xacaaa"
+// combined() -> "$\xc2\xa2\xe2\x82\xac"

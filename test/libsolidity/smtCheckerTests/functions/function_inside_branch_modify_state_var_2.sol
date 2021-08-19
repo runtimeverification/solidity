@@ -2,7 +2,7 @@ pragma experimental SMTChecker;
 
 contract C
 {
-	uint x;
+	uint256 x;
 	function f() internal {
 		require(x < 10000);
 		x = x + 1;

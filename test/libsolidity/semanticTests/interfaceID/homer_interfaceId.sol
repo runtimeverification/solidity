@@ -33,7 +33,7 @@ contract Homer is ERC165, Simpson {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// supportsInterface(bytes4): left(0x01ffc9a0) -> false
-// supportsInterface(bytes4): left(0x01ffc9a7) -> true
-// supportsInterface(bytes4): left(0x73b6b492) -> true
-// supportsInterface(bytes4): left(0x70b6b492) -> false
+// supportsInterface(bytes4): 0x01ffc9a0 -> false
+// supportsInterface(bytes4): 0x01ffc9a7 -> true
+// supportsInterface(bytes4): 0x73b6b492 -> true
+// supportsInterface(bytes4): 0x70b6b492 -> false

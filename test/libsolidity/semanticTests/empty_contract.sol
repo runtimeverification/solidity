@@ -5,4 +5,4 @@ contract test {
 // compileToEwasm: also
 // allowNonExistingFunctions: true
 // ----
-// i_am_not_there() -> FAILURE
+// i_am_not_there() -> FAILURE, 0x01

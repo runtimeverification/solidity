@@ -13,5 +13,5 @@ contract C {
     }
 }
 // ----
-// Warning 5740: (100-112): Unreachable code.
-// Warning 5740: (222-230): Unreachable code.
+// SyntaxError 1184: (52-122): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (168-213): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

@@ -21,4 +21,4 @@ contract C {
 // compileViaYul: also
 // EVMVersion: >=byzantium
 // ----
-// dt(uint256): 4 -> 6
+// dt(uint): 4 -> 6

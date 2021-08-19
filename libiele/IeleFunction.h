@@ -55,7 +55,7 @@ public:
   IeleFunction(const IeleFunction&) = delete;
   void operator=(const IeleFunction&) = delete;
 
-  ~IeleFunction();
+  ~IeleFunction() override;
 
   static IeleFunction *Create(IeleContext *Ctx, bool isPublic,
                               const llvm::Twine &Name = "",

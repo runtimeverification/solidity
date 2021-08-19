@@ -25,4 +25,4 @@ contract Creator {
 // ====
 // compileViaYul: also
 // ----
-// f(uint,address[]): 7, 0x40, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 -> 7, 8
+// f(uint,address[]): 7, dynarray 160 [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ] -> 7, 8

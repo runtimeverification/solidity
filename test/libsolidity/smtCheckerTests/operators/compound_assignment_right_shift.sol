@@ -1,7 +1,7 @@
 pragma experimental SMTChecker;
 
 contract C {
-	function f(int a, uint b) public view {
+	function f(int256 a, uint256 b) public view {
 		a >>= tx.gasprice;
 		require(a == 16 && b == 2);
 		a >>= b;

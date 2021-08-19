@@ -305,6 +305,7 @@ BOOST_AUTO_TEST_CASE(regular_functions_exclude_fallback)
 	testRunTimeGas("x()", vector<vector<bytes>>{encodeArgs()});
 }
 
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(complex_control_flow, 1)
 BOOST_AUTO_TEST_CASE(complex_control_flow)
 {
 	// This crashed the gas estimator previously (or took a very long time).

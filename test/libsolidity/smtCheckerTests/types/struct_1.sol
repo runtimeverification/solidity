@@ -3,12 +3,12 @@ pragma experimental SMTChecker;
 contract C
 {
 	struct S {
-		uint x;
+		uint256 x;
 	}
 
-	mapping (uint => S) smap;
+	mapping (uint256 => S) smap;
 
-	function f(uint y, uint v) public {
+	function f(uint256 y, uint256 v) public {
 		smap[y] = S(v);
 		S memory smem = S(v);
 		assert(smap[y].x == smem.x);

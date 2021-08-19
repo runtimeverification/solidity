@@ -1,7 +1,7 @@
 pragma experimental SMTChecker;
 contract C
 {
-	uint a;
+	uint256 a;
 	function f() public {
 		if (a > 0)
 		{

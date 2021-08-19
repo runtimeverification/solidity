@@ -7,4 +7,6 @@ contract test {
 }
 
 // ----
-// TypeError 7407: (106-246): Type int_const 7555...(132 digits omitted)...5555 is not implicitly convertible to expected type uint256. Literal is too large to fit in uint256.
+// Warning 6321: (86-92): Unnamed return variable can remain unassigned. Add an explicit return with value to all non-reverting code paths or name the variable.
+// Warning 6133: (104-247): Statement has no effect.
+// Warning 6133: (257-261): Statement has no effect.

@@ -1809,13 +1809,6 @@ void TypeChecker::typeCheckFunctionCall(
 			"\"staticcall\" is not supported by the VM version."
 		);
 
-	if (
-		_functionType->kind() == FunctionType::Kind::BareCall ||
-		_functionType->kind() == FunctionType::Kind::BareCallCode ||
-		_functionType->kind() == FunctionType::Kind::BareDelegateCall
-	)
-		m_errorReporter.typeError(6198_error, _functionCall.location(), "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
-
 	// Perform standard function call type checking
 	typeCheckFunctionGeneralChecks(_functionCall, _functionType);
 }
@@ -1948,11 +1941,6 @@ void TypeChecker::typeCheckABIEncodeFunctions(
 		);
 		return;
 	}
-
-	if (_functionType->kind() == FunctionType::Kind::ABIEncodeWithSelector)
-		m_errorReporter.typeError(2038_error, _functionCall.location(), "abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
-	if (_functionType->kind() == FunctionType::Kind::ABIEncodeWithSignature)
-		m_errorReporter.typeError(1379_error, _functionCall.location(), "abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
 
 	// Perform standard function call type checking
 	typeCheckFunctionGeneralChecks(_functionCall, _functionType);
@@ -2827,6 +2815,20 @@ bool TypeChecker::visit(MemberAccess const& _memberAccess)
 				if (contractType && contractType->isSuper())
 					requiredLookup = VirtualLookup::Super;
 			}
+
+		if (
+			funType->kind() == FunctionType::Kind::BareCall ||
+			funType->kind() == FunctionType::Kind::BareCallCode ||
+			funType->kind() == FunctionType::Kind::BareDelegateCall ||
+			funType->kind() == FunctionType::Kind::BareStaticCall
+		)
+			m_errorReporter.typeError(6198_error, _memberAccess.location(), "Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+
+		if (funType->kind() == FunctionType::Kind::ABIEncodeWithSelector)
+			m_errorReporter.typeError(2038_error, _memberAccess.location(), "abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+		if (funType->kind() == FunctionType::Kind::ABIEncodeWithSignature)
+			m_errorReporter.typeError(1379_error, _memberAccess.location(), "abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md");
+
 	}
 
 	annotation.requiredLookup = requiredLookup;
@@ -3280,7 +3282,7 @@ bool TypeChecker::visit(Identifier const& _identifier)
 		VirtualLookup::Virtual : VirtualLookup::Static;
 
 	if (auto contract = dynamic_cast<ContractDefinition const*>(&dereference(_identifier)))
-		if (contract->isLibrary())
+		if (contract->isLibrary() && contract != m_currentContract && m_currentContract)
 			m_currentContract->annotation().contractDependencies.insert(contract);
 
 	// Check for deprecated function names.
@@ -3412,7 +3414,7 @@ void TypeChecker::endVisit(UsingForDirective const& _usingFor)
 	ContractDefinition const* library = dynamic_cast<ContractDefinition const*>(
 		_usingFor.libraryName().annotation().referencedDeclaration
 	);
-	if (library && library->isLibrary())
+	if (library && library->isLibrary() && library != m_currentContract)
 	    m_currentContract->annotation().contractDependencies.insert(library);
 }
 

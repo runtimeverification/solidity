@@ -1,17 +1,17 @@
 contract C {
-	function test(uint256 len, uint idx) public returns (uint256)
+	function test(uint len, uint idx) public returns (uint)
 	{
 		uint[] memory array = new uint[](len);
 		uint result = receiver(array, idx);
 
-		for (uint256 i = 0; i < array.length; i++)
+		for (uint i = 0; i < array.length; i++)
 			require(array[i] == i + 1);
 
 		return result;
 	}
-	function receiver(uint[] memory array, uint idx) public returns (uint256)
+	function receiver(uint[] memory array, uint idx) public returns (uint)
 	{
-		for (uint256 i = 0; i < array.length; i++)
+		for (uint i = 0; i < array.length; i++)
 			array[i] = i + 1;
 
 		return array[idx];
@@ -20,7 +20,7 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// test(uint256,uint256): 0, 0 -> FAILURE, hex"4e487b71", 0x32
-// test(uint256,uint256): 1, 0 -> 1
-// test(uint256,uint256): 10, 5 -> 6
-// test(uint256,uint256): 10, 50 -> FAILURE, hex"4e487b71", 0x32
+// test(uint,uint): 0, 0 -> FAILURE, 255
+// test(uint,uint): 1, 0 -> 1
+// test(uint,uint): 10, 5 -> 6
+// test(uint,uint): 10, 50 -> FAILURE, 255

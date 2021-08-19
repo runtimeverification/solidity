@@ -13,3 +13,5 @@ contract C {
     }
 }
 // ----
+// SyntaxError 1184: (110-183): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// SyntaxError 1184: (253-326): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

@@ -8,4 +8,4 @@ contract C {
     }
 }
 // ----
-// TypeError 7615: (168-169): Only direct number constants and references to such constants are supported by inline assembly.
+// SyntaxError 1184: (140-179): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

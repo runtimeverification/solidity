@@ -1,7 +1,7 @@
 contract helper {
     bool flag;
 
-    function getBalance() public payable returns (uint myBalance) {
+    function getBalance() public payable returns (uint256 myBalance) {
         return address(this).balance;
     }
 
@@ -22,7 +22,7 @@ contract test {
         h = new helper();
     }
 
-    function sendAmount(uint amount) public payable returns (uint bal) {
+    function sendAmount(uint256 amount) public payable returns (uint256 bal) {
         return h.getBalance{value: amount}();
     }
 
@@ -41,6 +41,6 @@ contract test {
 // compileViaYul: also
 // ----
 // constructor(), 20 wei ->
-// sendAmount(uint): 5 -> 5
-// outOfGas() -> FAILURE # call to helper should not succeed but amount should be transferred anyway #
+// sendAmount(uint256): 5 -> 5
+// outOfGas() -> FAILURE, 5 # call to helper should not succeed but amount should be transferred anyway #
 // checkState() -> false, 15

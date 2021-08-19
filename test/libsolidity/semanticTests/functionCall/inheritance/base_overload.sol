@@ -24,9 +24,9 @@ contract Child is Base {
 // ----
 // x() -> 0
 // y() -> 0
-// cInit(uint256): 2 ->
+// cInit(uint): 2 ->
 // x() -> 2
 // y() -> 0
-// cInit(uint256,uint256): 3, 3 ->
+// cInit(uint,uint): 3, 3 ->
 // x() -> 3
 // y() -> 3

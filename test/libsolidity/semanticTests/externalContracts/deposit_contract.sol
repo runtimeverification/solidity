@@ -179,18 +179,18 @@ contract DepositContract is IDepositContract, ERC165 {
 // ----
 // constructor()
 // supportsInterface(bytes4): 0x0 -> 0
-// supportsInterface(bytes4): 0xffffffff00000000000000000000000000000000000000000000000000000000 -> false # defined to be false by ERC-165 #
-// supportsInterface(bytes4): 0x01ffc9a700000000000000000000000000000000000000000000000000000000 -> true # ERC-165 id #
-// supportsInterface(bytes4): 0x8564090700000000000000000000000000000000000000000000000000000000 -> true # the deposit interface id #
-// get_deposit_root() -> 0xd70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e
-// get_deposit_count() -> 0x20, 8, 0
+// supportsInterface(bytes4): 0x00ffffffff -> false # defined to be false by ERC-165 #
+// supportsInterface(bytes4): 0x01ffc9a7 -> true # ERC-165 id #
+// supportsInterface(bytes4): 0x0085640907 -> true # the deposit interface id #
+// get_deposit_root() -> 0x00d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e
+// get_deposit_count() -> "\x00\x00\x00\x00\x00\x00\x00\x00"
 // # TODO: check balance and logs after each deposit #
-// deposit(bytes,bytes,bytes,bytes32), 32 ether: 0 -> FAILURE # Empty input #
-// get_deposit_root() -> 0xd70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e
-// get_deposit_count() -> 0x20, 8, 0
-// deposit(bytes,bytes,bytes,bytes32), 1 ether: 0x80, 0xe0, 0x120, 0xaa4a8d0b7d9077248630f1a4701ae9764e42271d7f22b7838778411857fd349e, 0x30, 0x933ad9491b62059dd065b560d256d8957a8c402cc6e8d8ee7290ae11e8f73292, 0x67a8811c397529dac52ae1342ba58c9500000000000000000000000000000000, 0x20, 0x00f50428677c60f997aadeab24aabf7fceaef491c96a52b463ae91f95611cf71, 0x60, 0xa29d01cc8c6296a8150e515b5995390ef841dc18948aa3e79be6d7c1851b4cbb, 0x5d6ff49fa70b9c782399506a22a85193151b9b691245cebafd2063012443c132, 0x4b6c36debaedefb7b2d71b0503ffdc00150aaffd42e63358238ec888901738b8 -> # txhash: 0x7085c586686d666e8bb6e9477a0f0b09565b2060a11f1c4209d3a52295033832 #
+// deposit(bytes,bytes,bytes,bytes32), 32 ether: 0 -> FAILURE, 2 # Empty input #
+// get_deposit_root() -> 0x00d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e
+// get_deposit_count() -> "\x00\x00\x00\x00\x00\x00\x00\x00"
+// deposit(bytes,bytes,bytes,bytes32), 1 ether: "\x93\x3a\xd9\x49\x1b\x62\x05\x9d\xd0\x65\xb5\x60\xd2\x56\xd8\x95\x7a\x8c\x40\x2c\xc6\xe8\xd8\xee\x72\x90\xae\x11\xe8\xf7\x32\x92\x67\xa8\x81\x1c\x39\x75\x29\xda\xc5\x2a\xe1\x34\x2b\xa5\x8c\x95", "\x00\xf5\x04\x28\x67\x7c\x60\xf9\x97\xaa\xde\xab\x24\xaa\xbf\x7f\xce\xae\xf4\x91\xc9\x6a\x52\xb4\x63\xae\x91\xf9\x56\x11\xcf\x71", "\xa2\x9d\x01\xcc\x8c\x62\x96\xa8\x15\x0e\x51\x5b\x59\x95\x39\x0e\xf8\x41\xdc\x18\x94\x8a\xa3\xe7\x9b\xe6\xd7\xc1\x85\x1b\x4c\xbb\x5d\x6f\xf4\x9f\xa7\x0b\x9c\x78\x23\x99\x50\x6a\x22\xa8\x51\x93\x15\x1b\x9b\x69\x12\x45\xce\xba\xfd\x20\x63\x01\x24\x43\xc1\x32\x4b\x6c\x36\xde\xba\xed\xef\xb7\xb2\xd7\x1b\x05\x03\xff\xdc\x00\x15\x0a\xaf\xfd\x42\xe6\x33\x58\x23\x8e\xc8\x88\x90\x17\x38\xb8", 0x00aa4a8d0b7d9077248630f1a4701ae9764e42271d7f22b7838778411857fd349e -> # txhash: 0x7085c586686d666e8bb6e9477a0f0b09565b2060a11f1c4209d3a52295033832 #
 // get_deposit_root() -> 0x2089653123d9c721215120b6db6738ba273bbc5228ac093b1f983badcdc8a438
-// get_deposit_count() -> 0x20, 8, 0x0100000000000000000000000000000000000000000000000000000000000000
-// deposit(bytes,bytes,bytes,bytes32), 32 ether: 0x80, 0xe0, 0x120, 0xdbd986dc85ceb382708cf90a3500f500f0a393c5ece76963ac3ed72eccd2c301, 0x30, 0xb2ce0f79f90e7b3a113ca5783c65756f96c4b4673c2b5c1eb4efc22280259441, 0x06d601211e8866dc5b50dc48a244dd7c00000000000000000000000000000000, 0x20, 0x00344b6c73f71b11c56aba0d01b7d8ad83559f209d0a4101a515f6ad54c89771, 0x60, 0x945caaf82d18e78c033927d51f452ebcd76524497b91d7a11219cb3db6a1d369, 0x7595fc095ce489e46b2ef129591f2f6d079be4faaf345a02c5eb133c072e7c56, 0x0c6c3617eee66b4b878165c502357d49485326bc6b31bc96873f308c8f19c09d -> # txhash: 0x404d8e109822ce448e68f45216c12cb051b784d068fbe98317ab8e50c58304ac #
+// get_deposit_count() -> "\x01\x00\x00\x00\x00\x00\x00\x00"
+// deposit(bytes,bytes,bytes,bytes32), 32 ether: "\xb2\xce\x0f\x79\xf9\x0e\x7b\x3a\x11\x3c\xa5\x78\x3c\x65\x75\x6f\x96\xc4\xb4\x67\x3c\x2b\x5c\x1e\xb4\xef\xc2\x22\x80\x25\x94\x41\x06\xd6\x01\x21\x1e\x88\x66\xdc\x5b\x50\xdc\x48\xa2\x44\xdd\x7c", "\x00\x34\x4b\x6c\x73\xf7\x1b\x11\xc5\x6a\xba\x0d\x01\xb7\xd8\xad\x83\x55\x9f\x20\x9d\x0a\x41\x01\xa5\x15\xf6\xad\x54\xc8\x97\x71", "\x94\x5c\xaa\xf8\x2d\x18\xe7\x8c\x03\x39\x27\xd5\x1f\x45\x2e\xbc\xd7\x65\x24\x49\x7b\x91\xd7\xa1\x12\x19\xcb\x3d\xb6\xa1\xd3\x69\x75\x95\xfc\x09\x5c\xe4\x89\xe4\x6b\x2e\xf1\x29\x59\x1f\x2f\x6d\x07\x9b\xe4\xfa\xaf\x34\x5a\x02\xc5\xeb\x13\x3c\x07\x2e\x7c\x56\x0c\x6c\x36\x17\xee\xe6\x6b\x4b\x87\x81\x65\xc5\x02\x35\x7d\x49\x48\x53\x26\xbc\x6b\x31\xbc\x96\x87\x3f\x30\x8c\x8f\x19\xc0\x9d", 0x00dbd986dc85ceb382708cf90a3500f500f0a393c5ece76963ac3ed72eccd2c301 -> # txhash: 0x404d8e109822ce448e68f45216c12cb051b784d068fbe98317ab8e50c58304ac #
 // get_deposit_root() -> 0x40255975859377d912c53aa853245ebd939bdd2b33a28e084babdcc1ed8238ee
-// get_deposit_count() -> 0x20, 8, 0x0200000000000000000000000000000000000000000000000000000000000000
+// get_deposit_count() -> "\x02\x00\x00\x00\x00\x00\x00\x00"

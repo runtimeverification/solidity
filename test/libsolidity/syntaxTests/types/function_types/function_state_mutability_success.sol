@@ -1,6 +1,6 @@
 contract Test
 {
-  uint y;
+  uint256 y;
   function internalPureFunc(uint256 x) internal pure returns (uint256) { return x; }
   function internalViewFunc(uint256 x) internal view returns (uint256) { return x + y; }
   function internalMutableFunc(uint256 x) internal returns (uint256) { y = x; return x; }

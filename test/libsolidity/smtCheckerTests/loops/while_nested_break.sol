@@ -2,7 +2,7 @@ pragma experimental SMTChecker;
 
 contract C
 {
-	function f(uint x, uint y, bool b, bool c) public pure {
+	function f(uint256 x, uint256 y, bool b, bool c) public pure {
 		require(x < 10);
 		while (x < 10) {
 			if (b) {

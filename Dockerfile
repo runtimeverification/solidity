@@ -8,6 +8,8 @@ RUN    apt update        \
        cmake             \
        gcovr             \
        libboost-all-dev  \
+       libudev-dev       \
+       libusb-1.0-0      \
        libxml2-utils     \
        libz3-dev         \
        llvm-11           \

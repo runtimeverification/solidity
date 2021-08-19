@@ -126,7 +126,7 @@ bytes BytesUtils::convertErrorMessage(string const& _literal)
 {
 	try
 	{
-		return solidity::test::ExecutionFramework::encodeLogs(_literal);
+		return solidity::test::ExecutionFramework::encodeDyn(_literal);
 	}
 	catch (std::exception const&)
 	{
@@ -159,7 +159,7 @@ bytes BytesUtils::convertArray(vector<pair<string, Token>> const& _literal, bool
 		return solidity::test::ExecutionFramework::encodeRefArray(elems, elemSize);
 }
 
-bytes BytesUtils::convertRefArgs(vector<pair<string, Token>> const& _literal)
+bytes BytesUtils::convertRefArgs(vector<pair<ParsedRefArgs, Token>> const& _literal)
 {
 	bytes result;
 	for (auto &p : _literal)
@@ -169,20 +169,32 @@ bytes BytesUtils::convertRefArgs(vector<pair<string, Token>> const& _literal)
 		case Token::Boolean:
 		{
 			bytes encoded =
-				solidity::test::ExecutionFramework::encodeLog(p.first == "true" ? true : false);
+				solidity::test::ExecutionFramework::encodeLog(p.first.str == "true" ? true : false);
 			result = encoded + result;
 			break;
 		}
 		case Token::Hex:
 		case Token::HexNumber:
 		{
-			bytes encoded = fromHex(p.first);
+			bytes encoded = fromHex(p.first.str);
+			result = encoded + result;
+			break;
+		}
+		case Token::String:
+		{
+			bytes encoded = solidity::test::ExecutionFramework::encodeDyn(p.first.str);
 			result = encoded + result;
 			break;
 		}
 		case Token::Number:
 		{
-			bytes encoded = solidity::test::ExecutionFramework::encodeLog(bigint(p.first));
+			bytes encoded = solidity::test::ExecutionFramework::encodeLog(bigint(p.first.str));
+			result = encoded + result;
+			break;
+		}
+		case Token::RefArgs:
+		{
+			bytes encoded = convertRefArgs(p.first.refargs);
 			result = encoded + result;
 			break;
 		}

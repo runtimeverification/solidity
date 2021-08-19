@@ -10,5 +10,5 @@ contract C {
     }
 }
 // ----
-// DeclarationError 3927: (115-118): User-defined identifiers in inline assembly cannot contain '.'.
-// DeclarationError 3927: (140-143): User-defined identifiers in inline assembly cannot contain '.'.
+// SyntaxError 1184: (88-204): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 4266: (17-32): Uninitialized "constant" variable.

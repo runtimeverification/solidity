@@ -13,5 +13,5 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// g(uint256): 4 -> 5
-// f(uint256): 2 -> 5
+// g(uint): 4 -> 5
+// f(uint): 2 -> 5

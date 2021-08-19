@@ -13,5 +13,5 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// h(uint256[4]): 1, 2, 3, 4 -> 10
-// i(uint256[4]): 1, 2, 3, 4 -> 20
+// h(uint[4]): array 0 [ 1, 2, 3, 4 ] -> 10
+// i(uint[4]): array 0 [ 1, 2, 3, 4 ] -> 20

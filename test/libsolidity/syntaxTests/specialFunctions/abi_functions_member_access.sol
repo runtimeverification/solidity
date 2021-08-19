@@ -8,8 +8,5 @@ contract C {
     }
 }
 // ----
-// Warning 6133: (52-62): Statement has no effect.
-// Warning 6133: (72-88): Statement has no effect.
-// Warning 6133: (98-120): Statement has no effect.
-// Warning 6133: (130-153): Statement has no effect.
-// Warning 6133: (163-173): Statement has no effect.
+// TypeError 2038: (98-120): abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 1379: (130-153): abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

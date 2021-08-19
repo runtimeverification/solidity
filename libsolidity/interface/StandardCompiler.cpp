@@ -1148,6 +1148,7 @@ Json::Value StandardCompiler::compileSolidity(StandardCompiler::InputsAndSetting
 /*
 		if (compilationSuccess && isArtifactRequested(_inputsAndSettings.outputSelection, file, name, "evm.gasEstimates", wildcardMatchesExperimental))
 			evmData["gasEstimates"] = compilerStack.gasEstimates(contractName);
+*/
 
 		if (compilationSuccess && isArtifactRequested(
 			_inputsAndSettings.outputSelection,
@@ -1170,6 +1171,7 @@ Json::Value StandardCompiler::compileSolidity(StandardCompiler::InputsAndSetting
 				); }
 			);
 
+/*
 		if (compilationSuccess && isArtifactRequested(
 			_inputsAndSettings.outputSelection,
 			file,

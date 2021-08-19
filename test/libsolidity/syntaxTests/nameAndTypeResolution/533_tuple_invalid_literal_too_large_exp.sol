@@ -4,4 +4,4 @@ contract C {
     }
 }
 // ----
-// TypeError 3390: (53-59): Invalid rational number.
+// Warning 6133: (52-63): Statement has no effect.

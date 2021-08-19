@@ -6,4 +6,3 @@ contract C {
 }
 
 // ----
-// UnimplementedFeatureError: Copying nested calldata dynamic arrays to storage is not implemented in the old code generator.

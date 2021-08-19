@@ -35,8 +35,10 @@ public:
     ContinueBlock(nullptr),
     RevertBlock(nullptr),
     RevertStatusBlock(nullptr),
+    ECRFailedBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingBlockArithmetic(Arithmetic::Checked),
+    CompilingTryCatch(false),
     CompilingLValue(false),
     NextStorageAddress(1),
     CompilingContractASTNode(nullptr),
@@ -96,6 +98,7 @@ public:
   virtual bool visit(const Break &breakStatement) override;
   virtual bool visit(const Return &returnStatement) override;
   virtual bool visit(const Throw &throwStatement) override;
+  virtual bool visit(const TryStatement &tryStatement) override;
   virtual bool visit(
       const VariableDeclarationStatement &variableDeclarationStatement)
       override;
@@ -114,6 +117,7 @@ public:
   virtual bool visit(const NewExpression &newExpression) override;
   virtual bool visit(const MemberAccess &memberAccess) override;
   virtual bool visit(const IndexAccess &indexAccess) override;
+  virtual bool visit(const IndexRangeAccess &indexRangeAccess) override;
   virtual bool visit(const ElementaryTypeNameExpression &typeName) override;
   virtual void endVisit(const Block &block) override;
   virtual void endVisit(const Identifier &identifier) override;
@@ -129,6 +133,7 @@ private:
   std::map<const ContractDefinition *, std::shared_ptr<IeleCompiler const>> OtherCompilers;
   iele::IeleContext Context;
   iele::IeleContract *CompilingContract;
+  std::vector<const FunctionDefinition *> CompilingContractFreeFunctions;
   iele::IeleFunction *CompilingFunction;
   iele::IeleLocalVariable *CompilingFunctionStatus;
   iele::IeleBlock *CompilingBlock;
@@ -136,6 +141,7 @@ private:
   iele::IeleBlock *ContinueBlock;
   iele::IeleBlock *RevertBlock;
   iele::IeleBlock *RevertStatusBlock;
+  iele::IeleBlock *ECRFailedBlock;
   iele::IeleBlock *AssertFailBlock;
 
   Arithmetic CompilingBlockArithmetic;
@@ -143,6 +149,8 @@ private:
     CompilingBlockArithmetic = arithmetic;
   }
   Arithmetic getArithmetic() const { return CompilingBlockArithmetic; }
+
+  bool CompilingTryCatch;
 
   struct Value {
   private:
@@ -251,7 +259,9 @@ private:
           IeleLValue *Local, const VariableDeclaration *localVariable);
 
   IeleLValue *appendMappingAccess(const MappingType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue);
+  void appendArrayAccessRangeCheck(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc, bigint sizeInElements);
   IeleLValue *appendArrayAccess(const ArrayType &type, iele::IeleValue *IndexValue, iele::IeleValue *ExprValue, DataLocation Loc);
+  IeleRValue *appendArrayRangeAccess(const ArrayType &type, iele::IeleValue *StartValue, iele::IeleValue *EndValue, iele::IeleValue *ExprValue, DataLocation Loc);
   IeleLValue *appendStructAccess(const StructType &type, iele::IeleValue *ExprValue, std::string member, DataLocation Loc);
 
   void appendMul(iele::IeleLocalVariable *LValue, iele::IeleValue *LeftOperand, bigint RightOperand);
@@ -285,6 +295,19 @@ private:
   // allocated memory copy. Returns a pointer to the copy.
   iele::IeleValue *appendCopyFromStorageToMemory(
     TypePointer ToType, IeleRValue *From, TypePointer FromType);
+
+  void appendByteArrayCopyLoop(
+      IeleLValue *To, IeleRValue *From,
+      DataLocation ToLoc, DataLocation FromLoc,
+      iele::IeleLocalVariable *SizeVariableFrom,
+      iele::IeleLocalVariable *IndexTo, iele::IeleLocalVariable *IndexFrom);
+
+  void appendArrayCopyLoop(
+      IeleLValue *To, const ArrayType &toArrayType,
+      IeleRValue *From, const ArrayType &arrayType,
+      DataLocation ToLoc, DataLocation FromLoc,
+      iele::IeleLocalVariable *SizeVariableTo, iele::IeleLocalVariable *SizeVariableFrom,
+      iele::IeleLocalVariable *ElementTo, iele::IeleLocalVariable *ElementFrom);
 
   void appendCopy(
       IeleLValue *To, TypePointer ToType, IeleRValue *From,
@@ -371,6 +394,7 @@ private:
   bool isMostDerived(const VariableDeclaration *d) const;
   const ContractDefinition *contractFor(const Declaration *d) const;
   const FunctionDefinition *superFunction(const FunctionDefinition &function, const ContractDefinition &contract);
+  const ContractDefinition *superContract(const ContractDefinition &contract);
   const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function);
   const FunctionDefinition *resolveVirtualFunction(const FunctionDefinition &function, std::vector<const ContractDefinition *>::iterator it);
 
@@ -411,29 +435,30 @@ private:
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, IeleLValue *ArgValue,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type, bool appendWidths, bool bigEndian);
+    TypePointer type, bool appendWidths, bool bigEndian,
+    DataLocation Loc = DataLocation::CallData);
   void doDecode(
     iele::IeleValue *NextFree,
     iele::IeleLocalVariable *CrntPos, IeleLValue *StoreAt,
     iele::IeleLocalVariable *ArgTypeSize, iele::IeleLocalVariable *ArgLen,
-    TypePointer type);
+    TypePointer type, DataLocation Loc = DataLocation::CallData);
 
   // Infrastructure for encoding/decoding recursive structs.
   std::map<std::string, std::map<bool, std::map<bool, iele::IeleFunction *>>>
     RecursiveStructEncoders;
   iele::IeleFunction *getRecursiveStructEncoder(
-      const StructType &type, bool appendWidths, bool bigEndian);
+      const StructType &type, DataLocation Loc, bool appendWidths, bool bigEndian);
   std::map<std::string, iele::IeleFunction *> RecursiveStructDecoders;
-  iele::IeleFunction *getRecursiveStructDecoder(const StructType &type);
+  iele::IeleFunction *getRecursiveStructDecoder(const StructType &type, DataLocation Loc);
 
   // Helper functions that append code for encoding/decoding a struct.
   void appendStructEncode(
-      const StructType &type, iele::IeleValue *Address,
+      const StructType &type, DataLocation Loc, iele::IeleValue *Address,
       iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
       iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos,
       bool appendWidths, bool bigEndian);
   void appendStructDecode(
-      const StructType &type, iele::IeleValue *Address,
+      const StructType &type, DataLocation Loc, iele::IeleValue *Address,
       iele::IeleLocalVariable *AddrTypeSize, iele::IeleLocalVariable *AddrLen,
       iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos);
 

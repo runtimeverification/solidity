@@ -53,8 +53,8 @@
                     "storageLocation": "default",
                     "typeDescriptions":
                     {
-                      "typeIdentifier": "t_uint256",
-                      "typeString": "uint256"
+                      "typeIdentifier": "t_uint",
+                      "typeString": "uint"
                     },
                     "typeName":
                     {
@@ -64,8 +64,8 @@
                       "src": "28:4:1",
                       "typeDescriptions":
                       {
-                        "typeIdentifier": "t_uint256",
-                        "typeString": "uint256"
+                        "typeIdentifier": "t_uint",
+                        "typeString": "uint"
                       }
                     },
                     "visibility": "internal"
@@ -115,14 +115,14 @@
                     "src": "40:1:1",
                     "typeDescriptions":
                     {
-                      "typeIdentifier": "t_uint256",
-                      "typeString": "uint256"
+                      "typeIdentifier": "t_uint",
+                      "typeString": "uint"
                     }
                   },
                   "typeDescriptions":
                   {
-                    "typeIdentifier": "t_uint256",
-                    "typeString": "uint256"
+                    "typeIdentifier": "t_uint",
+                    "typeString": "uint"
                   }
                 },
                 "id": 9,

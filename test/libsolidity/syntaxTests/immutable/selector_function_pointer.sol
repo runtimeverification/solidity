@@ -14,3 +14,4 @@ contract C {
     }
 }
 // ----
+// TypeError 2524: (78-94): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

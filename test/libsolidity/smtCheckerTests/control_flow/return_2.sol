@@ -1,8 +1,8 @@
 pragma experimental SMTChecker;
 
 contract C {
-	uint c;
-	function add(uint x, uint y) internal returns (uint) {
+	uint256 c;
+	function add(uint256 x, uint256 y) internal returns (uint256) {
 		c = 0xff;
 		if (y == 0)
 			return x;

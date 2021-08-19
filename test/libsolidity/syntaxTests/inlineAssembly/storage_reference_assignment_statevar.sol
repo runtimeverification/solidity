@@ -8,5 +8,4 @@ contract C {
     }
 }
 // ----
-// TypeError 4713: (84-90): State variables cannot be assigned to - you have to use "sstore()".
-// TypeError 4713: (108-116): State variables cannot be assigned to - you have to use "sstore()".
+// SyntaxError 1184: (61-131): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

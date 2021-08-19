@@ -7,4 +7,4 @@ contract test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// run(bool,uint): true, 0xcd -> 0xcd, true, 0
+// run(bool,uint): true, 0x00cd -> 0x00cd, true, 0

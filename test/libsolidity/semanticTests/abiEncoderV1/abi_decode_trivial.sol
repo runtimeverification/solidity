@@ -7,4 +7,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(bytes): 0x20, 0x20, 0x21 -> 33
+// f(bytes): "\x21" -> 33

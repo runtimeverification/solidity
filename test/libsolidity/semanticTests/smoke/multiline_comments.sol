@@ -1,5 +1,5 @@
 contract C {
-    function f(uint a, uint b, uint c, uint d, uint e) public returns (uint) {
+    function f(uint256 a, uint256 b, uint256 c, uint256 d, uint256 e) public returns (uint256) {
         return a + b + c + d + e;
     }
 }

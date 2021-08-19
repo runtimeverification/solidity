@@ -11,3 +11,8 @@ contract C {
         d = L.h.selector;
     }
 }
+// ----
+// TypeError 2524: (244-256): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 2524: (270-282): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 2524: (296-308): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 2524: (322-334): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

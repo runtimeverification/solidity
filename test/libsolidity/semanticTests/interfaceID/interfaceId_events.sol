@@ -1,12 +1,12 @@
 interface HelloWorld {
     function hello() external pure;
-    function world(int) external pure;
+    function world(int256) external pure;
 }
 
 interface HelloWorldWithEvent {
     event Event();
     function hello() external pure;
-    function world(int) external pure;
+    function world(int256) external pure;
 }
 
 contract Test {
@@ -18,5 +18,5 @@ contract Test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// hello_world() -> left(0xc6be8b58)
-// hello_world_with_event() -> left(0xc6be8b58)
+// hello_world() -> 0x00c6be8b58
+// hello_world_with_event() -> 0x00c6be8b58

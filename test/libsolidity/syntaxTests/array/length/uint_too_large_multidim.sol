@@ -2,4 +2,5 @@ contract C {
     uint[8**90][500] ids;
 }
 // ----
-// TypeError 5462: (22-27): Invalid array length, expected integer literal or constant expression.
+// TypeError 7676: (0-40): Contract requires too much storage.
+// TypeError 1534: (17-37): Type too large for storage.

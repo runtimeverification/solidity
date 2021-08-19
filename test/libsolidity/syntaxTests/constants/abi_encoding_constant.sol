@@ -5,3 +5,5 @@ contract C {
     bytes32 constant d = keccak256(abi.encodeWithSignature("f()", 1, 2));
 }
 // ----
+// TypeError 2038: (168-190): abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 1379: (246-269): abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

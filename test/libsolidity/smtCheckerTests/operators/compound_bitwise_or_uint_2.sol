@@ -1,7 +1,7 @@
 pragma experimental SMTChecker;
 contract C {
     struct S {
-        uint[] x;
+        uint256[] x;
     }
     S s;
     function f(bool b) public {

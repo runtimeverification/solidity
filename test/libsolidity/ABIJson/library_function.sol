@@ -1,8 +1,8 @@
 contract X {}
 library test {
-    struct StructType { uint a; }
-    function f(StructType storage b, uint[] storage c, X d) public returns (uint[] memory e, StructType storage f) { f = f; }
-    function f1(uint[] memory c, X d) public pure returns (uint[] memory e) {  }
+    struct StructType { uint256 a; }
+    function f(StructType storage b, uint256[] storage c, X d) public returns (uint256[] memory e, StructType storage f) { f = f; }
+    function f1(uint256[] memory c, X d) public pure returns (uint256[] memory e) {  }
 }
 // ----
 //     :X

@@ -17,11 +17,11 @@ contract C {
 // ----
 // f(bool): 0x0 -> 0x0
 // f(bool): 0x1 -> 0x1
-// f(bool): 0x2 -> FAILURE
-// f(bool): 0x3 -> FAILURE
-// f(bool): 0xff -> FAILURE
+// f(bool): 0x2 -> FAILURE, 255
+// f(bool): 0x3 -> FAILURE, 255
+// f(bool): 0xff -> FAILURE, 255
 // g(bool): 0x0 -> 0x0
 // g(bool): 0x1 -> 0x1
-// g(bool): 0x2 -> FAILURE
-// g(bool): 0x3 -> FAILURE
-// g(bool): 0xff -> FAILURE
+// g(bool): 0x2 -> FAILURE, 255
+// g(bool): 0x3 -> FAILURE, 255
+// g(bool): 0xff -> FAILURE, 255

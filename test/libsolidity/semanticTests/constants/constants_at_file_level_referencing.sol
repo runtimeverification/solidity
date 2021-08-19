@@ -36,7 +36,7 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f() -> 0x20, 3, "\x03\x01\x02"
-// g() -> 0x20, 3, "\x03\x01\x02"
+// f() -> "\x03\x01\x02"
+// g() -> "\x03\x01\x02"
 // h() -> 5
-// i() -> 0x20, 3, "\x03\x01\x02"
+// i() -> "\x03\x01\x02"

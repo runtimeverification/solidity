@@ -1,11 +1,11 @@
 contract C {
-    uint x;
-    uint y;
-    function setX(uint a) public returns (uint _x) {
+    uint256 x;
+    uint256 y;
+    function setX(uint256 a) public returns (uint256 _x) {
         x = a;
         _x = x;
     }
-    function setY(uint a) public returns (uint _y) {
+    function setY(uint256 a) public returns (uint256 _y) {
         y = a;
         _y = y;
     }

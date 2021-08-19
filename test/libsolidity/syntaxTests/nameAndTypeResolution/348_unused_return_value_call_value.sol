@@ -4,4 +4,4 @@ contract test {
     }
 }
 // ----
-// Warning 9302: (50-85): Return value of low-level calls not used.
+// TypeError 6198: (50-68): Low-level calls are not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

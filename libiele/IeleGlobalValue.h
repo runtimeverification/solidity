@@ -18,7 +18,7 @@ public:
   IeleGlobalValue(const IeleGlobalValue&) = delete;
   void operator=(const IeleGlobalValue&) = delete;
 
-  virtual ~IeleGlobalValue();
+  virtual ~IeleGlobalValue() override;
 
   inline const IeleContract *getParent() const { return Parent; }
   inline       IeleContract *getParent()       { return Parent; }

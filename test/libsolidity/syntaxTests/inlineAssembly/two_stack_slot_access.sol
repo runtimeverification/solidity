@@ -7,4 +7,4 @@ contract C {
     }
 }
 // ----
-// TypeError 9857: (132-147): Only types that use one stack slot are supported.
+// SyntaxError 1184: (99-157): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

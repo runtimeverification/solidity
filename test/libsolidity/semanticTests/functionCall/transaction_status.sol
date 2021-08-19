@@ -8,5 +8,5 @@ contract test {
 // compileToEwasm: also
 // ----
 // f() ->
-// g() -> FAILURE
-// h() -> FAILURE, hex"4e487b71", 0x01
+// g() -> FAILURE, 255
+// h() -> FAILURE, 255

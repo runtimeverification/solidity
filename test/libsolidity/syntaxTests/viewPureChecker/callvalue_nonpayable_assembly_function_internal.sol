@@ -10,4 +10,4 @@ contract C
 	}
 }
 // ----
-// Warning 2018: (17-121): Function state mutability can be restricted to view
+// SyntaxError 1184: (66-115): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

@@ -10,7 +10,7 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// constructor(): 1, 2, 3 ->
+// constructor(): array 256 [ 1, 2, 3 ] ->
 // a(uint): 0 -> 1
 // a(uint): 1 -> 2
 // a(uint): 2 -> 3

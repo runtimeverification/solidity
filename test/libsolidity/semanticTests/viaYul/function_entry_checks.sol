@@ -11,7 +11,7 @@ contract C {
     }
     function k(bytes32 b) public returns (bytes32) {
     }
-    function s() public returns (uint256[] memory) {
+    function s(bytes memory b) public returns (uint[] memory) {
     }
     function t(uint) public pure {
     }
@@ -21,11 +21,11 @@ contract C {
 // compileToEwasm: also
 // ----
 // f() -> 0
-// g(uint256,uint256): 1, -2 -> 0
+// g(uint,uint): 1, 0x00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe -> 0
 // h(), 1 ether -> 0
-// i(bytes32), 1 ether: 2 -> FAILURE
+// i(bytes32), 1 ether: 2 -> FAILURE, 255
 // i(bytes32): 2 -> 0
 // j(bool): true -> false
 // k(bytes32): 0x31 -> 0x00
-// s(): hex"4200ef" -> 0x20, 0
-// t(uint256) -> FAILURE
+// s(bytes): hex"4200ef" -> 1
+// t(uint) -> FAILURE, 2

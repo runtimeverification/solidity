@@ -29,5 +29,5 @@ contract Child is Base {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// g(uint256): 4 -> 8
-// k(uint256): 4 -> 16
+// g(uint): 4 -> 8
+// k(uint): 4 -> 16

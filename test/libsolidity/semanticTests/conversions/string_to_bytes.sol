@@ -6,4 +6,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(string): 32, 5, "Hello" -> 32, 5, "Hello"
+// f(string): "Hello" -> "Hello"

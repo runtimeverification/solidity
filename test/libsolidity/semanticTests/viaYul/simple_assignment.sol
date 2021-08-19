@@ -1,5 +1,5 @@
 contract C {
-    function f(uint a, uint b) public pure returns (uint x, uint y) {
+    function f(uint256 a, uint256 b) public pure returns (uint256 x, uint256 y) {
         x = a;
         y = b;
     }

@@ -48,7 +48,7 @@ public:
   IeleBlock(const IeleBlock&) = delete;
   void operator=(const IeleBlock&) = delete;
 
-  ~IeleBlock();
+  ~IeleBlock() override;
 
   static IeleBlock *Create(IeleContext *Ctx, const llvm::Twine &Name = "",
                            IeleFunction *F = nullptr,

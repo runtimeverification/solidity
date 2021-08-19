@@ -20,4 +20,4 @@ contract C {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// f(uint32,(uint256,uint64,bytes2),uint256): 1, 42, 23, "ab", 1 -> 42, 23, "b"
+// f(uint32,(uint256,uint64,bytes2),uint256): 1, refargs { 0x000000000000000000000000000000000000000000000000000000000000002a, 0x0000000000000017, 0x6162 }, 1 -> 42, 23, 0x62

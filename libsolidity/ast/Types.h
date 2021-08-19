@@ -432,6 +432,7 @@ public:
 	bool operator==(Type const& _other) const override;
 
 	unsigned calldataEncodedSize(bool _padded = true) const override { return _padded ? 32 : 160 / 8; }
+	bigint getFixedBitwidth() const override { return bigint(160); }
 	unsigned storageBytes() const override { return 160 / 8; }
 	bool leftAligned() const override { return false; }
 	bool isValueType() const override { return true; }
@@ -848,6 +849,7 @@ public:
 	bigint getFixedBitwidth() const override;
 	bigint storageSizeUpperBound() const override;
 	bigint storageSize() const override;
+	bigint storageSizeOfElement() const;
 	bigint memorySize() const override { return memoryDataSize(); }
 	bool containsInfiniteMapping() const override;
 	bool containsNestedMapping() const override { return m_baseType->containsNestedMapping(); }

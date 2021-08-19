@@ -7,4 +7,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(uint256,uint16[],uint256): 6, 0x60, 9, 7, 11, 12, 13, 14, 15, 16, 17 -> 7, 17, 9
+// f(uint,uint16[],uint): 6, dynarray 16 [ 11, 12, 13, 14, 15, 16, 17 ], 9 -> 7, 17, 9

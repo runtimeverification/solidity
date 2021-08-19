@@ -36,5 +36,5 @@ contract D {
 // EVMVersion: >=byzantium
 // ----
 // f() -> 0x1 # This should work, next should throw #
-// fview() -> FAILURE
-// fpure() -> FAILURE
+// fview() -> FAILURE, 4
+// fpure() -> FAILURE, 4

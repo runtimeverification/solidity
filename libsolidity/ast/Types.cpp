@@ -384,7 +384,8 @@ BoolResult AddressType::isExplicitlyConvertibleTo(Type const& _convertTo) const
 	else if (m_stateMutability == StateMutability::NonPayable)
 	{
 		if (auto integerType = dynamic_cast<IntegerType const*>(&_convertTo))
-			return (!integerType->isSigned() && integerType->numBits() == 160);
+			return (!integerType->isUnbound() && !integerType->isSigned() &&
+                    integerType->numBits() == 160);
 		else if (auto fixedBytesType = dynamic_cast<FixedBytesType const*>(&_convertTo))
 			return (fixedBytesType->numBytes() == 20);
 	}
@@ -636,7 +637,8 @@ TypeResult IntegerType::binaryOperatorResult(Token _operator, Type const* _other
 		{
 			if (rationalNumberType->isFractional())
 				return TypeResult::err("Exponent is fractional.");
-			if (!rationalNumberType->integerType())
+			const IntegerType* integerType = rationalNumberType->integerType();
+			if (!isUnbound() && (integerType->isUnbound() || numBits() < integerType->numBits()))
 				return TypeResult::err("Exponent too large.");
 			if (rationalNumberType->isNegative())
 				return TypeResult::err("Exponentiation power is not allowed to be a negative integer literal.");
@@ -946,6 +948,7 @@ BoolResult RationalNumberType::isExplicitlyConvertibleTo(Type const& _convertTo)
 			!isNegative() &&
 			!isFractional() &&
 			integerType() &&
+			!integerType()->isUnbound() &&
 			(integerType()->numBits() <= 160));
 	else if (category == Category::Integer)
 		return false;
@@ -1021,9 +1024,11 @@ TypeResult RationalNumberType::binaryOperatorResult(Token _operator, Type const*
 	else if (optional<rational> value = ConstantEvaluator::evaluateBinaryOperator(_operator, m_value, other.m_value))
 	{
 		// verify that numerator and denominator fit into 4096 bit after every operation
-		if (value->numerator() != 0 && max(boost::multiprecision::msb(abs(value->numerator())), boost::multiprecision::msb(abs(value->denominator()))) > 4096)
-			return TypeResult::err("Precision of rational constants is limited to 4096 bits.");
-
+		if (value->numerator() != 0 && max(boost::multiprecision::msb(abs(value->numerator())), boost::multiprecision::msb(abs(value->denominator()))) > 4096) {
+			if (value->denominator() != 1)
+				return TypeResult::err("Precision of rational constants is limited to 4096 bits.");
+			return (value >= 0) ? TypeProvider::uint() : TypeProvider::sint();
+		}
 		return TypeResult{TypeProvider::rationalNumber(*value)};
 	}
 	else
@@ -1076,7 +1081,6 @@ bigint RationalNumberType::literalValue(Literal const*) const
 	// We ignore the literal and hope that the type was correctly determined to represent
 	// its value.
 
-	u256 value;
 	bigint shiftedValue;
 
 	if (!isFractional())
@@ -1649,7 +1653,8 @@ BoolResult ArrayType::validForLocation(DataLocation _loc) const
 
 bigint ArrayType::unlimitedStaticCalldataSize(bool _padded) const
 {
-	solAssert(!isDynamicallySized(), "");
+	if (isDynamicallySized())
+		return 32;
 	bigint size = bigint(length()) * calldataStride();
 	if (_padded)
 		size = ((size + 31) / 32) * 32;
@@ -1702,6 +1707,18 @@ bigint ArrayType::storageSize() const
 	if (isByteArray())
 		return 2;
 
+	bigint baseTypeSize = storageSizeOfElement();
+
+	if (isDynamicallySized()) {
+		return MAX_ARRAY_SIZE * baseTypeSize + 1; // One extra slot for the length
+	}
+
+	solAssert(length() <= MAX_ARRAY_SIZE, "Array too large.");
+	return length() * baseTypeSize;
+}
+
+bigint ArrayType::storageSizeOfElement() const
+{
 	bigint baseTypeSize;
 
 	// Recursive structs are stored as pointers in storage arrays,
@@ -1716,12 +1733,7 @@ bigint ArrayType::storageSize() const
 		baseTypeSize = baseType()->storageSize();
 	}
 
-	if (isDynamicallySized()) {
-		return MAX_ARRAY_SIZE * baseTypeSize + 1; // One extra slot for the length
-	}
-
-	solAssert(length() <= MAX_ARRAY_SIZE, "Array too large.");
-	return length() * baseTypeSize;
+	return baseTypeSize;
 }
 
 bigint ArrayType::memoryDataSize() const
@@ -3205,6 +3217,7 @@ unsigned FunctionType::gasIndex() const
 	case Kind::BareCall:
 	case Kind::BareCallCode:
 	case Kind::BareDelegateCall:
+	case Kind::BareStaticCall:
 	case Kind::Internal:
 	case Kind::DelegateCall:
 	case Kind::ArrayPush:
@@ -3240,6 +3253,7 @@ unsigned FunctionType::valueIndex() const
 	case Kind::BareCall:
 	case Kind::BareCallCode:
 	case Kind::BareDelegateCall:
+	case Kind::BareStaticCall:
 	case Kind::Internal:
 	case Kind::DelegateCall:
 	case Kind::ArrayPush:

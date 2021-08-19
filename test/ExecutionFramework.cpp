@@ -139,8 +139,10 @@ std::pair<bool, string> ExecutionFramework::compareAndCreateMessage(
 bytes ExecutionFramework::panicData(util::PanicCode _code)
 {
 	return
+/*
 		m_evmVersion.supportsReturndata() ?
 		toCompactBigEndian(selectorFromSignature32("Panic(uint256)"), 4) + encode(u256(_code)) :
+*/
 		bytes();
 }
 
@@ -166,7 +168,7 @@ u256 ExecutionFramework::blockHash(u256 const& _number) const
 
 u256 ExecutionFramework::blockNumber() const
 {
-	return m_evmcHost->tx_context.block_number;
+	return m_blockNumber;
 }
 
 void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::string _function, bytes const& _data, bool _isCreation, u256 const& _value)
@@ -291,27 +293,27 @@ bool ExecutionFramework::addressHasCode(h160 const& _addr)
 
 size_t ExecutionFramework::numLogs() const
 {
-	return m_evmcHost->recorded_logs.size();
+	return m_logs.size();
 }
 
 size_t ExecutionFramework::numLogTopics(size_t _logIdx) const
 {
-	return m_evmcHost->recorded_logs.at(_logIdx).topics.size();
+	return m_logs.at(_logIdx).topics.size();
 }
 
 h256 ExecutionFramework::logTopic(size_t _logIdx, size_t _topicIdx) const
 {
-	return EVMHost::convertFromEVMC(m_evmcHost->recorded_logs.at(_logIdx).topics.at(_topicIdx));
+	return m_logs.at(_logIdx).topics.at(_topicIdx);
 }
 
 h160 ExecutionFramework::logAddress(size_t _logIdx) const
 {
-	return EVMHost::convertFromEVMC(m_evmcHost->recorded_logs.at(_logIdx).creator);
+	return m_logs.at(_logIdx).address;
 }
 
 bytes ExecutionFramework::logData(size_t _logIdx) const
 {
-	const auto& data = m_evmcHost->recorded_logs.at(_logIdx).data;
+	const auto& data = m_logs.at(_logIdx).data;
 	// TODO: Return a copy of log data, because this is expected from REQUIRE_LOG_DATA(),
 	//       but reference type like string_view would be preferable.
 	return {data.begin(), data.end()};

@@ -1,5 +1,5 @@
 contract Other {
-    function addTwo(uint256 x) public returns (uint256) {
+    function addTwo(uint x) public returns (uint) {
         return x + 2;
     }
 }
@@ -17,7 +17,7 @@ contract C {
         return y(7);
     }
 
-    function t() public returns (uint256) {
+    function t() public returns (uint) {
         ev = eval;
         this.store((new Other()).addTwo);
         return ev(x);

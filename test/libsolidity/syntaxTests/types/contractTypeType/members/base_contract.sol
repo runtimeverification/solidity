@@ -9,3 +9,6 @@ contract C is B {
         B.g();
     }
 }
+// ----
+// TypeError 2524: (159-171): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 2524: (186-198): Member "selector" is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

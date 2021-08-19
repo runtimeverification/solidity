@@ -19,4 +19,4 @@ contract Test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// getName() -> "abc"
+// getName() -> 0x616263

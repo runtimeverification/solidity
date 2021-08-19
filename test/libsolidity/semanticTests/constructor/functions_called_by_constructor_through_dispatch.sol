@@ -29,4 +29,4 @@ contract Test {
 // compileViaYul: also
 // compileToEwasm: also
 // ----
-// getName() -> "def\x00\x00\x00"
+// getName() -> 0x646566000000

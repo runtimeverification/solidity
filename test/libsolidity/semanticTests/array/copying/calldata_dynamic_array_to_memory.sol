@@ -2,11 +2,11 @@ pragma abicoder               v2;
 
 
 contract C {
-    function f(uint256[][] calldata a)
+    function f(uint[][] calldata a)
         external
-        returns (uint256, uint256[] memory)
+        returns (uint, uint[] memory)
     {
-        uint256[] memory m = a[0];
+        uint[] memory m = a[0];
         return (a.length, m);
     }
 }
@@ -14,4 +14,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(uint256[][]): 0x20, 0x1, 0x20, 0x2, 0x17, 0x2a -> 0x1, 0x40, 0x2, 0x17, 0x2a
+// f(uint[][]): refargs { 0x01, 0x01, 0x01, 0x02, 23, 42 } -> 1, refargs { 0x01, 0x02, 23, 42 }

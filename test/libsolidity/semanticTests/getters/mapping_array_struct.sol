@@ -19,11 +19,11 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// m(uint256,uint256): 0, 0 -> FAILURE
-// m(uint256,uint256): 1, 0 -> 1, 2
-// m(uint256,uint256): 1, 1 -> 3, 4
-// m(uint256,uint256): 1, 2 -> FAILURE
-// n(uint256,uint256): 0, 0 -> 0x00, 0x00
-// n(uint256,uint256): 1, 0 -> 7, 8
-// n(uint256,uint256): 1, 1 -> 9, 0x0a
-// n(uint256,uint256): 1, 2 -> 0x00, 0x00
+// m(uint256,uint): 0, 0 -> FAILURE, 255
+// m(uint256,uint): 1, 0 -> 1, 2
+// m(uint256,uint): 1, 1 -> 3, 4
+// m(uint256,uint): 1, 2 -> FAILURE, 255
+// n(uint256,uint): 0, 0 -> 0x00, 0x00
+// n(uint256,uint): 1, 0 -> 7, 8
+// n(uint256,uint): 1, 1 -> 9, 0x0a
+// n(uint256,uint): 1, 2 -> 0x00, 0x00

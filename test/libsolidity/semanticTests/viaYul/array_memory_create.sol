@@ -1,5 +1,5 @@
 contract C {
-	function create(uint256 len) public returns (uint256)
+	function create(uint len) public returns (uint)
 	{
 		uint[] memory array = new uint[](len);
 		return array.length;
@@ -8,6 +8,6 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// create(uint256): 0 -> 0
-// create(uint256): 7 -> 7
-// create(uint256): 10 -> 10
+// create(uint): 0 -> 0
+// create(uint): 7 -> 7
+// create(uint): 10 -> 10

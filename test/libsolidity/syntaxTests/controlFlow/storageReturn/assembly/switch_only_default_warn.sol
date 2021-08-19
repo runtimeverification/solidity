@@ -9,4 +9,4 @@ contract C {
     }
 }
 // ----
-// Warning 9592: (142-195): "switch" statement with only a default case.
+// SyntaxError 1184: (119-205): Inline assembly is not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

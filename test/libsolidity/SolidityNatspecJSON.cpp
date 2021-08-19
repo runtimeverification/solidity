@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE(user_basic_test_with_uint)
 	char const* sourceCode = R"(
 		contract test {
 			/// @notice Multiplies `a` by 7
-			function mul(uint a) returns(uint d) { return a * 7; }
+			function mul(uint a) public returns(uint d) { return a * 7; }
 		}
 	)";
 
@@ -389,7 +389,7 @@ BOOST_AUTO_TEST_CASE(event)
 	{
 		"events":
 		{
-			"Transfer(address,address,uint256)":
+			"Transfer(address,address,uint)":
 			{
 				"details": "A test case!",
 				"params":
@@ -407,7 +407,7 @@ BOOST_AUTO_TEST_CASE(event)
 	{
 		"events":
 		{
-			"Transfer(address,address,uint256)":
+			"Transfer(address,address,uint)":
 			{
 				"notice": "This event is emitted when a transfer occurs."
 			}
@@ -581,7 +581,7 @@ BOOST_AUTO_TEST_CASE(dev_return_no_params)
 	char const* natspec = R"ABCDEF(
 	{
 		"methods": {
-			"mul(uint256,uint256)": {
+			"mul(uint,uint)": {
 				"returns": { "d": "The result of the multiplication"
 			}
 		}
@@ -672,7 +672,7 @@ BOOST_AUTO_TEST_CASE(dev_return_desc_multiple_unamed_mixed)
 
 	char const* natspec = "{"
 	"\"methods\":{"
-	"    \"mul(uint256,uint256)\":{ \n"
+	"    \"mul(uint,uint)\":{ \n"
 	"        \"details\": \"Multiplies a number by 7 and adds second parameter\",\n"
 	"        \"params\": {\n"
 	"            \"a\": \"Documentation for the first parameter starts here. Since it's a really complicated parameter we need 2 lines\",\n"
@@ -709,7 +709,7 @@ BOOST_AUTO_TEST_CASE(dev_return_desc_multiple_unamed_mixed_2)
 
 	char const* natspec = "{"
 	"\"methods\":{"
-	"    \"mul(uint256,uint256)\":{ \n"
+	"    \"mul(uint,uint)\":{ \n"
 	"        \"details\": \"Multiplies a number by 7 and adds second parameter\",\n"
 	"        \"params\": {\n"
 	"            \"a\": \"Documentation for the first parameter starts here. Since it's a really complicated parameter we need 2 lines\",\n"
@@ -745,7 +745,7 @@ BOOST_AUTO_TEST_CASE(dev_return_desc_multiple_unamed)
 
 	char const* natspec = "{"
 	"\"methods\":{"
-	"    \"mul(uint256,uint256)\":{ \n"
+	"    \"mul(uint,uint)\":{ \n"
 	"        \"details\": \"Multiplies a number by 7 and adds second parameter\",\n"
 	"        \"params\": {\n"
 	"            \"a\": \"Documentation for the first parameter starts here. Since it's a really complicated parameter we need 2 lines\",\n"
@@ -780,7 +780,7 @@ BOOST_AUTO_TEST_CASE(dev_return_desc_multiple)
 
 	char const* natspec = "{"
 	"\"methods\":{"
-	"    \"mul(uint256,uint256)\":{ \n"
+	"    \"mul(uint,uint)\":{ \n"
 	"        \"details\": \"Multiplies a number by 7 and adds second parameter\",\n"
 	"        \"params\": {\n"
 	"            \"a\": \"Documentation for the first parameter starts here. Since it's a really complicated parameter we need 2 lines\",\n"
@@ -1104,7 +1104,7 @@ BOOST_AUTO_TEST_CASE(user_constructor_and_function)
 
 	char const* natspec = R"ABCDEF({
 	"methods" : {
-		"mul(uint256,uint256)" : {
+		"mul(uint,uint)" : {
 			"notice" : "another multiplier"
 		},
 		"constructor" : {
@@ -1175,7 +1175,7 @@ BOOST_AUTO_TEST_CASE(dev_constructor_and_function)
 
 	char const *natspec = R"ABCDEF({
 	"methods" : {
-		"mul(uint256,uint256)" : {
+		"mul(uint,uint)" : {
 			"details" : "Multiplies a number by 7 and adds second parameter",
 			"params" : {
 				"a" : "Documentation for the first parameter starts here. Since it's a really complicated parameter we need 2 lines",
@@ -1427,7 +1427,7 @@ BOOST_AUTO_TEST_CASE(dev_default_inherit)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"details": "test",
 				"params":
@@ -1474,7 +1474,7 @@ BOOST_AUTO_TEST_CASE(user_default_inherit)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"notice": "Transfer ``amount`` from ``msg.sender`` to ``to``. Second line."
 			}
@@ -1514,7 +1514,7 @@ BOOST_AUTO_TEST_CASE(dev_explicit_inherit)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"details": "test",
 				"params":
@@ -1558,7 +1558,7 @@ BOOST_AUTO_TEST_CASE(user_explicit_inherit)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"notice": "Transfer ``amount`` from ``msg.sender`` to ``to``."
 			}
@@ -1597,7 +1597,7 @@ BOOST_AUTO_TEST_CASE(dev_explicit_inherit2)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"details": "test",
 				"params":
@@ -1642,7 +1642,7 @@ BOOST_AUTO_TEST_CASE(user_explicit_inherit2)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"notice": "Transfer ``amount`` from ``msg.sender`` to ``to``."
 			}
@@ -1684,7 +1684,7 @@ BOOST_AUTO_TEST_CASE(dev_explicit_inherit_partial2)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"details": "test",
 				"params":
@@ -1699,7 +1699,7 @@ BOOST_AUTO_TEST_CASE(dev_explicit_inherit_partial2)
 	char const *natspec2 = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"details": "override dev comment",
 				"params":
@@ -1745,7 +1745,7 @@ BOOST_AUTO_TEST_CASE(user_explicit_inherit_partial2)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"notice": "Transfer ``amount`` from ``msg.sender`` to ``to``."
 			}
@@ -1755,7 +1755,7 @@ BOOST_AUTO_TEST_CASE(user_explicit_inherit_partial2)
 	char const *natspec2 = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"notice": "override notice"
 			}
@@ -1796,7 +1796,7 @@ BOOST_AUTO_TEST_CASE(dev_explicit_inherit_partial)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"details": "test",
 				"params":
@@ -1811,7 +1811,7 @@ BOOST_AUTO_TEST_CASE(dev_explicit_inherit_partial)
 	char const *natspec2 = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"details": "override dev comment",
 				"params":
@@ -1857,7 +1857,7 @@ BOOST_AUTO_TEST_CASE(user_explicit_inherit_partial)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"notice": "Transfer ``amount`` from ``msg.sender`` to ``to``."
 			}
@@ -1867,7 +1867,7 @@ BOOST_AUTO_TEST_CASE(user_explicit_inherit_partial)
 	char const *natspec2 = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"notice": "override notice"
 			}
@@ -1905,7 +1905,7 @@ BOOST_AUTO_TEST_CASE(dev_inherit_parameter_mismatch)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"details": "test",
 				"params":
@@ -1953,7 +1953,7 @@ BOOST_AUTO_TEST_CASE(user_inherit_parameter_mismatch)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"notice": "Transfer ``amount`` from ``msg.sender`` to ``to``."
 			}
@@ -2004,7 +2004,7 @@ BOOST_AUTO_TEST_CASE(dev_explicit_inehrit_complex)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"transfer(address,uint256)":
+			"transfer(address,uint)":
 			{
 				"details": "test",
 				"params":
@@ -2056,7 +2056,7 @@ BOOST_AUTO_TEST_CASE(dev_different_return_name)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{
@@ -2069,7 +2069,7 @@ BOOST_AUTO_TEST_CASE(dev_different_return_name)
 	char const *natspec2 = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{
@@ -2100,7 +2100,7 @@ BOOST_AUTO_TEST_CASE(dev_different_return_name_multiple)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{
@@ -2114,7 +2114,7 @@ BOOST_AUTO_TEST_CASE(dev_different_return_name_multiple)
 	char const *natspec2 = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{
@@ -2146,7 +2146,7 @@ BOOST_AUTO_TEST_CASE(dev_different_return_name_multiple_partly_unnamed)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{
@@ -2160,7 +2160,7 @@ BOOST_AUTO_TEST_CASE(dev_different_return_name_multiple_partly_unnamed)
 	char const *natspec2 = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{
@@ -2192,7 +2192,7 @@ BOOST_AUTO_TEST_CASE(dev_different_return_name_multiple_unnamed)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{
@@ -2206,7 +2206,7 @@ BOOST_AUTO_TEST_CASE(dev_different_return_name_multiple_unnamed)
 	char const *natspec2 = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{
@@ -2237,7 +2237,7 @@ BOOST_AUTO_TEST_CASE(dev_return_name_no_description)
 	char const *natspec = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{
@@ -2250,7 +2250,7 @@ BOOST_AUTO_TEST_CASE(dev_return_name_no_description)
 	char const *natspec2 = R"ABCDEF({
 		"methods":
 		{
-			"g(int256)":
+			"g(int)":
 			{
 				"returns":
 				{

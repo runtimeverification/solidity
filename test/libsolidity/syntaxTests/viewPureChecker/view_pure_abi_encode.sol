@@ -6,3 +6,6 @@ contract C {
         r = abi.encodeWithSignature("f(uint256)", 4);
     }
 }
+// ----
+// TypeError 2038: (146-168): abi.encodeWithSelector not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md
+// TypeError 1379: (197-220): abi.encodeWithSignature not supported in IELE. For more information, including potential workarounds, see README-IELE-SUPPORT.md

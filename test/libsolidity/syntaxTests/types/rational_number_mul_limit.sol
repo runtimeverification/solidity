@@ -5,4 +5,4 @@ contract c {
     }
 }
 // ----
-// TypeError: (74-93): Type uint is not implicitly convertible to expected type int256.
+// TypeError 7407: (74-93): Type uint is not implicitly convertible to expected type int256.
