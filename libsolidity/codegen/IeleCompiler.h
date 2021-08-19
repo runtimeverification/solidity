@@ -38,6 +38,7 @@ public:
     ECRFailedBlock(nullptr),
     AssertFailBlock(nullptr),
     CompilingBlockArithmetic(Arithmetic::Checked),
+    CompilingTryCatch(false),
     CompilingLValue(false),
     NextStorageAddress(1),
     CompilingContractASTNode(nullptr),
@@ -97,6 +98,7 @@ public:
   virtual bool visit(const Break &breakStatement) override;
   virtual bool visit(const Return &returnStatement) override;
   virtual bool visit(const Throw &throwStatement) override;
+  virtual bool visit(const TryStatement &tryStatement) override;
   virtual bool visit(
       const VariableDeclarationStatement &variableDeclarationStatement)
       override;
@@ -147,6 +149,8 @@ private:
     CompilingBlockArithmetic = arithmetic;
   }
   Arithmetic getArithmetic() const { return CompilingBlockArithmetic; }
+
+  bool CompilingTryCatch;
 
   struct Value {
   private:

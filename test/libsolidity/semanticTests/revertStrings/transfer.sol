@@ -24,5 +24,5 @@ contract C {
 // ----
 // (), 10 wei ->
 // g() -> 10
-// f() -> FAILURE, 0x657669656365725f6f6e
+// f() -> FAILURE, "no_receive"
 // h() -> FAILURE, 7

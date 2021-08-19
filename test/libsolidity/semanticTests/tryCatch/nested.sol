@@ -28,7 +28,7 @@ contract C {
 // EVMVersion: >=byzantium
 // compileViaYul: also
 // ----
-// f(bool,bool): true, true -> 1, 2, 96, 7, "success"
-// f(bool,bool): true, false -> 12, 0, 96, 7, "failure"
-// f(bool,bool): false, true -> 99, 0, 96, 7, "failure"
-// f(bool,bool): false, false -> 99, 0, 96, 7, "failure"
+// f(bool,bool): true, true -> 1, 2, "success"
+// f(bool,bool): true, false -> 12, 0, "failure"
+// f(bool,bool): false, true -> 99, 0, "failure"
+// f(bool,bool): false, false -> 99, 0, "failure"

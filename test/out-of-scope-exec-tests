@@ -131,6 +131,7 @@
 -t !semanticTests/structs/struct_delete_storage_with_arrays_small
 -t !semanticTests/structs/struct_reference
 -t !semanticTests/structs/structs
+-t !semanticTests/tryCatch/invalid_error_encoding
 -t !semanticTests/various/address_code_complex
 -t !semanticTests/various/byte_optimization_bug
 -t !semanticTests/various/code_access_content

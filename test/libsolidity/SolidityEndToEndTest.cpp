@@ -4582,9 +4582,9 @@ BOOST_AUTO_TEST_CASE(revert_with_cause)
 	)";
 	compileAndRun(sourceCode, 0, "D");
 	ABI_CHECK(callContractFunction("f()"), encodeArgs());
-        bigint expected = fromBigEndian<bigint>(encodeLogs("test123"));
+        bigint expected = fromBigEndian<bigint>(encodeDyn(string("test123")));
         BOOST_CHECK_EQUAL(m_status, expected);
-        expected = fromBigEndian<bigint>(encodeLogs("test1234567890123456789012345678901234567890"));
+        expected = fromBigEndian<bigint>(encodeDyn(string("test1234567890123456789012345678901234567890")));
 	ABI_CHECK(callContractFunction("g()"), encodeArgs());
         BOOST_CHECK_EQUAL(m_status, expected);
 	ABI_CHECK(callContractFunction("h()"), encodeArgs());
@@ -4632,21 +4632,21 @@ BOOST_AUTO_TEST_CASE(require_with_message)
 	ABI_CHECK(callContractFunction("f(uint)", 8), encodeArgs());
         BOOST_CHECK_EQUAL(m_status, 0);
 	ABI_CHECK(callContractFunction("f(uint)", 5), encodeArgs());
-        bigint expected = fromBigEndian<bigint>(encodeLogs("failed"));
+        bigint expected = fromBigEndian<bigint>(encodeDyn(string("failed")));
         BOOST_CHECK_EQUAL(m_status, expected);
 
 	ABI_CHECK(callContractFunction("g()"), encodeArgs());
         BOOST_CHECK_EQUAL(m_status, 0);
 	ABI_CHECK(callContractFunction("g()"), encodeArgs());
-        expected = fromBigEndian<bigint>(encodeLogs("only on second run"));
+        expected = fromBigEndian<bigint>(encodeDyn(string("only on second run")));
         BOOST_CHECK_EQUAL(m_status, expected);
 	ABI_CHECK(callContractFunction("h()"), encodeArgs());
-        expected = fromBigEndian<bigint>(encodeLogs("abc"));
+        expected = fromBigEndian<bigint>(encodeDyn(string("abc")));
         BOOST_CHECK_EQUAL(m_status, expected);
 	ABI_CHECK(callContractFunction("i()"), encodeArgs());
         BOOST_CHECK_EQUAL(m_status, expected);
 	ABI_CHECK(callContractFunction("j()"), encodeArgs());
-        expected = fromBigEndian<bigint>(encodeLogs("msg"));
+        expected = fromBigEndian<bigint>(encodeDyn(string("msg")));
         BOOST_CHECK_EQUAL(m_status, expected);
 }
 
@@ -4664,7 +4664,7 @@ BOOST_AUTO_TEST_CASE(bubble_up_error_messages)
 	)";
 	compileAndRun(sourceCode, 0, "D");
 	ABI_CHECK(callContractFunction("f()"), encodeArgs());
-        bigint expected = fromBigEndian<bigint>(encodeLogs("message"));
+        bigint expected = fromBigEndian<bigint>(encodeDyn(string("message")));
         BOOST_CHECK_EQUAL(m_status, expected);
 	ABI_CHECK(callContractFunction("g()"), encodeArgs());
         BOOST_CHECK_EQUAL(m_status, expected);
@@ -4684,7 +4684,7 @@ BOOST_AUTO_TEST_CASE(bubble_up_error_messages_through_transfer)
 	)";
 	compileAndRun(sourceCode, 0, "D");
 	ABI_CHECK(callFallback(), encodeArgs());
-        bigint expected = fromBigEndian<bigint>(encodeLogs("message"));
+        bigint expected = fromBigEndian<bigint>(encodeDyn(string("message")));
         BOOST_CHECK_EQUAL(m_status, expected);
 	ABI_CHECK(callContractFunction("f()"), encodeArgs());
         BOOST_CHECK_EQUAL(m_status, expected);
@@ -4706,7 +4706,7 @@ BOOST_AUTO_TEST_CASE(bubble_up_error_messages_through_create)
 	)";
 	compileAndRun(sourceCode, 0, "D");
 	ABI_CHECK(callContractFunction("f()"), encodeArgs());
-        bigint expected = fromBigEndian<bigint>(encodeLogs("message"));
+        bigint expected = fromBigEndian<bigint>(encodeDyn(string("message")));
         BOOST_CHECK_EQUAL(m_status, expected);
 }
 
