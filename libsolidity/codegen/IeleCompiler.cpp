@@ -344,7 +344,7 @@ void IeleCompiler::compileContract(
       iele::IeleFunction::Create(&Context, function->isPublic(),
                                  FunctionName, CompilingContract);
       // here we don't call isPublic because we want to exclude external functions
-      if (hasTwoFunctions(FunctionType(*function), false, false)) {
+      if (hasTwoFunctions(FunctionType(*function), false, base->isLibrary())) {
         iele::IeleFunction::Create(&Context, false, FunctionName + ".internal", CompilingContract);
       }
     }
