@@ -124,6 +124,8 @@
 -t !semanticTests/smoke/fallback
 -t !semanticTests/snark
 -t !semanticTests/specialFunctions/abi_functions_member_access
+-t !semanticTests/state/msg_data
+-t !semanticTests/state/msg_sig
 -t !semanticTests/structs/recursive_struct_2
 -t !semanticTests/structs/struct_delete_storage_nested_small
 -t !semanticTests/structs/struct_delete_storage_small
