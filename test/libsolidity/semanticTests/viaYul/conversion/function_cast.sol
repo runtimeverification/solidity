@@ -18,6 +18,6 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(uint256): 2 -> 4
-// h(uint256): 2 -> 5
-// t() -> 0xFDD67305928FCAC8D213D1E47BFA6165CD0B87BB3DE648B0000000000000000, 0xFDD67305928FCAC8D213D1E47BFA6165CD0B87BB3DE648B0000000000000000
+// f(uint): 2 -> 4
+// h(uint): 2 -> 5
+// t() -> contract_address, 1, contract_address, 1

@@ -60,6 +60,7 @@ public:
 	bool deploy(std::string const& _contractName, u256 const& _value, std::vector<bytes> const& _arguments, std::map<std::string, solidity::test::Address> const& _libraries = {});
 private:
 	TestResult runTest(std::ostream& _stream, std::string const& _linePrefix, bool _formatted, bool _compileViaYul, bool _compileToEwasm);
+	void preprocessExpectation(FunctionCallExpectations &_expectations);
 	SourceMap m_sources;
 	std::size_t m_lineOffset;
 	std::vector<TestFunctionCall> m_tests;
