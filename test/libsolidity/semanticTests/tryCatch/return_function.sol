@@ -16,4 +16,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f() -> 0x1, 0xfdd67305928fcac8d213d1e47bfa6165cd0b87b946644cd0000000000000000, 9
+// f() -> 1, contract_address, 3, 9
