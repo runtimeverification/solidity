@@ -6,7 +6,7 @@ contract C {
         genesisHash = blockhash(0);
         currentHash = blockhash(1);
     }
-    function f(uint blockNumber) public returns (bytes32) {
+    function f(uint256 blockNumber) public returns (bytes32) {
         return blockhash(blockNumber);
     }
 }
