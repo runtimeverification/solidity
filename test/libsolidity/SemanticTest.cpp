@@ -143,6 +143,15 @@ void SemanticTest::preprocessExpectation(FunctionCallExpectations &_expectations
       param.abiType = ABIType{
         ABIType::HexString, ABIType::AlignNone, param.rawBytes.size()
       };
+    } else if (param.abiType.type == ABIType::Timestamp) {
+      size_t prev_timestamp = m_timestamp - 1;
+      std::ostringstream o;
+      o << prev_timestamp;
+      param.rawString = o.str();
+      param.rawBytes = solidity::test::ExecutionFramework::encode(bigint(prev_timestamp));
+	  param.abiType = ABIType{
+        ABIType::UnsignedDec, ABIType::AlignRight, param.rawBytes.size()
+      };
     }
   }
 }

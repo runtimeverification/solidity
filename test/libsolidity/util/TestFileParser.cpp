@@ -473,6 +473,13 @@ Parameter TestFileParser::parseParameter(bool isErrorMessage)
 			ABIType::Address, ABIType::AlignNone, parameter.rawBytes.size()
 		};
 	}
+	else if (accept(Token::Timestamp, true))
+	{
+		parameter.rawString = "timestamp";
+		parameter.abiType = ABIType{
+			ABIType::Timestamp, ABIType::AlignNone, parameter.rawBytes.size()
+		};
+	}
 	else if (accept(Token::Failure, true))
 	{
 		if (isSigned)
@@ -720,6 +727,7 @@ void TestFileParser::Scanner::scanNextToken()
 		if (_literal == "storage") return {Token::Storage, ""};
 		if (_literal == "contract_address") return {Token::ContractAddress, ""};
 		if (_literal == "sender_address") return {Token::SenderAddress, ""};
+		if (_literal == "timestamp") return {Token::Timestamp, ""};
 		return {Token::Identifier, _literal};
 	};
 
