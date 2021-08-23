@@ -63,6 +63,7 @@ namespace solidity::frontend::test
 	K(Storage, "storage", 0) \
 	K(ContractAddress, "contract_address", 0) \
 	K(SenderAddress, "sender_address", 0)     \
+	K(Timestamp, "timestamp", 0)              \
 
 namespace soltest
 {
@@ -108,7 +109,8 @@ struct ABIType
 		Hex,
 		HexString,
 		String,
-		Address
+		Address,
+		Timestamp
 	};
 	enum Align
 	{
