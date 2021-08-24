@@ -109,6 +109,7 @@ public:
 	static RPCSession& instance(std::string const& _path);
 
 	std::string eth_getCode(std::string const& _address, std::string const& _blockNumber);
+	std::string eth_getBlockhash(std::string const& _offset);
 	std::string eth_getTimestamp(std::string const& _blockNumber);
 	TransactionReceipt eth_getTransactionReceipt(std::string const& _transactionHash);
 	std::string iele_sendTransaction(TransactionData const& _td);

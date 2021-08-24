@@ -160,9 +160,8 @@ u256 ExecutionFramework::gasPrice() const
 
 u256 ExecutionFramework::blockHash(u256 const& _number) const
 {
-	return u256{EVMHost::convertFromEVMC(
-		m_evmcHost->get_block_hash(static_cast<int64_t>(_number & numeric_limits<uint64_t>::max()))
-	)};
+	auto blockhash = m_rpc.eth_getBlockhash(std::to_string(static_cast<int32_t>(_number & numeric_limits<int32_t>::max())));
+	return size_t(u256(blockhash));
 }
 
 u256 ExecutionFramework::blockNumber() const

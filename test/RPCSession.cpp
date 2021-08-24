@@ -152,6 +152,11 @@ string RPCSession::eth_getCode(string const& _address, string const& _blockNumbe
 	return rpcCall("eth_getCode", { quote(_address), quote(_blockNumber) }).asString();
 }
 
+string RPCSession::eth_getBlockhash(string const& _offset)
+{
+	return rpcCall("eth_getBlockhash", { quote(_offset) }).asString();
+}
+
 string RPCSession::eth_getTimestamp(string const& _blockNumber)
 {
 	// NOTE: to_string() converts bool to 0 or 1
