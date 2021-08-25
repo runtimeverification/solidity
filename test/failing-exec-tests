@@ -555,7 +555,6 @@
 -t !smtCheckerTests/types/unused_mapping
 -t !smtCheckerTests/verification_target/simple_assert
 -t !SolidityEndToEndTest/blockhash
--t !SolidityEndToEndTest/contract_name
 -t !syntaxTests/bound/bound_call
 -t !syntaxTests/nameAndTypeResolution/253_using_for_function_exists
 -t !syntaxTests/nameAndTypeResolution/254_using_for_function_on_int

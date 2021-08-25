@@ -5592,6 +5592,13 @@ BOOST_AUTO_TEST_CASE(contract_name)
 		}
 	)";
 
+	string longName = "ThisIsAVeryLongContractNameExceeding256bits";
+	compileAndRun(sourceCode, 0, longName);
+	vector<bytes> argsLong = encodeArgs(encodeDyn(string(longName)));
+	ABI_CHECK(callContractFunction("name()"), argsLong);
+	ABI_CHECK(callContractFunction("nameAccessor()"), argsLong);
+	ABI_CHECK(callContractFunction("constantNameAccessor()"), argsLong);
+
 	compileAndRun(sourceCode, 0, "C");
 	vector<bytes> argsC = encodeArgs(encodeDyn(string("C")));
 	ABI_CHECK(callContractFunction("name()"), argsC);
@@ -5602,13 +5609,6 @@ BOOST_AUTO_TEST_CASE(contract_name)
 	vector<bytes> argsD = encodeArgs(encodeDyn(string("D")));
 	ABI_CHECK(callContractFunction("name()"), argsD);
 	ABI_CHECK(callContractFunction("name2()"), argsC);
-
-	string longName = "ThisIsAVeryLongContractNameExceeding256bits";
-	compileAndRun(sourceCode, 0, longName);
-	vector<bytes> argsLong = encodeArgs(encodeDyn(string(longName)));
-	ABI_CHECK(callContractFunction("name()"), argsLong);
-	ABI_CHECK(callContractFunction("nameAccessor()"), argsLong);
-	ABI_CHECK(callContractFunction("constantNameAccessor()"), argsLong);
 }
 
 BOOST_AUTO_TEST_CASE(event_wrong_abi_name)
