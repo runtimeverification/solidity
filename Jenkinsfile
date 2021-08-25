@@ -69,6 +69,7 @@ pipeline {
                                --log_format=XML  \
                                `cat test/failing-exec-tests` \
                                `cat test/out-of-scope-exec-tests` \
+                               `cat test/unimplemented-features-tests` \
                                -- \
                                --enforce-no-yul-ewasm \
                                --ipcpath build/ipcfile \

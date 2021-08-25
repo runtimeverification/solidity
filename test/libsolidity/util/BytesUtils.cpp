@@ -385,6 +385,12 @@ string BytesUtils::formatBytes(
 	case ABIType::Hex:
 		os << formatHex(_bytes, _abiType.alignDeclared);
 		break;
+	case ABIType::Address:
+		os << "address";
+		break;
+	case ABIType::Timestamp:
+		os << "timestamp";
+		break;
 	case ABIType::HexString:
 		os << formatHexString(_bytes);
 		break;

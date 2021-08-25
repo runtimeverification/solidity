@@ -76,6 +76,7 @@ public:
 	void reset();
 
 	FunctionCall const& call() const { return m_call; }
+	FunctionCall& call() { return m_call; }
 	void calledNonExistingFunction() { m_calledNonExistingFunction = true; }
 	void setFailure(const bool _failure) { m_failure = _failure; }
 	void setRawBytes(const std::vector<bytes> _rawBytes) { m_rawBytes = _rawBytes; }

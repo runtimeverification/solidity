@@ -127,6 +127,35 @@ TestCase::TestResult SemanticTest::run(ostream& _stream, string const& _linePref
 	return result;
 }
 
+void SemanticTest::preprocessExpectation(FunctionCallExpectations &_expectations) {
+  for (Parameter &param : _expectations.result) {
+    if (param.abiType.type == ABIType::Address) {
+      h160 paramAddress;
+      if (param.rawString == "contract_address") {
+        paramAddress = m_contractAddress;
+      } else if (param.rawString == "sender_address") {
+        paramAddress = m_sender;
+      } else {
+        soltestAssert(false, "Unknown address token.");
+      }
+      param.rawString = "hex\"" + paramAddress.hex() + "\"";
+      param.rawBytes = encode(u160(paramAddress));
+      param.abiType = ABIType{
+        ABIType::HexString, ABIType::AlignNone, param.rawBytes.size()
+      };
+    } else if (param.abiType.type == ABIType::Timestamp) {
+      size_t prev_timestamp = m_timestamp - 1;
+      std::ostringstream o;
+      o << prev_timestamp;
+      param.rawString = o.str();
+      param.rawBytes = solidity::test::ExecutionFramework::encode(bigint(prev_timestamp));
+	  param.abiType = ABIType{
+        ABIType::UnsignedDec, ABIType::AlignRight, param.rawBytes.size()
+      };
+    }
+  }
+}
+
 TestCase::TestResult SemanticTest::runTest(ostream& _stream, string const& _linePrefix, bool _formatted, bool _compileViaYul, bool _compileToEwasm)
 {
 	try
@@ -228,6 +257,8 @@ TestCase::TestResult SemanticTest::runTest(ostream& _stream, string const& _line
 						test.call().arguments.rawBytes()
 					);
 				}
+
+				preprocessExpectation(test.call().expectations);
 
 				bool outputMismatch;
 				if (m_transactionSuccessful)

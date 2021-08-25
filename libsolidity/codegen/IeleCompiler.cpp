@@ -344,7 +344,7 @@ void IeleCompiler::compileContract(
       iele::IeleFunction::Create(&Context, function->isPublic(),
                                  FunctionName, CompilingContract);
       // here we don't call isPublic because we want to exclude external functions
-      if (hasTwoFunctions(FunctionType(*function), false, false)) {
+      if (hasTwoFunctions(FunctionType(*function), false, base->isLibrary())) {
         iele::IeleFunction::Create(&Context, false, FunctionName + ".internal", CompilingContract);
       }
     }
@@ -3802,6 +3802,9 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
   case FunctionType::Kind::DelegateCall:
   case FunctionType::Kind::Internal: {
     bool isDelegateCall = function.kind() == FunctionType::Kind::DelegateCall;
+    if (isDelegateCall && CompilingTryCatch)
+      solUnimplemented("We cannot support library calls within the try block.");
+
     // Visit arguments.
     llvm::SmallVector<iele::IeleValue *, 4> Arguments;
     llvm::SmallVector<iele::IeleLocalVariable *, 4> ReturnRegisters;
@@ -5070,6 +5073,8 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleInstruction::Beneficiary, BeneficiaryValue, EmptyArguments,
         CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create(BeneficiaryValue));
+    } else if (member == "chainid") {
+      solUnimplemented("Not yet implemented - chainid.");
     } else if (member == "min" || member == "max") {
       const MagicType *arg =
         dynamic_cast<const MagicType *>(actualType);
@@ -5112,6 +5117,10 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
                              TypeProvider::uint(32),
                              memberAccess.annotation().type);
       CompilingExpressionResult.push_back(ConvertedValue);
+    } else if (member == "creationCode") {
+      solUnimplemented("Not yet implemented - creationCode.");
+    } else if (member == "runtimeCode") {
+      solUnimplemented("Not yet implemented - runtimeCode.");
     } else if (member == "data")
       solAssert(false, "IeleCompiler: member not supported in IELE");
     else if (member == "sig")
@@ -5168,8 +5177,12 @@ bool IeleCompiler::visit(const MemberAccess &memberAccess) {
         iele::IeleInstruction::Extcodesize, CodeSizeValue, Arguments,
         CompilingBlock);
       CompilingExpressionResult.push_back(IeleRValue::Create(CodeSizeValue));
+    } else if (member == "code") {
+      solUnimplemented("Not yet implemented - code.");
+    } else if (member == "codehash") {
+      solUnimplemented("Not yet implemented - codehash.");
     } else
-      solAssert(false, "IeleCompiler: invalid member for integer value");
+      solAssert(false, "IeleCompiler: invalid member for address value");
     break;
   }
   case Type::Category::Function:
