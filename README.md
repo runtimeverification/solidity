@@ -14,20 +14,25 @@ Solidity is a statically typed, contract-oriented, high-level language for imple
 
 ### Dependencies
 
-To easily install the required dependencies on your system, run 
+For MacOS:
 
 ```
-sudo ./scripts/install_deps.sh
+brew update
+brew install boost
+brew install cmake
+brew install llvm@11
+brew install libxml2
+brew upgrade
 ```
 
-We have successfully tested the script on the following operating systems:
+For Ubuntu-based systems:
 
-* Darwin
-* Ubuntu
-* Arch Linux
-* Debian 
-* Fedora
-* Alpine Linux
+```
+sudo apt-get -y update
+sudo apt-get -y install build-essential cmake g++ gcc git libboost-all-dev unzip llvm-11.0 zlib1g-dev libz3-dev libxml2-utils
+```
+
+Please note that we have tested the compiler for the Ubuntu 20.04 and MacOS BigSur operation system.
 
 ### Build the compiler
 
@@ -46,17 +51,6 @@ Use the compiler like this:
 ./build/solc/isolc --asm <solidity file>
 ```
 
-To run the compilation tests:
-```
-./test/ieleCmdlineTests.sh
-```
-
-Failed tests reported are stored in `test/failed`, clean them before rerunning:
-
-```
-rm -rf test/failed
-```
-
 To run the execution test suite, first start an IELE vm in separate terminal (this assumes that IELE binaries are found in the system's PATH):
 ```
 kiele vm --port 9001
@@ -70,7 +64,27 @@ Note that, you may need to delete an existing `ipcfile` before you restart this 
 
 Finally, you can run the whole execution test suite with:
 ```
-./build/test/soltest --no_result_code --report_level=short `cat test/failing-exec-tests` -- --enforce-no-yul-ewasm --ipcpath build/ipcfile --testpath test
+./build/test/soltest --no_result_code \
+                     --report_sink=build/report.xml \
+                     --report_level=detailed \
+                     --report_format=XML \
+                     --log_sink=build/log.xml \
+                     --log_level=all \
+                     --log_format=XML  \
+                     `cat test/failing-exec-tests` \
+                     `cat test/out-of-scope-exec-tests` \
+                     `cat test/unimplemented-features-tests` \
+                     -- \
+                     --enforce-no-yul-ewasm \
+                     --ipcpath build/ipcfile \
+                     --testpath test
+xmllint --xpath "//TestCase[@assertions_failed!=@expected_failures]" build/report.xml && false
+```
+
+The output of the last command should look like this for a successful run of the test suite:
+
+```
+XPath set is empty
 ```
 
 Alternatively, you can run a specific test with:
