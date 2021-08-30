@@ -880,7 +880,7 @@ BOOST_AUTO_TEST_CASE(send_ether)
 
 		u256 amount(250);
 		compileAndRun(sourceCode, amount + 1);
-		h160 address(23);
+		h160 address(32);
 		ABI_CHECK(callContractFunction("a(address,uint)", address, amount), encodeArgs(1));
 		BOOST_CHECK_EQUAL(balanceAt(address), amount);
 	)
@@ -917,7 +917,7 @@ BOOST_AUTO_TEST_CASE(transfer_ether)
 		compileAndRun(sourceCode, 0, "C");
 		h160 const oogRecipient = m_contractAddress;
 		compileAndRun(sourceCode, 20, "A");
-		h160 payableRecipient(23);
+		h160 payableRecipient(32);
 		ABI_CHECK(callContractFunction("a(address,uint)", payableRecipient, 10), encodeArgs(10));
 		BOOST_CHECK_EQUAL(balanceAt(payableRecipient), 10);
 		BOOST_CHECK_EQUAL(balanceAt(m_contractAddress), 10);
@@ -938,7 +938,7 @@ BOOST_AUTO_TEST_CASE(selfdestruct)
 		}
 	)";
 	u256 amount(130);
-	h160 address(23);
+	h160 address(32);
 	ALSO_VIA_YUL(
 		DISABLE_EWASM_TESTRUN()
 

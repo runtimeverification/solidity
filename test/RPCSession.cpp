@@ -248,7 +248,7 @@ vector<string> RPCSession::iele_call(TransactionData const& _td)
 string RPCSession::eth_getBalance(string const& _address, string const& _blockNumber)
 {
 	string address = (_address.length() == 20) ? "0x" + _address : _address;
-	return rpcCall("eth_getBalance", { quote(address), quote(_blockNumber) }).asString();
+	return rpcCall("eth_getBalance", { quote(bech32Encode(address)), quote(_blockNumber) }).asString();
 }
 
 h256 const EmptyTrie("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");

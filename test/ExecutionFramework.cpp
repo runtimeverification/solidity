@@ -287,7 +287,7 @@ h160 ExecutionFramework::account(size_t _i)
 
 bool ExecutionFramework::addressHasCode(h160 const& _addr)
 {
-    string code = m_rpc.eth_getCode(toString(_addr), "latest");
+    string code = m_rpc.eth_getCode("0x" + toString(_addr), "latest");
     return !code.empty() && code != "0x";
 }
 
@@ -321,7 +321,7 @@ bytes ExecutionFramework::logData(size_t _logIdx) const
 
 u256 ExecutionFramework::balanceAt(h160 const& _addr)
 {
-	return u256(m_rpc.eth_getBalance(toString(_addr), "latest"));
+	return u256(m_rpc.eth_getBalance("0x" + toString(_addr), "latest"));
 }
 
 bool ExecutionFramework::storageEmpty(h160 const& _addr)
