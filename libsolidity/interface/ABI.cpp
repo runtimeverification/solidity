@@ -59,6 +59,7 @@ Json::Value ABI::generate(ContractDefinition const& _contractDef)
 		Json::Value method;
 		method["type"] = "function";
 		method["name"] = it.second->declaration().name();
+		method["ieleName"] = externalFunctionType->externalSignature();
 		method["stateMutability"] = stateMutabilityToString(externalFunctionType->stateMutability());
 		method["inputs"] = formatTypeList(
 			externalFunctionType->parameterNames(),
