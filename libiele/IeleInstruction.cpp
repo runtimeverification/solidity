@@ -10,9 +10,11 @@
 
 using namespace solidity;
 using namespace solidity::iele;
+using namespace solidity::langutil;
 
-IeleInstruction::IeleInstruction(IeleOps opc, IeleInstruction *InsertBefore) :
-  InstID(opc), Parent(nullptr) {
+IeleInstruction::IeleInstruction(IeleOps opc, const SourceLocation &Loc,
+                                 IeleInstruction *InsertBefore) :
+  InstID(opc), Parent(nullptr), Location(Loc) {
   // If requested, insert this instruction into a IeleBlock.
   if (InsertBefore) {
     IeleBlock *B = InsertBefore->getParent();
@@ -21,8 +23,9 @@ IeleInstruction::IeleInstruction(IeleOps opc, IeleInstruction *InsertBefore) :
   }
 }
 
-IeleInstruction::IeleInstruction(IeleOps opc, IeleBlock *InsertAtEnd) :
-  InstID(opc), Parent(nullptr) {
+IeleInstruction::IeleInstruction(IeleOps opc, const SourceLocation &Loc,
+                                 IeleBlock *InsertAtEnd) :
+  InstID(opc), Parent(nullptr), Location(Loc) {
   // Append this instruction into the given IeleBlock.
   solAssert(InsertAtEnd, "Block to append to may not be NULL!");
   InsertAtEnd->getIeleInstructionList().push_back(this);
@@ -65,20 +68,20 @@ const IeleValueSymbolTable *IeleInstruction::getIeleValueSymbolTable() const {
 
 IeleInstruction::~IeleInstruction() { }
 
-IeleInstruction *IeleInstruction::CreateRetVoid(IeleInstruction *InsertBefore) {
-  return new IeleInstruction(Ret, InsertBefore);
+IeleInstruction *IeleInstruction::CreateRetVoid(const SourceLocation &Loc, IeleInstruction *InsertBefore) {
+  return new IeleInstruction(Ret, Loc, InsertBefore);
 }
 
-IeleInstruction *IeleInstruction::CreateRetVoid(IeleBlock *InsertAtEnd) {
-  return new IeleInstruction(Ret, InsertAtEnd);
+IeleInstruction *IeleInstruction::CreateRetVoid(const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
+  return new IeleInstruction(Ret, Loc, InsertAtEnd);
 }
 
 IeleInstruction *IeleInstruction::CreateLog(
     llvm::SmallVectorImpl<IeleValue *> &IndexedArguments,
     IeleValue * NonIndexedArguments,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
 
-  IeleInstruction *LogInst = new IeleInstruction(Log, InsertBefore);
+  IeleInstruction *LogInst = new IeleInstruction(Log, Loc, InsertBefore);
   
   LogInst->getIeleOperandList().insert(LogInst->end(), NonIndexedArguments);
   LogInst->getIeleOperandList().insert(LogInst->end(), 
@@ -90,9 +93,9 @@ IeleInstruction *IeleInstruction::CreateLog(
 IeleInstruction *IeleInstruction::CreateLog(
     llvm::SmallVectorImpl<IeleValue *> &IndexedArguments,
     IeleValue * NonIndexedArguments,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
 
-  IeleInstruction *LogInst = new IeleInstruction(Log, InsertAtEnd);
+  IeleInstruction *LogInst = new IeleInstruction(Log, Loc, InsertAtEnd);
   
   LogInst->getIeleOperandList().insert(LogInst->end(), NonIndexedArguments);
   LogInst->getIeleOperandList().insert(LogInst->end(), 
@@ -103,12 +106,12 @@ IeleInstruction *IeleInstruction::CreateLog(
 
 IeleInstruction *IeleInstruction::CreateRet(
     llvm::SmallVectorImpl<IeleValue *> &ReturnValues,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   if (ReturnValues.size() == 0) {
-    return CreateRetVoid(InsertBefore);
+    return CreateRetVoid(Loc, InsertBefore);
   }
 
-  IeleInstruction *RetInst = new IeleInstruction(Ret, InsertBefore);
+  IeleInstruction *RetInst = new IeleInstruction(Ret, Loc, InsertBefore);
   RetInst->getIeleOperandList().insert(RetInst->end(), ReturnValues.begin(), 
                                        ReturnValues.end());
 
@@ -116,12 +119,12 @@ IeleInstruction *IeleInstruction::CreateRet(
 }
 
 IeleInstruction *IeleInstruction::CreateRet(
-    llvm::SmallVectorImpl<IeleValue *> &ReturnValues, IeleBlock *InsertAtEnd) {
+    llvm::SmallVectorImpl<IeleValue *> &ReturnValues, const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   if (ReturnValues.size() == 0) {
-    return CreateRetVoid(InsertAtEnd);
+    return CreateRetVoid(Loc, InsertAtEnd);
   }
 
-  IeleInstruction *RetInst = new IeleInstruction(Ret, InsertAtEnd);
+  IeleInstruction *RetInst = new IeleInstruction(Ret, Loc, InsertAtEnd);
   RetInst->getIeleOperandList().insert(RetInst->end(), ReturnValues.begin(),
                                        ReturnValues.end());
 
@@ -129,20 +132,20 @@ IeleInstruction *IeleInstruction::CreateRet(
 }
 
 IeleInstruction *IeleInstruction::CreateRevert(
-    IeleValue * StatusValue, IeleInstruction *InsertBefore) {
+    IeleValue * StatusValue, const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(StatusValue, "CreateRevert: Invalid operands");
 
-  IeleInstruction *RevertInst = new IeleInstruction(Revert, InsertBefore);
+  IeleInstruction *RevertInst = new IeleInstruction(Revert, Loc, InsertBefore);
   RevertInst->getIeleOperandList().push_back(StatusValue);
 
   return RevertInst;
 }
 
 IeleInstruction *IeleInstruction::CreateRevert(
-    IeleValue *StatusValue, IeleBlock *InsertAtEnd) {
+    IeleValue *StatusValue, const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(StatusValue, "CreateRevert: Invalid operands");
 
-  IeleInstruction *RevertInst = new IeleInstruction(Revert, InsertAtEnd);
+  IeleInstruction *RevertInst = new IeleInstruction(Revert, Loc, InsertAtEnd);
   RevertInst->getIeleOperandList().push_back(StatusValue);
 
   return RevertInst;
@@ -150,11 +153,11 @@ IeleInstruction *IeleInstruction::CreateRevert(
 
 IeleInstruction *IeleInstruction::CreateIsZero(
     IeleLocalVariable *Result, IeleValue *ConditionValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Result, "CreateIsZero: Invalid lvalues");
   solAssert(ConditionValue, "CreateIsZero: Invalid operands");
 
-  IeleInstruction *IsZeroInst = new IeleInstruction(IsZero, InsertBefore);
+  IeleInstruction *IsZeroInst = new IeleInstruction(IsZero, Loc, InsertBefore);
   IsZeroInst->getIeleLValueList().push_back(Result);
   IsZeroInst->getIeleOperandList().push_back(ConditionValue);
 
@@ -163,11 +166,11 @@ IeleInstruction *IeleInstruction::CreateIsZero(
 
 IeleInstruction *IeleInstruction::CreateIsZero(
     IeleLocalVariable *Result, IeleValue *ConditionValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateIsZero: Invalid lvalues");
   solAssert(ConditionValue, "CreateIsZero: Invalid operands");
 
-  IeleInstruction *IsZeroInst = new IeleInstruction(IsZero, InsertAtEnd);
+  IeleInstruction *IsZeroInst = new IeleInstruction(IsZero, Loc, InsertAtEnd);
   IsZeroInst->getIeleLValueList().push_back(Result);
   IsZeroInst->getIeleOperandList().push_back(ConditionValue);
 
@@ -177,50 +180,50 @@ IeleInstruction *IeleInstruction::CreateIsZero(
 // NB: this is not currently used, but it has been added here for
 // consistency. Remove...?
 IeleInstruction *IeleInstruction::CreateSelfdestruct(
-    IeleValue *Target, IeleInstruction *InsertBefore) {
+    IeleValue *Target, const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Target, "Selfdestruct: Invalid target");
 
-  IeleInstruction *SelfdestructInst = new IeleInstruction(Selfdestruct, InsertBefore);
+  IeleInstruction *SelfdestructInst = new IeleInstruction(Selfdestruct, Loc, InsertBefore);
   SelfdestructInst->getIeleOperandList().push_back(Target);
 
   return SelfdestructInst;
 }
 
 IeleInstruction *IeleInstruction::CreateSelfdestruct(
-    IeleValue *Target, IeleBlock *InsertAtEnd) {
+    IeleValue *Target, const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Target, "Selfdestruct: Invalid target");
 
-  IeleInstruction *SelfdestructInst = new IeleInstruction(Selfdestruct, InsertAtEnd);
+  IeleInstruction *SelfdestructInst = new IeleInstruction(Selfdestruct, Loc, InsertAtEnd);
   SelfdestructInst->getIeleOperandList().push_back(Target);
 
   return SelfdestructInst;
 }
 
 IeleInstruction *IeleInstruction::CreateUncondBr(
-    IeleBlock *Target, IeleInstruction *InsertBefore) {
+    IeleBlock *Target, const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Target, "CreateUncondBr: Invalid operands");
 
-  IeleInstruction *UncondBrInst = new IeleInstruction(Br, InsertBefore);
+  IeleInstruction *UncondBrInst = new IeleInstruction(Br, Loc, InsertBefore);
   UncondBrInst->getIeleOperandList().push_back(Target);
 
   return UncondBrInst;
 }
 
 IeleInstruction *IeleInstruction::CreateUncondBr(
-    IeleBlock *Target, IeleBlock *InsertAtEnd) {
+    IeleBlock *Target, const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Target, "CreateUncondBr: Invalid operands");
 
-  IeleInstruction *UncondBrInst = new IeleInstruction(Br, InsertAtEnd);
+  IeleInstruction *UncondBrInst = new IeleInstruction(Br, Loc, InsertAtEnd);
   UncondBrInst->getIeleOperandList().push_back(Target);
 
   return UncondBrInst;
 }
 
 IeleInstruction *IeleInstruction::CreateCondBr(
-    IeleValue *Condition, IeleBlock *Target, IeleInstruction *InsertBefore) {
+    IeleValue *Condition, IeleBlock *Target, const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Condition && Target, "CreateCondBr: Invalid operands");
 
-  IeleInstruction *CondBrInst = new IeleInstruction(Br, InsertBefore);
+  IeleInstruction *CondBrInst = new IeleInstruction(Br, Loc, InsertBefore);
   CondBrInst->getIeleOperandList().push_back(Condition);
   CondBrInst->getIeleOperandList().push_back(Target);
 
@@ -228,10 +231,10 @@ IeleInstruction *IeleInstruction::CreateCondBr(
 }
 
 IeleInstruction *IeleInstruction::CreateCondBr(
-    IeleValue *Condition, IeleBlock *Target, IeleBlock *InsertAtEnd) {
+    IeleValue *Condition, IeleBlock *Target, const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Condition && Target, "CreateCondBr: Invalid operands");
 
-  IeleInstruction *CondBrInst = new IeleInstruction(Br, InsertAtEnd);
+  IeleInstruction *CondBrInst = new IeleInstruction(Br, Loc, InsertAtEnd);
   CondBrInst->getIeleOperandList().push_back(Condition);
   CondBrInst->getIeleOperandList().push_back(Target);
 
@@ -246,14 +249,14 @@ IeleInstruction *IeleInstruction::CreateCreate(
     IeleValue *AddressValue,
     IeleValue *TransferValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(StatusValue && ReturnValue && TransferValue,
             "CreateCreate: Invalid operands");
   solAssert(!Contract == Copy,
             "CreateCreate: Invalid operands");
   solAssert(!!AddressValue == Copy,
             "CreateCreate: Invalid Operands");
-  IeleInstruction *CreateInst = new IeleInstruction(Copy ? CopyCreate : Create, InsertBefore);
+  IeleInstruction *CreateInst = new IeleInstruction(Copy ? CopyCreate : Create, Loc, InsertBefore);
   CreateInst->getIeleLValueList().push_back(StatusValue);
   CreateInst->getIeleLValueList().push_back(ReturnValue);
   if (Copy) {
@@ -278,14 +281,14 @@ IeleInstruction *IeleInstruction::CreateCreate(
     IeleValue *AddressValue,
     IeleValue *TransferValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(StatusValue && ReturnValue && TransferValue,
             "CreateCreate: Invalid operands");
   solAssert(!Contract == Copy,
             "CreateCreate: Invalid operands");
   solAssert(!!AddressValue == Copy,
             "CreateCreate: Invalid Operands");
-  IeleInstruction *CreateInst = new IeleInstruction(Copy ? CopyCreate : Create, InsertAtEnd);
+  IeleInstruction *CreateInst = new IeleInstruction(Copy ? CopyCreate : Create, Loc, InsertAtEnd);
   CreateInst->getIeleLValueList().push_back(StatusValue);
   CreateInst->getIeleLValueList().push_back(ReturnValue);
   if (Copy) {
@@ -309,12 +312,12 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
     IeleValue *Callee, IeleValue *AddressValue,
     IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Callee && StatusValue && AddressValue && GasValue,
             "CreateAccountCall: Invalid operands");
   solAssert(!TransferValue == StaticCall,
             "CreateAccountCall: Invalid operands");
-  IeleInstruction *AccountCallInst = new IeleInstruction(StaticCall ? StaticCallAt : CallAt, InsertBefore);
+  IeleInstruction *AccountCallInst = new IeleInstruction(StaticCall ? StaticCallAt : CallAt, Loc, InsertBefore);
   AccountCallInst->getIeleLValueList().push_back(StatusValue);
   AccountCallInst->getIeleLValueList().insert(AccountCallInst->lvalue_end(),
                                               LValues.begin(), LValues.end());
@@ -338,13 +341,13 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
     IeleValue *Callee, IeleValue *AddressValue,
     IeleValue *TransferValue, IeleValue *GasValue,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Callee && StatusValue && AddressValue && GasValue,
             "CreateAccountCall: Invalid operands");
   solAssert(!TransferValue == StaticCall,
             "CreateAccountCall: Invalid operands");
 
-  IeleInstruction *AccountCallInst = new IeleInstruction(StaticCall ? StaticCallAt : CallAt, InsertAtEnd);
+  IeleInstruction *AccountCallInst = new IeleInstruction(StaticCall ? StaticCallAt : CallAt, Loc, InsertAtEnd);
   AccountCallInst->getIeleLValueList().push_back(StatusValue);
   AccountCallInst->getIeleLValueList().insert(AccountCallInst->lvalue_end(),
                                               LValues.begin(), LValues.end());
@@ -364,10 +367,10 @@ IeleInstruction *IeleInstruction::CreateAccountCall(
 IeleInstruction *IeleInstruction::CreateCallAddress(
     IeleLocalVariable *ReturnValue,
     IeleGlobalValue *Callee, IeleValue *AddressValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(ReturnValue && Callee && AddressValue,
             "CreateCallAddress: Invalid operands");
-  IeleInstruction *CallAddressInst = new IeleInstruction(CallAddress, InsertBefore);
+  IeleInstruction *CallAddressInst = new IeleInstruction(CallAddress, Loc, InsertBefore);
   CallAddressInst->getIeleLValueList().push_back(ReturnValue);
   CallAddressInst->getIeleOperandList().push_back(Callee);
   CallAddressInst->getIeleOperandList().push_back(AddressValue);
@@ -377,10 +380,10 @@ IeleInstruction *IeleInstruction::CreateCallAddress(
 IeleInstruction *IeleInstruction::CreateCallAddress(
     IeleLocalVariable *ReturnValue,
     IeleGlobalValue *Callee, IeleValue *AddressValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(ReturnValue && Callee && AddressValue,
             "CreateCallAddress: Invalid operands");
-  IeleInstruction *CallAddressInst = new IeleInstruction(CallAddress, InsertAtEnd);
+  IeleInstruction *CallAddressInst = new IeleInstruction(CallAddress, Loc, InsertAtEnd);
   CallAddressInst->getIeleLValueList().push_back(ReturnValue);
   CallAddressInst->getIeleOperandList().push_back(Callee);
   CallAddressInst->getIeleOperandList().push_back(AddressValue);
@@ -390,12 +393,12 @@ IeleInstruction *IeleInstruction::CreateCallAddress(
 IeleInstruction *IeleInstruction::CreateIntrinsicCall(
     IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(IntrinsicOpcode >= IeleIntrinsicsBegin &&
             IntrinsicOpcode < IeleIntrinsicsEnd,
             "CreateIntrinsicCall: Invalid opcode");
   IeleInstruction *IntrinsicCallInst =
-    new IeleInstruction(IntrinsicOpcode, InsertBefore);
+    new IeleInstruction(IntrinsicOpcode, Loc, InsertBefore);
   if (Result)
     IntrinsicCallInst->getIeleLValueList().push_back(Result);
   IntrinsicCallInst->getIeleOperandList().insert(IntrinsicCallInst->end(),
@@ -408,9 +411,9 @@ IeleInstruction *IeleInstruction::CreateIntrinsicCall(
 IeleInstruction *IeleInstruction::CreateIntrinsicCall(
     IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   IeleInstruction *IntrinsicCallInst =
-    new IeleInstruction(IntrinsicOpcode, InsertAtEnd);
+    new IeleInstruction(IntrinsicOpcode, Loc, InsertAtEnd);
   if (Result)
     IntrinsicCallInst->getIeleLValueList().push_back(Result);
   IntrinsicCallInst->getIeleOperandList().insert(IntrinsicCallInst->end(),
@@ -424,10 +427,10 @@ IeleInstruction *IeleInstruction::CreateInternalCall(
     llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
     IeleValue *Callee,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Callee, "CreateInternalCall: Invalid operands");
 
-  IeleInstruction *InternalCallInst = new IeleInstruction(Call, InsertBefore);
+  IeleInstruction *InternalCallInst = new IeleInstruction(Call, Loc, InsertBefore);
   InternalCallInst->getIeleLValueList().insert(InternalCallInst->lvalue_end(),
                                                LValues.begin(), LValues.end());
   InternalCallInst->getIeleOperandList().push_back(Callee);
@@ -442,10 +445,10 @@ IeleInstruction *IeleInstruction::CreateInternalCall(
     llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
     IeleValue *Callee,
     llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Callee, "CreateInternalCall: Invalid operands");
 
-  IeleInstruction *InternalCallInst = new IeleInstruction(Call, InsertAtEnd);
+  IeleInstruction *InternalCallInst = new IeleInstruction(Call, Loc, InsertAtEnd);
   InternalCallInst->getIeleLValueList().insert(InternalCallInst->lvalue_end(),
                                                LValues.begin(), LValues.end());
   InternalCallInst->getIeleOperandList().push_back(Callee);
@@ -458,11 +461,11 @@ IeleInstruction *IeleInstruction::CreateInternalCall(
 
 IeleInstruction *IeleInstruction::CreateAssign(
     IeleLocalVariable *Result, IeleValue *RHSValue,
-    IeleInstruction *InsertBefore ) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore ) {
   solAssert(Result, "CreateAssign: Invalid lvalues");
   solAssert(RHSValue, "CreateAssign: Invalid operands");
 
-  IeleInstruction *AssignInst = new IeleInstruction(Assign, InsertBefore);
+  IeleInstruction *AssignInst = new IeleInstruction(Assign, Loc, InsertBefore);
   AssignInst->getIeleLValueList().push_back(Result);
   AssignInst->getIeleOperandList().push_back(RHSValue);
 
@@ -471,11 +474,11 @@ IeleInstruction *IeleInstruction::CreateAssign(
 
 IeleInstruction *IeleInstruction::CreateAssign(
     IeleLocalVariable *Result, IeleValue *RHSValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateAssign: Invalid lvalues");
   solAssert(RHSValue, "CreateAssign: Invalid operands");
 
-  IeleInstruction *AssignInst = new IeleInstruction(Assign, InsertAtEnd);
+  IeleInstruction *AssignInst = new IeleInstruction(Assign, Loc, InsertAtEnd);
   AssignInst->getIeleLValueList().push_back(Result);
   AssignInst->getIeleOperandList().push_back(RHSValue);
 
@@ -484,11 +487,11 @@ IeleInstruction *IeleInstruction::CreateAssign(
 
 IeleInstruction *IeleInstruction::CreateSLoad(
     IeleLocalVariable *Result, IeleValue *AddressValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Result, "CreateSLoad: Invalid lvalues");
   solAssert(AddressValue, "CreateSLoad: Invalid operands");
 
-  IeleInstruction *SLoadInst = new IeleInstruction(SLoad, InsertBefore);
+  IeleInstruction *SLoadInst = new IeleInstruction(SLoad, Loc, InsertBefore);
   SLoadInst->getIeleLValueList().push_back(Result);
   SLoadInst->getIeleOperandList().push_back(AddressValue);
 
@@ -497,11 +500,11 @@ IeleInstruction *IeleInstruction::CreateSLoad(
 
 IeleInstruction *IeleInstruction::CreateSLoad(
     IeleLocalVariable *Result, IeleValue *AddressValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateSLoad: Invalid lvalues");
   solAssert(AddressValue, "CreateSLoad: Invalid operands");
 
-  IeleInstruction *SLoadInst = new IeleInstruction(SLoad, InsertAtEnd);
+  IeleInstruction *SLoadInst = new IeleInstruction(SLoad, Loc, InsertAtEnd);
   SLoadInst->getIeleLValueList().push_back(Result);
   SLoadInst->getIeleOperandList().push_back(AddressValue);
 
@@ -510,10 +513,10 @@ IeleInstruction *IeleInstruction::CreateSLoad(
 
 IeleInstruction *IeleInstruction::CreateSStore(
     IeleValue *DataValue, IeleValue *AddressValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(DataValue && AddressValue, "CreateSStore: Invalid operands");
 
-  IeleInstruction *SStoreInst = new IeleInstruction(SStore, InsertBefore);
+  IeleInstruction *SStoreInst = new IeleInstruction(SStore, Loc, InsertBefore);
   SStoreInst->getIeleOperandList().push_back(DataValue);
   SStoreInst->getIeleOperandList().push_back(AddressValue);
 
@@ -521,10 +524,10 @@ IeleInstruction *IeleInstruction::CreateSStore(
 }
 
 IeleInstruction *IeleInstruction::CreateSStore(
-    IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd) {
+    IeleValue *DataValue, IeleValue *AddressValue, const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(DataValue && AddressValue, "CreateSStore: Invalid operands");
 
-  IeleInstruction *SStoreInst = new IeleInstruction(SStore, InsertAtEnd);
+  IeleInstruction *SStoreInst = new IeleInstruction(SStore, Loc, InsertAtEnd);
   SStoreInst->getIeleOperandList().push_back(DataValue);
   SStoreInst->getIeleOperandList().push_back(AddressValue);
 
@@ -533,11 +536,11 @@ IeleInstruction *IeleInstruction::CreateSStore(
 
 IeleInstruction *IeleInstruction::CreateLoad(
     IeleLocalVariable *Result, IeleValue *AddressValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Result, "CreateLoad: Invalid lvalues");
   solAssert(AddressValue, "CreateLoad: Invalid operands");
 
-  IeleInstruction *LoadInst = new IeleInstruction(Load, InsertBefore);
+  IeleInstruction *LoadInst = new IeleInstruction(Load, Loc, InsertBefore);
   LoadInst->getIeleLValueList().push_back(Result);
   LoadInst->getIeleOperandList().push_back(AddressValue);
 
@@ -546,11 +549,11 @@ IeleInstruction *IeleInstruction::CreateLoad(
 
 IeleInstruction *IeleInstruction::CreateLoad(
     IeleLocalVariable *Result, IeleValue *AddressValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateLoad: Invalid lvalues");
   solAssert(AddressValue, "CreateLoad: Invalid operands");
 
-  IeleInstruction *LoadInst = new IeleInstruction(Load, InsertAtEnd);
+  IeleInstruction *LoadInst = new IeleInstruction(Load, Loc, InsertAtEnd);
   LoadInst->getIeleLValueList().push_back(Result);
   LoadInst->getIeleOperandList().push_back(AddressValue);
 
@@ -560,11 +563,11 @@ IeleInstruction *IeleInstruction::CreateLoad(
 IeleInstruction *IeleInstruction::CreateLoad(
     IeleLocalVariable *Result, IeleValue *AddressValue,
     IeleValue *OffsetValue, IeleValue *WidthValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Result, "CreateLoad: Invalid lvalues");
   solAssert(AddressValue && OffsetValue && WidthValue, "CreateLoad: Invalid operands");
 
-  IeleInstruction *LoadInst = new IeleInstruction(Load, InsertBefore);
+  IeleInstruction *LoadInst = new IeleInstruction(Load, Loc, InsertBefore);
   LoadInst->getIeleLValueList().push_back(Result);
   LoadInst->getIeleOperandList().push_back(AddressValue);
   LoadInst->getIeleOperandList().push_back(OffsetValue);
@@ -576,11 +579,11 @@ IeleInstruction *IeleInstruction::CreateLoad(
 IeleInstruction *IeleInstruction::CreateLoad(
     IeleLocalVariable *Result, IeleValue *AddressValue,
     IeleValue *OffsetValue, IeleValue *WidthValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateLoad: Invalid lvalues");
   solAssert(AddressValue && OffsetValue && WidthValue, "CreateLoad: Invalid operands");
 
-  IeleInstruction *LoadInst = new IeleInstruction(Load, InsertAtEnd);
+  IeleInstruction *LoadInst = new IeleInstruction(Load, Loc, InsertAtEnd);
   LoadInst->getIeleLValueList().push_back(Result);
   LoadInst->getIeleOperandList().push_back(AddressValue);
   LoadInst->getIeleOperandList().push_back(OffsetValue);
@@ -592,10 +595,10 @@ IeleInstruction *IeleInstruction::CreateLoad(
 
 IeleInstruction *IeleInstruction::CreateStore(
     IeleValue *DataValue, IeleValue *AddressValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
 
-  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertBefore);
+  IeleInstruction *StoreInst = new IeleInstruction(Store, Loc, InsertBefore);
   StoreInst->getIeleOperandList().push_back(DataValue);
   StoreInst->getIeleOperandList().push_back(AddressValue);
 
@@ -603,10 +606,10 @@ IeleInstruction *IeleInstruction::CreateStore(
 }
 
 IeleInstruction *IeleInstruction::CreateStore(
-    IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd) {
+    IeleValue *DataValue, IeleValue *AddressValue, const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
 
-  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertAtEnd);
+  IeleInstruction *StoreInst = new IeleInstruction(Store, Loc, InsertAtEnd);
   StoreInst->getIeleOperandList().push_back(DataValue);
   StoreInst->getIeleOperandList().push_back(AddressValue);
 
@@ -618,10 +621,10 @@ IeleInstruction *IeleInstruction::CreateStore(
 // optional args...
 IeleInstruction *IeleInstruction::CreateStore(
     IeleValue *DataValue, IeleValue *AddressValue,
-    IeleValue *OffsetValue, IeleValue *WidthValue, IeleInstruction *InsertBefore) {
+    IeleValue *OffsetValue, IeleValue *WidthValue, const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
 
-  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertBefore);
+  IeleInstruction *StoreInst = new IeleInstruction(Store, Loc, InsertBefore);
   StoreInst->getIeleOperandList().push_back(DataValue);
   StoreInst->getIeleOperandList().push_back(AddressValue);
   StoreInst->getIeleOperandList().push_back(OffsetValue);
@@ -632,10 +635,10 @@ IeleInstruction *IeleInstruction::CreateStore(
 
 IeleInstruction *IeleInstruction::CreateStore(
     IeleValue *DataValue, IeleValue *AddressValue,
-    IeleValue *OffsetValue, IeleValue *WidthValue, IeleBlock *InsertAtEnd) {
+    IeleValue *OffsetValue, IeleValue *WidthValue, const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(DataValue && AddressValue, "CreateStore: Invalid operands");
 
-  IeleInstruction *StoreInst = new IeleInstruction(Store, InsertAtEnd);
+  IeleInstruction *StoreInst = new IeleInstruction(Store, Loc, InsertAtEnd);
   StoreInst->getIeleOperandList().push_back(DataValue);
   StoreInst->getIeleOperandList().push_back(AddressValue);
   StoreInst->getIeleOperandList().push_back(OffsetValue);
@@ -646,12 +649,12 @@ IeleInstruction *IeleInstruction::CreateStore(
 
 IeleInstruction *IeleInstruction::CreateLog2(
     IeleLocalVariable *Result, IeleValue *OperandValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Result, "CreateBinOp: Invalid lvalues");
   solAssert(OperandValue,
          "CreateBinOp: Invalid operand");
 
-  IeleInstruction *Log2Inst = new IeleInstruction(Log2, InsertBefore);
+  IeleInstruction *Log2Inst = new IeleInstruction(Log2, Loc, InsertBefore);
   Log2Inst->getIeleLValueList().push_back(Result);
   Log2Inst->getIeleOperandList().push_back(OperandValue);
 
@@ -660,12 +663,12 @@ IeleInstruction *IeleInstruction::CreateLog2(
 
 IeleInstruction *IeleInstruction::CreateLog2(
     IeleLocalVariable *Result, IeleValue *OperandValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateBinOp: Invalid lvalues");
   solAssert(OperandValue,
          "CreateBinOp: Invalid operand");
 
-  IeleInstruction *Log2Inst = new IeleInstruction(Log2, InsertAtEnd);
+  IeleInstruction *Log2Inst = new IeleInstruction(Log2, Loc, InsertAtEnd);
   Log2Inst->getIeleLValueList().push_back(Result);
   Log2Inst->getIeleOperandList().push_back(OperandValue);
 
@@ -674,12 +677,12 @@ IeleInstruction *IeleInstruction::CreateLog2(
 
 IeleInstruction *IeleInstruction::CreateNot(
     IeleLocalVariable *Result, IeleValue *OperandValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Result, "CreateBinOp: Invalid lvalues");
   solAssert(OperandValue,
          "CreateBinOp: Invalid operand");
 
-  IeleInstruction *NotInst = new IeleInstruction(Not, InsertBefore);
+  IeleInstruction *NotInst = new IeleInstruction(Not, Loc, InsertBefore);
   NotInst->getIeleLValueList().push_back(Result);
   NotInst->getIeleOperandList().push_back(OperandValue);
 
@@ -688,12 +691,12 @@ IeleInstruction *IeleInstruction::CreateNot(
 
 IeleInstruction *IeleInstruction::CreateNot(
     IeleLocalVariable *Result, IeleValue *OperandValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateBinOp: Invalid lvalues");
   solAssert(OperandValue,
          "CreateBinOp: Invalid operand");
 
-  IeleInstruction *NotInst = new IeleInstruction(Not, InsertAtEnd);
+  IeleInstruction *NotInst = new IeleInstruction(Not, Loc, InsertAtEnd);
   NotInst->getIeleLValueList().push_back(Result);
   NotInst->getIeleOperandList().push_back(OperandValue);
 
@@ -702,11 +705,11 @@ IeleInstruction *IeleInstruction::CreateNot(
 
 IeleInstruction *IeleInstruction::CreateSha3(
     IeleLocalVariable *Result, IeleValue *OperandValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Result, "CreateSha3: Invalid lvalues");
   solAssert(OperandValue, "CreateSha3: Invalid operand");
 
-  IeleInstruction *Sha3Inst = new IeleInstruction(Sha3, InsertBefore);
+  IeleInstruction *Sha3Inst = new IeleInstruction(Sha3, Loc, InsertBefore);
   Sha3Inst->getIeleLValueList().push_back(Result);
   Sha3Inst->getIeleOperandList().push_back(OperandValue);
 
@@ -715,11 +718,11 @@ IeleInstruction *IeleInstruction::CreateSha3(
 
 IeleInstruction *IeleInstruction::CreateSha3(
     IeleLocalVariable *Result, IeleValue *OperandValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateSha3: Invalid lvalues");
   solAssert(OperandValue, "CreateSha3: Invalid operand");
 
-  IeleInstruction *Sha3Inst = new IeleInstruction(Sha3, InsertAtEnd);
+  IeleInstruction *Sha3Inst = new IeleInstruction(Sha3, Loc, InsertAtEnd);
   Sha3Inst->getIeleLValueList().push_back(Result);
   Sha3Inst->getIeleOperandList().push_back(OperandValue);
 
@@ -728,12 +731,12 @@ IeleInstruction *IeleInstruction::CreateSha3(
 
 IeleInstruction *IeleInstruction::CreateBinOp(
     IeleOps BinOpcode, IeleLocalVariable *Result, IeleValue *LeftOperandValue,
-    IeleValue *RightOperandValue, IeleInstruction *InsertBefore) {
+    IeleValue *RightOperandValue, const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Result, "CreateBinOp: Invalid lvalues");
   solAssert(LeftOperandValue && RightOperandValue,
          "CreateBinOp: Invalid operands");
 
-  IeleInstruction *BinOpInst = new IeleInstruction(BinOpcode, InsertBefore);
+  IeleInstruction *BinOpInst = new IeleInstruction(BinOpcode, Loc, InsertBefore);
   BinOpInst->getIeleLValueList().push_back(Result);
   BinOpInst->getIeleOperandList().push_back(LeftOperandValue);
   BinOpInst->getIeleOperandList().push_back(RightOperandValue);
@@ -743,12 +746,12 @@ IeleInstruction *IeleInstruction::CreateBinOp(
 
 IeleInstruction *IeleInstruction::CreateBinOp(
     IeleOps BinOpcode, IeleLocalVariable *Result, IeleValue *LeftOperandValue,
-    IeleValue *RightOperandValue, IeleBlock *InsertAtEnd) {
+    IeleValue *RightOperandValue, const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateBinOp: Invalid lvalues");
   solAssert(LeftOperandValue && RightOperandValue,
          "CreateBinOp: Invalid operands");
 
-  IeleInstruction *BinOpInst = new IeleInstruction(BinOpcode, InsertAtEnd);
+  IeleInstruction *BinOpInst = new IeleInstruction(BinOpcode, Loc, InsertAtEnd);
   BinOpInst->getIeleLValueList().push_back(Result);
   BinOpInst->getIeleOperandList().push_back(LeftOperandValue);
   BinOpInst->getIeleOperandList().push_back(RightOperandValue);
@@ -759,12 +762,12 @@ IeleInstruction *IeleInstruction::CreateBinOp(
 IeleInstruction *IeleInstruction::CreateTernOp(
     IeleOps TernOpcode, IeleLocalVariable *Result, IeleValue *FirstOperandValue,
     IeleValue *SecondOperandValue, IeleValue *ThirdOperandValue,
-    IeleInstruction *InsertBefore) {
+    const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   solAssert(Result, "CreateTernOp: Invalid lvalues");
   solAssert(FirstOperandValue && SecondOperandValue && ThirdOperandValue,
          "CreateTernOp: Invalid operands");
 
-  IeleInstruction *TernOpInst = new IeleInstruction(TernOpcode, InsertBefore);
+  IeleInstruction *TernOpInst = new IeleInstruction(TernOpcode, Loc, InsertBefore);
   TernOpInst->getIeleLValueList().push_back(Result);
   TernOpInst->getIeleOperandList().push_back(FirstOperandValue);
   TernOpInst->getIeleOperandList().push_back(SecondOperandValue);
@@ -776,12 +779,12 @@ IeleInstruction *IeleInstruction::CreateTernOp(
 IeleInstruction *IeleInstruction::CreateTernOp(
     IeleOps TernOpcode, IeleLocalVariable *Result, IeleValue *FirstOperandValue,
     IeleValue *SecondOperandValue, IeleValue *ThirdOperandValue,
-    IeleBlock *InsertAtEnd) {
+    const SourceLocation &Loc, IeleBlock *InsertAtEnd) {
   solAssert(Result, "CreateTernOp: Invalid lvalues");
   solAssert(FirstOperandValue && SecondOperandValue && ThirdOperandValue,
          "CreateTernOp: Invalid operands");
 
-  IeleInstruction *TernOpInst = new IeleInstruction(TernOpcode, InsertAtEnd);
+  IeleInstruction *TernOpInst = new IeleInstruction(TernOpcode, Loc, InsertAtEnd);
   TernOpInst->getIeleLValueList().push_back(Result);
   TernOpInst->getIeleOperandList().push_back(FirstOperandValue);
   TernOpInst->getIeleOperandList().push_back(SecondOperandValue);

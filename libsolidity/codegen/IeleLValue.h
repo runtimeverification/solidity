@@ -10,8 +10,8 @@ protected:
   explicit IeleLValue() {}
 
 public:
-  virtual void write(IeleRValue *Value, iele::IeleBlock *InsertAtEnd) const = 0;
-  virtual IeleRValue *read(iele::IeleBlock *InsertAtEnd) const = 0;
+  virtual void write(IeleRValue *Value, const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const = 0;
+  virtual IeleRValue *read(const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const = 0;
 };
 
 class RegisterLValue : public IeleLValue {
@@ -29,8 +29,8 @@ public:
     return new RegisterLValue(Var);
   }
 
-  virtual void write(IeleRValue *Value, iele::IeleBlock *InsertAtEnd) const override;
-  virtual IeleRValue *read(iele::IeleBlock *InsertAtEnd) const override;
+  virtual void write(IeleRValue *Value, const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override;
+  virtual IeleRValue *read(const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override;
 };
 
 // used to represent array elements and struct members that are not dynamically allocated; ie, a dereference is not required in order to get an rvalue of reference type.
@@ -49,8 +49,8 @@ public:
     return new ReadOnlyLValue(Value);
   }
 
-  virtual void write(IeleRValue *Value, iele::IeleBlock *InsertAtEnd) const override { solAssert(false, "Cannot write to ReadOnlyLValue"); }
-  virtual IeleRValue *read(iele::IeleBlock *InsertAtEnd) const override { return Value; }
+  virtual void write(IeleRValue *Value, const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override { solAssert(false, "Cannot write to ReadOnlyLValue"); }
+  virtual IeleRValue *read(const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override { return Value; }
 };
 
 
@@ -74,8 +74,8 @@ public:
     return new AddressLValue(Compiler, Address, Loc, Name, Num);
   }
 
-  virtual void write(IeleRValue *Value, iele::IeleBlock *InsertAtEnd) const override;
-  virtual IeleRValue *read(iele::IeleBlock *InsertAtEnd) const override;
+  virtual void write(IeleRValue *Value, const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override;
+  virtual IeleRValue *read(const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override;
 };
 
 class ByteArrayLValue : public IeleLValue
@@ -97,8 +97,8 @@ public:
     return new ByteArrayLValue(Compiler, Address, Offset, Loc);
   }
 
-  virtual void write(IeleRValue *Value, iele::IeleBlock *InsertAtEnd) const override;
-  virtual IeleRValue *read(iele::IeleBlock *InsertAtEnd) const override;
+  virtual void write(IeleRValue *Value, const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override;
+  virtual IeleRValue *read(const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override;
 };
 
 class ArrayLengthLValue : public AddressLValue
@@ -116,7 +116,7 @@ public:
     return new ArrayLengthLValue(Compiler, Address, Loc);
   }
 
-  virtual void write(IeleRValue *Value, iele::IeleBlock *InsertAtEnd) const override;
+  virtual void write(IeleRValue *Value, const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override;
 };
 
 // A recursive struct lvalue should only be used to hold a reference to a
@@ -151,7 +151,7 @@ public:
     return new RecursiveStructLValue(Value, type, Compiler);
   }
 
-  virtual IeleRValue *read(iele::IeleBlock *InsertAtEnd) const override;
+  virtual IeleRValue *read(const langutil::SourceLocation &SLoc, iele::IeleBlock *InsertAtEnd) const override;
 };
 
 } // end namespace frontend

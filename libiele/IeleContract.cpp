@@ -20,6 +20,7 @@
 using namespace std;
 using namespace solidity;
 using namespace solidity::iele;
+using namespace solidity::langutil;
 using namespace solidity::util;
 using namespace boost::filesystem;
 using namespace llvm;
@@ -169,4 +170,56 @@ bytes IeleContract::toBinary() const {
   std::remove(tempout);
 
   return fromHex(hex, WhenError::Throw) + AuxiliaryData;
+}
+
+
+void IeleContract::printSourceMapping(
+  llvm::raw_ostream &OS,
+  const std::map<std::string, unsigned> &SourceIndicesMap) const {
+  int prevStart = -1;
+  int prevLength = -1;
+  int prevSourceIndex = -1;
+  for (const IeleFunction &F : functions()) {
+    for (const IeleBlock &B : F.blocks()) {
+      for (const IeleInstruction &I : B.instructions()) {
+        if (OS.tell())
+          OS << ';';
+
+        const SourceLocation &location = I.location();
+        int length =
+          location.start != -1 && location.end != -1 ? location.end - location.start : -1;
+        int sourceIndex =
+          location.source && SourceIndicesMap.count(location.source->name()) ?
+            static_cast<int>(SourceIndicesMap.at(location.source->name())) :
+            -1;
+        unsigned components = 3;
+        if (sourceIndex == prevSourceIndex) {
+          components--;
+          if (length == prevLength) {
+            components--;
+            if (location.start == prevStart)
+              components--;
+          }
+        }
+        if (components-- > 0) {
+          if (location.start != prevStart)
+            OS << to_string(location.start);
+          if (components-- > 0) {
+            OS << ':';
+            if (length != prevLength)
+              OS << to_string(length);
+            if (components-- > 0) {
+              OS << ':';
+              if (sourceIndex != prevSourceIndex)
+                OS << to_string(sourceIndex);
+            }
+          }
+        }
+
+        prevStart = location.start;
+        prevLength = length;
+        prevSourceIndex = sourceIndex;
+      }
+    }
+  }
 }

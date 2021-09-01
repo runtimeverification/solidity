@@ -78,6 +78,16 @@ public:
             std::map<u256, std::pair<std::string, std::vector<size_t>>>()};
   }
 
+  std::string computeSourceMapping(
+    const std::map<std::string, unsigned> &SourceIndicesMap) const {
+    solAssert(CompiledContract,
+              "Attempted access to compiled contract before compiling successfully.");
+    std::string ret;
+    llvm::raw_string_ostream OS(ret);
+    CompiledContract->printSourceMapping(OS, SourceIndicesMap);
+    return ret;
+  }
+
   // Update currently enabled set of experimental features.
   void setExperimentalFeatures(const std::set<ExperimentalFeature> &features) {
     ExperimentalFeatures = features;
@@ -144,6 +154,8 @@ private:
   iele::IeleBlock *ECRFailedBlock;
   iele::IeleBlock *AssertFailBlock;
 
+  langutil::SourceLocation CurrentLoc;
+
   Arithmetic CompilingBlockArithmetic;
   void setArithmetic(Arithmetic arithmetic) {
     CompilingBlockArithmetic = arithmetic;
@@ -162,7 +174,7 @@ private:
   public:
     Value(IeleRValue *RValue) : isLValue(false), RValue(RValue) {}
     Value(IeleLValue *LValue) : isLValue(true), LValue(LValue) {}
-    IeleRValue *rval(iele::IeleBlock *Block);
+    IeleRValue *rval(const langutil::SourceLocation &SLoc, iele::IeleBlock *Block);
     IeleLValue *lval() { solAssert(isLValue, "IeleCompiler: expression is not an lvalue"); return LValue; }
   };
 
@@ -370,13 +382,15 @@ private:
   iele::IeleValue *appendBooleanOperator(
       Token Opcode,
       const Expression &LeftOperand,
-      const Expression &RightOperand);
+      const Expression &RightOperand,
+      const langutil::SourceLocation &OperatorLoc);
 
   void appendConditional(
       iele::IeleValue *ConditionValue,
       llvm::SmallVectorImpl<IeleLValue *> &Results,
       const std::function<void(llvm::SmallVectorImpl<IeleRValue *> &)> &TrueExpression,
-      const std::function<void(llvm::SmallVectorImpl<IeleRValue *> &)> &FalseExpression);
+      const std::function<void(llvm::SmallVectorImpl<IeleRValue *> &)> &FalseExpression,
+      const langutil::SourceLocation &ConditionalLoc);
 
   void appendConditionalBranch(
     llvm::SmallVectorImpl<IeleRValue *> &Results,
