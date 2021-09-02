@@ -618,7 +618,7 @@ BOOST_AUTO_TEST_CASE(output_selection_dependent_contract)
 	Json::Value contract = getContractResult(result, "fileA", "A");
 	BOOST_CHECK(contract.isObject());
 	BOOST_CHECK(contract["abi"].isArray());
-	BOOST_CHECK_EQUAL(util::jsonCompactPrint(contract["abi"]), "[{\"inputs\":[],\"name\":\"f\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]");
+	BOOST_CHECK_EQUAL(util::jsonCompactPrint(contract["abi"]), "[{\"ieleName\":\"f()\",\"inputs\":[],\"name\":\"f\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]");
 }
 
 BOOST_AUTO_TEST_CASE(output_selection_dependent_contract_with_import)
@@ -650,7 +650,7 @@ BOOST_AUTO_TEST_CASE(output_selection_dependent_contract_with_import)
 	Json::Value contract = getContractResult(result, "fileA", "A");
 	BOOST_CHECK(contract.isObject());
 	BOOST_CHECK(contract["abi"].isArray());
-	BOOST_CHECK_EQUAL(util::jsonCompactPrint(contract["abi"]), "[{\"inputs\":[],\"name\":\"f\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]");
+	BOOST_CHECK_EQUAL(util::jsonCompactPrint(contract["abi"]), "[{\"ieleName\":\"f()\",\"inputs\":[],\"name\":\"f\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]");
 }
 
 BOOST_AUTO_TEST_CASE(filename_with_colon)

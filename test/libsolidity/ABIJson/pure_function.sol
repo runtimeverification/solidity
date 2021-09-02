@@ -6,6 +6,7 @@ contract test {
 //     :test
 // [
 //   {
+//     "ieleName": "boo(uint32)",
 //     "inputs":
 //     [
 //       {
@@ -27,6 +28,7 @@ contract test {
 //     "type": "function"
 //   },
 //   {
+//     "ieleName": "foo(uint256,uint256)",
 //     "inputs":
 //     [
 //       {

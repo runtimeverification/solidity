@@ -24,6 +24,7 @@ contract Derived is Base {
 //     "type": "event"
 //   },
 //   {
+//     "ieleName": "baseFunction(uint256)",
 //     "inputs":
 //     [
 //       {
@@ -78,6 +79,7 @@ contract Derived is Base {
 //     "type": "event"
 //   },
 //   {
+//     "ieleName": "baseFunction(uint256)",
 //     "inputs":
 //     [
 //       {
@@ -99,6 +101,7 @@ contract Derived is Base {
 //     "type": "function"
 //   },
 //   {
+//     "ieleName": "derivedFunction(bytes32)",
 //     "inputs":
 //     [
 //       {

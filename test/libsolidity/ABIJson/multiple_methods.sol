@@ -6,6 +6,7 @@ contract test {
 //     :test
 // [
 //   {
+//     "ieleName": "f(uint256)",
 //     "inputs":
 //     [
 //       {
@@ -27,6 +28,7 @@ contract test {
 //     "type": "function"
 //   },
 //   {
+//     "ieleName": "g(uint256)",
 //     "inputs":
 //     [
 //       {

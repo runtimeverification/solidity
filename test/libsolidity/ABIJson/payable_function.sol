@@ -6,6 +6,7 @@ contract test {
 //     :test
 // [
 //   {
+//     "ieleName": "f()",
 //     "inputs": [],
 //     "name": "f",
 //     "outputs": [],
@@ -13,6 +14,7 @@ contract test {
 //     "type": "function"
 //   },
 //   {
+//     "ieleName": "g()",
 //     "inputs": [],
 //     "name": "g",
 //     "outputs": [],

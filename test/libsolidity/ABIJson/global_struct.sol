@@ -8,6 +8,7 @@ contract C {
 //     :C
 // [
 //   {
+//     "ieleName": "f((uint256))",
 //     "inputs":
 //     [
 //       {
@@ -30,6 +31,7 @@ contract C {
 //     "type": "function"
 //   },
 //   {
+//     "ieleName": "g((uint256))",
 //     "inputs":
 //     [
 //       {

@@ -9,6 +9,7 @@ contract C {
 //     :C
 // [
 //   {
+//     "ieleName": "f()",
 //     "inputs": [],
 //     "name": "f",
 //     "outputs":

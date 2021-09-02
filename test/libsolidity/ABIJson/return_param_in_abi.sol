@@ -23,6 +23,7 @@ contract test {
 //     "type": "constructor"
 //   },
 //   {
+//     "ieleName": "ret()",
 //     "inputs": [],
 //     "name": "ret",
 //     "outputs":

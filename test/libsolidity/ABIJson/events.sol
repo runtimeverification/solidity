@@ -55,6 +55,7 @@ contract test {
 //     "type": "event"
 //   },
 //   {
+//     "ieleName": "f(uint256)",
 //     "inputs":
 //     [
 //       {

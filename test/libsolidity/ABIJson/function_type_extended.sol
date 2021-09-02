@@ -5,6 +5,7 @@ contract test {
 //     :test
 // [
 //   {
+//     "ieleName": "g(function)",
 //     "inputs":
 //     [
 //       {
