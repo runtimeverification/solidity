@@ -1,0 +1,9 @@
+{
+	"jsonrpc": "2.0",
+	"method": "wallet_unlock",
+	"params": ["ce3bbd3e"],
+	"secrets": {
+		"passphrase": "walletNotSecure"
+	},
+	"id": 1
+}

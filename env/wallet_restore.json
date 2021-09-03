@@ -1,0 +1,9 @@
+{
+	"jsonrpc": "2.0",
+  "method": "wallet_restore",
+  "secrets": {
+		"passphrase": "walletNotSecure",
+		"spendingKey": "m-test-shl-sk1fj335eanpmupaj9vx5879t7ljfnh7xct486rqgwxw8evwp2qkaksmcqu88"
+	},
+  "id": 1
+}

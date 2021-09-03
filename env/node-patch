@@ -1,0 +1,52 @@
+diff --git a/midnight.conf b/midnight.conf
+index d3b51c2..388e7c1 100644
+--- a/midnight.conf
++++ b/midnight.conf
+@@ -16,17 +16,18 @@ include "sync.conf"
+ include "misc.conf"
+ include "metrics.conf"
+ include "mining.conf"
++include "privacy.conf"
+ 
+ # This disables TLS since it requires keystore configuration
+ include "no-tls.conf"
+ 
+ # Comment the following include if you don't want to connect to midnight-testnet
+ # Note that any settings in this file will override the ones defined in the files above.
+-include "midnight-testnet.conf"
++# include "midnight-testnet.conf"
+ 
+ # Unlike the other configuration files, vm.conf reqires that one of three supported VM configurations is selected.
+ include "vm.conf"
+ 
+ # Uncomment the following include if you want to run the node in test mode. Test mode exposes RPCs for modifying the
+ # block time and rewinding to a specified block
+-# include "test-mode.conf"
++include "test-mode.conf"
+diff --git a/privacy.conf b/privacy.conf
+index f640aa5..46d2781 100644
+--- a/privacy.conf
++++ b/privacy.conf
+@@ -1,7 +1,7 @@
+ midnight {
+ 
+   privacy {
+-    # libsonic-provider = "NativeLibsonic"
++    libsonic-provider = "MockedLibsonic"
+ 
+     # Folder where sonic setup parameters are stored. This parameters can be downloaded using 'sbt fetch-params'
+     #
+diff --git a/vm.conf b/vm.conf
+index 0bf46e8..fe6c574 100644
+--- a/vm.conf
++++ b/vm.conf
+@@ -2,7 +2,8 @@ midnight {
+   vm {
+ 
+     # internal-evm | external-evm | executable-evm | iele
+-    vm-type = "internal-evm"
++    vm-type = "iele"
++    iele.executable-path = "/usr/lib/kiele/node/iele-testing-kompiled/iele-vm"
+ 
+     # Set true when vm-type = iele to collect coverage
+     iele.collect-coverage = false

@@ -1,0 +1,24 @@
+diff --git a/wallet.conf b/wallet.conf
+index e36b13c..c68e4e4 100644
+--- a/wallet.conf
++++ b/wallet.conf
+@@ -227,7 +227,7 @@ midnight {
+ 
+       ipc {
+         # Whether to enable JSON-RPC over IPC
+-        # enabled = false
++        enabled = true
+ 
+         # Path to IPC socket file
+         # socket-file = ${wallet.datadir}"/midnight.ipc"
+@@ -253,6 +253,10 @@ midnight {
+     # The port for setting up a Prometheus server over localhost.
+     # port = 13796
+   }
++
++  privacy {
++    libsonic-provider = "MockedLibsonic"
++  }
+ }
+ 
+ include "no-tls.conf"
