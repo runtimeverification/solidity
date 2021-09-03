@@ -280,7 +280,7 @@ void RPCSession::test_mineBlocks(int _number)
         string newBlockNumber;
         do {
           newBlockNumber = eth_blockNumber();
-          sleep(1);
+          usleep(100000);
         } while (blockNumber == newBlockNumber);
 }
 
