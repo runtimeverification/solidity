@@ -146,14 +146,14 @@ bytes IeleContract::toBinary() const {
   std::ofstream write(tempin);
   write << assembly << endl;
   write.close();
-  ErrorOr<std::string> result = findProgramByName("iele-assemble");
+  ErrorOr<std::string> result = findProgramByName("kiele");
   if (error_code error = result.getError()) {
     solAssert(false, error.message());
   }
   std::string program = result.get();
   const StringRef output = tempout;
 
-  StringRef args[] = {"iele-assemble", tempin};
+  StringRef args[] = {"kiele", "assemble", tempin};
   const Optional<StringRef> redirects[] = {None, Optional<StringRef>::create(&output), None};  
 
   int exit = ExecuteAndWait(program, args, None, redirects);
