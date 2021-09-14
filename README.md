@@ -28,8 +28,8 @@ brew upgrade
 For Ubuntu-based systems:
 
 ```
-sudo apt-get -y update
-sudo apt-get -y install build-essential cmake g++ gcc git libboost-all-dev unzip llvm-11.0 zlib1g-dev libz3-dev libxml2-utils
+sudo apt-get update
+sudo apt-get install build-essential cmake g++ gcc git libboost-all-dev unzip llvm-11 zlib1g-dev libz3-dev libxml2-utils
 ```
 
 Please note that we have tested the compiler for the Ubuntu 20.04 and MacOS BigSur operation system.
@@ -51,16 +51,20 @@ Use the compiler like this:
 ./build/solc/isolc --asm <solidity file>
 ```
 
-To run the execution test suite, first start an IELE vm in separate terminal (this assumes that IELE binaries are found in the system's PATH):
+## Testing
+
+To run the execution test suite, first start an IELE vm in separate terminal (this assumes the `kiele` exexcutable is found in the system's PATH):
 ```
 kiele vm --port 9001
 ```
 
-Then, start the `iele-test-client` script in a separate terminal:
+Then, start the `iele-test-client`executable in a separate terminal:
 ```
 iele-test-client <path to Solidity-to-IELE build directory>/ipcfile 9001
 ```
-Note that, you may need to delete an existing `ipcfile` before you restart this script.
+Note that, there is no need for an exisiting `ipcfile`, this command will create a fresh one. You may need to delete an existing `ipcfile` before you restart this script.
+
+Also note that the `iele-test-client` executable can be found in `"$(dirname `which kiele`)/../lib/kiele"`, assuming the `kiele` executable is in the system's PATH.
 
 Finally, you can run the whole execution test suite with:
 ```
@@ -78,6 +82,7 @@ Finally, you can run the whole execution test suite with:
                      --enforce-no-yul-ewasm \
                      --ipcpath build/ipcfile \
                      --testpath test
+
 xmllint --xpath "//TestCase[@assertions_failed!=@expected_failures]" build/report.xml && false
 ```
 
