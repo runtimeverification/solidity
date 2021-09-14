@@ -64,7 +64,7 @@ iele-test-client <path to Solidity-to-IELE build directory>/ipcfile 9001
 ```
 Note that, there is no need for an exisiting `ipcfile`, this command will create a fresh one. You may need to delete an existing `ipcfile` before you restart this script.
 
-Also note that the `iele-test-client` executable can be found in `"$(dirname `which kiele`)/../lib/kiele"`, assuming the `kiele` executable is in the system's PATH.
+Also note that the `iele-test-client` executable can be found in ``"$(dirname `which kiele`)/../lib/kiele"``, assuming the `kiele` executable is in the system's PATH.
 
 Finally, you can run the whole execution test suite with:
 ```
