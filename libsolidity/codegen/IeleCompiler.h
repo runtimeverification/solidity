@@ -477,6 +477,10 @@ private:
       iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos);
 
   void appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value);
+
+  // Helper function that desugars constant operands from all iele instructions except
+  // assignment.
+  void desugarConstantOperands();
 };
 
 } // end namespace frontend
