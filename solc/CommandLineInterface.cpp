@@ -150,6 +150,7 @@ static string const g_strLibraries = "libraries";
 static string const g_strLink = "link";
 static string const g_strMachine = "machine";
 static string const g_strMetadata = "metadata";
+static string const g_strMetadataBin = "metadata-bin";
 static string const g_strMetadataHash = "metadata-hash";
 static string const g_strMetadataLiteral = "metadata-literal";
 static string const g_strModelCheckerEngine = "model-checker-engine";
@@ -221,6 +222,7 @@ static string const g_argLibraries = g_strLibraries;
 static string const g_argLink = g_strLink;
 static string const g_argMachine = g_strMachine;
 static string const g_argMetadata = g_strMetadata;
+static string const g_argMetadataBin = g_strMetadataBin;
 static string const g_argMetadataHash = g_strMetadataHash;
 static string const g_argMetadataLiteral = g_strMetadataLiteral;
 static string const g_argModelCheckerEngine = g_strModelCheckerEngine;
@@ -320,6 +322,7 @@ static bool needsHumanTargetedStdout(po::variables_map const& _args)
 		g_argBinary,
 		g_argBinaryRuntime,
 		g_argMetadata,
+		g_argMetadataBin,
 		g_argNatspecUser,
 		g_argNatspecDev,
 		g_argOpcodes,
@@ -468,6 +471,20 @@ void CommandLineInterface::handleMetadata(string const& _contract)
 		createFile(m_compiler->filesystemFriendlyName(_contract) + "_meta.json", data);
 	else
 		sout() << "Metadata:" << endl << data << endl;
+}
+
+void CommandLineInterface::handleMetadataBin(string const& _contract)
+{
+	if (!m_args.count(g_argMetadataBin))
+		return;
+
+	bytes data = m_compiler->cborMetadata(_contract);
+	string dataStr = toHex(data);
+
+	if (m_args.count(g_argOutputDir))
+		createFile(m_compiler->filesystemFriendlyName(_contract) + "_meta.bin", dataStr);
+	else
+		sout() << "Metadata Swarm hash:" << endl << dataStr << endl;
 }
 
 void CommandLineInterface::handleABI(string const& _contract)
@@ -971,6 +988,7 @@ General Information)").c_str(),
 		(g_argNatspecUser.c_str(), "Natspec user documentation of all contracts.")
 		(g_argNatspecDev.c_str(), "Natspec developer documentation of all contracts.")
 		(g_argMetadata.c_str(), "Combined Metadata JSON whose Swarm hash is stored on-chain.")
+		(g_argMetadataBin.c_str(), "Swarm hash of the Combined Metadata JSON as it is stored on-chain.")
 		(g_argStorageLayout.c_str(), "Slots, offsets and types of the contract's state variables.")
 	;
 	desc.add(outputComponents);
@@ -2041,6 +2059,7 @@ void CommandLineInterface::outputCompilationResults()
 		handleEwasm(contract);
 		handleSignatureHashes(contract);
 		handleMetadata(contract);
+		handleMetadataBin(contract);
 		handleABI(contract);
 		handleStorageLayout(contract);
 		handleNatspec(true, contract);
