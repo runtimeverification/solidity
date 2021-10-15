@@ -257,6 +257,7 @@ static set<string> const g_combinedJsonArgs
 	g_strGeneratedSourcesRuntime,
 	g_strInterface,
 	g_strMetadata,
+	g_strMetadataBin,
 	g_strNatspecUser,
 	g_strNatspecDev,
 	g_strOpcodes,
@@ -1657,6 +1658,8 @@ void CommandLineInterface::handleCombinedJSON()
 			contractData[g_strAbi] = m_compiler->contractABI(contractName);
 		if (requests.count("metadata"))
 			contractData["metadata"] = m_compiler->metadata(contractName);
+		if (requests.count(g_strMetadataBin))
+			contractData[g_strMetadataBin] = toHex(m_compiler->cborMetadata(contractName));
 		if (requests.count(g_strBinary) && m_compiler->compilationSuccessful())
 			contractData[g_strBinary] = m_compiler->object(contractName).toHex();
 /*
