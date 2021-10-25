@@ -57,7 +57,7 @@ pipeline {
           kiele vm --port 9001 &
           kiele_pid=$!
           sleep 3
-          iele-test-client build/ipcfile 9001 &
+          /usr/lib/kiele/iele-test-client build/ipcfile 9001 &
           testnode_pid=$!
           sleep 3
           ./build/test/soltest --no_result_code \
