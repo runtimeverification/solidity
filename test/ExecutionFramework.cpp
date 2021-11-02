@@ -73,7 +73,6 @@ ExecutionFramework::ExecutionFramework(langutil::EVMVersion _evmVersion, vector<
 		m_optimiserSettings = solidity::frontend::OptimiserSettings::standard();
 
     m_rpc.test_rewindToBlock(1);
-    m_rpc.test_mineBlocks(1);
 
 /*
 	for (auto const& path: m_vmPaths)

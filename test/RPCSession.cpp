@@ -149,7 +149,7 @@ RPCSession& RPCSession::instance(const string& _path, const string& _walletId, c
 
 string RPCSession::eth_blockNumber(void)
 {
-        return rpcCall("eth_blockNumber").asString();
+        return rpcCall("wallet_getSynchronizationStatus", { quote(m_walletId) })["currentBlock"].asString();
 }
 
 string RPCSession::eth_getCode(string const& _address, string const& _blockNumber)
@@ -172,7 +172,7 @@ RPCSession::TransactionReceipt RPCSession::eth_getTransactionReceipt(string cons
           receipt.contractAddress = bech32Decode(result["contractAddress"].asString());
         }
 	receipt.gasUsed = result["gasUsed"].asString();
-	receipt.status = result["status"].asString();
+	receipt.status = result["statusCode"].asString();
 	receipt.blockNumber = result["blockNumber"].asString();
 	for (auto const& log: result["logs"])
 	{
@@ -191,10 +191,22 @@ string RPCSession::iele_sendTransaction(TransactionData const& _td)
 	return iele_sendTransaction(_td.toJson(this));
 }
 
-string RPCSession::iele_sendTransaction(string const& _transaction)
+string RPCSession::iele_sendTransaction(Json::Value const& _transaction)
 {
-        string retval = rpcCall("wallet_callContract", { quote(m_walletId), quote(m_privateFromAddr), _transaction }, false, true).asString();
-        rpcCall("qa_getPendingTransactions");
+        Json::Value params;
+        params["sender"] = m_privateFromAddr;
+        params["transparentTx"] = _transaction;
+        string retval = rpcCall("wallet_callContract", { quote(m_walletId), jsonCompactPrint(params) }, false, true).asString();
+        do {
+          Json::Value txs = rpcCall("qa_getPendingTransactions");
+          for (unsigned int i = 0; i < txs.size(); i++) {
+            if (txs[i].asString() == retval) {
+              goto exit;
+            }
+          }
+          usleep(100000);
+        } while (true);
+exit:
         return retval;
 }
 
@@ -236,7 +248,7 @@ static vector<string> rlpDecode(string rlp) {
 
 vector<string> RPCSession::iele_call(TransactionData const& _td)
 {
-	Json::Value rawOutput = rpcCall("eth_call", { _td.toJson(this), quote("latest") });
+	Json::Value rawOutput = rpcCall("eth_call", { jsonCompactPrint(_td.toJson(this)), quote("latest") });
         string rlp = rawOutput.asString();
 	vector<string> result = rlpDecode(asString(fromHex(rlp)));
         for (auto const& output : rawOutput) {
@@ -271,6 +283,13 @@ string RPCSession::personal_newAccount()
 void RPCSession::test_rewindToBlock(size_t _blockNr)
 {
 	BOOST_REQUIRE(rpcCall("test_rewindToBlock", { to_string(_blockNr) }) == true);
+        string newBlockNumber;
+        size_t blockNumberInt;
+        do {
+          newBlockNumber = eth_blockNumber();
+          blockNumberInt = std::stoi(newBlockNumber, nullptr, 0);
+          usleep(100000);
+        } while (blockNumberInt != _blockNr);
 }
 
 void RPCSession::test_mineBlocks(int _number)
@@ -401,7 +420,7 @@ string RPCSession::bech32Decode(const string& addr) {
   return rpcCall("bech32_decodeTransparentAddress", { quote(addr) }).asString();
 }
 
-string RPCSession::TransactionData::toJson(RPCSession * session) const
+Json::Value RPCSession::TransactionData::toJson(RPCSession * session) const
 {
         Json::Value json;
         string _from = (from.length() == 20) ? "0x" + from : from;
@@ -424,5 +443,5 @@ string RPCSession::TransactionData::toJson(RPCSession * session) const
                 args.push_back(fromHex(arg));
 	}
         json["data"] = toHex(ExecutionFramework::rlpEncode(first, args), HexPrefix::Add);
-	return jsonCompactPrint(json);
+	return json;
 }

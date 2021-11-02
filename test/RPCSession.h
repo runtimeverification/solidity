@@ -88,7 +88,7 @@ public:
 		std::string function;
 		std::vector<std::string> arguments;
 
-		std::string toJson(RPCSession*) const;
+                Json::Value toJson(RPCSession*) const;
 	};
 
 	struct LogEntry {
@@ -113,7 +113,7 @@ public:
 	std::string eth_getTimestamp(std::string const& _blockNumber);
 	TransactionReceipt eth_getTransactionReceipt(std::string const& _transactionHash);
 	std::string iele_sendTransaction(TransactionData const& _td);
-	std::string iele_sendTransaction(std::string const& _transaction);
+	std::string iele_sendTransaction(Json::Value const& _transaction);
 	std::vector<std::string> iele_call(TransactionData const& _td);
 	std::string eth_getBalance(std::string const& _address, std::string const& _blockNumber);
 	bool eth_isStorageEmpty(std::string const& _address, std::string const& _blockNumber);
