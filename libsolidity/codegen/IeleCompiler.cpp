@@ -4455,6 +4455,81 @@ bool IeleCompiler::visit(const FunctionCall &functionCall) {
     CompilingExpressionResult.push_back(IeleRValue::Create(Return));
     break;
   }
+  case FunctionType::Kind::BECH32:
+  case FunctionType::Kind::VFYINCL:
+  case FunctionType::Kind::VFYPOB: {
+    // Visit arguments.
+    llvm::SmallVector<iele::IeleValue *, 4> Arguments;
+    llvm::SmallVector<iele::IeleLocalVariable *, 1> ReturnRegisters;
+    std::string IeleFunctionName, ResultName;
+    switch (function.kind()) {
+    case FunctionType::Kind::BECH32:
+      IeleFunctionName = std::string("iele.bech32");
+      ResultName = std::string("bech32.address");
+      break;
+    case FunctionType::Kind::VFYINCL:
+      IeleFunctionName = std::string("iele.vfyincl");
+      ResultName = std::string("etc.balance");
+      break;
+    case FunctionType::Kind::VFYPOB:
+      IeleFunctionName = std::string("iele.vfypob");
+      ResultName = std::string("burned.coins");
+      break;
+    default:
+      solAssert(false, "IeleCompiler: unexpected midnight precompiled contract.");
+    }
+    iele::IeleLocalVariable *Result =
+      iele::IeleLocalVariable::Create(&Context, ResultName, CompilingFunction);
+    ReturnRegisters.push_back(Result);
+
+    for (unsigned i = 0; i < arguments.size(); ++i) {
+      IeleRValue *ArgValue = compileExpression(*arguments[i]);
+      solAssert(ArgValue,
+                "IeleCompiler: Failed to compile internal function call argument");
+      // Check if we need to do a memory to/from storage copy.
+      TypePointer ArgType = arguments[i]->annotation().type;
+      TypePointer ParamType = function.parameterTypes()[i];
+      ArgValue = appendTypeConversion(ArgValue, ArgType, ParamType);
+      // If the argument is of string/bytes type, we create an extra argument
+      // that is the length of the array.
+      if (ParamType->category() == Type::Category::Array) {
+        const ArrayType *arrayType = dynamic_cast<const ArrayType *>(ParamType);
+        IeleLValue *SizeLValue = AddressLValue::Create(this, ArgValue->getValue(), arrayType->location());
+        iele::IeleValue *SizeValue = SizeLValue->read(CompilingBlock)->getValue();
+        Arguments.push_back(SizeValue);
+      }
+      Arguments.push_back(ArgValue->getValue());
+    }
+
+    IeleRValue *CalleeValue = compileExpression(functionCall.expression());
+    iele::IeleGlobalVariable *FunctionCalleeValue =
+      iele::IeleGlobalVariable::Create(&Context, IeleFunctionName);
+    iele::IeleValue *AddressValue = iele::IeleIntConstant::getOne(&Context);
+
+    iele::IeleLocalVariable *StatusValue = CompilingFunctionStatus;
+
+    iele::IeleValue *GasValue;
+    if (!function.gasSet()) {
+      llvm::SmallVector<iele::IeleValue *, 0> EmptyArguments;
+      iele::IeleLocalVariable *GasLeft =
+        iele::IeleLocalVariable::Create(&Context, "gas", CompilingFunction);
+      iele::IeleInstruction::CreateIntrinsicCall(
+        iele::IeleInstruction::Gas, GasLeft, EmptyArguments,
+        CompilingBlock);
+      GasValue = GasLeft;
+    } else {
+      GasValue = CalleeValue->getValues()[0];
+    }
+
+    iele::IeleInstruction::CreateAccountCall(
+      true, StatusValue, ReturnRegisters, FunctionCalleeValue, AddressValue,
+      nullptr, GasValue, Arguments, CompilingBlock);
+
+    appendRevert(StatusValue, StatusValue);
+
+    CompilingExpressionResult.push_back(IeleRValue::Create(Result));
+    break;
+  }
   case FunctionType::Kind::ByteArrayPush: {
     IeleRValue *PushedValue =
       arguments.size() ? compileExpression(*arguments.front()) : nullptr;

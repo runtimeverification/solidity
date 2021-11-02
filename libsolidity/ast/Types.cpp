@@ -2917,6 +2917,9 @@ string FunctionType::richIdentifier() const
 	case Kind::ECPairing: id += "ecpairing"; break;
 	case Kind::SHA256: id += "sha256"; break;
 	case Kind::RIPEMD160: id += "ripemd160"; break;
+	case Kind::BECH32: id += "bech32toaddress"; break;
+	case Kind::VFYINCL: id += "verifyinclusionandgetbalance"; break;
+	case Kind::VFYPOB: id += "verifypob"; break;
 	case Kind::GasLeft: id += "gasleft"; break;
 	case Kind::Event: id += "event"; break;
 	case Kind::SetGas: id += "setgas"; break;
@@ -3552,6 +3555,9 @@ bool FunctionType::isBareCall() const
 	case Kind::ECPairing:
 	case Kind::SHA256:
 	case Kind::RIPEMD160:
+	case Kind::BECH32:
+	case Kind::VFYINCL:
+	case Kind::VFYPOB:
 		return true;
 	default:
 		return false;
@@ -3617,6 +3623,9 @@ bool FunctionType::isPure() const
 		m_kind == Kind::ECPairing ||
 		m_kind == Kind::SHA256 ||
 		m_kind == Kind::RIPEMD160 ||
+		m_kind == Kind::BECH32 ||
+		m_kind == Kind::VFYINCL ||
+		m_kind == Kind::VFYPOB ||
 		m_kind == Kind::AddMod ||
 		m_kind == Kind::MulMod ||
 		m_kind == Kind::ObjectCreation ||

@@ -1183,6 +1183,9 @@ public:
                 ECPairing,
 		SHA256, ///< CALL to special contract for sha256
 		RIPEMD160, ///< CALL to special contract for ripemd160
+		BECH32, ///< CALL to special contract for bech32ToAddress
+		VFYINCL, ///< CALL to special contract for verifyInclusionAndGetBalance
+		VFYPOB, ///< CALL to special contract for verifyPoB
 		Event, ///< syntactic sugar for LOG*
 		SetGas, ///< modify the default gas value for the function call
 		SetValue, ///< modify the default value transfer for the function call

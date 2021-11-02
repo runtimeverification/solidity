@@ -64,6 +64,9 @@ int magicVariableToID(std::string const& _name)
 	else if (_name == "ecadd") return -29;
 	else if (_name == "ecmul") return -30;
 	else if (_name == "ecpairing") return -31;
+	else if (_name == "bech32ToAddress") return -32;
+	else if (_name == "verifyInclusionAndGetBalance") return -33;
+	else if (_name == "verifyPoB") return -34;
 	else
 		solAssert(false, "Unknown magic variable: \"" + _name + "\".");
 }
@@ -97,6 +100,9 @@ inline vector<shared_ptr<MagicVariableDeclaration const>> constructMagicVariable
 		magicVarDecl("revert", TypeProvider::function(strings(), strings(), FunctionType::Kind::Revert, false, StateMutability::Pure)),
 		magicVarDecl("revert", TypeProvider::function(strings{"string memory"}, strings(), FunctionType::Kind::Revert, false, StateMutability::Pure)),
 		magicVarDecl("ripemd160", TypeProvider::function(strings{"bytes memory"}, strings{"bytes20"}, FunctionType::Kind::RIPEMD160, false, StateMutability::Pure)),
+		magicVarDecl("bech32ToAddress", TypeProvider::function(strings{"string memory"}, strings{"address"}, FunctionType::Kind::BECH32, false, StateMutability::Pure)),
+		magicVarDecl("verifyInclusionAndGetBalance", TypeProvider::function(strings{"bytes32", "address", "bytes memory"}, strings{"uint256"}, FunctionType::Kind::VFYINCL, false, StateMutability::Pure)),
+		magicVarDecl("verifyPoB", TypeProvider::function(strings{"bytes memory"}, strings{"uint256"}, FunctionType::Kind::VFYPOB, false, StateMutability::Pure)),
 		magicVarDecl("selfdestruct", TypeProvider::function(strings{"address payable"}, strings{}, FunctionType::Kind::Selfdestruct)),
 		magicVarDecl("sha256", TypeProvider::function(strings{"bytes memory"}, strings{"bytes32"}, FunctionType::Kind::SHA256, false, StateMutability::Pure)),
 		magicVarDecl("sha3", TypeProvider::function(strings{"bytes memory"}, strings{"bytes32"}, FunctionType::Kind::KECCAK256, false, StateMutability::Pure)),
