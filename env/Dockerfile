@@ -39,17 +39,17 @@ ENV PATH="/home/user/solc/bin:${PATH}"
 WORKDIR /home/user
 RUN git clone https://$USERNAME:$TOKEN@github.com/input-output-hk/midnight.git
 WORKDIR /home/user/midnight
-RUN git checkout PM-3719-Fix-ExternalVM
+RUN git checkout checking-for-pending-transactions-after-tx-build
 RUN sbt dist
 WORKDIR /home/user
-RUN unzip midnight/node/instance/target/universal/midnight-node-v0.19.1.zip
-RUN unzip midnight/wallet/backend/target/universal/midnight-wallet-v0.19.1.zip
+RUN unzip midnight/node/instance/target/universal/midnight-node-v0.19.3.zip
+RUN unzip midnight/wallet/backend/target/universal/midnight-wallet-v0.19.3.zip
 
-COPY node-patch /home/user/midnight-node-v0.19.1/conf
-COPY wallet-patch /home/user/midnight-wallet-v0.19.1/conf
-WORKDIR /home/user/midnight-node-v0.19.1/conf
+COPY node-patch /home/user/midnight-node-v0.19.3/conf
+COPY wallet-patch /home/user/midnight-wallet-v0.19.3/conf
+WORKDIR /home/user/midnight-node-v0.19.3/conf
 RUN patch -p1 < node-patch
-WORKDIR /home/user/midnight-wallet-v0.19.1/conf
+WORKDIR /home/user/midnight-wallet-v0.19.3/conf
 RUN patch -p1 < wallet-patch
 
 WORKDIR /home/user
@@ -59,5 +59,5 @@ RUN git checkout midnight
 RUN mkdir build && cd build && cmake .. && make -j`nproc`
 
 WORKDIR /home/user
-COPY init.sh soltest.sh qa_mineBlocks.json wallet_restore.json wallet_unlock.json /home/user/
+COPY init.sh soltest.sh qa_mineBlocks.json wallet_restore.json wallet_start.json /home/user/
 ENV PATH="/usr/lib/kiele/:${PATH}"

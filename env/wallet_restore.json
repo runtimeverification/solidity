@@ -3,7 +3,7 @@
   "method": "wallet_restore",
   "secrets": {
 		"passphrase": "walletNotSecure",
-		"spendingKey": "m-test-shl-sk1fj335eanpmupaj9vx5879t7ljfnh7xct486rqgwxw8evwp2qkaksmcqu88"
+		"masterKey": "m-test-shl-mk1fj335eanpmupaj9vx5879t7ljfnh7xct486rqgwxw8evwp2qkaks93ugg2"
 	},
   "id": 1
 }

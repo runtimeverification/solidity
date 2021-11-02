@@ -1,0 +1,6 @@
+{
+	"jsonrpc": "2.0",
+	"method": "wallet_start",
+	"params": ["ce3bbd3e"],
+	"id": 1
+}

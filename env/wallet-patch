@@ -1,8 +1,17 @@
 diff --git a/wallet.conf b/wallet.conf
-index e36b13c..c68e4e4 100644
+index aa4ec63..66fe398 100644
 --- a/wallet.conf
 +++ b/wallet.conf
-@@ -227,7 +227,7 @@ midnight {
+@@ -42,7 +42,7 @@ wallet {
+   # Note that this effectively overrides the notion of stable block
+   # i.e. if this config is set to a number bigger than midnight.sync.block-confirmation-depth,
+   # the wallet won't consider notes from stable blocks as spendable
+-  # spend-notes-threshold = 0
++  spend-notes-threshold = 0
+ 
+   # How often should rpc service check whether transaction is already built or not when polling
+   # transaction-poll-interval = 100.millis
+@@ -230,7 +230,7 @@ midnight {
  
        ipc {
          # Whether to enable JSON-RPC over IPC
@@ -11,7 +20,7 @@ index e36b13c..c68e4e4 100644
  
          # Path to IPC socket file
          # socket-file = ${wallet.datadir}"/midnight.ipc"
-@@ -253,6 +253,10 @@ midnight {
+@@ -256,6 +256,10 @@ midnight {
      # The port for setting up a Prometheus server over localhost.
      # port = 13796
    }
