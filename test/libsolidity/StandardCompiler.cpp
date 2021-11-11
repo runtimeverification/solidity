@@ -1358,10 +1358,13 @@ BOOST_AUTO_TEST_CASE(use_stack_optimization)
 	Json::Value contract = getContractResult(result, "fileA", "A");
 	BOOST_REQUIRE(!contract.isObject());
 	BOOST_REQUIRE(result["errors"].isArray());
-	BOOST_CHECK(result["errors"][1]["severity"] == "error");
-	BOOST_REQUIRE(result["errors"][1]["message"].isString());
-	BOOST_CHECK(result["errors"][1]["message"].asString().find("Inline assembly is not supported in IELE.") != std::string::npos);
-	BOOST_CHECK(result["errors"][1]["type"] == "SyntaxError");
+	for (const auto &error : result["errors"]) {
+		if(error["severity"] != "error") continue;
+		BOOST_CHECK(error["severity"] == "error");
+		BOOST_REQUIRE(error["message"].isString());
+		BOOST_CHECK(error["message"].asString().find("Inline assembly is not supported in IELE.") != std::string::npos);
+		BOOST_CHECK(error["type"] == "SyntaxError");
+	}
 }
 
 BOOST_AUTO_TEST_CASE(standard_output_selection_wildcard)
