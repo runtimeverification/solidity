@@ -268,7 +268,7 @@ h256 const EmptyTrie("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5
 bool RPCSession::eth_isStorageEmpty(string const& _address, string const& _blockNumber)
 {
 	string address = (_address.length() == 20) ? "0x" + _address : _address;
-	string result = rpcCall("eth_getStorageRoot", { quote(address), quote(_blockNumber) }).asString();
+	string result = rpcCall("eth_getStorageRoot", { quote(bech32Encode(address)), quote(_blockNumber) }).asString();
 	return h256(result) == EmptyTrie;
 }
 
