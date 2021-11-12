@@ -177,7 +177,7 @@ RPCSession::TransactionReceipt RPCSession::eth_getTransactionReceipt(string cons
 	for (auto const& log: result["logs"])
 	{
 		LogEntry entry;
-		entry.address = log["address"].asString();
+		entry.address = bech32Decode(log["address"].asString());
 		entry.data = log["data"].asString();
 		for (auto const& topic: log["topics"])
 			entry.topics.push_back(topic.asString());
