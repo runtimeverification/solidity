@@ -261,7 +261,7 @@ void ExecutionFramework::sendEther(h160 const& _to, u256 const& _value)
 	d.gas = toHex(m_gas, HexPrefix::Add);
 	d.gasPrice = toHex(m_gasPrice, HexPrefix::Add);
 	d.value = toHex(_value, HexPrefix::Add);
-	d.to = toString(_to);
+	d.to = "0x" + toString(_to);
 
 	string txHash = m_rpc.iele_sendTransaction(d);
 	m_rpc.test_mineBlocks(1);
