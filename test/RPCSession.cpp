@@ -136,7 +136,10 @@ string IPCSocket::sendRequest(string const& _req)
 	if (ret == 0)
 		BOOST_FAIL("Timeout reading on IPC.");
 
-	return string(m_readBuf, m_readBuf + ret);
+	if (bytesread > 0 && m_readBuf[bytesread - 1] != '}' && m_readBuf[bytesread - 1] != '\n')
+		BOOST_FAIL("Read currupt data on IPC.");
+
+	return string(m_readBuf, m_readBuf + bytesread);
 #endif
 }
 
