@@ -325,5 +325,5 @@ u256 ExecutionFramework::balanceAt(h160 const& _addr)
 
 bool ExecutionFramework::storageEmpty(h160 const& _addr)
 {
-	return m_rpc.eth_isStorageEmpty(toString(_addr), "latest");
+	return m_rpc.eth_isStorageEmpty("0x" + toString(_addr), "latest");
 }
