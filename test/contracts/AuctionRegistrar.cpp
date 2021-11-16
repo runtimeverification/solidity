@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE(auction_bidding)
 	deployRegistrar();
 	string name = "x";
 
-	unsigned startTime = 0x776347e2;
+	unsigned startTime = currentTimestamp() + 10;
 	modifyTimestamp(startTime);
 
 	RegistrarInterface registrar(*this);
