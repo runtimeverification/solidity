@@ -104,6 +104,7 @@ public:
 		std::string status;
 		std::vector<LogEntry> logEntries;
 		std::string blockNumber;
+		std::vector<std::string> returnData;
 	};
 
 	static RPCSession& instance(std::string const& _path, std::string const& _walletId, std::string const& _privateFromAddr);

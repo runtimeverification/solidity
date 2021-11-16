@@ -206,11 +206,6 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 	{
 	        d.to = "0x" + toString(m_contractAddress);
 	        BOOST_REQUIRE(m_rpc.eth_getCode(d.to, "latest").size() > 2);
-		vector<string> const& outputs = m_rpc.iele_call(d);
-		m_output.clear();
-		for (auto const& output : outputs) {
-			m_output.push_back(asBytes(output));
-		}
 	}
 	m_timestamp = m_timestamp + 1;
 
@@ -228,6 +223,15 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 	{
 	        m_contractAddress = h160(receipt.contractAddress);
 	}
+        else
+        {
+		vector<string> const& outputs = receipt.returnData;
+		m_output.clear();
+		for (auto const& output : outputs) {
+			m_output.push_back(asBytes(output));
+		}
+        }
+
 
 	if (m_showMessages)
 	{
