@@ -13,6 +13,8 @@ set(sources
     Metadata.h
     RPCSession.cpp
     RPCSession.h
+    SignalToStacktraceScope.cpp
+    SignalToStacktraceScope.h
     TestCase.cpp
     TestCase.h
     TestCaseReader.cpp
