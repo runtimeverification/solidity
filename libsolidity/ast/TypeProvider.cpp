@@ -173,6 +173,12 @@ inline void clearCache(unique_ptr<T> const& type)
 		type->clearCache();
 }
 
+template <typename K, typename T>
+inline void clearCache(pair<K, T> const& typeInPair)
+{
+	clearCache(typeInPair.second);
+}
+
 template <typename Container>
 inline void clearCaches(Container& container)
 {
@@ -197,9 +203,13 @@ void TypeProvider::reset()
 	clearCaches(instance().m_bytesM);
 	clearCaches(instance().m_magics);
 
+	clearCaches(instance().m_generalTypes);
 	instance().m_generalTypes.clear();
+	clearCaches(instance().m_stringLiteralTypes);
 	instance().m_stringLiteralTypes.clear();
+	clearCaches(instance().m_ufixedMxN);
 	instance().m_ufixedMxN.clear();
+	clearCaches(instance().m_fixedMxN);
 	instance().m_fixedMxN.clear();
 }
 

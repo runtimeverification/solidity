@@ -197,6 +197,10 @@ public:
   void print(llvm::raw_ostream &OS, unsigned indent = 0) const override;
   bytes toBinary() const;
 
+  void printSourceMapping(
+    llvm::raw_ostream &OS,
+    const std::map<std::string, unsigned> &SourceIndicesMap) const;
+
   // Method for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const IeleValue *V) {
     return V->getIeleValueID() == IeleValue::IeleContractVal;

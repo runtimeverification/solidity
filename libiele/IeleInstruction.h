@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SymbolTableListTraits.h"
+#include <liblangutil/SourceLocation.h>
 
 #include "llvm/ADT/iterator_range.h"
 #include <vector>
@@ -53,14 +54,17 @@ private:
   IeleOperandListType IeleOperandList;
   IeleLValueListType IeleLValueList;
   IeleBlock *Parent;
+  langutil::SourceLocation Location;
 
   // Used by SymbolTableListTraits.
   void setParent(IeleBlock *parent);
 
   friend class SymbolTableListTraits<IeleInstruction>;
 
-  IeleInstruction(IeleOps opc, IeleInstruction *InsertBefore = nullptr);
-  IeleInstruction(IeleOps opc, IeleBlock *InsertAtEnd);
+  IeleInstruction(IeleOps opc, const langutil::SourceLocation &Loc,
+                  IeleInstruction *InsertBefore = nullptr);
+  IeleInstruction(IeleOps opc, const langutil::SourceLocation &Loc,
+                  IeleBlock *InsertAtEnd);
 
 public:
   IeleInstruction(const IeleInstruction&) = delete;
@@ -72,6 +76,8 @@ public:
 
   inline const IeleBlock *getParent() const { return Parent; }
   inline       IeleBlock *getParent()       { return Parent; }
+
+  inline const langutil::SourceLocation &location() const { return Location; }
 
   // Get the operands/lvalues of the IeleInstruction.
   //
@@ -141,52 +147,76 @@ public:
 
   // Creators for various instruction types.
   static IeleInstruction *CreateRetVoid(
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
-  static IeleInstruction *CreateRetVoid(IeleBlock *InsertAtEnd);
+  static IeleInstruction *CreateRetVoid(
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateLog(
     llvm::SmallVectorImpl<IeleValue *> &IndexedArguments,
     IeleValue * NonIndexedArguments,
-    IeleInstruction *InsertBefore);
-
+    const langutil::SourceLocation &Loc,
+    IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateLog(
     llvm::SmallVectorImpl<IeleValue *> &IndexedArguments,
     IeleValue * NonIndexedArguments,
+    const langutil::SourceLocation &Loc,
     IeleBlock *InsertAfter);
 
   static IeleInstruction *CreateRet(
       llvm::SmallVectorImpl<IeleValue *> &ReturnValues,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateRet(
-      llvm::SmallVectorImpl<IeleValue *> &ReturnValues, IeleBlock *InsertAtEnd);
+      llvm::SmallVectorImpl<IeleValue *> &ReturnValues,
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateRevert(
-      IeleValue * StatusValue, IeleInstruction *InsertBefore = nullptr);
+      IeleValue * StatusValue,
+      const langutil::SourceLocation &Loc,
+      IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateRevert(
-      IeleValue *StatusValue, IeleBlock *InsertAtEnd);
+      IeleValue *StatusValue,
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateIsZero(
       IeleLocalVariable *Result, IeleValue *ConditionValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateIsZero(
       IeleLocalVariable *Result, IeleValue *ConditionValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateSelfdestruct(
-      IeleValue *Target, IeleInstruction *InsertBefore = nullptr);
+      IeleValue *Target,
+      const langutil::SourceLocation &Loc,
+      IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateSelfdestruct(
-      IeleValue *Target, IeleBlock *InsertAtEnd);
+      IeleValue *Target,
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateUncondBr(
-      IeleBlock *Target, IeleInstruction *InsertBefore = nullptr);
+      IeleBlock *Target,
+      const langutil::SourceLocation &Loc,
+      IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateUncondBr(
-      IeleBlock *Target, IeleBlock *InsertAtEnd);
+      IeleBlock *Target,
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateCondBr(
       IeleValue *Condition, IeleBlock *Target,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateCondBr(
-      IeleValue *Condition, IeleBlock *Target, IeleBlock *InsertAtEnd);
+      IeleValue *Condition, IeleBlock *Target,
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateCreate(
       bool Copy,
@@ -196,6 +226,7 @@ public:
       IeleValue *AddressValue,
       IeleValue *TransferValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateCreate(
       bool Copy,
@@ -205,6 +236,7 @@ public:
       IeleValue *AddressValue,
       IeleValue *TransferValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateAccountCall(
@@ -214,6 +246,7 @@ public:
       IeleValue *Callee, IeleValue *AddressValue,
       IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateAccountCall(
       bool StaticCall,
@@ -222,122 +255,158 @@ public:
       IeleValue *Callee, IeleValue *AddressValue,
       IeleValue *TransferValue, IeleValue *GasValue,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateCallAddress(
       IeleLocalVariable *ReturnValue,
       IeleGlobalValue *Callee, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateCallAddress(
       IeleLocalVariable *ReturnValue,
       IeleGlobalValue *Callee, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateIntrinsicCall(
       IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateIntrinsicCall(
       IeleOps IntrinsicOpcode, IeleLocalVariable *Result,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateInternalCall(
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
       IeleValue *Callee,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateInternalCall(
       llvm::SmallVectorImpl<IeleLocalVariable *> &LValues,
       IeleValue *Callee,
       llvm::SmallVectorImpl<IeleValue *> &ArgumentValues,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateAssign(
       IeleLocalVariable *Result, IeleValue *RHSValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateAssign(
       IeleLocalVariable *Result, IeleValue *RHSValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateSLoad(
       IeleLocalVariable *Result, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateSLoad(
       IeleLocalVariable *Result, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateSStore(
       IeleValue *DataValue, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateSStore(
-      IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
+      IeleValue *DataValue, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateLoad(
       IeleLocalVariable *Result, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateLoad(
       IeleLocalVariable *Result, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateLoad(
       IeleLocalVariable *Result, IeleValue *AddressValue,
       IeleValue *OffsetValue, IeleValue *WidthValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateLoad(
       IeleLocalVariable *Result, IeleValue *AddressValue,
       IeleValue *OffsetValue, IeleValue *WidthValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateStore(
-      IeleValue *DataValue, IeleValue *AddressValue, IeleBlock *InsertAtEnd);
+      IeleValue *DataValue, IeleValue *AddressValue,
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
   
   static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue,
-      IeleValue *OffsetValue, IeleValue *WidthValue, IeleInstruction *InsertBefore = nullptr);
+      IeleValue *OffsetValue, IeleValue *WidthValue,
+      const langutil::SourceLocation &Loc,
+      IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateStore(
       IeleValue *DataValue, IeleValue *AddressValue,
-      IeleValue *OffsetValue, IeleValue *WidthValue, IeleBlock *InsertAtEnd);
+      IeleValue *OffsetValue, IeleValue *WidthValue,
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateLog2(
       IeleLocalVariable *Result, IeleValue *OperandValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateLog2(
       IeleLocalVariable *Result, IeleValue *OperandValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateNot(
       IeleLocalVariable *Result, IeleValue *OperandValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateNot(
       IeleLocalVariable *Result, IeleValue *OperandValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateSha3(
       IeleLocalVariable *Result, IeleValue *OperandValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateSha3(
       IeleLocalVariable *Result, IeleValue *OperandValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateBinOp(
       IeleOps BinOpcode, IeleLocalVariable *Result, IeleValue *LeftOperandValue,
-      IeleValue *RightOperandValue, IeleInstruction *InsertBefore = nullptr);
+      IeleValue *RightOperandValue,
+      const langutil::SourceLocation &Loc,
+      IeleInstruction *InsertBefore = nullptr);
   static IeleInstruction *CreateBinOp(
       IeleOps BinOpcode, IeleLocalVariable *Result, IeleValue *LeftOperandValue,
-      IeleValue *RightOperandValue, IeleBlock *InsertAtEnd);
+      IeleValue *RightOperandValue,
+      const langutil::SourceLocation &Loc,
+      IeleBlock *InsertAtEnd);
 
   static IeleInstruction *CreateTernOp(
       IeleOps TernOpcode, IeleLocalVariable *Result, IeleValue *FirstOperandValue,
       IeleValue *SecondOperandValue, IeleValue *ThirdOperandValue,
+      const langutil::SourceLocation &Loc,
       IeleInstruction *InsertBefore = nullptr);
-
   static IeleInstruction *CreateTernOp(
       IeleOps TernOpcode, IeleLocalVariable *Result, IeleValue *FirstOperandValue,
       IeleValue *SecondOperandValue, IeleValue *ThirdOperandValue,
+      const langutil::SourceLocation &Loc,
       IeleBlock *InsertAtEnd);
 
   void print(llvm::raw_ostream &OS, unsigned indent = 0) const;

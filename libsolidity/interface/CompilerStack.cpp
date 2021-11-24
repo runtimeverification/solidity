@@ -691,20 +691,16 @@ Json::Value CompilerStack::generatedSources(string const& _contractName, bool _r
 
 string const* CompilerStack::sourceMapping(string const& _contractName) const
 {
-	// TODO: source mapping
-	return nullptr;
-/*
 	if (m_stackState != CompilationSuccessful)
 		BOOST_THROW_EXCEPTION(CompilerError() << errinfo_comment("Compilation was not successful."));
 
 	Contract const& c = contract(_contractName);
 	if (!c.sourceMapping)
 	{
-		if (auto items = assemblyItems(_contractName))
-			c.sourceMapping.emplace(evmasm::AssemblyItem::computeSourceMapping(*items, sourceIndices()));
+		if (c.compiler)
+			c.sourceMapping.emplace(c.compiler->computeSourceMapping(sourceIndices()));
 	}
 	return c.sourceMapping ? &*c.sourceMapping : nullptr;
-*/
 }
 /*
 string const* CompilerStack::runtimeSourceMapping(string const& _contractName) const
