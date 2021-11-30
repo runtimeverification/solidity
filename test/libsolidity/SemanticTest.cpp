@@ -144,7 +144,7 @@ void SemanticTest::preprocessExpectation(FunctionCallExpectations &_expectations
         ABIType::HexString, ABIType::AlignNone, param.rawBytes.size()
       };
     } else if (param.abiType.type == ABIType::Timestamp) {
-      size_t prev_timestamp = m_timestamp - 1;
+      size_t prev_timestamp = currentTimestamp();
       std::ostringstream o;
       o << prev_timestamp;
       param.rawString = o.str();

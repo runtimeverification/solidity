@@ -200,14 +200,11 @@ void ExecutionFramework::sendMessage(std::vector<bytes> const& _arguments, std::
 	d.gas = toHex(m_gas, HexPrefix::Add);
 	d.gasPrice = toHex(m_gasPrice, HexPrefix::Add);
 	d.value = toHex(_value, HexPrefix::Add);
-	if (m_timestamp == 0)
-		m_timestamp = time(nullptr);
 	if (!_isCreation)
 	{
 	        d.to = "0x" + toString(m_contractAddress);
 	        BOOST_REQUIRE(m_rpc.eth_getCode(d.to, "latest").size() > 2);
 	}
-	m_timestamp = m_timestamp + 1;
 
 	string txHash = m_rpc.iele_sendTransaction(d);
 	m_rpc.test_mineBlocks(1);
