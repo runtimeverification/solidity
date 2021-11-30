@@ -8,5 +8,5 @@ contract C {
 // compileViaYul: also
 // ----
 // constructor()
-// f() -> 2
 // f() -> 3
+// f() -> 4
