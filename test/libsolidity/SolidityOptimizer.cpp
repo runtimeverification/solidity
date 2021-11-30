@@ -632,7 +632,7 @@ BOOST_AUTO_TEST_CASE(init_empty_dynamic_arrays)
 	BOOST_CHECK_LE(1600000, m_gasUsedNonOptimized);
 }
 
-BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(optimise_multi_stores, 3)
+BOOST_AUTO_TEST_CASE_EXPECTED_FAILURES(optimise_multi_stores, 2)
 BOOST_AUTO_TEST_CASE(optimise_multi_stores)
 {
 	char const* sourceCode = R"(
