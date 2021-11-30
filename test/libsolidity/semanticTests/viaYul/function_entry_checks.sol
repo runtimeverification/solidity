@@ -22,8 +22,8 @@ contract C {
 // ----
 // f() -> 0
 // g(uint,uint): 1, 0x00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe -> 0
-// h(), 1 ether -> 0
-// i(bytes32), 1 ether: 2 -> FAILURE, 255
+// h(), 1 wei -> 0
+// i(bytes32), 1 wei: 2 -> FAILURE, 255
 // i(bytes32): 2 -> 0
 // j(bool): true -> false
 // k(bytes32): 0x31 -> 0x00

@@ -122,7 +122,7 @@ contract FixedFeeRegistrar is Registrar {
 	function m_record(string memory _name) view internal returns (Record storage o_record) {
 		return m_recordData[uint(uint256(keccak256(bytes(_name)))) / 8];
 	}
-	uint constant c_fee = 69 ether;
+	uint constant c_fee = 5 gwei;
 }
 )DELIMITER";
 
@@ -140,7 +140,7 @@ protected:
 		sendMessage(std::vector<bytes>(), "", compiled, true);
 		BOOST_REQUIRE(m_status == 0);
 	}
-	u256 const m_fee = u256("69000000000000000000");
+	u256 const m_fee = u256("5000000000");
 };
 
 }
@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE(double_reserve)
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee, encodeDyn(name)) == encodeArgs());
 	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(u160(account(0))));
 
-	sendEther(account(1), 100 * u256("1000000000000000000"));
+	sendEther(account(1), 10 * u256("1000000000"));
 	m_sender = account(1);
 	BOOST_REQUIRE(callContractFunctionWithValue("reserve(string)", m_fee, encodeDyn(name)) == encodeArgs());
 	BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(u160(account(0))));
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE(properties)
 	{
 		addr++;
 		m_sender = account(0);
-		sendEther(account(count), 100 * u256("1000000000000000000"));
+		sendEther(account(count), 5 * u256("1000000000"));
 		m_sender = account(count);
 		u160 owner = u160(m_sender);
 		// setting by sender works
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(properties)
 		count++;
 		// but not by someone else
 		m_sender = account(0);
-		sendEther(account(count), 100 * u256("1000000000000000000"));
+		sendEther(account(count), 5 * u256("1000000000"));
 		m_sender = account(count);
 		BOOST_CHECK(callContractFunction("owner(string)", encodeDyn(name)) == encodeArgs(owner));
 		BOOST_CHECK(callContractFunction("setAddr(string,address)", encodeDyn(name), addr + 1) == encodeArgs());

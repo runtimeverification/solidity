@@ -9,4 +9,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// h(), 1 ether -> 1
+// h(), 1 wei -> 1

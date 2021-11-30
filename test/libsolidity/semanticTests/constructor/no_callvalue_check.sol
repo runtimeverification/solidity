@@ -18,4 +18,4 @@ contract C {
 // ====
 // compileViaYul: also
 // ----
-// f(), 2000 ether -> true
+// f(), 2000000000 wei -> true

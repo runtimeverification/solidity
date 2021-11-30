@@ -11,5 +11,5 @@ contract B is A {}
 // getData() -> 0
 // () ->
 // getData() -> 1
-// (), 1 ether ->
+// (), 1 wei ->
 // getData() -> 2
