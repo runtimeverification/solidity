@@ -41,6 +41,7 @@ bytes SolidityExecutionFramework::multiSourceCompileContract(
 	bool compileFail
 )
 {
+//std::cerr << "Compiling code for test " << boost::unit_test::framework::current_test_case().full_name() << "... " << std::flush;
 	map<string, string> sourcesWithPreamble = _sourceCode;
 	for (auto& entry: sourcesWithPreamble)
 		entry.second = addPreamble(entry.second);
@@ -117,6 +118,7 @@ bytes SolidityExecutionFramework::multiSourceCompileContract(
 	BOOST_TEST_MESSAGE(obj.bytecode.size());
 	if (m_showMetadata)
 		cout << "metadata: " << m_compiler.metadata(contractName) << endl;
+//std::cerr << "Compiled!\n" << std::flush;
 	return obj.bytecode;
 }
 

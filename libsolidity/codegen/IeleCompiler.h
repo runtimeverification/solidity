@@ -2,6 +2,7 @@
 
 #include "libiele/IeleContext.h"
 #include "libiele/IeleContract.h"
+#include "libiele/transforms/IeleTransforms.h"
 #include "libsolidity/ast/ASTVisitor.h"
 #include "libevmasm/LinkerObject.h"
 
@@ -97,6 +98,15 @@ public:
   bool experimentalFeatureActive(ExperimentalFeature feature) const {
     return ExperimentalFeatures.count(feature);
   }
+
+  // Available optimizations.
+  void performDeadCodeElimination() {
+    solAssert(CompiledContract, "Attempted optimization before compiling successfully.");
+    iele::transform::deadCodeElimination(*CompiledContract);
+  }
+
+  // Desugars constant operands from all iele instructions except assignment.
+  void desugarConstantOperands();
 
   // Visitor interface.
   virtual bool visit(const FunctionDefinition &function) override;
@@ -477,10 +487,6 @@ private:
       iele::IeleValue *NextFree, iele::IeleLocalVariable *CrntPos);
 
   void appendByteWidth(iele::IeleLocalVariable *Result, iele::IeleValue *Value);
-
-  // Helper function that desugars constant operands from all iele instructions except
-  // assignment.
-  void desugarConstantOperands();
 };
 
 } // end namespace frontend

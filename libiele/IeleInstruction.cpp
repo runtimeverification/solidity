@@ -32,20 +32,23 @@ IeleInstruction::IeleInstruction(IeleOps opc, const SourceLocation &Loc,
 }
 
 void IeleInstruction::setParent(IeleBlock *parent) {
-  // Assert that all operands and lvalues have the same parent as the block.
-  IeleFunction *F = parent->getParent();
-  for (const IeleValue *V : operands()) {
-    if (const IeleLocalVariable *LV = llvm::dyn_cast<IeleLocalVariable>(V))
-      solAssert(LV->getParent() == F, 
-             "Instruction operand belongs to a different function!");
-    else if (const IeleBlock *B = llvm::dyn_cast<IeleBlock>(V))
-      solAssert(B->getParent() == F, 
-             "Instruction operand belongs to a different function!");
-  }
+  // When the given parent block is not null, we need to assert that
+  // all operands and lvalues have the same parent as the given parent block.
+  if (parent) {
+    IeleFunction *F = parent->getParent();
+    for (const IeleValue *V : operands()) {
+      if (const IeleLocalVariable *LV = llvm::dyn_cast<IeleLocalVariable>(V))
+        solAssert(LV->getParent() == F,
+               "Instruction operand belongs to a different function!");
+      else if (const IeleBlock *B = llvm::dyn_cast<IeleBlock>(V))
+        solAssert(B->getParent() == F,
+               "Instruction operand belongs to a different function!");
+    }
 
-  for (const IeleLocalVariable *LV : lvalues()) {
-    solAssert(LV->getParent() == F, 
-           "Instruction lvalue belongs to a different function!");
+    for (const IeleLocalVariable *LV : lvalues()) {
+      solAssert(LV->getParent() == F, 
+             "Instruction lvalue belongs to a different function!");
+    }
   }
 
   // Set the parent.
@@ -67,6 +70,14 @@ const IeleValueSymbolTable *IeleInstruction::getIeleValueSymbolTable() const {
 }
 
 IeleInstruction::~IeleInstruction() { }
+
+void IeleInstruction::removeFromParent() {
+  getParent()->getIeleInstructionList().remove(getIterator());
+}
+
+SymbolTableList<IeleInstruction>::iterator IeleInstruction::eraseFromParent() {
+  return getParent()->getIeleInstructionList().erase(getIterator());
+}
 
 IeleInstruction *IeleInstruction::CreateRetVoid(const SourceLocation &Loc, IeleInstruction *InsertBefore) {
   return new IeleInstruction(Ret, Loc, InsertBefore);

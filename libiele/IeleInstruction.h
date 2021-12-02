@@ -145,6 +145,29 @@ public:
   size_t  lvalue_size() const { return IeleLValueList.size();  }
   bool   lvalue_empty() const { return IeleLValueList.empty(); }
 
+  // Getters and Setters for operands.
+  IeleValue *getOperand(unsigned i) {
+    solAssert(i < size(), "Out of bounds operand access");
+    return IeleOperandList[i];
+  }
+  const IeleValue *getOperand(unsigned i) const {
+    solAssert(i < size(), "Out of bounds operand access");
+    return IeleOperandList[i];
+  }
+
+  void setOperand(unsigned i, IeleValue *Operand) {
+    solAssert(i < size(), "Out of bounds operand access");
+    IeleOperandList[i] = Operand;
+  }
+
+  // This method unlinks 'this' from the containing basic block, but does not
+  // delete it.
+  void removeFromParent();
+
+  // This method unlinks 'this' from the containing basic block and deletes it.
+  // Returns an iterator pointing to the element after the erased one.
+  SymbolTableList<IeleInstruction>::iterator eraseFromParent();
+
   // Creators for various instruction types.
   static IeleInstruction *CreateRetVoid(
       const langutil::SourceLocation &Loc,
