@@ -266,6 +266,10 @@ MemberList const& Type::members(ASTNode const* _currentScope) const
 		if (_currentScope)
 			members += boundFunctions(*this, *_currentScope);
 		m_members[_currentScope] = make_unique<MemberList>(move(members));
+if (const auto *Contract = dynamic_cast<const ContractDefinition *>(_currentScope)) {
+for (auto m : *m_members[_currentScope])
+std::cerr << "AAAAAAAAAAAAAA " << Contract->name() << " : " << m.name << "\n";
+}
 	}
 	return *m_members[_currentScope];
 }

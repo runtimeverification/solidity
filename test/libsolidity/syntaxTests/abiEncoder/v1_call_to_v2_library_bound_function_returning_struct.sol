@@ -12,7 +12,7 @@ library L {
 pragma abicoder v1;
 import "A";
 
-contract D {
+contract Dadada {
     using L for uint;
 
     function test() public {
@@ -20,4 +20,4 @@ contract D {
     }
 }
 // ----
-// TypeError 2428: (B:106-117): The type of return parameter 1, struct L.Item, is only supported in ABI coder v2. Use "pragma abicoder v2;" to enable the feature.
+// TypeError 2428: (B:111-122): The type of return parameter 1, struct L.Item, is only supported in ABI coder v2. Use "pragma abicoder v2;" to enable the feature.
